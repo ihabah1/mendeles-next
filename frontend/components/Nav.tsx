@@ -53,7 +53,7 @@ export default function Nav() {
     <nav style={{ background: "var(--navy-m)", borderBottom: "1px solid var(--navy-b)", position: "sticky", top: 0, zIndex: 200 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, padding: "0 16px", height: 52 }}>
         <Link href="/" style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1rem", color: "var(--gold)", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>
-          🌳 Mandeles<span style={{ color: "var(--muted)", fontSize: ".7rem", fontFamily: "Heebo,sans-serif", fontWeight: 400 }}>.co.il</span>
+          🌳 Mandeles<span style={{ color: "var(--muted)", fontSize: ".7rem", fontFamily: "Heebo,sans-serif", fontWeight: 400 }}>.co.il <span style={{ opacity: 0.7 }}>V2.2</span></span>
         </Link>
 
         <div style={{ display: "flex", gap: 2, flex: 1, justifyContent: "center" }}>
