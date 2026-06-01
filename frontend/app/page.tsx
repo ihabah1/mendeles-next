@@ -1,6 +1,9 @@
 import Nav from "@/components/Nav";
 import Link from "next/link";
 import StatsWidget from "@/components/StatsWidget";
+import HomeHero from "@/components/HomeHero";
+import FreeComboCheck from "@/components/FreeComboCheck";
+import PremiumSection from "@/components/PremiumSection";
 
 export const metadata = { title: "Mandeles.co.il — לוטו חכם" };
 
@@ -10,26 +13,14 @@ export default function HomePage() {
       <Nav />
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 16px" }}>
 
-        {/* Hero */}
-        <section style={{ textAlign: "center", padding: "60px 0 40px" }}>
-          <div style={{ fontSize: "3rem", marginBottom: 12 }}>🎯</div>
-          <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "clamp(1.8rem,5vw,3rem)", fontWeight: 900, color: "var(--cream)", lineHeight: 1.2, marginBottom: 14 }}>
-            מנדל לוטו<br />
-            <span style={{ color: "var(--gold)" }}>200 סטים. מילוי מקצועי. הגשה אישית.</span>
-          </h1>
-          <p style={{ fontSize: ".95rem", color: "var(--muted)", maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7 }}>
-            קבל 200 סטים מחושבים לכל הגרלה, מלא טפסים בקלות ואנחנו נגיש אותם לדוכן לוטו בשמך.
-          </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/lotto" className="btn btn-gold" style={{ fontSize: ".95rem", padding: "12px 28px" }}>🎱 התחל עכשיו</Link>
-            <Link href="/auth" className="btn btn-outline" style={{ fontSize: ".95rem", padding: "12px 28px" }}>כניסה / הרשמה</Link>
-          </div>
-        </section>
+        <HomeHero />
 
-        {/* Stats Widget */}
+        <FreeComboCheck />
+
+        <PremiumSection />
+
         <StatsWidget />
 
-        {/* Features */}
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 16, margin: "40px 0" }}>
           {[
             { icon: "🧮", title: "200 סטים חכמים", desc: "אלגוריתם מנדל מייצר 200 סטים בפיזור מקסימלי לכל הגרלה" },
@@ -45,7 +36,6 @@ export default function HomePage() {
           ))}
         </section>
 
-        {/* Pricing */}
         <section style={{ textAlign: "center", padding: "40px 0" }}>
           <h2 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.6rem", fontWeight: 900, color: "var(--cream)", marginBottom: 24 }}>מחירים</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, maxWidth: 600, margin: "0 auto" }}>
@@ -65,7 +55,6 @@ export default function HomePage() {
           <Link href="/lotto" className="btn btn-gold" style={{ display: "inline-flex", marginTop: 24, padding: "12px 32px", fontSize: ".92rem" }}>התחל עכשיו →</Link>
         </section>
 
-        {/* Toto promo */}
         <section style={{ background: "rgba(26,45,66,.8)", border: "1px solid var(--navy-b)", borderRadius: 14, padding: "24px 20px", textAlign: "center", margin: "20px 0 40px" }}>
           <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>⚽</div>
           <h3 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.2rem", fontWeight: 900, color: "var(--cream)", marginBottom: 8 }}>ניתוח טוטו חכם</h3>

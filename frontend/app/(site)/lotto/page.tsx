@@ -406,7 +406,7 @@ function LottoPageInner() {
         </div>
       </div>
       <div style={{background:'rgba(26,45,66,.9)',border:`2px solid ${canSend>=2?'rgba(29,185,106,.35)':'var(--navy-b)'}`,borderRadius:14,padding:'16px 18px',marginBottom:12}}>
-        <div style={{fontSize:'.82rem',fontWeight:700,color:'var(--cream)',marginBottom:6}}>שליחה לאדמין</div>
+        <div style={{fontSize:'.82rem',fontWeight:700,color:'var(--cream)',marginBottom:6}}>שליחה</div>
         <div style={{fontSize:'.74rem',color:'var(--muted)',marginBottom:12,lineHeight:1.7}}>
           {filled===0&&'מלא לפחות 2 טבלאות לשליחה'}
           {filled===1&&'מלאת טבלה אחת — צריך עוד אחת'}

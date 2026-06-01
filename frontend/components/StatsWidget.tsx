@@ -46,7 +46,6 @@ export default function StatsWidget() {
       {/* כרטיסי סטטיסטיקה */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "משתמשים רשומים", value: data.total_users.toLocaleString(), icon: "👤" },
           { label: "טפסים שהוגשו", value: data.total_orders.toLocaleString(), icon: "📋" },
           { label: "זוכים סה״כ", value: data.total_winners.toLocaleString(), icon: "🏆" },
           { label: "פרסים שחולקו", value: `₪${data.total_prize.toLocaleString()}`, icon: "💰" },
