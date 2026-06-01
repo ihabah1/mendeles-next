@@ -1,60 +1,69 @@
-# Railway deploy — שני שירותים מאותו repo
+# Railway deploy — שני שירותים חובה
 
+Frontend: https://mendeles-next-production.up.railway.app  
 Repo: **ihabah1/mendeles-next** · branch: **main**
 
 ---
 
-## שירות Frontend (Next.js)
+## שלב 1 — Backend (Django) — **חובה ללוגין**
 
 | Setting | Value |
 |---------|--------|
-| Connected repo | `ihabah1/mendeles-next` |
-| Branch | `main` |
-| **Root Directory** | **ריק** (repo root) — או `frontend` |
-| **Builder** | **Dockerfile** |
-
-### אם Root Directory ריק (מומלץ עכשיו)
-- Builder: **Dockerfile**
-- Dockerfile path: **`Dockerfile.frontend`** (מוגדר ב-`railway.toml`)
-
-### אם Root Directory = `frontend`
-- Builder: **Dockerfile**
-- Dockerfile path: **`Dockerfile`**
-
-### Variables
-```
-# Runtime — אין צורך ב-rebuild:
-API_BASE_URL=https://<backend-domain>.up.railway.app/api
-```
-
----
-
-## שירות Backend (Django)
-
-| Setting | Value |
-|---------|--------|
-| Root Directory | **`backend`** ← חובה |
+| Root Directory | **`backend`** |
 | Builder | **Dockerfile** |
 
 ### Variables
 ```
-DJANGO_SECRET_KEY=<random>
+DJANGO_SECRET_KEY=<random-long-string>
 DJANGO_DEBUG=false
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}}
-CORS_ALLOWED_ORIGINS=https://<frontend-domain>.up.railway.app
-FRONTEND_URL=https://<frontend-domain>.up.railway.app
 BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
-BOOTSTRAP_ADMIN_PASSWORD=<password>
+BOOTSTRAP_ADMIN_PASSWORD=admin
+CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
+FRONTEND_URL=https://mendeles-next-production.up.railway.app
 ```
+
+הוסף **PostgreSQL** plugin לפרויקט.
+
+אחרי deploy — בדוק: `https://<backend-url>/api/` → JSON
 
 ---
 
-## שגיאה: "only README.md"
+## שלב 2 — Frontend (Next.js)
 
-1. **Settings → Source** — ודא repo = `ihabah1/mendeles-next` (לא repo ריק אחר)
-2. **Disconnect** → **Connect again** → בחר `mendeles-next`
-3. **Builder = Dockerfile** (לא Railpack)
-4. **Deploy** → **Redeploy** (לא Restart)
+| Setting | Value |
+|---------|--------|
+| Root Directory | **ריק** (repo root) |
+| Builder | **Dockerfile** → `Dockerfile.frontend` |
 
-ב-GitHub אמורים להיות: `frontend/package.json`, `Dockerfile.frontend`, `backend/Dockerfile`
+### Variables (חובה!)
+```
+API_BASE_URL=https://<backend-url>.up.railway.app/api
+```
+
+דוגמה:
+```
+API_BASE_URL=https://mandeles-backend-xxxx.up.railway.app/api
+```
+
+> הפרונט מעביר בקשות דרך `/django-api/*` (proxy) — אין בעיית CORS.  
+> **Restart** אחרי שינוי `API_BASE_URL` (לא חייב rebuild).
+
+---
+
+## בדיקה
+
+1. Backend: `curl https://<backend>/api/`
+2. Frontend: התחבר ב-https://mendeles-next-production.up.railway.app/auth  
+   `admin@admin.com` / `admin`
+
+---
+
+## שגיאות נפוצות
+
+| שגיאה | פתרון |
+|--------|--------|
+| לא ניתן להתחבר לשרver Django (8000) | הגדר `API_BASE_URL` + deploy backend + **Redeploy** frontend |
+| CORS error | הוסף frontend URL ל-`CORS_ALLOWED_ORIGINS` ב-backend |
+| Backend 404 Application not found | שירות backend לא קיים — צור שירות חדש |

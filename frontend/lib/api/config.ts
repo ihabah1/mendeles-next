@@ -1,25 +1,35 @@
 /**
  * API base URL resolution.
  *
- * - Build time: NEXT_PUBLIC_API_BASE_URL (baked into client bundle)
- * - Runtime (Railway): API_BASE_URL via /api/runtime-config (no rebuild needed)
+ * Production (browser): same-origin `/django-api` → Next.js rewrite → Django (API_BASE_URL).
+ * Local dev: http://localhost:8000/api
  */
 const DEFAULT = "http://localhost:8000/api";
+const PROXY_PATH = "/django-api";
 
 function normalize(url: string): string {
   return url.replace(/\/$/, "");
 }
 
 function envBase(): string | undefined {
-  const v = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const v =
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    process.env.API_BASE_URL?.trim();
   return v ? normalize(v) : undefined;
 }
 
-function isLocalUrl(url: string): boolean {
-  return url.includes("localhost") || url.includes("127.0.0.1");
+function isLocalHost(): boolean {
+  if (typeof window === "undefined") return true;
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1";
 }
 
-/** Sync fallback for SSR / first paint (may be localhost in production until resolved). */
+function productionProxyBase(): string | undefined {
+  if (typeof window === "undefined" || isLocalHost()) return undefined;
+  return `${window.location.origin}${PROXY_PATH}`;
+}
+
+/** Sync fallback for SSR. */
 export const API_BASE_URL = envBase() || DEFAULT;
 
 export const AUTH_ENDPOINTS = {
@@ -39,8 +49,14 @@ export async function resolveApiBaseUrl(): Promise<string> {
   if (pending) return pending;
 
   pending = (async () => {
+    const proxy = productionProxyBase();
+    if (proxy) {
+      resolved = proxy;
+      return resolved;
+    }
+
     const baked = envBase();
-    if (baked && !isLocalUrl(baked)) {
+    if (baked && !baked.includes("localhost") && !baked.includes("127.0.0.1")) {
       resolved = baked;
       return resolved;
     }
@@ -56,7 +72,7 @@ export async function resolveApiBaseUrl(): Promise<string> {
           }
         }
       } catch {
-        /* use fallback */
+        /* fall through */
       }
     }
 
@@ -67,7 +83,6 @@ export async function resolveApiBaseUrl(): Promise<string> {
   return pending;
 }
 
-/** Call once on app load so the first API request uses the correct backend URL. */
 export function primeApiBaseUrl(): Promise<string> {
   return resolveApiBaseUrl();
 }

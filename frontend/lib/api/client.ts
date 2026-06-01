@@ -103,7 +103,7 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
       if (onLocalhost) {
         return "לא ניתן להתחבר לשרת Django (8000). הפעל: cd backend && python manage.py runserver";
       }
-      return "לא ניתן להתחבר לשרת API. הגדר API_BASE_URL ב-Railway (כתובת ה-backend + /api) והפעל מחדש את שירות ה-backend.";
+      return "לא ניתן להתחבר לשרת API. ודא ששירות ה-backend (Django) רץ ב-Railway והגדר API_BASE_URL ב-frontend (כתובת ה-backend + /api).";
     }
     const data = error.response.data as Record<string, unknown> | undefined;
     if (data) {
