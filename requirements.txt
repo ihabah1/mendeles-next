@@ -1,3 +1,5 @@
-# Root requirements for Railway (repo root deploy).
-# Installs backend deps when Root Directory is not set to backend/.
+# Used ONLY when Railway Root Directory is the REPO ROOT (not recommended).
+# Prefer: Root Directory = backend + backend/Dockerfile
+#
+# If you deploy from repo root, this file pulls backend deps:
 -r backend/requirements.txt

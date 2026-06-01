@@ -1,5 +1,7 @@
+# Backend service — set Root Directory = backend (not repo root)
 [build]
-builder = "RAILPACK"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "bash scripts/start.sh"
