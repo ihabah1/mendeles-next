@@ -11,7 +11,6 @@ export default function Nav() {
   const { user: authUser, isAuthenticated, isStaff, logout: authLogout } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
 
-  const name = authUser?.display_name || authUser?.full_name || authUser?.email || "משתמש";
   const isDemo = authUser?.email === "demo@mandeles.co.il";
 
   useEffect(() => {
@@ -27,6 +26,8 @@ export default function Nav() {
 
   const logout = async () => {
     await authLogout().catch(() => {});
+    localStorage.removeItem("demo_mode");
+    document.cookie = "demo_mode=; path=/; max-age=0";
     router.push("/");
   };
 
@@ -71,8 +72,13 @@ export default function Nav() {
               <Link href="/profile" style={{ background: "rgba(201,168,76,.12)", border: "1px solid #9a7a30", borderRadius: 6, padding: "4px 9px", fontSize: ".72rem", fontWeight: 700, color: "var(--gold)", textDecoration: "none" }}>
                 💳 ₪{balance?.toFixed(2) ?? "..."}
               </Link>
-              <button title={name} onClick={logout} style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--gold)", color: "var(--navy)", border: "none", fontSize: ".75rem", fontWeight: 800, cursor: "pointer" }}>
-                {name[0].toUpperCase()}
+              <button
+                type="button"
+                onClick={logout}
+                className="btn btn-outline"
+                style={{ fontSize: ".72rem", padding: "5px 10px", whiteSpace: "nowrap" }}
+              >
+                התנתק
               </button>
             </>
           ) : (

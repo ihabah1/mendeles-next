@@ -1,56 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { states } from "../route";
-import prisma from "@/lib/prisma";
-import { signToken } from "@/lib/auth";
+
+import { resolveSiteUrl } from "@/lib/auth/google-oauth";
+import { resolveServerApiBaseUrl } from "@/lib/api/server-backend-url";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const siteUrl = resolveSiteUrl(req);
+  const { searchParams } = req.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
+  const cookieState = req.cookies.get("g_state")?.value;
 
-  const stateData = states.get(state || "");
-  if (!code || !stateData || Date.now() - stateData > 600000)
-    return NextResponse.redirect(`${siteUrl}/auth?error=google_state`);
-  states.delete(state!);
+  const fail = (error: string) => {
+    const res = NextResponse.redirect(`${siteUrl}/auth?error=${error}`);
+    res.cookies.set("g_state", "", { maxAge: 0, path: "/" });
+    return res;
+  };
 
-  // Exchange code for token
+  if (!code || !state || !cookieState || state !== cookieState) {
+    return fail("google_state");
+  }
+
+  const redirectUri = `${siteUrl}/api/auth/google/callback`;
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      code, client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: `${siteUrl}/api/auth/google/callback`,
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID!.trim(),
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
   });
   const tokens = await tokenRes.json();
-  if (!tokens.access_token) return NextResponse.redirect(`${siteUrl}/auth?error=google_token`);
+  if (!tokens.access_token) return fail("google_token");
 
-  // Get user info
-  const uiRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  const djangoBase = resolveServerApiBaseUrl();
+  const djangoRes = await fetch(`${djangoBase}/auth/google/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ access_token: tokens.access_token }),
   });
-  const ui = await uiRes.json();
-  const email = ui.email?.toLowerCase();
-  const name = ui.name || email;
-  const providerId = ui.sub;
+  const session = await djangoRes.json();
+  if (!djangoRes.ok || !session.access) return fail("google_login");
 
-  // Find or create user
-  let user = await prisma.user.findFirst({
-    where: { OR: [{ provider: "google", providerId }, ...(email ? [{ email }] : [])] },
-  });
-  if (!user) {
-    user = await prisma.user.create({
-      data: { name, email, provider: "google", providerId, emailVerified: true },
-    });
-  } else {
-    await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
-  }
+  const hash = new URLSearchParams({
+    access: session.access,
+    refresh: session.refresh || "",
+  }).toString();
 
-  const token = await signToken({ sub: user.id, email: user.email, phone: user.phone });
-  const res = NextResponse.redirect(siteUrl);
-  res.cookies.set("auth_token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 30 * 86400 });
+  const res = NextResponse.redirect(`${siteUrl}/auth/oauth#${hash}`);
+  res.cookies.set("g_state", "", { maxAge: 0, path: "/" });
   return res;
 }

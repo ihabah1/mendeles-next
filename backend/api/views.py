@@ -1,4 +1,5 @@
 """REST API views: JWT auth flow + model viewsets for the React frontend."""
+import requests
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -76,6 +77,53 @@ def logout_view(request):
     except TokenError:
         return Response({'detail': 'invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def google_login(request):
+    """Verify a Google access token and return Django JWT (login or register)."""
+    access_token = (request.data.get('access_token') or '').strip()
+    if not access_token:
+        return Response({'detail': 'access_token required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        ui_res = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
+        )
+        ui_res.raise_for_status()
+        ui = ui_res.json()
+    except requests.RequestException:
+        return Response({'detail': 'Google token invalid'}, status=status.HTTP_400_BAD_REQUEST)
+
+    email = (ui.get('email') or '').lower().strip()
+    if not email:
+        return Response({'detail': 'Google account has no email'}, status=status.HTTP_400_BAD_REQUEST)
+    if ui.get('email_verified') is False:
+        return Response({'detail': 'Google email not verified'}, status=status.HTTP_400_BAD_REQUEST)
+
+    name = (ui.get('name') or '').strip()
+    first_name = name.split()[0] if name else ''
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        user = User(email=email, first_name=first_name[:60])
+        user.set_unusable_password()
+        user.sync_full_name()
+        user.save()
+        ensure_customer_records(user)
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 class MeView(RetrieveUpdateAPIView):
