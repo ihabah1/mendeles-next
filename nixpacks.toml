@@ -1,8 +1,11 @@
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
+[variables]
+DATABASE_URL = "postgresql://build:build@127.0.0.1:5432/build"
+
 [phases.install]
-cmds = ["cd frontend && npm ci"]
+cmds = ["cd frontend && npm ci", "cd frontend && npx prisma generate"]
 
 [phases.build]
 cmds = ["cd frontend && npm run build"]
