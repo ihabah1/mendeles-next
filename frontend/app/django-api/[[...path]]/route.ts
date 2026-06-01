@@ -30,7 +30,7 @@ async function proxy(
   }
 
   const { path = [] } = await ctx.params;
-  const suffix = path.length ? `/${path.join("/")}` : "";
+  const suffix = path.length ? `/${path.join("/")}/` : "/";
   const target = `${base}${suffix}${req.nextUrl.search}`;
 
   const headers = new Headers();

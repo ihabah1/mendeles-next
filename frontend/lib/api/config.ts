@@ -33,12 +33,12 @@ function productionProxyBase(): string | undefined {
 export const API_BASE_URL = envBase() || DEFAULT;
 
 export const AUTH_ENDPOINTS = {
-  login: "/auth/login/",
-  register: "/auth/register/",
-  logout: "/auth/logout/",
-  refresh: "/auth/refresh/",
-  verify: "/auth/verify/",
-  me: "/auth/me/",
+  login: "/auth/login",
+  register: "/auth/register",
+  logout: "/auth/logout",
+  refresh: "/auth/refresh",
+  verify: "/auth/verify",
+  me: "/auth/me",
 } as const;
 
 let resolved: string | null = null;
