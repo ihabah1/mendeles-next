@@ -5,9 +5,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Postgres driver (psycopg2) needs build tools on slim images
+# Postgres driver (psycopg2) + git (AI agent PR/push)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc \
+    libpq-dev gcc git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps (paths relative to backend/ — Root Directory must be backend)
