@@ -1,6 +1,10 @@
+# Next.js frontend service — Root Directory MUST be: frontend
 [build]
-buildCommand = "npm ci && npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
+healthcheckPath = "/"
+healthcheckTimeout = 300

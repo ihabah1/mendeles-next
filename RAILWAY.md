@@ -1,5 +1,8 @@
 # Deploying on Railway
 
+> **Monorepo:** הקוד לא בשורש — יש שני תיקיות: `backend/` (Django) ו-`frontend/` (Next.js).  
+> **חובה** להגדיר **Root Directory** נפרד לכל שירות, אחרת Railway רואה רק `README.md`.
+
 This repo is a **monorepo** (Django API + Next.js UI). Use **two Railway services** from the same GitHub repo.
 
 Repo: [ihabah1/mendeles-next](https://github.com/ihabah1/mendeles-next)
@@ -10,8 +13,8 @@ Repo: [ihabah1/mendeles-next](https://github.com/ihabah1/mendeles-next)
 
 | Setting | Value |
 |---------|--------|
-| **Root Directory** | `backend` *(recommended)* or repo root |
-| **Start command** | auto from `railway.toml` / `start.sh` |
+| **Root Directory** | `backend` |
+| **Builder** | Railpack (default) or Dockerfile |
 
 ### Required variables
 
@@ -47,9 +50,20 @@ Create a **second service** in the same Railway project:
 
 | Setting | Value |
 |---------|--------|
-| **Root Directory** | `frontend` |
-| **Build** | `npm ci && npm run build` |
-| **Start** | `npm start` |
+| **Repository** | `ihabah1/mendeles-next` |
+| **Branch** | `main` |
+| **Root Directory** | **`frontend`** ← חובה! לא להשאיר ריק |
+| **Builder** | **Dockerfile** (recommended) or Railpack |
+
+### Railway UI path
+
+```
+Project → [Frontend Service] → Settings → Source
+  Connected Repo: ihabah1/mendeles-next
+  Branch: main
+  Root Directory: frontend    ← type exactly this, no slash
+→ Save → Deploy → Redeploy
+```
 
 ### Required variables
 
@@ -61,17 +75,17 @@ Create a **second service** in the same Railway project:
 
 ## Troubleshooting
 
-### "Railpack could not determine how to build" / only `README.md`
+### "Only README.md" / "Push Next.js source code"
 
-1. Confirm GitHub repo is **`ihabah1/mendeles-next`** branch **`main`** (not an empty repo).
-2. In Railway → Service → **Settings → Source** → **Root Directory**:
-   - Backend: `backend` (or leave empty if using root `requirements.txt` + `start.sh`)
-   - Frontend: `frontend`
-3. Click **Redeploy** after changing root directory.
+**הסיבה:** Root Directory ריק או שגוי — Railway בונה מהשורש שיש בו רק README + קבצי backend.
 
-### Build sees 10 KB / single file
+**פתרון:**
+1. ודא שה-repo הוא **`ihabah1/mendeles-next`** (לא repo ריק אחר)
+2. **Frontend service** → Root Directory = **`frontend`**
+3. **Backend service** → Root Directory = **`backend`**
+4. **Redeploy** (לא רק Restart)
 
-Railway is building the wrong commit or wrong repo. Re-link the service to `mendeles-next` and redeploy.
+Verify on GitHub: `frontend/package.json` and `frontend/next.config.ts` exist on `main`.
 
 ---
 

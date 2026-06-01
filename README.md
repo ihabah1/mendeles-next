@@ -1,5 +1,7 @@
 # Mandeles — React (Next.js) frontend + Django REST backend
 
+> **Railway deploy:** This is a monorepo. Set **Root Directory** to `frontend` (Next.js) or `backend` (Django) per service. See [RAILWAY.md](./RAILWAY.md).
+
 This repository hosts two independently deployable applications:
 
 | Folder      | Stack                              | Responsibility                                            |
