@@ -1,20 +1,26 @@
-# Railway deploy — שני שירותים חובה
+# Railway — הגדרה ללוגין
 
-Frontend: https://mendeles-next-production.up.railway.app  
-Repo: **ihabah1/mendeles-next** · branch: **main**
+Frontend: https://mendeles-next-production.up.railway.app
 
 ---
 
-## שלב 1 — Backend (Django) — **חובה ללוגין**
+## הבעיה: "שירת ה-API לא מוגדר"
 
-| Setting | Value |
-|---------|--------|
-| Root Directory | **`backend`** |
-| Builder | **Dockerfile** |
+זה אומר ש**חסר משתנה סביבה** בשירות ה-Frontend, ו/או **אין שירות Backend**.
 
-### Variables
+---
+
+## שלב א — צור שירות Backend (אם אין)
+
+1. ב-Railway → הפרויקט → **+ New** → **GitHub Repo** → `ihabah1/mendeles-next`
+2. **Settings** של השירות החדש:
+   - **Root Directory:** `backend`
+   - **Builder:** Dockerfile
+3. **+ New** → **Database** → **PostgreSQL** (אם אין)
+4. **Variables** (שירות Backend):
+
 ```
-DJANGO_SECRET_KEY=<random-long-string>
+DJANGO_SECRET_KEY=change-me-to-random-32-chars-minimum
 DJANGO_DEBUG=false
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}}
@@ -24,46 +30,51 @@ CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
 FRONTEND_URL=https://mendeles-next-production.up.railway.app
 ```
 
-הוסף **PostgreSQL** plugin לפרויקט.
-
-אחרי deploy — בדוק: `https://<backend-url>/api/` → JSON
+5. **Settings** → **Networking** → **Generate Domain**
+6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`
+7. בדוק בדפדפן: `https://<backend-url>/api/` → JSON
 
 ---
 
-## שלב 2 — Frontend (Next.js)
+## שלב ב — חבר Frontend ל-Backend
 
-| Setting | Value |
-|---------|--------|
-| Root Directory | **ריק** (repo root) |
-| Builder | **Dockerfile** → `Dockerfile.frontend` |
+1. Railway → שירות **Frontend** (mendeles-next-production)
+2. **Variables** → **+ New Variable**:
 
-### Variables (חובה!)
 ```
 API_BASE_URL=https://<backend-url>.up.railway.app/api
 ```
 
-דוגמה:
+**דוגמה:**
 ```
 API_BASE_URL=https://mandeles-backend-xxxx.up.railway.app/api
 ```
 
-> הפרונט מעביר בקשות דרך `/django-api/*` (proxy) — אין בעיית CORS.  
-> **Restart** אחרי שינוי `API_BASE_URL` (לא חייב rebuild).
+**או** עם Reference (אם שם השירות ב-Railway הוא `backend`):
+```
+API_BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api
+```
+
+3. **Deploy** → **Restart** (או Redeploy)
+
+> אחרי Restart — **לא** צריך rebuild. המשתנה נקרא ב-runtime.
 
 ---
 
 ## בדיקה
 
-1. Backend: `curl https://<backend>/api/`
-2. Frontend: התחבר ב-https://mendeles-next-production.up.railway.app/auth  
-   `admin@admin.com` / `admin`
+| URL | תוצאה צפויה |
+|-----|-------------|
+| `/api/runtime-config` | `"configured": true`, `"backendReachable": true` |
+| `/django-api/` | JSON מ-Django |
+| `/auth` | כניסה עם `admin@admin.com` / `admin` |
 
 ---
 
-## שגיאות נפוצות
+## שגיאות
 
-| שגיאה | פתרון |
+| הודעה | פתרון |
 |--------|--------|
-| לא ניתן להתחבר לשרver Django (8000) | הגדר `API_BASE_URL` + deploy backend + **Redeploy** frontend |
-| CORS error | הוסף frontend URL ל-`CORS_ALLOWED_ORIGINS` ב-backend |
-| Backend 404 Application not found | שירות backend לא קיים — צור שירות חדש |
+| שירת ה-API לא מוגדר | הוסף `API_BASE_URL` ב-Frontend + Restart |
+| לא ניתן להגיע ל-backend | Backend לא רץ — בדוק Logs + Postgres |
+| Backend 404 | שירות Backend לא קיים או Root Directory שגוי |
