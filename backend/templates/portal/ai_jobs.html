@@ -5,12 +5,18 @@
 {% endblock %}
 {% block content %}
 <h1 class="page-title">⚙️ תור עבודת AI</h1>
-<p class="meta">מתרענן אוטומטית כל 15 שניות · <a href="{% url 'portal:ai_requests' %}">← בקשות</a></p>
+<p class="meta">
+  מתרענן אוטומטית כל 15 שניות ·
+  <a href="{% url 'portal:ai_requests' %}">← ניהול ג'obs (טבלה מלאה)</a>
+</p>
 
 <div class="card">
   <p class="meta">
     ממתינים: {{ queue_summary.pending_global|default:0 }}
     · רץ: {% if queue_summary.running_global %}כן{% else %}לא{% endif %}
+    {% if queue_summary.running_job %}
+    · ג'וב פעיל: #{{ queue_summary.running_job.id }} ({{ queue_summary.running_job.type_label }})
+    {% endif %}
   </p>
 </div>
 
@@ -22,6 +28,7 @@
         <th>סוג</th>
         <th>בקשה</th>
         <th>סטטוס</th>
+        <th>ניסיון</th>
         <th>נוצר</th>
         <th></th>
       </tr>
@@ -29,21 +36,36 @@
     <tbody>
       {% for job in jobs %}
       <tr>
-        <td>{{ job.pk }}</td>
-        <td>{{ job.get_job_type_display }}</td>
-        <td><a href="{% url 'portal:ai_request_detail' job.change_request_id %}">#{{ job.change_request_id }}</a></td>
-        <td><span class="badge badge-muted">{{ job.get_status_display }}</span></td>
-        <td>{{ job.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ job.id }}</td>
+        <td>{{ job.type_label }}</td>
         <td>
-          {% if job.status == 'pending' or job.status == 'running' %}
-          <form method="post" action="{% url 'portal:ai_job_cancel' job.pk %}" style="display:inline;">{% csrf_token %}
+          <a href="{% url 'portal:ai_request_detail' job.request_id %}">#{{ job.request_id }}</a>
+          <div class="meta" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {{ job.request_prompt|truncatechars:40 }}
+          </div>
+        </td>
+        <td>
+          <span class="badge {% if job.status == 'failed' %}badge-failed{% elif job.status == 'completed' %}badge-ok{% else %}badge-muted{% endif %}">
+            {{ job.status_label }}
+          </span>
+        </td>
+        <td class="meta">{{ job.attempts }}/{{ job.max_attempts }}</td>
+        <td>{{ job.created_at_display }}</td>
+        <td>
+          {% if job.can_cancel_job %}
+          <form method="post" action="{{ job.cancel_job_url }}" style="display:inline;">{% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline">בטל</button>
           </form>
           {% endif %}
         </td>
       </tr>
+      {% if job.error %}
+      <tr>
+        <td colspan="7" class="form-errors" style="font-size:.72rem;">{{ job.error }}</td>
+      </tr>
+      {% endif %}
       {% empty %}
-      <tr><td colspan="6" class="meta">אין jobs בתור</td></tr>
+      <tr><td colspan="7" class="meta">אין jobs בתור</td></tr>
       {% endfor %}
     </tbody>
   </table>
