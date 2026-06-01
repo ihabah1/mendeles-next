@@ -18,7 +18,7 @@ def create_pull_request(
 ) -> tuple[int, str]:
     token = clean_env_value(getattr(settings, 'GITHUB_TOKEN', '') or '')
     try:
-        repo_name = normalize_github_repo(getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles'))
+        repo_name = normalize_github_repo(getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles-next'))
     except ValueError as exc:
         raise GitHubPRError(str(exc)) from exc
     base = clean_env_value(getattr(settings, 'GITHUB_DEFAULT_BRANCH', 'main') or 'main')
@@ -52,7 +52,7 @@ def _github_client():
         from github import Github
     except ImportError as exc:
         raise GitHubPRError('חבילת PyGithub לא מותקנת') from exc
-    return Github(token), normalize_github_repo(getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles'))
+    return Github(token), normalize_github_repo(getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles-next'))
 
 
 def merge_pull_request(pr_number: int) -> str:

@@ -26,7 +26,7 @@ def friendly_git_error(stderr: str) -> str | None:
         return (
             'GitHub דחה push (403): ל-GITHUB_TOKEN חסרות הרשאות כתיבה. '
             'צור Personal Access Token חדש עם: Contents (Read and write) + '
-            'Pull requests (Read and write) על repo ihabah1/mendeles, '
+            'Pull requests (Read and write) על repo ihabah1/mendeles-next, '
             'עדכן ב-Railway (בלי רווח בסוף), ואם Fine-grained – אשר SSO אם מופיע.'
         )
     if 'terminal prompts disabled' in low or 'could not read username' in low:

@@ -9,10 +9,11 @@ from pathlib import Path
 from django.conf import settings
 
 from .diff_validator import DiffValidationError, validate_diff_syntax
-from .path_guard import is_path_allowed, list_allowed_files
+from .path_guard import is_path_allowed, list_allowed_files, resolve_file_on_disk
 
 _PATH_IN_PROMPT = re.compile(
-    r'((?:static|templates)/[\w./-]+\.(?:css|html|js|txt|svg))',
+    r'((?:backend/)?(?:static|templates)/[\w./()-]+\.(?:css|html|js|txt|svg)|'
+    r'frontend/(?:app|components|lib|hooks)/[\w./()-]+\.(?:css|tsx|ts|jsx|js))',
     re.IGNORECASE,
 )
 
@@ -54,6 +55,9 @@ def select_files_for_prompt(
         )
     ):
         explicit.extend([
+            'frontend/components/Nav.tsx',
+            'frontend/app/(site)/page.tsx',
+            'frontend/app/globals.css',
             'templates/web/base_public.html',
             'templates/web/home.html',
             'templates/web/partials/lotto_panel.html',
@@ -161,9 +165,10 @@ def repair_diff_from_partial_output(raw: str, base_dir: Path) -> str:
         if not ok:
             raise DiffValidationError(reason)
 
-        full = base_dir / path
-        if not full.is_file():
+        full = resolve_file_on_disk(base_dir, path)
+        if not full:
             raise DiffValidationError(f'קובץ לא קיים: {path}')
+        path = full.relative_to(base_dir).as_posix()
         original = full.read_text(encoding='utf-8', errors='replace')
         modified = apply_line_edits_to_content(original, section)
         if original == modified:
@@ -220,9 +225,10 @@ def _apply_edits_list(edits: list[dict], base_dir: Path, log) -> list[str]:
         ok, reason = is_path_allowed(rel)
         if not ok:
             raise DiffValidationError(reason)
-        full = base_dir / rel
-        if not full.is_file():
+        full = resolve_file_on_disk(base_dir, rel)
+        if not full:
             raise DiffValidationError(f'קובץ לא קיים: {rel}')
+        rel = full.relative_to(base_dir).as_posix()
         original = full.read_text(encoding='utf-8', errors='replace')
         if not old.strip():
             raise DiffValidationError(f'חסר טקסט old ב-{rel}')

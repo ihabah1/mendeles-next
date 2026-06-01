@@ -9,7 +9,7 @@ from django.conf import settings
 
 from .diff_builder import generate_diff_via_structured_edits, repair_diff_from_partial_output
 from .diff_validator import DiffValidationError, extract_unified_diff, validate_diff_syntax
-from .path_guard import list_allowed_files
+from .path_guard import find_allowed_files
 from .site_index import (
     resolve_request,
     select_files_with_index,
@@ -146,18 +146,33 @@ def generate_diff(
     except ImportError as exc:
         raise GeminiServiceError('חבילת google-generativeai לא מותקנת') from exc
 
-    root = base_dir or settings.BASE_DIR
+    server_root = base_dir or settings.BASE_DIR
+    root = server_root
+    github_root = None
     if getattr(settings, 'GITHUB_TOKEN', ''):
         try:
             from admin_panel.ai_agent.git_tools.repo import ensure_github_context_clone
 
-            root = ensure_github_context_clone()
+            github_root = ensure_github_context_clone()
+            root = github_root
             log('קורא קבצים מ-GitHub (origin/main) ליצירת diff מדויק…')
         except Exception as exc:
             log(f'GitHub clone לקונטקסט: {exc} – משתמש בקבצי השרת')
-    all_files = list_allowed_files(root)
+
+    root, all_files, scan_log = find_allowed_files(root, server_root)
+    for line in scan_log:
+        log(f'סריקת קבצים: {line}')
     if not all_files:
-        raise GeminiServiceError('לא נמצאו קבצים מותרים בפרויקט')
+        repo = getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles-next')
+        raise GeminiServiceError(
+            'לא נמצאו קבצים מותרים בפרויקט. '
+            f'{"; ".join(scan_log)}. '
+            f'ודא GITHUB_REPO={repo} ושה-repo כולל backend/templates/ או templates/.',
+        )
+    if github_root and root != github_root:
+        log(f'גיבוי לקבצי שרת/monorepo: {len(all_files)} קבצים מ-{root}')
+    else:
+        log(f'נמצאו {len(all_files)} קבצים מותרים')
 
     from .new_page import build_new_page_diff, is_new_page_request
 

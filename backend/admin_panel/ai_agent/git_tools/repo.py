@@ -91,7 +91,7 @@ def _github_token() -> str:
 
 
 def _repo_slug() -> str:
-    repo_raw = getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles')
+    repo_raw = getattr(settings, 'GITHUB_REPO', 'ihabah1/mendeles-next')
     try:
         return normalize_github_repo(repo_raw)
     except ValueError as exc:

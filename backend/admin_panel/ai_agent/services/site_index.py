@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .path_guard import list_allowed_files
+from .path_guard import list_allowed_files, resolve_file_on_disk, resolve_hint_path
 
 # אזורים לוגיים → תוויות בעברית (למנהל) + קבצים אופייניים
 ZONES: dict[str, dict] = {
@@ -21,6 +21,11 @@ ZONES: dict[str, dict] = {
             'homepage', 'home page', 'לוטו', 'מנדל', 'אסטרטגיית',
         ),
         'files': (
+            'frontend/app/(site)/page.tsx',
+            'frontend/app/(site)/lotto/page.tsx',
+            'frontend/components/StatsWidget.tsx',
+            'frontend/app/globals.css',
+            # legacy hints (Django-only repo)
             'templates/web/lotto_home.html',
             'templates/web/home.html',
             'templates/web/partials/lotto_panel.html',
@@ -36,12 +41,16 @@ ZONES: dict[str, dict] = {
             'version', 'גרסה', 'v2', 'מצב הדגמה', 'הדגמה', 'demo',
             'יופי', 'שלום', 'ברכה', 'greeting', 'nav-greeting', 'שם משתמש', 'username',
         ),
-        'files': ('templates/web/base_public.html',),
+        'files': (
+            'frontend/components/Nav.tsx',
+            'templates/web/base_public.html',
+        ),
     },
     'public_toto': {
         'label': 'דף טוטו',
         'keywords': ('טוטו', 'toto', 'משחקים', '1x2'),
         'files': (
+            'frontend/app/(site)/toto/page.tsx',
             'templates/web/partials/toto_panel.html',
             'templates/web/home.html',
         ),
@@ -49,22 +58,35 @@ ZONES: dict[str, dict] = {
     'public_footer': {
         'label': 'פוטר / תחתית',
         'keywords': ('פוטר', 'תחתית', 'footer', 'זכויות'),
-        'files': ('templates/web/base_public.html',),
+        'files': (
+            'frontend/components/Nav.tsx',
+            'templates/web/base_public.html',
+        ),
     },
     'public_about': {
         'label': 'דף אודות',
         'keywords': ('אודות', 'about'),
-        'files': ('templates/web/about.html',),
+        'files': (
+            'frontend/app/(site)/about/page.tsx',
+            'templates/web/about.html',
+        ),
     },
     'public_legal': {
         'label': 'תנאים / מדיניות',
         'keywords': ('תנאים', 'מדיניות', 'legal', 'פרטיות'),
-        'files': ('templates/web/legal.html',),
+        'files': (
+            'frontend/app/(site)/terms/page.tsx',
+            'templates/web/legal.html',
+        ),
     },
     'public_login': {
         'label': 'כניסה / הרשמה',
         'keywords': ('כניסה', 'הרשמה', 'login', 'register'),
-        'files': ('templates/web/login.html', 'templates/web/register.html'),
+        'files': (
+            'frontend/app/(site)/auth/page.tsx',
+            'templates/web/login.html',
+            'templates/web/register.html',
+        ),
     },
     'manage': {
         'label': 'דשבורד ניהול',
@@ -74,6 +96,9 @@ ZONES: dict[str, dict] = {
             'תור', 'שינויים', 'אינטגרציה',
         ),
         'files': (
+            'backend/templates/portal/base.html',
+            'backend/static/portal/dashboard.css',
+            'backend/static/portal/ai-dashboard.css',
             'templates/portal/base_dashboard.html',
             'static/css/portal.css',
         ),
@@ -182,21 +207,23 @@ class ResolvedRequest:
 
 def _guess_zone_for_path(rel: str) -> str:
     r = rel.replace('\\', '/').lower()
-    if 'portal/' in r:
+    if 'portal/' in r or 'templates/portal' in r:
         return 'manage'
-    if 'toto_panel' in r:
-        return 'public_toto'
-    if 'lotto_panel' in r or r.endswith('web/home.html'):
-        return 'public_home'
-    if 'base_public' in r:
+    if 'frontend/components/nav' in r or 'base_public' in r:
         return 'public_nav'
+    if 'toto' in r:
+        return 'public_toto'
+    if 'lotto' in r or ('page.tsx' in r and '(site)' in r):
+        return 'public_home'
     if 'about' in r:
         return 'public_about'
-    if 'legal' in r:
+    if 'terms' in r or 'legal' in r:
         return 'public_legal'
-    if 'login' in r or 'register' in r:
+    if 'auth' in r or 'login' in r or 'register' in r:
         return 'public_login'
-    if 'public_site.css' in r:
+    if 'globals.css' in r or 'public_site.css' in r:
+        return 'public_home'
+    if r.startswith('frontend/'):
         return 'public_home'
     return 'public_home'
 
@@ -414,11 +441,17 @@ def _extract_search_terms(prompt: str, prompt_l: str) -> list[str]:
     return out
 
 
-def _rank_files(zones: list[str], snippets: list[TextSnippet], terms: list[str]) -> list[str]:
+def _rank_files(
+    zones: list[str],
+    snippets: list[TextSnippet],
+    terms: list[str],
+    root: Path,
+) -> list[str]:
     scores: dict[str, float] = {}
     for z in zones:
         for f in ZONES.get(z, {}).get('files', ()):
-            scores[f] = scores.get(f, 0) + 10.0
+            resolved = resolve_hint_path(f, root)
+            scores[resolved] = scores.get(resolved, 0) + 10.0
     for sn in snippets:
         for term in terms:
             tl = term.lower()
@@ -470,7 +503,7 @@ def resolve_request(prompt: str, base_dir: Path) -> ResolvedRequest:
 
     index = build_site_index(base_dir)
     matched = _match_snippets(index, zones, terms)
-    target_files = _rank_files(zones, matched, terms)
+    target_files = _rank_files(zones, matched, terms, base_dir)
 
     zone_labels = ', '.join(ZONES[z]['label'] for z in zones[:3])
     term_str = ', '.join(f'«{t}»' for t in terms[:4]) if terms else '—'
@@ -528,7 +561,7 @@ def resolve_request(prompt: str, base_dir: Path) -> ResolvedRequest:
     enriched += (
         '\nהוראה: בצע את השינוי בקבצים המומלצים בלבד. '
         'העתק old/new מדויק מהשורות בקובץ. אל תערוך templates/portal/home.html.\n'
-        'סרגל משתמש מחובר: templates/web/base_public.html שורת nav-greeting.\n'
+        'סרגל משתמש מחובר: frontend/components/Nav.tsx או templates/web/base_public.html.\n'
     )
 
     return ResolvedRequest(
@@ -619,13 +652,15 @@ def try_direct_edit(prompt: str, base_dir: Path, resolved: ResolvedRequest) -> s
     files_to_try = [f for f in resolved.target_files if _should_index(f)][:4]
     if not files_to_try and resolved.matched_snippets:
         files_to_try = list(dict.fromkeys(s.file for s in resolved.matched_snippets))
-    if do_replace and 'templates/web/base_public.html' not in files_to_try:
-        files_to_try.insert(0, 'templates/web/base_public.html')
+    nav_hint = resolve_hint_path('frontend/components/Nav.tsx', base_dir)
+    if do_replace and nav_hint not in files_to_try:
+        files_to_try.insert(0, nav_hint)
 
     for rel in files_to_try:
-        full = base_dir / rel
-        if not full.is_file():
+        full = resolve_file_on_disk(base_dir, rel)
+        if not full:
             continue
+        rel = full.relative_to(base_dir).as_posix()
         original = full.read_text(encoding='utf-8', errors='replace')
         modified = original
         changed = False

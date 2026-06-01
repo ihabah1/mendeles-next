@@ -238,7 +238,7 @@ def _env_clean(key: str, default: str = '') -> str:
 
 
 GITHUB_TOKEN = _env_clean('GITHUB_TOKEN')
-_github_repo_raw = _env_clean('GITHUB_REPO', 'ihabah1/mendeles')
+_github_repo_raw = _env_clean('GITHUB_REPO', 'ihabah1/mendeles-next')
 if _github_repo_raw.endswith('.git'):
     _github_repo_raw = _github_repo_raw[:-4].rstrip('/')
 GITHUB_REPO = _github_repo_raw
