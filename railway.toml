@@ -1,3 +1,10 @@
-# Monorepo: use TWO services. Do not deploy backend from repo root.
-# Backend  → Root Directory: backend  (uses backend/railway.toml + Dockerfile)
-# Frontend → Root Directory: frontend (uses frontend/railway.toml + Dockerfile)
+# Frontend service — use when Root Directory is empty (repo root).
+# Backend service MUST use Root Directory = backend (uses backend/railway.toml).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.frontend"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+healthcheckPath = "/"
+healthcheckTimeout = 300

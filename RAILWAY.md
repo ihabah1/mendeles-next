@@ -1,102 +1,59 @@
-# Deploying on Railway
+# Railway deploy — שני שירותים מאותו repo
 
-> **Monorepo:** הקוד לא בשורש — יש שני תיקיות: `backend/` (Django) ו-`frontend/` (Next.js).  
-> **חובה** להגדיר **Root Directory** נפרד לכל שירות, אחרת Railway רואה רק `README.md`.
-
-This repo is a **monorepo** (Django API + Next.js UI). Use **two Railway services** from the same GitHub repo.
-
-Repo: [ihabah1/mendeles-next](https://github.com/ihabah1/mendeles-next)
+Repo: **ihabah1/mendeles-next** · branch: **main**
 
 ---
 
-## 1. Backend (Django API)
+## שירות Frontend (Next.js)
 
 | Setting | Value |
 |---------|--------|
-| **Root Directory** | `backend` |
-| **Builder** | Railpack (default) or Dockerfile |
+| Connected repo | `ihabah1/mendeles-next` |
+| Branch | `main` |
+| **Root Directory** | **ריק** (repo root) — או `frontend` |
+| **Builder** | **Dockerfile** |
 
-### Required variables
+### אם Root Directory ריק (מומלץ עכשיו)
+- Builder: **Dockerfile**
+- Dockerfile path: **`Dockerfile.frontend`** (מוגדר ב-`railway.toml`)
 
-| Variable | Example |
-|----------|---------|
-| `DJANGO_SECRET_KEY` | long random string |
-| `DJANGO_DEBUG` | `false` |
-| `DATABASE_URL` | Postgres plugin URL *(Railway adds automatically)* |
-| `ALLOWED_HOSTS` | `${{RAILWAY_PUBLIC_DOMAIN}}` |
-| `CORS_ALLOWED_ORIGINS` | `https://your-frontend.up.railway.app` |
-| `FRONTEND_URL` | same as frontend public URL |
-| `BOOTSTRAP_ADMIN_EMAIL` | `admin@admin.com` |
-| `BOOTSTRAP_ADMIN_PASSWORD` | strong password |
+### אם Root Directory = `frontend`
+- Builder: **Dockerfile**
+- Dockerfile path: **`Dockerfile`**
 
-### Optional
-
-| Variable | Purpose |
-|----------|---------|
-| `PORTAL_DASHBOARD_ENABLED` | `true` for `/manage` dashboard |
-| `AI_AGENT_ENABLED` | `true` for AI agent |
-| `GEMINI_API_KEY` | AI feature |
-| `GITHUB_TOKEN` / `GITHUB_REPO` | AI PR creation |
-
-On deploy, `start.sh` runs: **migrate → collectstatic → ensure_superuser → gunicorn**.
-
-Health check: `GET /` returns JSON API landing page.
+### Variables
+```
+NEXT_PUBLIC_API_BASE_URL=https://<backend-domain>.up.railway.app/api
+```
 
 ---
 
-## 2. Frontend (Next.js)
-
-Create a **second service** in the same Railway project:
+## שירות Backend (Django)
 
 | Setting | Value |
 |---------|--------|
-| **Repository** | `ihabah1/mendeles-next` |
-| **Branch** | `main` |
-| **Root Directory** | **`frontend`** ← חובה! לא להשאיר ריק |
-| **Builder** | **Dockerfile** (recommended) or Railpack |
+| Root Directory | **`backend`** ← חובה |
+| Builder | **Dockerfile** |
 
-### Railway UI path
-
+### Variables
 ```
-Project → [Frontend Service] → Settings → Source
-  Connected Repo: ihabah1/mendeles-next
-  Branch: main
-  Root Directory: frontend    ← type exactly this, no slash
-→ Save → Deploy → Redeploy
+DJANGO_SECRET_KEY=<random>
+DJANGO_DEBUG=false
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}}
+CORS_ALLOWED_ORIGINS=https://<frontend-domain>.up.railway.app
+FRONTEND_URL=https://<frontend-domain>.up.railway.app
+BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
+BOOTSTRAP_ADMIN_PASSWORD=<password>
 ```
-
-### Required variables
-
-| Variable | Example |
-|----------|---------|
-| `NEXT_PUBLIC_API_BASE_URL` | `https://your-backend.up.railway.app/api` |
 
 ---
 
-## Troubleshooting
+## שגיאה: "only README.md"
 
-### "Only README.md" / "Push Next.js source code"
+1. **Settings → Source** — ודא repo = `ihabah1/mendeles-next` (לא repo ריק אחר)
+2. **Disconnect** → **Connect again** → בחר `mendeles-next`
+3. **Builder = Dockerfile** (לא Railpack)
+4. **Deploy** → **Redeploy** (לא Restart)
 
-**הסיבה:** Root Directory ריק או שגוי — Railway בונה מהשורש שיש בו רק README + קבצי backend.
-
-**פתרון:**
-1. ודא שה-repo הוא **`ihabah1/mendeles-next`** (לא repo ריק אחר)
-2. **Frontend service** → Root Directory = **`frontend`**
-3. **Backend service** → Root Directory = **`backend`**
-4. **Redeploy** (לא רק Restart)
-
-Verify on GitHub: `frontend/package.json` and `frontend/next.config.ts` exist on `main`.
-
----
-
-## Local parity
-
-```bash
-# Backend
-cd backend && pip install -r requirements.txt
-python manage.py migrate
-gunicorn mandeles_portal.wsgi:application --bind 127.0.0.1:8000
-
-# Frontend
-cd frontend && npm ci && npm run dev
-```
+ב-GitHub אמורים להיות: `frontend/package.json`, `Dockerfile.frontend`, `backend/Dockerfile`
