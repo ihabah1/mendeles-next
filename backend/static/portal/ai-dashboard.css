@@ -142,3 +142,5 @@
   margin: 0;
 }
 .ai-actions-cell .btn { margin-left: 4px; }
+.badge-failed { background: rgba(255,107,122,.18); color: #ff8a8a; }
+.ai-jobs-table tr.ai-row-failed td { background: rgba(255,107,122,.04); }

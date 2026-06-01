@@ -130,6 +130,7 @@ def _status_payload(obj: AIChangeRequest) -> dict:
         'scope_warning': scope_warning(obj.publish_scope or '', obj.files_touched or []) or '',
         'queue': queue_status_for_request(obj.pk),
         'can_retry': _can_retry_request(obj),
+        'retry_url': reverse('portal:ai_request_retry', kwargs={'pk': obj.pk}),
         'actions': request_action_fields(obj),
         'approve_url': reverse('portal:ai_request_approve', kwargs={'pk': obj.pk}),
         'reject_url': reverse('portal:ai_request_reject', kwargs={'pk': obj.pk}),

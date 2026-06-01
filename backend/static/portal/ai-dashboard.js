@@ -59,15 +59,20 @@
         const cancelBtn = r.pipeline && r.pipeline.can_cancel
           ? `<button type="button" class="btn btn-sm btn-outline ai-cancel-btn" data-id="${r.id}">בטל</button>`
           : "";
+        const retryBtn =
+          r.can_retry && r.retry_url
+            ? `<button type="button" class="btn btn-sm btn-gold ai-retry-btn" data-url="${esc(r.retry_url)}">נסה שוב</button>`
+            : "";
         const archiveBtn = r.pipeline && r.pipeline.can_archive
           ? `<button type="button" class="btn btn-sm btn-danger ai-archive-btn" data-id="${r.id}">מחק</button>`
           : "";
-        return `<tr data-id="${r.id}" class="ai-row${sel}">
+        const statusCls = r.failed ? "badge-failed" : "badge-muted";
+        return `<tr data-id="${r.id}" class="ai-row${sel}${r.failed ? " ai-row-failed" : ""}">
           <td>${r.id}</td>
           <td class="ai-prompt-cell" title="${esc(r.prompt)}">${esc((r.prompt || "").slice(0, 50))}${(r.prompt || "").length > 50 ? "…" : ""}</td>
-          <td><span class="badge badge-muted">${esc(r.status_label)}</span></td>
+          <td><span class="badge ${statusCls}">${esc(r.status_label)}</span></td>
           ${stages.map((s) => `<td class="ai-stage-cell">${stageDot(s)}</td>`).join("")}
-          <td class="ai-actions-cell">${cancelBtn}${archiveBtn}</td>
+          <td class="ai-actions-cell">${retryBtn}${cancelBtn}${archiveBtn}</td>
         </tr>`;
       })
       .join("");
@@ -88,6 +93,12 @@
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         archiveRequest(Number(btn.dataset.id));
+      });
+    });
+    tbody.querySelectorAll(".ai-retry-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        retryRequest(btn.dataset.url);
       });
     });
   }
@@ -140,6 +151,11 @@
         `<button type="button" class="btn btn-sm btn-danger ai-archive-detail" data-url="${esc(p.archive_url)}">מחק רשומה</button>`,
       );
     }
+    if (r.can_retry && r.retry_url) {
+      btns.push(
+        `<button type="button" class="btn btn-sm btn-gold ai-retry-detail" data-url="${esc(r.retry_url)}">נסה שוב</button>`,
+      );
+    }
     if (r.pr_url) {
       btns.push(
         `<a href="${esc(r.pr_url)}" target="_blank" rel="noreferrer" class="btn btn-sm btn-outline">PR ↗</a>`,
@@ -161,6 +177,9 @@
           });
         }
       });
+    });
+    el.querySelectorAll(".ai-retry-detail").forEach((btn) => {
+      btn.addEventListener("click", () => retryRequest(btn.dataset.url));
     });
   }
 
@@ -299,6 +318,16 @@
     if (!confirm("להסיר את הרשומה מהרשימה?")) return;
     await postJson(url);
     if (selectedId === id) selectedId = null;
+    refresh();
+  }
+
+  async function retryRequest(url) {
+    if (!url) return;
+    if (!confirm("להפעיל מחדש את השלב שנכשל?")) return;
+    const data = await postJson(url);
+    if (data.error) {
+      alert(data.error);
+    }
     refresh();
   }
 
