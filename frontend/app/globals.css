@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0d1b2a;
+  --navy-c: #1a2d42;
+  --navy-b: #263d57;
+  --navy-m: #162436;
+  --gold: #c9a84c;
+  --gold-l: #e8c870;
+  --text: #e8dcc8;
+  --muted: #8aaabe;
+  --red: #e8001e;
+  --green: #1db96a;
+  --cream: #f0e8d8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { direction: rtl; }
+body { background: var(--navy); color: var(--text); font-family: "Heebo", sans-serif; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 9px; font-family: "Heebo", sans-serif; font-size: .82rem; font-weight: 700; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
+.btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-l)); color: var(--navy); }
+.btn-gold:hover { opacity: .9; }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { opacity: .9; }
+.btn-outline { background: transparent; border: 1px solid var(--navy-b); color: var(--text); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-red { background: var(--red); color: #fff; }

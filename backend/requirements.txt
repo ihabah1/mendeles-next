@@ -1,0 +1,21 @@
+# ── Core ──────────────────────────────────────────────────────────────────
+Django==5.0.6
+python-dotenv==1.0.1
+
+# ── REST API + JWT auth ──────────────────────────────────────────────────────
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.4.0
+
+# ── Database / deployment ────────────────────────────────────────────────────
+dj-database-url==2.2.0
+whitenoise==6.7.0
+# psycopg2-binary is only needed when DATABASE_URL points at PostgreSQL.
+psycopg2-binary==2.9.9 ; sys_platform != "win32" or python_version < "3.13"
+
+# ── Misc utilities used by existing scripts/views ────────────────────────────
+requests==2.32.3
+
+# ── Optional: AI agent feature (only required when AI_AGENT_ENABLED=true) ─────
+# google-generativeai==0.7.2
+# PyGithub==2.3.0

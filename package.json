@@ -1,0 +1,12 @@
+{
+  "name": "mandeles-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && ..\\.venv\\Scripts\\python.exe manage.py runserver 127.0.0.1:8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "echo Run backend and frontend in separate terminals: npm run dev:backend && npm run dev:frontend",
+    "migrate": "cd backend && ..\\.venv\\Scripts\\python.exe manage.py migrate",
+    "check:backend": "cd backend && ..\\.venv\\Scripts\\python.exe manage.py check",
+    "check:frontend": "cd frontend && npx tsc --noEmit"
+  }
+}
