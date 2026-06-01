@@ -27,12 +27,11 @@ def _allowed_hosts():
     railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
     if railway_domain:
         hosts.add(railway_domain)
+        hosts.add('.up.railway.app')
+    # Railway health checks always send Host: healthcheck.railway.app (not *.up.railway.app)
+    hosts.add('healthcheck.railway.app')
     if DEBUG:
         hosts.update(['localhost', '127.0.0.1', '[::1]'])
-    else:
-        hosts.add('.up.railway.app')
-        # Railway health checks use Host: healthcheck.railway.app (not *.up.railway.app)
-        hosts.add('healthcheck.railway.app')
     if not hosts:
         hosts.update(['localhost', '127.0.0.1'])
     return sorted(hosts)
