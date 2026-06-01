@@ -12,7 +12,7 @@ function AuthForm() {
   const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get("redirect") || "/lotto";
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -25,6 +25,10 @@ function AuthForm() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirect);
+      return;
+    }
     const oauthError = params.get("error");
     if (oauthError && GOOGLE_OAUTH_ERRORS[oauthError]) {
       setError(GOOGLE_OAUTH_ERRORS[oauthError]);
@@ -33,7 +37,7 @@ function AuthForm() {
       .then((r) => r.json())
       .then((d: { enabled?: boolean }) => setGoogleEnabled(Boolean(d.enabled)))
       .catch(() => setGoogleEnabled(false));
-  }, [params]);
+  }, [params, isAuthenticated, router, redirect]);
 
   const go = (path: string) => { setError(""); setStatus(""); setMode(path as Mode); };
 
