@@ -23,7 +23,8 @@ Repo: **ihabah1/mendeles-next** · branch: **main**
 
 ### Variables
 ```
-NEXT_PUBLIC_API_BASE_URL=https://<backend-domain>.up.railway.app/api
+# Runtime — אין צורך ב-rebuild:
+API_BASE_URL=https://<backend-domain>.up.railway.app/api
 ```
 
 ---

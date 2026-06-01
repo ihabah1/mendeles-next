@@ -19,6 +19,7 @@ import {
 
 import { authService } from "@/lib/api/auth";
 import { setOnAuthFailure } from "@/lib/api/client";
+import { primeApiBaseUrl } from "@/lib/api/config";
 import { tokenStore } from "@/lib/api/tokens";
 import type { ApiUser, RegisterPayload } from "@/lib/api/types";
 
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     mounted.current = true;
     (async () => {
+      await primeApiBaseUrl().catch(() => {});
       await refreshUser();
       if (mounted.current) setLoading(false);
     })();

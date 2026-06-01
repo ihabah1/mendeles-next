@@ -12,7 +12,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-import { API_BASE_URL, AUTH_ENDPOINTS } from "./config";
+import { API_BASE_URL, AUTH_ENDPOINTS, resolveApiBaseUrl } from "./config";
 import { tokenStore } from "./tokens";
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
@@ -29,7 +29,8 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  config.baseURL = await resolveApiBaseUrl();
   const token = tokenStore.getAccess();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -45,8 +46,9 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refresh) return null;
   try {
     // Use a bare axios call so we don't recurse through these interceptors.
+    const base = await resolveApiBaseUrl();
     const { data } = await axios.post<{ access: string; refresh?: string }>(
-      `${API_BASE_URL}${AUTH_ENDPOINTS.refresh}`,
+      `${base}${AUTH_ENDPOINTS.refresh}`,
       { refresh },
       { headers: { "Content-Type": "application/json" } },
     );
@@ -91,10 +93,17 @@ api.interceptors.response.use(
 export function extractApiError(error: unknown, fallback = "אירעה שגיאה"): string {
   if (axios.isAxiosError(error)) {
     if (error.code === "ECONNABORTED") {
-      return "השרת לא מגיב בזמן. ודא ש-Django רץ על פורט 8000.";
+      return "השרת לא מגיב בזמן. ודא שה-backend (Django) רץ.";
     }
     if (!error.response) {
-      return "לא ניתן להתחבר לשרת Django (8000). הפעל: cd backend && python manage.py runserver";
+      const onLocalhost =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      if (onLocalhost) {
+        return "לא ניתן להתחבר לשרת Django (8000). הפעל: cd backend && python manage.py runserver";
+      }
+      return "לא ניתן להתחבר לשרת API. הגדר API_BASE_URL ב-Railway (כתובת ה-backend + /api) והפעל מחדש את שירות ה-backend.";
     }
     const data = error.response.data as Record<string, unknown> | undefined;
     if (data) {
