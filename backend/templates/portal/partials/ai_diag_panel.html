@@ -1,0 +1,28 @@
+<div class="ai-diag-inner">
+  {% if is_active %}
+  <p class="meta">⏳ הבקשה בעיבוד…</p>
+  {% endif %}
+
+  {% if diag.interpretation %}
+  <p style="font-size:.82rem;"><strong>פרשנות:</strong> {{ diag.interpretation }}</p>
+  {% endif %}
+
+  {% if diag.files %}
+  <h4 style="font-size:.82rem;margin:12px 0 6px;">קבצים ({{ diag.counts.total|default:diag.files|length }})</h4>
+  <ul style="margin:0;padding-right:18px;font-size:.78rem;">
+    {% for f in diag.files %}
+    <li>{{ f.path }} — {{ f.kind_label|default:f.kind }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if diag.error %}
+  <div class="form-errors">{{ diag.error }}</div>
+  {% endif %}
+
+  {% if diag.logs %}
+  <h4 style="font-size:.82rem;margin:12px 0 6px;">לוג</h4>
+  <pre style="max-height:200px;">{% for line in diag.logs %}{{ line }}
+{% endfor %}</pre>
+  {% endif %}
+</div>

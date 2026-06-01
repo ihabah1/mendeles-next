@@ -290,6 +290,9 @@ CORS_ALLOWED_ORIGINS = _split_env_list(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000,http://127.0.0.1:3000',
 )
+_frontend_url = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
+if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(_frontend_url)
 # Allow cookies/Authorization headers from the SPA.
 CORS_ALLOW_CREDENTIALS = True
 # Frontend origins are also trusted for CSRF (needed for session-auth fallback).

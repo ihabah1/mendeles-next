@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>כניסה — Mandeles ניהול</title>
+  <link rel="stylesheet" href="{% static 'portal/dashboard.css' %}">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <h1>🎯 כניסה לניהול</h1>
+      <p class="sub">Mandeles.co.il — דשבורד צוות</p>
+
+      {% if form.non_field_errors %}
+      <div class="form-errors">
+        {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="post" action="">
+        {% csrf_token %}
+        {% if request.GET.next %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+
+        <label for="id_email">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% if form.email.errors %}<div class="form-errors">{{ form.email.errors.0 }}</div>{% endif %}
+
+        <label for="id_password">{{ form.password.label }}</label>
+        {{ form.password }}
+        {% if form.password.errors %}<div class="form-errors">{{ form.password.errors.0 }}</div>{% endif %}
+
+        <button type="submit" class="btn btn-gold" style="width:100%;margin-top:8px;">כניסה</button>
+      </form>
+
+      <p class="meta" style="text-align:center;margin-top:18px;">
+        משתמש צוות בלבד · <a href="http://127.0.0.1:3000">← חזרה לאתר</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

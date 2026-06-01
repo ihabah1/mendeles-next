@@ -1,0 +1,52 @@
+{% extends "portal/base.html" %}
+{% block title %}שינויי AI — Mandeles{% endblock %}
+{% block content %}
+<h1 class="page-title">🤖 בקשות שינוי AI</h1>
+<div class="actions-row" style="margin-bottom:16px;">
+  <a href="{% url 'portal:ai_request_create' %}" class="btn btn-gold">+ בקשה חדשה</a>
+  <a href="{% url 'portal:ai_jobs' %}" class="btn btn-outline">תור עבודה</a>
+</div>
+
+{% if focus_req %}
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.9rem;">בקשה פעילה #{{ focus_req.pk }}</h3>
+  <p class="meta">{{ focus_req.get_status_display }} · {{ focus_req.created_at|date:"d/m/Y H:i" }}</p>
+  <div id="ai-diag-panel">
+    {% include "portal/partials/ai_diag_panel.html" with req=focus_req diag=focus_diag diag_url=focus_diag_url is_active=focus_is_active %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>בקשה</th>
+        <th>סטטוס</th>
+        <th>נוצר ע״י</th>
+        <th>תאריך</th>
+        <th>PR</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in request_rows %}
+      {% with r=row.req %}
+      <tr>
+        <td>{{ r.pk }}</td>
+        <td>{{ r.prompt|truncatechars:60 }}</td>
+        <td><span class="badge badge-muted">{{ r.get_status_display }}</span></td>
+        <td>{% if r.created_by %}{{ r.created_by.email }}{% else %}—{% endif %}</td>
+        <td>{{ r.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{% if r.pr_url %}<a href="{{ r.pr_url }}" target="_blank">#{{ r.pr_number }}</a>{% else %}—{% endif %}</td>
+        <td><a href="{% url 'portal:ai_request_detail' r.pk %}" class="btn btn-sm btn-outline">פרטים</a></td>
+      </tr>
+      {% endwith %}
+      {% empty %}
+      <tr><td colspan="7" class="meta">אין בקשות — <a href="{% url 'portal:ai_request_create' %}">צור ראשונה</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

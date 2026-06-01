@@ -1,0 +1,3 @@
+# Root requirements for Railway (repo root deploy).
+# Installs backend deps when Root Directory is not set to backend/.
+-r backend/requirements.txt

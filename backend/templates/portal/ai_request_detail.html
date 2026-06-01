@@ -1,0 +1,88 @@
+{% extends "portal/base.html" %}
+{% block title %}בקשה #{{ req.pk }} — AI{% endblock %}
+{% block content %}
+<h1 class="page-title">🤖 בקשה #{{ req.pk }}</h1>
+<p class="meta">
+  {{ req.get_status_display }}
+  · {% if req.created_by %}{{ req.created_by.email }}{% endif %}
+  · {{ req.created_at|date:"d/m/Y H:i" }}
+  {% if publish_scope_label %} · {{ publish_scope_label }}{% endif %}
+</p>
+
+{% if scope_warning %}
+<div class="card" style="border-color:var(--gold);color:var(--gold-l);font-size:.82rem;">{{ scope_warning }}</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.9rem;">בקשה</h3>
+  <p style="white-space:pre-wrap;font-size:.85rem;">{{ req.prompt }}</p>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:.9rem;">תהליך</h3>
+  <div class="pipeline">
+    {% for stage in pipeline.stages %}
+    <span class="step {% if stage.done %}done{% elif stage.running %}active{% endif %}">
+      {{ stage.label }}{% if stage.running %} ⏳{% elif stage.done %} ✓{% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  <div class="actions-row">
+    {% if can_generate %}
+    <form method="post" action="{{ generate_url }}">{% csrf_token %}<button class="btn btn-gold">ייצר diff</button></form>
+    {% endif %}
+    {% if can_approve %}
+    <form method="post" action="{{ approve_url }}">{% csrf_token %}<button class="btn btn-gold">אשר ויצור PR</button></form>
+    {% endif %}
+    {% if can_merge %}
+    <form method="post" action="{{ merge_url }}">{% csrf_token %}<button class="btn btn-gold">מיזוג PR</button></form>
+    {% endif %}
+    {% if can_retry %}
+    <form method="post" action="{{ retry_url }}">{% csrf_token %}<button class="btn btn-outline">נסה שוב</button></form>
+    {% endif %}
+    {% if can_reject %}
+    <form method="post" action="{{ pipeline.reject_url }}">{% csrf_token %}<button class="btn btn-danger">דחה</button></form>
+    {% endif %}
+    {% if can_cancel %}
+    <form method="post" action="{{ cancel_url }}">{% csrf_token %}<button class="btn btn-outline">בטל</button></form>
+    {% endif %}
+    {% if pipeline.can_archive %}
+    <form method="post" action="{{ pipeline.archive_url }}">{% csrf_token %}<button class="btn btn-outline">הסר מהרשימה</button></form>
+    {% endif %}
+    {% if req.pr_url %}<a href="{{ req.pr_url }}" target="_blank" class="btn btn-outline">PR ↗</a>{% endif %}
+    <a href="{% url 'portal:ai_requests' %}" class="btn btn-outline">← רשימה</a>
+  </div>
+</div>
+
+{% if is_in_progress %}
+<div class="card meta">⏳ הבקשה בעיבוד… רענן את הדף לעדכון.</div>
+{% endif %}
+
+{% if req.error_message %}
+<div class="card form-errors">{{ req.error_message }}</div>
+{% endif %}
+
+{% if req.result %}
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.9rem;">Diff</h3>
+  <pre class="diff-block">{{ req.result }}</pre>
+</div>
+{% endif %}
+
+{% if req.files_touched %}
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.85rem;">קבצים שנגעו</h3>
+  <ul style="margin:0;padding-right:18px;font-size:.78rem;">
+    {% for f in req.files_touched %}<li>{{ f }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if req.processing_log %}
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.85rem;">לוג עיבוד</h3>
+  <pre style="max-height:240px;">{% for entry in req.processing_log %}{{ entry }}
+{% endfor %}</pre>
+</div>
+{% endif %}
+{% endblock %}

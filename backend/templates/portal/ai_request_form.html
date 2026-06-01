@@ -1,0 +1,24 @@
+{% extends "portal/base.html" %}
+{% block title %}בקשת AI חדשה — Mandeles{% endblock %}
+{% block content %}
+<h1 class="page-title">+ בקשת שינוי AI</h1>
+<div class="card" style="max-width:720px;">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="id_prompt">{{ form.prompt.label }}</label>
+    {{ form.prompt }}
+    <label>תמונות מצורפות (אופציונלי)</label>
+    <input type="file" name="images" accept="image/*" multiple class="form-control">
+    <div class="actions-row">
+      <button type="submit" class="btn btn-gold">שלח ל-AI</button>
+      <a href="{% url 'portal:ai_requests' %}" class="btn btn-outline">ביטול</a>
+    </div>
+  </form>
+</div>
+{% if site_index_preview %}
+<div class="card">
+  <h3 style="margin:0 0 8px;font-size:.85rem;color:var(--muted);">תצוגה מקדימה — אינדקס אתר</h3>
+  <pre>{{ site_index_preview }}</pre>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "portal/base.html" %}
+{% block title %}הזמנות — Mandeles{% endblock %}
+{% block content %}
+<h1 class="page-title">📋 הזמנות</h1>
+<div class="filters card">
+  <form method="get" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+    <div>
+      <label>חיפוש</label>
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="מספר, שם, אימייל">
+    </div>
+    <div>
+      <label>סטטוס</label>
+      <select name="status" class="form-control">
+        <option value="">הכל</option>
+        <option value="pending" {% if status == 'pending' %}selected{% endif %}>ממתין</option>
+        <option value="paid" {% if status == 'paid' %}selected{% endif %}>שולם</option>
+        <option value="printing" {% if status == 'printing' %}selected{% endif %}>בדפוס</option>
+        <option value="shipped" {% if status == 'shipped' %}selected{% endif %}>נשלח</option>
+        <option value="completed" {% if status == 'completed' %}selected{% endif %}>הושלם</option>
+        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>בוטל</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-outline">סנן</button>
+  </form>
+</div>
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>מספר</th>
+        <th>לקוח</th>
+        <th>הגרלה</th>
+        <th>טפסים</th>
+        <th>סכום</th>
+        <th>סטטוס</th>
+        <th>תאריך</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.order_number }}</td>
+        <td>{{ o.customer.full_name|default:o.customer.email }}</td>
+        <td>{{ o.draw_name|default:"—" }}</td>
+        <td>{{ o.forms_count }}</td>
+        <td>₪{{ o.amount_ils }}</td>
+        <td><span class="badge badge-muted">{{ o.get_status_display }}</span></td>
+        <td>{{ o.created_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="meta">אין הזמנות</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

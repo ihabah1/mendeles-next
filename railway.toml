@@ -1,0 +1,10 @@
+# Default service: Django API (deploy from repo root).
+# For frontend, create a second Railway service with Root Directory = frontend/
+[build]
+builder = "RAILPACK"
+
+[deploy]
+startCommand = "bash start.sh"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

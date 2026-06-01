@@ -1,0 +1,66 @@
+{% extends "portal/base.html" %}
+{% block title %}לקוחות — Mandeles{% endblock %}
+{% block content %}
+<h1 class="page-title">👥 לקוחות</h1>
+
+<div class="filters card">
+  <form method="get">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+      <div>
+        <label>חיפוש</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="שם, אימייל, טלפון">
+      </div>
+      <div>
+        <label>סטטוס</label>
+        <select name="status" class="form-control">
+          <option value="">הכל</option>
+          <option value="active" {% if status == 'active' %}selected{% endif %}>פעיל</option>
+          <option value="locked" {% if status == 'locked' %}selected{% endif %}>נעול</option>
+          <option value="pending" {% if status == 'pending' %}selected{% endif %}>ממתין</option>
+        </select>
+      </div>
+      <div>
+        <label>תפקיד</label>
+        <select name="role" class="form-control">
+          <option value="">הכל</option>
+          <option value="customer" {% if role_filter == 'customer' %}selected{% endif %}>לקוח</option>
+          <option value="team" {% if role_filter == 'team' %}selected{% endif %}>צוות</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-outline">סנן</button>
+      <a href="{% url 'portal:user_create' %}" class="btn btn-gold">+ משתמש חדש</a>
+    </div>
+  </form>
+</div>
+
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>שם</th>
+        <th>אימייל</th>
+        <th>טלפון</th>
+        <th>תפקיד</th>
+        <th>הזמנות</th>
+        <th>הצטרף</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td>{{ c.full_name|default:c.display_name }}</td>
+        <td dir="ltr">{{ c.email }}</td>
+        <td>{{ c.phone|default:"—" }}</td>
+        <td>{{ c.get_role_display }}</td>
+        <td>{{ c.orders_count }}</td>
+        <td>{{ c.date_joined|date:"d/m/Y" }}</td>
+        <td><a href="{% url 'portal:customer_detail' c.pk %}" class="btn btn-sm btn-outline">פרטים</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="meta">לא נמצאו לקוחות</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
