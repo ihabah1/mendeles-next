@@ -87,7 +87,25 @@ function AuthForm() {
           🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : "שכחתי סיסמה"}
         </h1>
 
-        {error && <div style={{ background: "rgba(232,0,30,.1)", border: "1px solid rgba(232,0,30,.3)", color: "#ff6b7a", borderRadius: 8, padding: "8px 12px", fontSize: ".78rem", marginBottom: 14 }}>{error}</div>}
+        {error && (
+          <div
+            role="alert"
+            style={{
+              background: "rgba(232,0,30,.12)",
+              border: "1px solid rgba(232,0,30,.45)",
+              color: "#ff8a96",
+              borderRadius: 8,
+              padding: "10px 12px",
+              fontSize: ".8rem",
+              lineHeight: 1.45,
+              marginBottom: 14,
+              textAlign: "center",
+              wordBreak: "break-word",
+            }}
+          >
+            {error}
+          </div>
+        )}
         {status && <div style={{ background: "rgba(29,185,106,.1)", border: "1px solid rgba(29,185,106,.3)", color: "var(--green)", borderRadius: 8, padding: "8px 12px", fontSize: ".78rem", marginBottom: 14 }}>{status}</div>}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
