@@ -478,6 +478,24 @@ def _process_one_job_locked() -> bool:
         job.save(update_fields=['status', 'started_at', 'attempts', 'error_message'])
 
     req = job.change_request
+    req.refresh_from_db()
+
+    if job.job_type == AIJob.JobType.CREATE_PR:
+        if req.status == AIChangeRequest.Status.GENERATING:
+            job.status = AIJob.Status.PENDING
+            job.started_at = None
+            job.finished_at = None
+            job.attempts = max(0, job.attempts - 1)
+            job.save(update_fields=['status', 'started_at', 'finished_at', 'attempts'])
+            req.append_log('[תור] ממתין לסיום אנליזה לפני עיבוד…')
+            return True
+        if req.status not in (
+            AIChangeRequest.Status.DIFF_READY,
+            AIChangeRequest.Status.APPROVED,
+            AIChangeRequest.Status.PR_CREATING,
+        ) or not (req.result or '').strip():
+            raise ValueError('יש לאשר רק בקשה עם diff מוכן לבדיקה')
+
     req.append_log(
         f'[תור] מתחיל ג\'וב #{job.pk}: {job.get_job_type_display()} '
         f'(ניסיון {job.attempts}/{job.max_attempts})',

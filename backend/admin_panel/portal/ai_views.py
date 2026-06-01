@@ -90,6 +90,8 @@ def _status_payload(obj: AIChangeRequest) -> dict:
     last = logs[-1] if logs else {}
     return {
         'id': obj.pk,
+        'prompt': (obj.prompt or '').strip(),
+        'created_at': obj.created_at.isoformat() if obj.created_at else '',
         'status': obj.status,
         'status_label': obj.get_status_display(),
         'logs': logs,
@@ -138,6 +140,22 @@ def _status_payload(obj: AIChangeRequest) -> dict:
         ),
         'diagnostics': build_request_diagnostics(obj),
     }
+
+
+@admin_required
+@require_GET
+def ai_requests_list_status(request):
+    """JSON לטבלת ניהול ג'ובים – polling."""
+    _require_ai_enabled()
+    reqs = (
+        AIChangeRequest.objects.exclude(status=AIChangeRequest.Status.ARCHIVED)
+        .select_related('created_by')
+        .order_by('-created_at')[:50]
+    )
+    return JsonResponse({
+        'requests': [_status_payload(r) for r in reqs],
+        'queue': queue_status_global(),
+    })
 
 
 @admin_required
@@ -201,7 +219,12 @@ def ai_requests_list(request):
         (row for row in request_rows if row['req'].status in _ACTIVE_STATUSES),
         request_rows[0] if request_rows else None,
     )
-    context = {'request_rows': request_rows}
+    context = {
+        'request_rows': request_rows,
+        'list_status_url': reverse('portal:ai_requests_list_status'),
+        'repo_content_url': reverse('portal:ai_repo_content'),
+        'create_url': reverse('portal:ai_request_create'),
+    }
     if focus:
         focus_req = focus['req']
         context.update({
@@ -240,7 +263,7 @@ def ai_request_create(request):
             )
         except Exception:
             messages.success(request, 'הבקשה נשמרה – לחץ «ייצר diff» ליצירת השינוי')
-        return redirect('portal:ai_request_detail', pk=obj.pk)
+        return redirect('portal:ai_requests')
     preview = ''
     try:
         from admin_panel.ai_agent.services.site_index import format_index_summary

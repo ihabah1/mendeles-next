@@ -1,0 +1,144 @@
+/* AI jobs dashboard — split table + detail panel */
+.ai-dash-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ai-queue-badge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--navy-b);
+  font-size: .78rem;
+}
+.ai-dash-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .ai-dash-layout { grid-template-columns: 1fr; }
+}
+.ai-table-card { margin-bottom: 0; max-height: 70vh; overflow: auto; }
+.ai-jobs-table tr.ai-row { cursor: pointer; }
+.ai-jobs-table tr.ai-row.selected td { background: rgba(201,168,76,.08); }
+.ai-prompt-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--navy-b);
+  background: transparent;
+}
+.stage-dot.done { background: var(--green); border-color: var(--green); }
+.stage-dot.running {
+  background: var(--gold);
+  border-color: var(--gold);
+  animation: ai-pulse 1s infinite;
+}
+@keyframes ai-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
+.ai-detail-panel {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  margin-bottom: 0;
+}
+.ai-pipeline-bar { margin: 8px 0 14px; }
+.ai-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 10px;
+  border-bottom: 1px solid var(--navy-b);
+  padding-bottom: 8px;
+}
+.ai-tab {
+  background: transparent;
+  border: 1px solid var(--navy-b);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .75rem;
+}
+.ai-tab.active { border-color: var(--gold); color: var(--gold); }
+.ai-log-panel {
+  max-height: 280px;
+  overflow: auto;
+  font-size: .72rem;
+  direction: ltr;
+  text-align: left;
+  white-space: pre-wrap;
+}
+.ai-diff-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.ai-diff-file-btn {
+  font-size: .68rem;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--navy-b);
+  background: var(--navy-m);
+  color: var(--muted);
+  cursor: pointer;
+}
+.ai-diff-file-btn.active { border-color: var(--gold); color: var(--gold); }
+.ai-diff-view {
+  max-height: 360px;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: .68rem;
+  direction: ltr;
+  text-align: left;
+  background: #0a121c;
+  border: 1px solid var(--navy-b);
+  border-radius: 8px;
+  padding: 8px;
+}
+.ai-diff-view .line { padding: 0 4px; white-space: pre-wrap; }
+.ai-diff-view .line.add { background: rgba(29,185,106,.18); color: #6ee7a0; }
+.ai-diff-view .line.del { background: rgba(255,107,122,.15); color: #ff8a8a; }
+.ai-diff-view .line.hunk { color: var(--gold-l); }
+.ai-diff-view .line.ctx { color: #8aaabe; }
+.ai-repo-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  min-height: 280px;
+}
+.ai-repo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow: auto;
+  font-size: .68rem;
+  border: 1px solid var(--navy-b);
+  border-radius: 8px;
+}
+.ai-repo-list li {
+  padding: 6px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--navy-b);
+  word-break: break-all;
+}
+.ai-repo-list li:hover, .ai-repo-list li.active {
+  background: rgba(201,168,76,.1);
+  color: var(--gold);
+}
+.ai-repo-content {
+  max-height: 360px;
+  overflow: auto;
+  font-size: .68rem;
+  margin: 0;
+}
+.ai-actions-cell .btn { margin-left: 4px; }

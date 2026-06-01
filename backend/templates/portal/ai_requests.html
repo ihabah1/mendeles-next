@@ -1,52 +1,99 @@
 {% extends "portal/base.html" %}
-{% block title %}שינויי AI — Mandeles{% endblock %}
+{% load static %}
+{% block title %}ניהול ג'obs AI — Mandeles{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'portal/ai-dashboard.css' %}">
+{% endblock %}
 {% block content %}
-<h1 class="page-title">🤖 בקשות שינוי AI</h1>
-<div class="actions-row" style="margin-bottom:16px;">
-  <a href="{% url 'portal:ai_request_create' %}" class="btn btn-gold">+ בקשה חדשה</a>
-  <a href="{% url 'portal:ai_jobs' %}" class="btn btn-outline">תור עבודה</a>
+<h1 class="page-title">🤖 ניהול ג'obs AI</h1>
+
+<div class="ai-dash-toolbar">
+  <a href="{{ create_url }}" class="btn btn-gold">+ בקשה חדשה</a>
+  <div id="ai-queue-badge" class="ai-queue-badge meta">טוען תור…</div>
+  <span class="meta" id="ai-last-sync"></span>
 </div>
 
-{% if focus_req %}
-<div class="card">
-  <h3 style="margin:0 0 8px;font-size:.9rem;">בקשה פעילה #{{ focus_req.pk }}</h3>
-  <p class="meta">{{ focus_req.get_status_display }} · {{ focus_req.created_at|date:"d/m/Y H:i" }}</p>
-  <div id="ai-diag-panel">
-    {% include "portal/partials/ai_diag_panel.html" with req=focus_req diag=focus_diag diag_url=focus_diag_url is_active=focus_is_active %}
+<div class="ai-dash-layout">
+  <div class="card table-wrap ai-table-card">
+    <table id="ai-jobs-table" class="ai-jobs-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>בקשה</th>
+          <th>סטטוס</th>
+          <th>① אנליזה</th>
+          <th>② עיבוד</th>
+          <th>③ Git</th>
+          <th>פעולות</th>
+        </tr>
+      </thead>
+      <tbody id="ai-jobs-tbody">
+        {% for row in request_rows %}
+        {% with r=row.req p=row.pipeline %}
+        <tr data-id="{{ r.pk }}" class="ai-row">
+          <td>{{ r.pk }}</td>
+          <td class="ai-prompt-cell">{{ r.prompt|truncatechars:50 }}</td>
+          <td><span class="badge badge-muted ai-status-badge">{{ r.get_status_display }}</span></td>
+          {% for stage in p.stages %}
+          <td class="ai-stage-cell" data-stage="{{ stage.id }}">
+            <span class="stage-dot {% if stage.done %}done{% elif stage.running %}running{% endif %}" title="{{ stage.label }}"></span>
+          </td>
+          {% endfor %}
+          <td class="ai-actions-cell">—</td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="7" class="meta">אין בקשות — <a href="{{ create_url }}">צור ראשונה</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div id="ai-detail-panel" class="card ai-detail-panel">
+    <div id="ai-detail-empty" class="meta" style="padding:24px;text-align:center;">
+      בחר שורה בטבלה לצפייה בפרטים, לוג ו-diff
+    </div>
+    <div id="ai-detail-content" hidden>
+      <div class="ai-detail-header">
+        <h2 id="ai-detail-title" style="margin:0;font-size:1rem;"></h2>
+        <p id="ai-detail-meta" class="meta" style="margin:4px 0 12px;"></p>
+      </div>
+
+      <div id="ai-pipeline-bar" class="pipeline ai-pipeline-bar"></div>
+
+      <div class="ai-detail-actions actions-row" id="ai-detail-actions"></div>
+
+      <div id="ai-detail-error" class="form-errors" hidden></div>
+
+      <div class="ai-tabs">
+        <button type="button" class="ai-tab active" data-tab="log">לוג</button>
+        <button type="button" class="ai-tab" data-tab="diff">קוד לפני/אחרי</button>
+        <button type="button" class="ai-tab" data-tab="repo">קבצים ב-repository</button>
+      </div>
+
+      <div id="ai-tab-log" class="ai-tab-panel">
+        <pre id="ai-log-panel" class="ai-log-panel"></pre>
+      </div>
+      <div id="ai-tab-diff" class="ai-tab-panel" hidden>
+        <div id="ai-diff-files" class="ai-diff-files"></div>
+        <div id="ai-diff-view" class="ai-diff-view"></div>
+      </div>
+      <div id="ai-tab-repo" class="ai-tab-panel" hidden>
+        <div class="ai-repo-layout">
+          <ul id="ai-repo-list" class="ai-repo-list"></ul>
+          <pre id="ai-repo-content" class="ai-repo-content"></pre>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-{% endif %}
 
-<div class="card table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>בקשה</th>
-        <th>סטטוס</th>
-        <th>נוצר ע״י</th>
-        <th>תאריך</th>
-        <th>PR</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in request_rows %}
-      {% with r=row.req %}
-      <tr>
-        <td>{{ r.pk }}</td>
-        <td>{{ r.prompt|truncatechars:60 }}</td>
-        <td><span class="badge badge-muted">{{ r.get_status_display }}</span></td>
-        <td>{% if r.created_by %}{{ r.created_by.email }}{% else %}—{% endif %}</td>
-        <td>{{ r.created_at|date:"d/m/Y H:i" }}</td>
-        <td>{% if r.pr_url %}<a href="{{ r.pr_url }}" target="_blank">#{{ r.pr_number }}</a>{% else %}—{% endif %}</td>
-        <td><a href="{% url 'portal:ai_request_detail' r.pk %}" class="btn btn-sm btn-outline">פרטים</a></td>
-      </tr>
-      {% endwith %}
-      {% empty %}
-      <tr><td colspan="7" class="meta">אין בקשות — <a href="{% url 'portal:ai_request_create' %}">צור ראשונה</a></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<script id="ai-dash-config" type="application/json">
+{
+  "listStatusUrl": "{{ list_status_url|escapejs }}",
+  "repoContentUrl": "{{ repo_content_url|escapejs }}",
+  "initialFocusId": {% if focus_req %}{{ focus_req.pk }}{% else %}null{% endif %}
+}
+</script>
+<script src="{% static 'portal/ai-dashboard.js' %}"></script>
 {% endblock %}

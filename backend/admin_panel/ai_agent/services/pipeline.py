@@ -151,8 +151,8 @@ def build_pipeline(
     stages = [
         {
             'id': 'generate_diff',
-            'label': 'ייצור diff',
-            'short': 'Diff',
+            'label': 'אנליזה של בקשה',
+            'short': 'אנליזה',
             'done': s1_done,
             'running': s1_running,
             'can_run': s1_can_run,
@@ -161,8 +161,8 @@ def build_pipeline(
         },
         {
             'id': 'create_pr',
-            'label': 'יצירת PR',
-            'short': 'PR',
+            'label': 'ביצוע עיבוד',
+            'short': 'עיבוד',
             'done': s2_done,
             'running': s2_running,
             'can_run': s2_can_run,
@@ -171,7 +171,7 @@ def build_pipeline(
         },
         {
             'id': 'merge_git',
-            'label': 'מיזוג / Push ל-Git',
+            'label': 'מיזוג ל-Git',
             'short': 'Git',
             'done': s3_done,
             'running': s3_running,

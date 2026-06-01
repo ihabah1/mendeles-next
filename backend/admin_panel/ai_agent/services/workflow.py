@@ -87,7 +87,16 @@ def approve_and_create_pr(request: AIChangeRequest, *, resume: bool = False) -> 
         if not resume:
             raise ValueError('הבקשה כבר בתהליך יצירת PR')
     elif request.status != AIChangeRequest.Status.DIFF_READY:
-        raise ValueError('יש לאשר רק בקשה עם diff מוכן לבדיקה')
+        if not (
+            resume
+            and request.status
+            in (
+                AIChangeRequest.Status.APPROVED,
+                AIChangeRequest.Status.PR_CREATING,
+            )
+            and (request.result or '').strip()
+        ):
+            raise ValueError('יש לאשר רק בקשה עם diff מוכן לבדיקה')
     if not request.result.strip():
         raise ValueError('אין diff ליישום')
 
