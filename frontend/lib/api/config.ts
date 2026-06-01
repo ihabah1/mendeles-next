@@ -86,3 +86,37 @@ export async function resolveApiBaseUrl(): Promise<string> {
 export function primeApiBaseUrl(): Promise<string> {
   return resolveApiBaseUrl();
 }
+
+/** Django server origin for /manage/, /admin/ links (not the /django-api proxy). */
+export function apiBaseToOrigin(apiBaseUrl: string): string {
+  return apiBaseUrl.replace(/\/api\/?$/, "");
+}
+
+export async function resolveBackendOriginUrl(): Promise<string> {
+  if (typeof window === "undefined" || isLocalHost()) {
+    return apiBaseToOrigin(envBase() || DEFAULT);
+  }
+
+  try {
+    const res = await fetch("/api/runtime-config", { cache: "no-store" });
+    if (res.ok) {
+      const data = (await res.json()) as { apiBaseUrl?: string };
+      if (data.apiBaseUrl && !isLocalApiBase(data.apiBaseUrl)) {
+        return apiBaseToOrigin(data.apiBaseUrl);
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
+  const baked = envBase();
+  if (baked && !baked.includes("localhost") && !baked.includes("127.0.0.1")) {
+    return apiBaseToOrigin(baked);
+  }
+
+  return "http://localhost:8000";
+}
+
+function isLocalApiBase(url: string): boolean {
+  return url.includes("localhost") || url.includes("127.0.0.1");
+}

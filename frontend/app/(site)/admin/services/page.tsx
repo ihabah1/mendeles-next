@@ -6,9 +6,7 @@ import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import { serviceFlagsApi, type ServiceFlag } from "@/lib/api/serviceFlags";
-import { API_BASE_URL } from "@/lib/api/config";
-
-const manageBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "") + "/manage/";
+import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 
 export default function AdminServicesPage() {
   return (
@@ -19,6 +17,8 @@ export default function AdminServicesPage() {
 }
 
 function AdminServicesInner() {
+  const backendOrigin = useBackendOrigin();
+  const manageBaseUrl = `${backendOrigin}/manage/`;
   const [flags, setFlags] = useState<ServiceFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);

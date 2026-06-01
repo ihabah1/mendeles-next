@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService } from "@/lib/api/admin";
-import { API_BASE_URL } from "@/lib/api/config";
+import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 import type { UiOrder } from "@/lib/api/mappers";
 
 interface Stats { total_users: number; new_today: number; active_subs: number; pending_orders: number; total_revenue: number; total_wins: number; total_prize: number; }
@@ -20,7 +20,6 @@ const STATUS_COLORS: Record<string, string> = {
   shipped: "#c9a84c", sent: "#c9a84c", completed: "#1db96a", delivered: "#1db96a", cancelled: "#ff6b7a",
 };
 const STATUS_ORDER = ["pending", "paid", "printing", "shipped", "completed", "cancelled"];
-const djangoAdminUrl = API_BASE_URL.replace(/\/api\/?$/, "") + "/admin/";
 
 export default function AdminPage() {
   return (
@@ -32,6 +31,8 @@ export default function AdminPage() {
 
 function AdminPageInner() {
   const { isAdmin } = useAuth();
+  const backendOrigin = useBackendOrigin();
+  const djangoAdminUrl = `${backendOrigin}/admin/`;
   const [legacyToken, setLegacyToken] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
