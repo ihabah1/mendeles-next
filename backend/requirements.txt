@@ -17,6 +17,6 @@ psycopg2-binary==2.9.9 ; sys_platform != "win32" or python_version < "3.13"
 # ── Misc utilities used by existing scripts/views ────────────────────────────
 requests==2.32.3
 
-# ── Optional: AI agent feature (only required when AI_AGENT_ENABLED=true) ─────
-# google-generativeai==0.7.2
-# PyGithub==2.3.0
+# ── AI agent (AI_AGENT_ENABLED=true) ─────────────────────────────────────────
+google-generativeai==0.7.2
+PyGithub==2.3.0
