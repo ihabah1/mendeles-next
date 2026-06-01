@@ -81,9 +81,7 @@ export default function Nav() {
                 התנתק
               </button>
             </>
-          ) : (
-            <Link href="/auth" style={{ background: "linear-gradient(135deg,var(--gold),var(--gold-l))", color: "var(--navy)", border: "none", borderRadius: 8, fontFamily: "Heebo,sans-serif", fontSize: ".76rem", fontWeight: 800, padding: "6px 12px", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>כניסה / הרשמה</Link>
-          )}
+          ) : null}
         </div>
       </div>
     </nav>
