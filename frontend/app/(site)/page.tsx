@@ -1,2 +1,2 @@
-import { redirect } from "next/navigation";
-export default function SitePage() { redirect("/"); }
+
+import Nav from "@/components/Nav";
