@@ -1,9 +1,30 @@
 "use client";
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { tokenStore } from "@/lib/api/tokens";
+
+function subscribeSession() {
+  return () => {};
+}
+
+function getSessionSnapshot() {
+  return tokenStore.hasSession();
+}
+
+function getServerSessionSnapshot() {
+  return false;
+}
 
 export default function HomeHero() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  const hasSession = useSyncExternalStore(
+    subscribeSession,
+    getSessionSnapshot,
+    getServerSessionSnapshot,
+  );
+
+  const showLogin = !isAuthenticated && !hasSession && !loading;
 
   return (
     <section style={{ textAlign: "center", padding: "60px 0 40px" }}>
@@ -17,7 +38,7 @@ export default function HomeHero() {
       </p>
       <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
         <Link href="/lotto" className="btn btn-gold" style={{ fontSize: ".95rem", padding: "12px 28px" }}>🎱 התחל עכשיו</Link>
-        {!isAuthenticated && (
+        {showLogin && (
           <Link href="/auth" className="btn btn-outline" style={{ fontSize: ".95rem", padding: "12px 28px" }}>כניסה / הרשמה</Link>
         )}
       </div>
