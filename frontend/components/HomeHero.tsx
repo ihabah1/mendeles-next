@@ -11,23 +11,45 @@ export default function HomeHero() {
     setMounted(true);
   }, []);
 
-  // Only show login after client mount and auth check confirm there is no user.
   const showLogin = mounted && !loading && !user;
 
   return (
-    <section style={{ textAlign: "center", padding: "60px 0 40px" }}>
-      <div style={{ fontSize: "3rem", marginBottom: 12 }}>🎯</div>
-      <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "clamp(1.8rem,5vw,3rem)", fontWeight: 900, color: "var(--cream)", lineHeight: 1.2, marginBottom: 14 }}>
-        מנדל לוטו<br />
-        <span style={{ color: "var(--gold)" }}>200 סטים. מילוי מקצועי. הגשה אישית.</span>
+    <section className="home-section" style={{ textAlign: "center", padding: "8px 0 4px" }}>
+      <div style={{ fontSize: "2.2rem", marginBottom: 10, lineHeight: 1 }}>🎯</div>
+      <h1
+        style={{
+          fontFamily: "'Frank Ruhl Libre',serif",
+          fontSize: "clamp(1.6rem,4.5vw,2.4rem)",
+          fontWeight: 900,
+          color: "var(--cream)",
+          lineHeight: 1.25,
+          marginBottom: 10,
+        }}
+      >
+        מנדל לוטו
+        <span style={{ display: "block", color: "var(--gold)", fontSize: "0.72em", marginTop: 6 }}>
+          200 סטים · מילוי מקצועי · הגשה אישית
+        </span>
       </h1>
-      <p style={{ fontSize: ".95rem", color: "var(--muted)", maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7 }}>
+      <p
+        style={{
+          fontSize: "0.88rem",
+          color: "var(--muted)",
+          maxWidth: 460,
+          margin: "0 auto 22px",
+          lineHeight: 1.65,
+        }}
+      >
         קבל 200 סטים מחושבים לכל הגרלה, מלא טפסים בקלות ואנחנו נגיש אותם לדוכן לוטו בשמך.
       </p>
-      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-        <Link href="/lotto" className="btn btn-gold" style={{ fontSize: ".95rem", padding: "12px 28px" }}>🎱 התחל עכשיו</Link>
+      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        <Link href="/lotto" className="btn btn-gold" style={{ fontSize: "0.88rem", padding: "11px 24px" }}>
+          🎱 התחל עכשיו
+        </Link>
         {showLogin ? (
-          <Link href="/auth" className="btn btn-outline" style={{ fontSize: ".95rem", padding: "12px 28px" }}>כניסה / הרשמה</Link>
+          <Link href="/auth" className="btn btn-outline" style={{ fontSize: "0.88rem", padding: "11px 24px" }}>
+            כניסה / הרשמה
+          </Link>
         ) : null}
       </div>
     </section>
