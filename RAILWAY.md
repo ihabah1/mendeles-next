@@ -57,7 +57,18 @@ API_BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api
 
 3. **Deploy** → **Restart** (או Redeploy)
 
-> אחרי Restart — **לא** צריך rebuild. המשתנה נקרא ב-runtime.
+> **חשוב:** אם שינויים בקוד לא מופיעים באתר — ב-Railway → Frontend → **Deployments** בדוק שה-build האחרון **Succeeded**.  
+> אם נכשל, לחץ **Redeploy**.  
+> בדיקת גרסה: `GET /api/version` → השדה `commit` צריך להתאים ל-commit האחרון ב-GitHub.
+
+### Root Directory — Frontend
+
+| הגדרה | Dockerfile |
+|--------|------------|
+| ריק (שורש repo) | `Dockerfile.frontend` |
+| `frontend` | `frontend/Dockerfile` |
+
+> **אל** תשאיר `DATABASE_URL` עם `127.0.0.1` — זה dummy ל-build בלבד.
 
 ### Frontend — DATABASE_URL (Prisma, אופציונלי)
 

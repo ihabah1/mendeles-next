@@ -1,27 +1,43 @@
 # Frontend deploy from REPO ROOT (Railway Root Directory empty).
-# If Root Directory = frontend, use frontend/Dockerfile instead.
-FROM node:20-alpine
-
+# If Root Directory = frontend, Railway uses frontend/Dockerfile instead.
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Prisma needs OpenSSL on Alpine
 RUN apk add --no-cache openssl libc6-compat
-
-# Install deps first (no postinstall — schema not copied yet)
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts
 
-# Copy full app including prisma/schema.prisma
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN apk add --no-cache openssl libc6-compat
+COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
-
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
-
+ARG RAILWAY_GIT_COMMIT_SHA=local
+ENV NEXT_PUBLIC_COMMIT_SHA=$RAILWAY_GIT_COMMIT_SHA
 RUN npx prisma generate
-RUN npx next build
+RUN npm run build
 
-EXPOSE 3000
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN apk add --no-cache openssl libc6-compat
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-CMD ["npm", "start"]
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/draw_results.json ./draw_results.json
+
+USER nextjs
+EXPOSE 3000
+
+CMD ["node", "server.js"]

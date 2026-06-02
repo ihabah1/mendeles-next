@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 interface WinStats { [rank: string]: number }
 interface Prize { name: string; ils: number }
 interface StatsData {
-  total_users: number;
   total_orders: number;
   last_draw: { date: string; numbers: number[]; strong: number } | null;
   prizes: Record<string, Prize> | null;
