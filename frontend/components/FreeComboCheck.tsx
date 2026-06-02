@@ -52,8 +52,12 @@ export default function FreeComboCheck() {
 
   const check = async () => {
     const filled = nums.filter(n => n !== null) as number[];
-    if (filled.length !== 6 || strong === null) {
-      setResult("הזן 6 מספרים (1–37) ומספר חזק (1–7)");
+    if (filled.length !== 6) {
+      setResult("הזן 6 מספרים (1–37)");
+      return;
+    }
+    if (strong === null) {
+      setResult("הזן גם מספר חזק (1–7)");
       return;
     }
     if (new Set(filled).size !== 6) {
@@ -84,64 +88,122 @@ export default function FreeComboCheck() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+  const boxStyle: React.CSSProperties = {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
     border: "1px solid var(--navy-b)",
-    background: "var(--navy)",
+    background: "rgba(13,27,42,.9)",
     color: "var(--cream)",
     fontFamily: "Heebo,sans-serif",
-    fontSize: ".85rem",
+    fontSize: ".95rem",
     fontWeight: 700,
     textAlign: "center",
     outline: "none",
+    flexShrink: 0,
   };
 
   return (
-    <div style={{ background: "rgba(26,45,66,.85)", border: "1px solid var(--navy-b)", borderRadius: 14, padding: "20px 18px", margin: "20px 0" }}>
-      <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1rem", fontWeight: 900, color: "var(--cream)", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
-        <span>🔍</span> בדיקת צירוף – חינם
-      </div>
-      <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 14 }}>(1–37) הזן 6 מספרים</div>
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        {nums.map((n, i) => (
-          <input
-            key={i}
-            type="number"
-            min={1}
-            max={37}
-            value={n ?? ""}
-            onChange={e => setNum(i, e.target.value)}
-            placeholder="–"
-            style={inputStyle}
-          />
-        ))}
-        <input
-          type="number"
-          min={1}
-          max={7}
-          value={strong ?? ""}
-          onChange={e => setStrongNum(e.target.value)}
-          placeholder="ח"
-          title="מספר חזק (1–7)"
-          style={{ ...inputStyle, borderColor: "rgba(232,0,30,.4)" }}
-        />
-      </div>
-      <button
-        type="button"
-        onClick={check}
-        disabled={checking}
-        className="btn btn-gold"
-        style={{ width: "100%", justifyContent: "center", padding: "11px 16px", fontSize: ".88rem" }}
+    <section style={{ margin: "28px auto", maxWidth: 420 }}>
+      <div
+        style={{
+          background: "rgba(26,45,66,.92)",
+          border: "1px solid var(--navy-b)",
+          borderRadius: 16,
+          padding: "22px 20px 20px",
+          boxShadow: "0 8px 32px rgba(0,0,0,.25)",
+        }}
       >
-        {checking ? "בודק..." : "🔍 בדוק צירוף"}
-      </button>
-      {result && (
-        <div style={{ marginTop: 12, fontSize: ".78rem", color: result.includes("🎉") ? "var(--green)" : "var(--muted)", textAlign: "center", lineHeight: 1.6 }}>
-          {result}
+        <div
+          style={{
+            fontFamily: "'Frank Ruhl Libre',serif",
+            fontSize: "1.05rem",
+            fontWeight: 900,
+            color: "var(--cream)",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            gap: 8,
+          }}
+        >
+          <span aria-hidden>🔍</span>
+          <span>בדיקת צירוף – חינם</span>
         </div>
-      )}
-    </div>
+        <p style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 18 }}>
+          (1–37) הזן 6 מספרים
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+            flexWrap: "wrap",
+            marginBottom: 10,
+          }}
+        >
+          {nums.map((n, i) => (
+            <input
+              key={i}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={37}
+              value={n ?? ""}
+              onChange={e => setNum(i, e.target.value)}
+              placeholder="–"
+              aria-label={`מספר ${i + 1}`}
+              style={boxStyle}
+            />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 18 }}>
+          <span style={{ fontSize: ".72rem", color: "var(--muted)" }}>חזק (1–7)</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={7}
+            value={strong ?? ""}
+            onChange={e => setStrongNum(e.target.value)}
+            placeholder="–"
+            aria-label="מספר חזק"
+            style={{ ...boxStyle, width: 42, borderColor: "rgba(201,168,76,.35)" }}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={check}
+          disabled={checking}
+          className="btn btn-gold"
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "12px 16px",
+            fontSize: ".9rem",
+            borderRadius: 12,
+          }}
+        >
+          {checking ? "בודק..." : "🔍 בדוק צירוף"}
+        </button>
+
+        {result && (
+          <p
+            style={{
+              marginTop: 14,
+              fontSize: ".78rem",
+              color: result.includes("🎉") ? "var(--green)" : "var(--muted)",
+              textAlign: "center",
+              lineHeight: 1.6,
+            }}
+          >
+            {result}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
