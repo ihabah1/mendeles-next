@@ -28,6 +28,12 @@
       <p class="meta" style="margin-top:24px;">v{{ APP_VERSION }}</p>
     </aside>
     <main class="main">
+      {% if page_code %}
+      <div class="page-code-bar" title="{{ page_code_label }} — מקרא לבקשות AI">
+        <span class="page-code-label">מקרא דף</span>
+        <strong class="page-code-value">{{ page_code }}</strong>
+      </div>
+      {% endif %}
       {% if messages %}
       <ul class="messages">
         {% for message in messages %}

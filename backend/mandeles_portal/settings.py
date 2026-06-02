@@ -125,6 +125,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'admin_panel.portal.context_processors.dashboard_context',
+                'admin_panel.portal.context_processors.page_code_context',
             ],
         },
     },

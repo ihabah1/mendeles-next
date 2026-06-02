@@ -59,6 +59,18 @@ API_BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api
 
 > אחרי Restart — **לא** צריך rebuild. המשתנה נקרא ב-runtime.
 
+### Frontend — DATABASE_URL (Prisma, אופציונלי)
+
+Auth ולוטו ב-production עוברים דרך **Django** (`API_BASE_URL`).  
+**אין חובה** לחבר Postgres ל-Frontend.
+
+| מצב | מה לעשות |
+|-----|----------|
+| רק Django | אל תגדיר `DATABASE_URL` ב-Frontend — הסטטיסטיקות יציגו 0 בלי שגיאות Prisma |
+| Legacy Prisma (API ישן) | הוסף `DATABASE_URL=${{Postgres.DATABASE_URL}}` ב-Frontend |
+
+> **אל** תשאיר `DATABASE_URL` עם `127.0.0.1` — זה dummy ל-build בלבד.
+
 ---
 
 ## בדיקה
@@ -78,3 +90,4 @@ API_BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api
 | שירת ה-API לא מוגדר | הוסף `API_BASE_URL` ב-Frontend + Restart |
 | לא ניתן להגיע ל-backend | Backend לא רץ — בדוק Logs + Postgres |
 | Backend 404 | שירות Backend לא קיים או Root Directory שגוי |
+| `Can't reach database server at 127.0.0.1:5432` (Frontend) | מחק `DATABASE_URL` מ-Frontend או חבר `${{Postgres.DATABASE_URL}}`; Redeploy |

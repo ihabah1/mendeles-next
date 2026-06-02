@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start -H 0.0.0.0",
+    "start": "node server.js",
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:e2e:prod": "playwright test e2e/smoke.production.spec.ts"

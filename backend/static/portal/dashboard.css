@@ -185,3 +185,30 @@ pre, .diff-block {
   .layout { flex-direction: column; }
   .sidebar { width: 100%; border-left: none; border-bottom: 1px solid var(--navy-b); }
 }
+
+.page-code-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(201, 168, 76, 0.08);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.22);
+  font-size: .72rem;
+  color: var(--muted);
+}
+.page-code-bar--login {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  justify-content: center;
+}
+body:has(.page-code-bar--login) .login-page { padding-top: 36px; }
+.page-code-label { opacity: .85; }
+.page-code-value {
+  font-family: ui-monospace, monospace;
+  font-size: .78rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}

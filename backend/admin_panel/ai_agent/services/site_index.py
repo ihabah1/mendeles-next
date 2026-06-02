@@ -505,6 +505,25 @@ def resolve_request(prompt: str, base_dir: Path) -> ResolvedRequest:
     matched = _match_snippets(index, zones, terms)
     target_files = _rank_files(zones, matched, terms, base_dir)
 
+    page_code_lines: list[str] = []
+    from admin_panel.page_codes import codes_in_prompt, entry_for_code
+
+    for code in codes_in_prompt(prompt):
+        entry = entry_for_code(code)
+        if not entry:
+            continue
+        for f in entry.files:
+            resolved_f = resolve_hint_path(f, base_dir)
+            if resolved_f not in target_files:
+                target_files.insert(0, resolved_f)
+        page_code_lines.append(
+            f'מקרא {code}: {entry.label_he} → {", ".join(entry.files)}',
+        )
+        if entry.django_url_names and 'manage' not in zones:
+            zones.insert(0, 'manage')
+        elif entry.frontend_paths and 'public_home' not in zones:
+            zones.append('public_home')
+
     zone_labels = ', '.join(ZONES[z]['label'] for z in zones[:3])
     term_str = ', '.join(f'«{t}»' for t in terms[:4]) if terms else '—'
 
@@ -525,7 +544,14 @@ def resolve_request(prompt: str, base_dir: Path) -> ResolvedRequest:
     else:
         interp = f'שינוי ב{zone_labels}' + (f' – חיפוש: {term_str}' if terms else '')
 
-    snippet_block = []
+    if page_code_lines:
+        labels = ', '.join(page_code_lines)
+        interp = f'{interp} · {labels}' if interp else labels
+
+    snippet_block: list[str] = []
+    if page_code_lines:
+        snippet_block.append('--- מקרא דפים בבקשה ---')
+        snippet_block.extend(f'- {line}' for line in page_code_lines)
     for sn in matched[:8]:
         snippet_block.append(
             f'- [{sn.zone_label}] {sn.file}:{sn.line} → "{sn.text[:80]}"',
@@ -746,8 +772,10 @@ def select_files_with_index(
 
 def format_index_summary(base_dir: Path, max_entries: int = 40) -> str:
     """סיכום אינדוקס לתצוגה בממשק הניהול."""
+    from admin_panel.page_codes import format_registry_table
+
     index = build_site_index(base_dir)
-    lines = ['אינדוקס אתר (תוכן לעריכה בשפה פשוטה):', '']
+    lines = [format_registry_table(), '', 'אינדוקס אתר (תוכן לעריכה בשפה פשוטה):', '']
     by_zone: dict[str, list[TextSnippet]] = {}
     for sn in index:
         by_zone.setdefault(sn.zone_label, []).append(sn)

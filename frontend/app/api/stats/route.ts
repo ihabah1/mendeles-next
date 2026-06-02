@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma, { isDatabaseConfigured } from "@/lib/prisma";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -25,24 +25,25 @@ function calcRank(nums: number[], strong: number, drawNums: number[], drawStrong
 }
 
 export async function GET() {
-  // טען draw_results.json
   let drawData: DrawData | null = null;
   try {
     const raw = readFileSync(join(process.cwd(), "draw_results.json"), "utf-8");
     drawData = JSON.parse(raw);
   } catch { drawData = null; }
 
-  // סטטיסטיקות בסיסיות
-  const [totalUsers, totalOrders] = await Promise.all([
-    prisma.user.count().catch(() => 0),
-    prisma.lottoOrder.count().catch(() => 0),
-  ]);
+  const db = isDatabaseConfigured();
+  const [totalUsers, totalOrders] = db
+    ? await Promise.all([
+        prisma.user.count().catch(() => 0),
+        prisma.lottoOrder.count().catch(() => 0),
+      ])
+    : [0, 0];
 
   let winStats: Record<string, number> = {};
   let totalWinners = 0;
   let totalPrize = 0;
 
-  if (drawData) {
+  if (drawData && db) {
     const { numbers: drawNums, strong: drawStrong } = drawData.last_draw;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sets = await prisma.lottoSet.findMany({
