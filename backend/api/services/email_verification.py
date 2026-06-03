@@ -1,5 +1,6 @@
 """Email verification helpers for registration."""
 import logging
+import os
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -21,19 +22,73 @@ def verification_link(token: str) -> str:
     return f'{base}/auth/verify-email?token={token}'
 
 
-def issue_verification_email(user) -> EmailVerificationToken:
+def frontend_email_proxy_enabled() -> bool:
+    secret = (
+        getattr(settings, 'EMAIL_PROXY_SECRET', '')
+        or os.getenv('EMAIL_PROXY_SECRET', '')
+    ).strip()
+    return bool(secret)
+
+
+def verification_payload_for_user(user) -> dict:
     record = EmailVerificationToken.create_for_user(user)
     url = verification_link(record.token)
     display = user.display_name if hasattr(user, 'display_name') else user.email.split('@')[0]
+    return {
+        'to': user.email,
+        'display_name': display,
+        'verify_url': url,
+    }
 
+
+def issue_verification_email(user) -> EmailVerificationToken:
+    payload = verification_payload_for_user(user)
+    send_verification_email(
+        to=payload['to'],
+        verify_url=payload['verify_url'],
+        display_name=payload['display_name'],
+    )
+    return EmailVerificationToken.objects.filter(user=user).order_by('-created_at').first()
+
+
+def issue_verification_or_delegate(user) -> dict:
+    """
+    Send via backend Resend, or allow trusted frontend proxy to send.
+    Returns response fields for RegisterView.
+    """
     if resend_configured():
-        send_verification_email(to=user.email, verify_url=url, display_name=display)
-    elif settings.DEBUG:
-        logger.warning('RESEND not configured — verification link for %s: %s', user.email, url)
-    else:
-        raise ResendError(resend_setup_error_hebrew() or 'שירות אימייל לא מוגדר. פנה למנהל המערכת.')
+        issue_verification_email(user)
+        return {
+            'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
+            'email': user.email,
+            'verification_required': True,
+            'email_send_via': 'backend',
+        }
 
-    return record
+    if settings.DEBUG:
+        payload = verification_payload_for_user(user)
+        logger.warning(
+            'RESEND not configured — verification link for %s: %s',
+            user.email,
+            payload['verify_url'],
+        )
+        return {
+            'detail': 'נרשמת (מצב פיתוח). בדוק לוגים לקישור אימות.',
+            'email': user.email,
+            'verification_required': True,
+            'email_send_via': 'dev-log',
+        }
+
+    if frontend_email_proxy_enabled():
+        verification_payload_for_user(user)
+        return {
+            'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
+            'email': user.email,
+            'verification_required': True,
+            'email_send_via': 'frontend',
+        }
+
+    raise ResendError(resend_setup_error_hebrew() or 'שירות אימייל לא מוגדר. פנה למנהל המערכת.')
 
 
 def verify_token(raw_token: str) -> User:
@@ -69,4 +124,10 @@ def resend_for_email(email: str) -> None:
         return
     if user.email_verified:
         return
-    issue_verification_email(user)
+    if resend_configured():
+        issue_verification_email(user)
+        return
+    if frontend_email_proxy_enabled():
+        verification_payload_for_user(user)
+        return
+    raise ResendError(resend_setup_error_hebrew())

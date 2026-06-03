@@ -32,7 +32,17 @@ RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 ```
 
-> **אימות אימייל בהרשמה:** `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (דומיין מאומת ב-Resend) + `FRONTEND_URL` לקישור האימות.
+> **אימות אימייל:** `RESEND_API_KEY` + `RESEND_FROM_EMAIL` + `FRONTEND_URL` ב-**Backend**.  
+> **או** — אותם `RESEND_*` ב-**Frontend** + `EMAIL_PROXY_SECRET` **זהה** בשני השירותים.
+
+### Frontend — משתנים נוספים
+
+```
+API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM_EMAIL=Mandeles <noreply@mandeles.co.il>
+EMAIL_PROXY_SECRET=בחר-מחרוזת-ארוכה-אקראית
+```
 
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`

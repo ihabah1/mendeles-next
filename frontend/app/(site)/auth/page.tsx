@@ -105,8 +105,22 @@ function AuthForm() {
         first_name: name,
         phone,
       });
+      if (res.email_send_via === "frontend") {
+        const sendRes = await fetch("/api/email/send-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: res.email }),
+        });
+        const sendData = await sendRes.json().catch(() => ({}));
+        if (!sendRes.ok) {
+          setError((sendData as { detail?: string }).detail || "שליחת אימייל האימות נכשלה");
+          return;
+        }
+        setStatus((sendData as { detail?: string }).detail || res.detail);
+      } else {
+        setStatus(res.detail);
+      }
       setPendingEmail(res.email);
-      setStatus(res.detail);
       go("verify-pending");
     } catch (err) {
       setError(extractApiError(err, "ההרשמה נכשלה"));
@@ -124,8 +138,17 @@ function AuthForm() {
     setLoading(true);
     setError("");
     try {
-      const res = await authService.resendVerification(target);
-      setStatus(res.detail);
+      const sendRes = await fetch("/api/email/send-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target }),
+      });
+      const sendData = await sendRes.json().catch(() => ({}));
+      if (!sendRes.ok) {
+        setError((sendData as { detail?: string }).detail || "שליחה מחדש נכשלה");
+        return;
+      }
+      setStatus((sendData as { detail?: string }).detail || "נשלח שוב");
     } catch (err) {
       setError(extractApiError(err, "שליחה מחדש נכשלה"));
     } finally {

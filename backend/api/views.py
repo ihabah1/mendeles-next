@@ -19,7 +19,13 @@ from admin_panel.portal.models import (
 )
 
 from .permissions import IsAdminOrOwner, IsStaffOrReadOnlyOwner
-from .services.email_verification import issue_verification_email, resend_for_email, verify_token
+from .services.email_verification import (
+    frontend_email_proxy_enabled,
+    issue_verification_or_delegate,
+    resend_for_email,
+    verification_payload_for_user,
+    verify_token,
+)
 from .services.resend_email import ResendError, resend_config_status
 from .services.user_setup import ensure_customer_records
 from .serializers import (
@@ -57,18 +63,11 @@ class RegisterView(CreateAPIView):
         user = serializer.save()
         ensure_customer_records(user)
         try:
-            issue_verification_email(user)
+            payload = issue_verification_or_delegate(user)
         except ResendError as exc:
             user.delete()
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        return Response(
-            {
-                'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
-                'email': user.email,
-                'verification_required': True,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -93,6 +92,36 @@ def verify_email_view(request):
     )
 
 
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verification_email_payload(request):
+    """Trusted frontend fetches verify URL to send via Resend on Next.js."""
+    import os
+
+    from django.conf import settings
+
+    secret = (request.headers.get('X-Email-Proxy-Secret') or '').strip()
+    expected = (
+        getattr(settings, 'EMAIL_PROXY_SECRET', '')
+        or os.getenv('EMAIL_PROXY_SECRET', '')
+    ).strip()
+    if not expected or secret != expected:
+        return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    email = (request.data.get('email') or '').strip().lower()
+    if not email:
+        return Response({'detail': 'נדרש אימייל'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        return Response({'detail': 'לא נמצא'}, status=status.HTTP_404_NOT_FOUND)
+    if user.email_verified:
+        return Response({'detail': 'כבר מאומת'}, status=status.HTTP_400_BAD_REQUEST)
+
+    payload = verification_payload_for_user(user)
+    return Response(payload)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def email_service_status(request):
@@ -101,9 +130,10 @@ def email_service_status(request):
     return Response(
         {
             **status,
+            'frontend_proxy': frontend_email_proxy_enabled(),
             'hint': None
             if status['configured']
-            else 'Set RESEND_API_KEY and RESEND_FROM_EMAIL on the Backend Railway service.',
+            else 'Set RESEND on Backend, or RESEND on Frontend + EMAIL_PROXY_SECRET on both.',
         },
     )
 

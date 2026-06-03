@@ -23,6 +23,7 @@ export interface RegisterResponse {
   detail: string;
   email: string;
   verification_required: boolean;
+  email_send_via?: "backend" | "frontend" | "dev-log";
 }
 
 export interface VerifyEmailResponse extends LoginResponse {

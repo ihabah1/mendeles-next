@@ -6,9 +6,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv(
     'DJANGO_SECRET_KEY',
@@ -296,6 +296,8 @@ CORS_ALLOWED_ORIGINS = _split_env_list(
 RESEND_API_KEY = _env_clean('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = _env_clean('RESEND_FROM_EMAIL', '')
 EMAIL_VERIFICATION_HOURS = int(os.getenv('EMAIL_VERIFICATION_HOURS', '24'))
+# Same secret on Frontend + Backend — allows Next.js to send verification email via Resend
+EMAIL_PROXY_SECRET = _env_clean('EMAIL_PROXY_SECRET', '')
 
 _frontend_url = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
