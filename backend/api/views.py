@@ -20,7 +20,7 @@ from admin_panel.portal.models import (
 
 from .permissions import IsAdminOrOwner, IsStaffOrReadOnlyOwner
 from .services.email_verification import issue_verification_email, resend_for_email, verify_token
-from .services.resend_email import ResendError
+from .services.resend_email import ResendError, resend_config_status
 from .services.user_setup import ensure_customer_records
 from .serializers import (
     ActionLogSerializer,
@@ -90,6 +90,21 @@ def verify_email_view(request):
             'user': UserSerializer(user).data,
         },
         status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def email_service_status(request):
+    """Check Resend configuration (no secrets exposed)."""
+    status = resend_config_status()
+    return Response(
+        {
+            **status,
+            'hint': None
+            if status['configured']
+            else 'Set RESEND_API_KEY and RESEND_FROM_EMAIL on the Backend Railway service.',
+        },
     )
 
 

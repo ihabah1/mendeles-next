@@ -17,6 +17,7 @@ router.register('action-logs', views.ActionLogViewSet, basename='actionlog')
 auth_patterns = [
     path('login/', views.LoginView.as_view(), name='auth-login'),
     path('register/', views.RegisterView.as_view(), name='auth-register'),
+    path('email-status/', views.email_service_status, name='auth-email-status'),
     path('verify-email/', views.verify_email_view, name='auth-verify-email'),
     path('resend-verification/', views.resend_verification_view, name='auth-resend-verification'),
     path('google/', views.google_login, name='auth-google'),

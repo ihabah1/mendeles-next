@@ -5,7 +5,12 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from admin_panel.accounts.models import EmailVerificationToken
-from api.services.resend_email import ResendError, resend_configured, send_verification_email
+from api.services.resend_email import (
+    ResendError,
+    resend_configured,
+    resend_setup_error_hebrew,
+    send_verification_email,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -26,7 +31,7 @@ def issue_verification_email(user) -> EmailVerificationToken:
     elif settings.DEBUG:
         logger.warning('RESEND not configured — verification link for %s: %s', user.email, url)
     else:
-        raise ResendError('שירות אימייל לא מוגדר. פנה למנהל המערכת.')
+        raise ResendError(resend_setup_error_hebrew() or 'שירות אימייל לא מוגדר. פנה למנהל המערכת.')
 
     return record
 

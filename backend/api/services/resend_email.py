@@ -1,5 +1,6 @@
 """Send transactional email via Resend (https://api.resend.com/emails)."""
 import logging
+import os
 
 import requests
 from django.conf import settings
@@ -13,15 +14,58 @@ class ResendError(Exception):
     pass
 
 
+def _resend_api_key() -> str:
+    return (
+        getattr(settings, 'RESEND_API_KEY', '')
+        or os.getenv('RESEND_API_KEY', '')
+    ).strip()
+
+
+def _resend_from_email() -> str:
+    return (
+        getattr(settings, 'RESEND_FROM_EMAIL', '')
+        or os.getenv('RESEND_FROM_EMAIL', '')
+    ).strip()
+
+
 def resend_configured() -> bool:
-    return bool(getattr(settings, 'RESEND_API_KEY', '').strip())
+    return bool(_resend_api_key()) and bool(_resend_from_email())
+
+
+def resend_config_status() -> dict:
+    """Safe status for diagnostics (no secrets)."""
+    key = _resend_api_key()
+    from_addr = _resend_from_email()
+    return {
+        'configured': bool(key and from_addr),
+        'has_api_key': bool(key),
+        'has_from_email': bool(from_addr),
+        'from_email': from_addr.split('@')[-1] if '@' in from_addr else None,
+    }
+
+
+def resend_setup_error_hebrew() -> str:
+    status = resend_config_status()
+    if status['configured']:
+        return ''
+    missing = []
+    if not status['has_api_key']:
+        missing.append('RESEND_API_KEY')
+    if not status['has_from_email']:
+        missing.append('RESEND_FROM_EMAIL')
+    return (
+        'שירות אימייל לא מוגדר ב-Backend. '
+        f'חסרים: {", ".join(missing)}. '
+        'ב-Railway → שירות Backend (eloquent-perfection) → Variables → Redeploy.'
+    )
 
 
 def send_email(*, to: str, subject: str, html: str) -> dict:
-    api_key = getattr(settings, 'RESEND_API_KEY', '').strip()
-    from_email = getattr(settings, 'RESEND_FROM_EMAIL', '').strip()
-    if not api_key or not from_email:
-        raise ResendError('Resend is not configured (RESEND_API_KEY / RESEND_FROM_EMAIL)')
+    if not resend_configured():
+        raise ResendError(resend_setup_error_hebrew())
+
+    api_key = _resend_api_key()
+    from_email = _resend_from_email()
 
     payload = {
         'from': from_email,
@@ -41,11 +85,11 @@ def send_email(*, to: str, subject: str, html: str) -> dict:
         )
     except requests.RequestException as exc:
         logger.exception('Resend request failed')
-        raise ResendError('שליחת האימייל נכשלה') from exc
+        raise ResendError('שליחת האימייל נכשלה — נסה שוב מאוחר יותר.') from exc
 
     if res.status_code >= 400:
         logger.error('Resend API error %s: %s', res.status_code, res.text[:500])
-        raise ResendError('שליחת האימייל נכשלה')
+        raise ResendError('שליחת האימייל נכשלה — בדוק שדומיין האימייל מאומת ב-Resend.')
 
     return res.json()
 
