@@ -299,7 +299,8 @@ EMAIL_VERIFICATION_HOURS = int(os.getenv('EMAIL_VERIFICATION_HOURS', '24'))
 # Same secret on Frontend + Backend — allows Next.js to send verification email via Resend
 EMAIL_PROXY_SECRET = _env_clean('EMAIL_PROXY_SECRET', '')
 
-_frontend_url = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
+FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
+_frontend_url = FRONTEND_URL
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(_frontend_url)
 # Allow cookies/Authorization headers from the SPA.

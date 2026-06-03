@@ -93,22 +93,31 @@ async function sendViaResend(
   }
 }
 
+async function backendResendConfigured(base: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${base}/auth/email-status/`, { cache: "no-store" });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { configured?: boolean };
+    return Boolean(data.configured);
+  } catch {
+    return false;
+  }
+}
+
 /** Try backend resend; fall back to Frontend Resend + verification payload. */
 export async function sendVerificationEmail(email: string): Promise<void> {
   const base = resolveServerApiBaseUrl();
 
-  if (!isLocalApiBase(base)) {
-    try {
-      const res = await fetch(`${base}/auth/resend-verification/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        cache: "no-store",
-      });
-      if (res.ok) return;
-    } catch {
-      /* try frontend path */
-    }
+  if (!isLocalApiBase(base) && (await backendResendConfigured(base))) {
+    const res = await fetch(`${base}/auth/resend-verification/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+    if (res.ok) return;
+    const err = (await res.json().catch(() => ({}))) as { detail?: string };
+    throw new Error(err.detail || "שליחת אימייל מהשרת נכשלה");
   }
 
   if (!resendFromFrontend()) {

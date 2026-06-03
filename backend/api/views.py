@@ -58,10 +58,14 @@ class RegisterView(CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
+        import logging
+
+        logger = logging.getLogger(__name__)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         ensure_customer_records(user)
+        logger.info('Register endpoint: user=%s', user.email)
         try:
             payload = issue_verification_or_delegate(user)
         except ResendError as exc:
@@ -119,18 +123,34 @@ def verification_email_payload(request):
 @permission_classes([permissions.AllowAny])
 def email_service_status(request):
     """Check Resend configuration (no secrets exposed)."""
+    import os
+
+    from django.conf import settings as dj_settings
+
     from api.services.email_proxy_secret import get_email_proxy_secret
 
     status = resend_config_status()
     proxy_ok = frontend_email_proxy_enabled()
+    env_key = bool(os.getenv('RESEND_API_KEY', '').strip())
+    env_from = bool(os.getenv('RESEND_FROM_EMAIL', '').strip())
+    if status['configured']:
+        send_path = 'backend'
+    elif proxy_ok:
+        send_path = 'frontend'
+    else:
+        send_path = 'none'
     return Response(
         {
             **status,
+            'env_has_api_key': env_key,
+            'env_has_from_email': env_from,
+            'frontend_url_set': bool(getattr(dj_settings, 'FRONTEND_URL', '').strip()),
+            'send_path': send_path,
             'frontend_proxy': proxy_ok,
             'proxy_secret_ready': bool(get_email_proxy_secret()),
             'hint': None
             if status['configured'] or proxy_ok
-            else 'Backend: RESEND_* — or Frontend: RESEND_* + EMAIL_PROXY_DERIVE_FROM=${{backend.DJANGO_SECRET_KEY}}',
+            else 'Backend service (eloquent-perfection): RESEND_API_KEY + RESEND_FROM_EMAIL + FRONTEND_URL — then Redeploy. Or Frontend: RESEND_* + EMAIL_PROXY_DERIVE_FROM=${{backend.DJANGO_SECRET_KEY}}',
         },
     )
 

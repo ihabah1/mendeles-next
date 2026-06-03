@@ -24,9 +24,11 @@ def verification_link(token: str) -> str:
 
 def frontend_email_proxy_enabled() -> bool:
     """True when Next.js can send verification email (Resend on Frontend)."""
-    if get_email_proxy_secret():
-        return True
-    return bool(getattr(settings, 'FRONTEND_URL', '').strip()) and not settings.DEBUG
+    if not getattr(settings, 'FRONTEND_URL', '').strip():
+        return False
+    if settings.DEBUG:
+        return False
+    return bool(get_email_proxy_secret())
 
 
 def verification_payload_for_user(user) -> dict:
@@ -52,7 +54,9 @@ def issue_verification_email(user) -> EmailVerificationToken:
 
 def issue_verification_or_delegate(user) -> dict:
     """Send via backend Resend, or delegate to Frontend /api/email/send-verification."""
+    logger.info('issue_verification_or_delegate user=%s resend=%s frontend_proxy=%s', user.email, resend_configured(), frontend_email_proxy_enabled())
     if resend_configured():
+        logger.info('Sending verification email via backend Resend to %s', user.email)
         issue_verification_email(user)
         return {
             'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
@@ -76,6 +80,7 @@ def issue_verification_or_delegate(user) -> dict:
         }
 
     if frontend_email_proxy_enabled():
+        logger.info('Delegating verification email to Frontend for %s', user.email)
         verification_payload_for_user(user)
         return {
             'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
@@ -121,9 +126,12 @@ def resend_for_email(email: str) -> None:
     if user.email_verified:
         return
     if resend_configured():
+        logger.info('Resend verification via backend to %s', user.email)
         issue_verification_email(user)
         return
     if frontend_email_proxy_enabled():
-        verification_payload_for_user(user)
-        return
+        raise ResendError(
+            'שליחת אימייל מ-Backend לא מוגדרת — השתמש ב-Frontend /api/email/send-verification '
+            'או הוסף RESEND_API_KEY + RESEND_FROM_EMAIL לשירות Backend ב-Railway.',
+        )
     raise ResendError(resend_setup_error_hebrew())

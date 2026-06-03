@@ -67,6 +67,7 @@ def send_email(*, to: str, subject: str, html: str) -> dict:
 
     api_key = _resend_api_key()
     from_email = _resend_from_email()
+    logger.info('Resend POST to=%s from_domain=%s', to, from_email.split('@')[-1] if '@' in from_email else '?')
 
     payload = {
         'from': from_email,
@@ -92,7 +93,9 @@ def send_email(*, to: str, subject: str, html: str) -> dict:
         logger.error('Resend API error %s: %s', res.status_code, res.text[:500])
         raise ResendError('שליחת האימייל נכשלה — בדוק שדומיין האימייל מאומת ב-Resend.')
 
-    return res.json()
+    data = res.json()
+    logger.info('Resend API success id=%s', data.get('id'))
+    return data
 
 
 def send_verification_email(*, to: str, verify_url: str, display_name: str) -> dict:

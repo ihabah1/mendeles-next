@@ -32,8 +32,9 @@ RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 ```
 
-> **אימות אימייל:** `RESEND_API_KEY` + `RESEND_FROM_EMAIL` + `FRONTEND_URL` ב-**Backend**.  
-> **או** — אותם `RESEND_*` ב-**Frontend** + `EMAIL_PROXY_SECRET` **זהה** בשני השירותים.
+> **אימות אימייל:** `RESEND_API_KEY` + `RESEND_FROM_EMAIL` + `FRONTEND_URL` ב-**שירות Backend** (`eloquent-perfection` — Root Directory `backend`).  
+> **או** — `RESEND_*` ב-**Frontend** + `EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}`.  
+> בדיקה: `GET https://<backend>/api/auth/email-status/` → `configured: true` או `send_path: "frontend"`.
 
 ### Frontend — משתנים (מספיק לשליחת אימייל בלי Resend ב-Backend)
 
