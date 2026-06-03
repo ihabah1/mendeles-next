@@ -12,7 +12,12 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-import { API_BASE_URL, AUTH_ENDPOINTS, resolveApiBaseUrl } from "./config";
+import {
+  API_BASE_URL,
+  AUTH_ENDPOINTS,
+  resetApiBaseCache,
+  resolveApiBaseUrl,
+} from "./config";
 import { tokenStore } from "./tokens";
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
@@ -96,6 +101,7 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
       return "השרת לא מגיב בזמן. ודא שה-backend (Django) רץ.";
     }
     if (!error.response) {
+      resetApiBaseCache();
       const onLocalhost =
         typeof window !== "undefined" &&
         (window.location.hostname === "localhost" ||
@@ -104,9 +110,9 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
         return "לא ניתן להתחבר לשרת Django (8000). הפעל: cd backend && python manage.py runserver";
       }
       return (
-        "שירת ה-API לא זמין. ב-Railway → שירות Frontend (לא Backend): " +
-        "הוסף API_BASE_URL=https://<כתובת-backend>/api ואז Redeploy. " +
-        "בדיקה: /api/runtime-config"
+        "שירת ה-API לא זמין. ודא ב-Railway → Frontend → Variables: " +
+        "API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api " +
+        "ואז Redeploy. בדיקה: פתח /api/runtime-config בדפדפן."
       );
     }
     const status = error.response.status;

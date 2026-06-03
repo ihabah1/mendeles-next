@@ -36,7 +36,7 @@ test.describe("Production smoke — API", () => {
   });
 
   test("frontend django-api proxy login works", async ({ request }) => {
-    const res = await request.post("/django-api/auth/login", {
+    const res = await request.post("/django-api/auth/login/", {
       data: { email: adminEmail, password: adminPassword },
     });
     expect(res.ok()).toBeTruthy();

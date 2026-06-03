@@ -1,7 +1,7 @@
 /**
  * API base URL resolution.
  *
- * Production (browser): same-origin `/django-api` → Next.js rewrite → Django (API_BASE_URL).
+ * Production (browser): same-origin `/django-api` → Next.js proxy → Django (API_BASE_URL).
  * Local dev: http://localhost:8000/api
  */
 const DEFAULT = "http://localhost:8000/api";
@@ -24,7 +24,7 @@ function isLocalHost(): boolean {
   return h === "localhost" || h === "127.0.0.1";
 }
 
-function productionProxyBase(): string | undefined {
+function browserProxyBase(): string | undefined {
   if (typeof window === "undefined" || isLocalHost()) return undefined;
   return `${window.location.origin}${PROXY_PATH}`;
 }
@@ -32,31 +32,34 @@ function productionProxyBase(): string | undefined {
 /** Sync fallback for SSR. */
 export const API_BASE_URL = envBase() || DEFAULT;
 
+/** Django expects trailing slashes on API paths. */
 export const AUTH_ENDPOINTS = {
-  login: "/auth/login",
-  register: "/auth/register",
-  verifyEmail: "/auth/verify-email",
-  resendVerification: "/auth/resend-verification",
-  logout: "/auth/logout",
-  refresh: "/auth/refresh",
-  verify: "/auth/verify",
-  me: "/auth/me",
+  login: "/auth/login/",
+  register: "/auth/register/",
+  verifyEmail: "/auth/verify-email/",
+  resendVerification: "/auth/resend-verification/",
+  logout: "/auth/logout/",
+  refresh: "/auth/refresh/",
+  verify: "/auth/verify/",
+  me: "/auth/me/",
 } as const;
 
 let resolved: string | null = null;
 let pending: Promise<string> | null = null;
 
+export function resetApiBaseCache(): void {
+  resolved = null;
+  pending = null;
+}
+
 export async function resolveApiBaseUrl(): Promise<string> {
+  const proxy = browserProxyBase();
+  if (proxy) return proxy;
+
   if (resolved) return resolved;
   if (pending) return pending;
 
   pending = (async () => {
-    const proxy = productionProxyBase();
-    if (proxy) {
-      resolved = proxy;
-      return resolved;
-    }
-
     const baked = envBase();
     if (baked && !baked.includes("localhost") && !baked.includes("127.0.0.1")) {
       resolved = baked;
@@ -68,7 +71,7 @@ export async function resolveApiBaseUrl(): Promise<string> {
         const res = await fetch("/api/runtime-config", { cache: "no-store" });
         if (res.ok) {
           const data = (await res.json()) as { apiBaseUrl?: string };
-          if (data.apiBaseUrl) {
+          if (data.apiBaseUrl && !data.apiBaseUrl.includes("127.0.0.1")) {
             resolved = normalize(data.apiBaseUrl);
             return resolved;
           }
@@ -103,7 +106,7 @@ export async function resolveBackendOriginUrl(): Promise<string> {
     const res = await fetch("/api/runtime-config", { cache: "no-store" });
     if (res.ok) {
       const data = (await res.json()) as { apiBaseUrl?: string };
-      if (data.apiBaseUrl && !isLocalApiBase(data.apiBaseUrl)) {
+      if (data.apiBaseUrl && !data.apiBaseUrl.includes("127.0.0.1")) {
         return apiBaseToOrigin(data.apiBaseUrl);
       }
     }
@@ -117,8 +120,4 @@ export async function resolveBackendOriginUrl(): Promise<string> {
   }
 
   return "http://localhost:8000";
-}
-
-function isLocalApiBase(url: string): boolean {
-  return url.includes("localhost") || url.includes("127.0.0.1");
 }

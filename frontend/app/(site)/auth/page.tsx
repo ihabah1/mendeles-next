@@ -172,7 +172,12 @@ function AuthForm() {
               <>
                 <strong>API_BASE_URL חסר</strong> — ב-Railway → שירות <strong>Frontend</strong> → Variables:
                 <br />
-                <code style={{ fontSize: ".68rem" }}>API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api</code>
+                <code style={{ fontSize: ".68rem", display: "block", marginTop: 6, wordBreak: "break-all" }}>
+                  API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api
+                </code>
+                <a href="/api/runtime-config" target="_blank" rel="noopener noreferrer" style={{ color: "var(--gold)", fontSize: ".68rem" }}>
+                  בדיקת runtime-config →
+                </a>
               </>
             ) : (
               <>
