@@ -25,6 +25,11 @@ function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const [apiStatus, setApiStatus] = useState<{
+    configured: boolean;
+    backendReachable: boolean;
+    hint: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -39,6 +44,18 @@ function AuthForm() {
       .then((r) => r.json())
       .then((d: { enabled?: boolean }) => setGoogleEnabled(Boolean(d.enabled)))
       .catch(() => setGoogleEnabled(false));
+
+    fetch("/api/runtime-config", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { configured?: boolean; backendReachable?: boolean; hint?: string | null } | null) => {
+        if (!d) return;
+        setApiStatus({
+          configured: Boolean(d.configured),
+          backendReachable: Boolean(d.backendReachable),
+          hint: d.hint ?? null,
+        });
+      })
+      .catch(() => setApiStatus({ configured: false, backendReachable: false, hint: null }));
   }, [params, isAuthenticated, router, redirect]);
 
   const go = (path: string) => { setError(""); setStatus(""); setMode(path as Mode); };
@@ -136,6 +153,35 @@ function AuthForm() {
           🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : mode === "verify-pending" ? "אימות אימייל" : "שכחתי סיסמה"}
         </h1>
 
+        {apiStatus && (!apiStatus.configured || !apiStatus.backendReachable) && (
+          <div
+            role="alert"
+            style={{
+              background: "rgba(232,160,48,.1)",
+              border: "1px solid rgba(232,160,48,.35)",
+              color: "#e8c870",
+              borderRadius: 8,
+              padding: "10px 12px",
+              fontSize: ".75rem",
+              lineHeight: 1.5,
+              marginBottom: 14,
+              textAlign: "right",
+            }}
+          >
+            {!apiStatus.configured ? (
+              <>
+                <strong>API_BASE_URL חסר</strong> — ב-Railway → שירות <strong>Frontend</strong> → Variables:
+                <br />
+                <code style={{ fontSize: ".68rem" }}>API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api</code>
+              </>
+            ) : (
+              <>
+                <strong>Backend לא מגיב</strong>
+                {apiStatus.hint ? ` — ${apiStatus.hint}` : ""}. ודא ששירות Backend רץ (Deploy + Logs).
+              </>
+            )}
+          </div>
+        )}
         {error && (
           <div
             role="alert"
