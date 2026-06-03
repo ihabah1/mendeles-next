@@ -45,18 +45,19 @@ def resend_config_status() -> dict:
 
 
 def resend_setup_error_hebrew() -> str:
+    from api.services.email_proxy_secret import get_email_proxy_secret
+
     status = resend_config_status()
     if status['configured']:
         return ''
-    missing = []
-    if not status['has_api_key']:
-        missing.append('RESEND_API_KEY')
-    if not status['has_from_email']:
-        missing.append('RESEND_FROM_EMAIL')
+    if get_email_proxy_secret():
+        return (
+            'שליחת אימייל תתבצע מ-Frontend. ודא ש-RESEND_API_KEY מוגדר בשירות Frontend '
+            'ו-EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}.'
+        )
     return (
-        'שירות אימייל לא מוגדר ב-Backend. '
-        f'חסרים: {", ".join(missing)}. '
-        'ב-Railway → שירות Backend (eloquent-perfection) → Variables → Redeploy.'
+        'שירות אימייל לא מוגדר. אפשרות א׳ — Backend: RESEND_API_KEY + RESEND_FROM_EMAIL. '
+        'אפשרות ב׳ — Frontend: RESEND_* + EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}.'
     )
 
 

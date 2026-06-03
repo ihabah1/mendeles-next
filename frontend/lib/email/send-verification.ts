@@ -1,11 +1,12 @@
 /**
  * Server-side Resend send (used by /api/email/send-verification).
- * Supports RESEND on Frontend when Backend has no Resend keys.
+ * Backend may omit RESEND — keys live on Frontend only.
  */
 import {
   isLocalApiBase,
   resolveServerApiBaseUrl,
 } from "@/lib/api/server-backend-url";
+import { getEmailProxySecret } from "@/lib/email/proxy-secret";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -15,19 +16,17 @@ function resendFromFrontend(): boolean {
   return Boolean(key && from);
 }
 
-function proxySecret(): string {
-  return process.env.EMAIL_PROXY_SECRET?.trim() || "";
-}
-
 async function fetchVerificationPayload(email: string): Promise<{
   to: string;
   display_name: string;
   verify_url: string;
 }> {
   const base = resolveServerApiBaseUrl();
-  const secret = proxySecret();
+  const secret = getEmailProxySecret();
   if (!secret || isLocalApiBase(base)) {
-    throw new Error("EMAIL_PROXY_SECRET חסר ב-Frontend (וגם ב-Backend)");
+    throw new Error(
+      "חסר EMAIL_PROXY_SECRET או EMAIL_PROXY_DERIVE_FROM ב-Frontend (השתמש ב-DJANGO_SECRET_KEY מ-Backend)",
+    );
   }
 
   const res = await fetch(`${base}/auth/verification-payload/`, {
@@ -114,7 +113,7 @@ export async function sendVerificationEmail(email: string): Promise<void> {
 
   if (!resendFromFrontend()) {
     throw new Error(
-      "שירות אימייל לא מוגדר. הוסף RESEND ב-Backend או RESEND + EMAIL_PROXY_SECRET ב-Frontend.",
+      "הוסף ב-Railway → Frontend: RESEND_API_KEY, RESEND_FROM_EMAIL, EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}",
     );
   }
 

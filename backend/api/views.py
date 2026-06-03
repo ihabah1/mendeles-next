@@ -96,16 +96,9 @@ def verify_email_view(request):
 @permission_classes([permissions.AllowAny])
 def verification_email_payload(request):
     """Trusted frontend fetches verify URL to send via Resend on Next.js."""
-    import os
+    from api.services.email_proxy_secret import verify_email_proxy_secret
 
-    from django.conf import settings
-
-    secret = (request.headers.get('X-Email-Proxy-Secret') or '').strip()
-    expected = (
-        getattr(settings, 'EMAIL_PROXY_SECRET', '')
-        or os.getenv('EMAIL_PROXY_SECRET', '')
-    ).strip()
-    if not expected or secret != expected:
+    if not verify_email_proxy_secret(request.headers.get('X-Email-Proxy-Secret')):
         return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
 
     email = (request.data.get('email') or '').strip().lower()
@@ -126,14 +119,18 @@ def verification_email_payload(request):
 @permission_classes([permissions.AllowAny])
 def email_service_status(request):
     """Check Resend configuration (no secrets exposed)."""
+    from api.services.email_proxy_secret import get_email_proxy_secret
+
     status = resend_config_status()
+    proxy_ok = frontend_email_proxy_enabled()
     return Response(
         {
             **status,
-            'frontend_proxy': frontend_email_proxy_enabled(),
+            'frontend_proxy': proxy_ok,
+            'proxy_secret_ready': bool(get_email_proxy_secret()),
             'hint': None
-            if status['configured']
-            else 'Set RESEND on Backend, or RESEND on Frontend + EMAIL_PROXY_SECRET on both.',
+            if status['configured'] or proxy_ok
+            else 'Backend: RESEND_* — or Frontend: RESEND_* + EMAIL_PROXY_DERIVE_FROM=${{backend.DJANGO_SECRET_KEY}}',
         },
     )
 

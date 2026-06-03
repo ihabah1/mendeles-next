@@ -1,11 +1,11 @@
 """Email verification helpers for registration."""
 import logging
-import os
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from admin_panel.accounts.models import EmailVerificationToken
+from api.services.email_proxy_secret import get_email_proxy_secret
 from api.services.resend_email import (
     ResendError,
     resend_configured,
@@ -23,11 +23,10 @@ def verification_link(token: str) -> str:
 
 
 def frontend_email_proxy_enabled() -> bool:
-    secret = (
-        getattr(settings, 'EMAIL_PROXY_SECRET', '')
-        or os.getenv('EMAIL_PROXY_SECRET', '')
-    ).strip()
-    return bool(secret)
+    """True when Next.js can send verification email (Resend on Frontend)."""
+    if get_email_proxy_secret():
+        return True
+    return bool(getattr(settings, 'FRONTEND_URL', '').strip()) and not settings.DEBUG
 
 
 def verification_payload_for_user(user) -> dict:
@@ -52,10 +51,7 @@ def issue_verification_email(user) -> EmailVerificationToken:
 
 
 def issue_verification_or_delegate(user) -> dict:
-    """
-    Send via backend Resend, or allow trusted frontend proxy to send.
-    Returns response fields for RegisterView.
-    """
+    """Send via backend Resend, or delegate to Frontend /api/email/send-verification."""
     if resend_configured():
         issue_verification_email(user)
         return {
