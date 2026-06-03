@@ -19,11 +19,19 @@ export interface ApiUser {
   email_verified: boolean;
 }
 
+export interface VerificationEmailPayload {
+  to: string;
+  display_name: string;
+  verify_url: string;
+}
+
 export interface RegisterResponse {
   detail: string;
   email: string;
   verification_required: boolean;
   email_send_via?: "backend" | "frontend" | "dev-log";
+  /** Present when email_send_via is frontend — avoids EMAIL_PROXY_DERIVE_FROM on register. */
+  verification_payload?: VerificationEmailPayload;
 }
 
 export interface VerifyEmailResponse extends LoginResponse {

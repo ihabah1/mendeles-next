@@ -22,11 +22,14 @@ def verification_link(token: str) -> str:
     return f'{base}/auth/verify-email?token={token}'
 
 
+def can_delegate_email_to_frontend() -> bool:
+    """Production: Frontend sends via Resend after register (payload in response)."""
+    return bool(getattr(settings, 'FRONTEND_URL', '').strip()) and not settings.DEBUG
+
+
 def frontend_email_proxy_enabled() -> bool:
-    """True when Next.js can send verification email (Resend on Frontend)."""
-    if not getattr(settings, 'FRONTEND_URL', '').strip():
-        return False
-    if settings.DEBUG:
+    """True when Next.js can fetch verification-payload (resend without register payload)."""
+    if not can_delegate_email_to_frontend():
         return False
     return bool(get_email_proxy_secret())
 
@@ -79,14 +82,15 @@ def issue_verification_or_delegate(user) -> dict:
             'email_send_via': 'dev-log',
         }
 
-    if frontend_email_proxy_enabled():
+    if can_delegate_email_to_frontend():
         logger.info('Delegating verification email to Frontend for %s', user.email)
-        verification_payload_for_user(user)
+        payload = verification_payload_for_user(user)
         return {
             'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
             'email': user.email,
             'verification_required': True,
             'email_send_via': 'frontend',
+            'verification_payload': payload,
         }
 
     raise ResendError(resend_setup_error_hebrew() or 'שירות אימייל לא מוגדר. פנה למנהל המערכת.')

@@ -104,8 +104,31 @@ async function backendResendConfigured(base: string): Promise<boolean> {
   }
 }
 
+export type VerificationEmailPayload = {
+  to: string;
+  display_name: string;
+  verify_url: string;
+};
+
+/** Send using payload from register response (no proxy secret needed). */
+export async function sendVerificationWithPayload(
+  payload: VerificationEmailPayload,
+): Promise<void> {
+  if (!resendFromFrontend()) {
+    throw new Error("RESEND_API_KEY / RESEND_FROM_EMAIL חסרים ב-Frontend");
+  }
+  await sendViaResend(payload.to, payload.verify_url, payload.display_name);
+}
+
 /** Try backend resend; fall back to Frontend Resend + verification payload. */
-export async function sendVerificationEmail(email: string): Promise<void> {
+export async function sendVerificationEmail(
+  email: string,
+  inlinePayload?: VerificationEmailPayload,
+): Promise<void> {
+  if (inlinePayload) {
+    await sendVerificationWithPayload(inlinePayload);
+    return;
+  }
   const base = resolveServerApiBaseUrl();
 
   if (!isLocalApiBase(base) && (await backendResendConfigured(base))) {

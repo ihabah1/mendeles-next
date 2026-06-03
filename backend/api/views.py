@@ -128,14 +128,16 @@ def email_service_status(request):
     from django.conf import settings as dj_settings
 
     from api.services.email_proxy_secret import get_email_proxy_secret
+    from api.services.email_verification import can_delegate_email_to_frontend
 
     status = resend_config_status()
     proxy_ok = frontend_email_proxy_enabled()
+    delegate_ok = can_delegate_email_to_frontend()
     env_key = bool(os.getenv('RESEND_API_KEY', '').strip())
     env_from = bool(os.getenv('RESEND_FROM_EMAIL', '').strip())
     if status['configured']:
         send_path = 'backend'
-    elif proxy_ok:
+    elif delegate_ok:
         send_path = 'frontend'
     else:
         send_path = 'none'
@@ -146,11 +148,13 @@ def email_service_status(request):
             'env_has_from_email': env_from,
             'frontend_url_set': bool(getattr(dj_settings, 'FRONTEND_URL', '').strip()),
             'send_path': send_path,
+            'frontend_delegate': delegate_ok,
             'frontend_proxy': proxy_ok,
             'proxy_secret_ready': bool(get_email_proxy_secret()),
+            'register_inline_payload': delegate_ok,
             'hint': None
-            if status['configured'] or proxy_ok
-            else 'Backend service (eloquent-perfection): RESEND_API_KEY + RESEND_FROM_EMAIL + FRONTEND_URL — then Redeploy. Or Frontend: RESEND_* + EMAIL_PROXY_DERIVE_FROM=${{backend.DJANGO_SECRET_KEY}}',
+            if status['configured'] or delegate_ok
+            else 'Backend: RESEND_* + FRONTEND_URL — or Frontend: RESEND_* + FRONTEND_URL on Backend',
         },
     )
 

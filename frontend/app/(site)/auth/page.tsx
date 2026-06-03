@@ -109,7 +109,10 @@ function AuthForm() {
         const sendRes = await fetch("/api/email/send-verification", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: res.email }),
+          body: JSON.stringify({
+            email: res.email,
+            verification_payload: res.verification_payload,
+          }),
         });
         const sendData = await sendRes.json().catch(() => ({}));
         if (!sendRes.ok) {

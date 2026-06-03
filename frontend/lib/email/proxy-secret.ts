@@ -7,7 +7,9 @@ export function getEmailProxySecret(): string {
   const explicit = process.env.EMAIL_PROXY_SECRET?.trim();
   if (explicit) return explicit;
 
-  const derive = process.env.EMAIL_PROXY_DERIVE_FROM?.trim();
+  const derive =
+    process.env.EMAIL_PROXY_DERIVE_FROM?.trim() ||
+    process.env.DJANGO_SECRET_KEY?.trim();
   if (derive) {
     return createHash("sha256").update(`${SALT}${derive}`).digest("hex");
   }
