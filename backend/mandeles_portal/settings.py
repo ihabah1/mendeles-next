@@ -292,6 +292,11 @@ CORS_ALLOWED_ORIGINS = _split_env_list(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000,http://127.0.0.1:3000',
 )
+# ── Resend (email verification on registration) ───────────────────────────────
+RESEND_API_KEY = _env_clean('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = _env_clean('RESEND_FROM_EMAIL', '')
+EMAIL_VERIFICATION_HOURS = int(os.getenv('EMAIL_VERIFICATION_HOURS', '24'))
+
 _frontend_url = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(_frontend_url)

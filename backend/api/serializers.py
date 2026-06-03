@@ -26,9 +26,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'email', 'username', 'first_name', 'last_name', 'full_name',
             'phone', 'role', 'is_active', 'is_staff', 'date_joined',
-            'display_name', 'is_admin',
+            'display_name', 'is_admin', 'email_verified',
         )
-        read_only_fields = ('id', 'role', 'is_active', 'is_staff', 'date_joined')
+        read_only_fields = ('id', 'role', 'is_active', 'is_staff', 'date_joined', 'email_verified')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -51,6 +51,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.sync_full_name()
+        user.email_verified = False
+        user.is_active = False
         user.save()
         return user
 
@@ -68,6 +70,23 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        email = (attrs.get(self.username_field) or '').lower().strip()
+        password = attrs.get('password', '')
+        if email and password:
+            try:
+                candidate = User.objects.get(email__iexact=email)
+            except User.DoesNotExist:
+                pass
+            else:
+                if candidate.check_password(password) and (
+                    not candidate.is_active or not candidate.email_verified
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            'detail': 'יש לאמת את כתובת האימייל לפני הכניסה. בדוק את תיבת הדואר.',
+                        },
+                        code='email_not_verified',
+                    )
         data = super().validate(attrs)
         data['user'] = UserSerializer(self.user).data
         return data

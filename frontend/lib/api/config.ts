@@ -35,6 +35,8 @@ export const API_BASE_URL = envBase() || DEFAULT;
 export const AUTH_ENDPOINTS = {
   login: "/auth/login",
   register: "/auth/register",
+  verifyEmail: "/auth/verify-email",
+  resendVerification: "/auth/resend-verification",
   logout: "/auth/logout",
   refresh: "/auth/refresh",
   verify: "/auth/verify",

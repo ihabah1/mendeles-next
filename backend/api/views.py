@@ -19,6 +19,8 @@ from admin_panel.portal.models import (
 )
 
 from .permissions import IsAdminOrOwner, IsStaffOrReadOnlyOwner
+from .services.email_verification import issue_verification_email, resend_for_email, verify_token
+from .services.resend_email import ResendError
 from .services.user_setup import ensure_customer_records
 from .serializers import (
     ActionLogSerializer,
@@ -44,7 +46,7 @@ class LoginView(TokenObtainPairView):
 
 
 class RegisterView(CreateAPIView):
-    """POST -> create a customer account and return tokens + user."""
+    """POST -> create account and send email verification (Resend)."""
 
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -54,15 +56,58 @@ class RegisterView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         ensure_customer_records(user)
-        refresh = RefreshToken.for_user(user)
+        try:
+            issue_verification_email(user)
+        except ResendError as exc:
+            user.delete()
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(
             {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'user': UserSerializer(user).data,
+                'detail': 'נשלח אימייל לאימות. בדוק את תיבת הדואר (גם בספאם).',
+                'email': user.email,
+                'verification_required': True,
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verify_email_view(request):
+    """Activate account from link token; returns JWT."""
+    token = (request.data.get('token') or '').strip()
+    try:
+        user = verify_token(token)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            'detail': 'האימייל אומת בהצלחה.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def resend_verification_view(request):
+    """Resend verification email (always 200 to avoid email enumeration)."""
+    email = (request.data.get('email') or '').strip()
+    if not email:
+        return Response({'detail': 'נדרש אימייל'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        resend_for_email(email)
+    except ResendError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response(
+        {'detail': 'אם החשבון קיים וטרם אומת — נשלח אימייל אימות.'},
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['POST'])
@@ -109,11 +154,20 @@ def google_login(request):
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
-        user = User(email=email, first_name=first_name[:60])
+        user = User(
+            email=email,
+            first_name=first_name[:60],
+            email_verified=True,
+            is_active=True,
+        )
         user.set_unusable_password()
         user.sync_full_name()
         user.save()
         ensure_customer_records(user)
+    elif not user.email_verified:
+        user.email_verified = True
+        user.is_active = True
+        user.save(update_fields=['email_verified', 'is_active'])
 
     refresh = RefreshToken.for_user(user)
     return Response(

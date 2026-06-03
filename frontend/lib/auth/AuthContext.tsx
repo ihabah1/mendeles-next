@@ -21,7 +21,7 @@ import { authService } from "@/lib/api/auth";
 import { setOnAuthFailure } from "@/lib/api/client";
 import { primeApiBaseUrl } from "@/lib/api/config";
 import { tokenStore } from "@/lib/api/tokens";
-import type { ApiUser, RegisterPayload } from "@/lib/api/types";
+import type { ApiUser, RegisterPayload, RegisterResponse } from "@/lib/api/types";
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -30,7 +30,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   isStaff: boolean;
   login: (email: string, password: string) => Promise<ApiUser>;
-  register: (payload: RegisterPayload) => Promise<ApiUser>;
+  register: (payload: RegisterPayload) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<ApiUser | null>;
 }
@@ -83,9 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    const { user: created } = await authService.register(payload);
-    setUser(created);
-    return created;
+    return authService.register(payload);
   }, []);
 
   const logout = useCallback(async () => {

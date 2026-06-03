@@ -2,7 +2,13 @@
 import api from "./client";
 import { AUTH_ENDPOINTS } from "./config";
 import { tokenStore } from "./tokens";
-import type { ApiUser, LoginResponse, RegisterPayload } from "./types";
+import type {
+  ApiUser,
+  LoginResponse,
+  RegisterPayload,
+  RegisterResponse,
+  VerifyEmailResponse,
+} from "./types";
 
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -14,12 +20,28 @@ export const authService = {
     return data;
   },
 
-  async register(payload: RegisterPayload): Promise<LoginResponse> {
-    const { data } = await api.post<LoginResponse>(
+  async register(payload: RegisterPayload): Promise<RegisterResponse> {
+    const { data } = await api.post<RegisterResponse>(
       AUTH_ENDPOINTS.register,
       payload,
     );
+    return data;
+  },
+
+  async verifyEmail(token: string): Promise<VerifyEmailResponse> {
+    const { data } = await api.post<VerifyEmailResponse>(
+      AUTH_ENDPOINTS.verifyEmail,
+      { token },
+    );
     tokenStore.set(data.access, data.refresh);
+    return data;
+  },
+
+  async resendVerification(email: string): Promise<{ detail: string }> {
+    const { data } = await api.post<{ detail: string }>(
+      AUTH_ENDPOINTS.resendVerification,
+      { email },
+    );
     return data;
   },
 

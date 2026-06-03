@@ -1,6 +1,10 @@
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -34,6 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField('שם מלא', max_length=120, blank=True)
     phone = models.CharField('טלפון', max_length=20, blank=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
+    email_verified = models.BooleanField('אימייל מאומת', default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -95,3 +100,38 @@ class User(AbstractBaseUser, PermissionsMixin):
                 return (parts[0][0] + parts[-1][0]).upper()
             return parts[0][0].upper()
         return self.email[0].upper()
+
+
+class EmailVerificationToken(models.Model):
+    """One-time token emailed to new users via Resend."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_verification_tokens',
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'אסימון אימות אימייל'
+        verbose_name_plural = 'אסימוני אימות אימייל'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.email} ({self.token[:8]}…)'
+
+    @classmethod
+    def create_for_user(cls, user) -> 'EmailVerificationToken':
+        hours = int(getattr(settings, 'EMAIL_VERIFICATION_HOURS', 24))
+        cls.objects.filter(user=user, used_at__isnull=True).delete()
+        return cls.objects.create(
+            user=user,
+            token=secrets.token_urlsafe(32),
+            expires_at=timezone.now() + timedelta(hours=hours),
+        )
+
+    def is_valid(self) -> bool:
+        return self.used_at is None and timezone.now() < self.expires_at

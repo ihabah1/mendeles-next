@@ -3,10 +3,11 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Nav from "@/components/Nav";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
 import { GOOGLE_OAUTH_ERRORS } from "@/lib/auth/google-oauth";
 
-type Mode = "login" | "register" | "forgot";
+type Mode = "login" | "register" | "forgot" | "verify-pending";
 
 function AuthForm() {
   const router = useRouter();
@@ -23,6 +24,7 @@ function AuthForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -72,13 +74,43 @@ function AuthForm() {
   };
 
   const handleRegister = async () => {
-    if (!email || !password) { setError("יש למלא אימייל וסיסמה"); return; }
-    setLoading(true); setError("");
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
+      setError("יש למלא אימייל וסיסמה");
+      return;
+    }
+    setLoading(true);
+    setError("");
     try {
-      await register({ email, password, first_name: name, phone });
-      router.push(redirect);
+      const res = await register({
+        email: trimmedEmail,
+        password,
+        first_name: name,
+        phone,
+      });
+      setPendingEmail(res.email);
+      setStatus(res.detail);
+      go("verify-pending");
     } catch (err) {
       setError(extractApiError(err, "ההרשמה נכשלה"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const target = pendingEmail || email.trim().toLowerCase();
+    if (!target) {
+      setError("הזן אימייל");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await authService.resendVerification(target);
+      setStatus(res.detail);
+    } catch (err) {
+      setError(extractApiError(err, "שליחה מחדש נכשלה"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +133,7 @@ function AuthForm() {
     <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 380 }}>
         <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.3rem", fontWeight: 900, color: "var(--cream)", textAlign: "center", marginBottom: 20 }}>
-          🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : "שכחתי סיסמה"}
+          🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : mode === "verify-pending" ? "אימות אימייל" : "שכחתי סיסמה"}
         </h1>
 
         {error && (
@@ -154,6 +186,30 @@ function AuthForm() {
               {inp({ placeholder: "סיסמה", type: "password", value: password, onChange: e => setPassword(e.target.value), onKeyDown: e => e.key === "Enter" && handleRegister() })}
               <button className="btn btn-gold" style={{ width: "100%", justifyContent: "center", padding: 12 }} onClick={handleRegister} disabled={loading}>{loading ? "..." : "הרשמה"}</button>
               <button style={{ background: "none", border: "none", color: "var(--muted)", fontSize: ".72rem", cursor: "pointer" }} onClick={() => go("login")}>כבר רשום? התחבר</button>
+            </>
+          )}
+          {mode === "verify-pending" && (
+            <>
+              <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
+                שלחנו קישור אימות ל-<strong style={{ color: "var(--cream)" }}>{pendingEmail}</strong>.
+                <br />
+                לחץ על הקישור באימייל כדי להפעיל את החשבון.
+              </p>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ width: "100%", justifyContent: "center", padding: 12 }}
+                onClick={handleResendVerification}
+                disabled={loading}
+              >
+                {loading ? "שולח..." : "שלח שוב אימייל אימות"}
+              </button>
+              <button
+                style={{ background: "none", border: "none", color: "var(--muted)", fontSize: ".72rem", cursor: "pointer" }}
+                onClick={() => go("login")}
+              >
+                חזרה לכניסה
+              </button>
             </>
           )}
           {mode === "forgot" && (

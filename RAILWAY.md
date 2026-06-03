@@ -28,7 +28,11 @@ BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
 BOOTSTRAP_ADMIN_PASSWORD=admin
 CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
 FRONTEND_URL=https://mendeles-next-production.up.railway.app
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 ```
+
+> **אימות אימייל בהרשמה:** `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (דומיין מאומת ב-Resend) + `FRONTEND_URL` לקישור האימות.
 
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`

@@ -16,6 +16,17 @@ export interface ApiUser {
   date_joined: string;
   display_name: string;
   is_admin: boolean;
+  email_verified: boolean;
+}
+
+export interface RegisterResponse {
+  detail: string;
+  email: string;
+  verification_required: boolean;
+}
+
+export interface VerifyEmailResponse extends LoginResponse {
+  detail: string;
 }
 
 export interface TokenPair {

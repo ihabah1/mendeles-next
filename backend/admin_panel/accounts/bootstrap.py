@@ -32,12 +32,14 @@ def ensure_bootstrap_admin() -> tuple[User, bool]:
             is_staff=True,
             is_superuser=True,
             is_active=True,
+            email_verified=True,
         )
     else:
         # אותו משתמש — רק מוודאים הרשאות (לא נוגעים ב-date_joined / last_login)
         admin.is_staff = True
         admin.is_superuser = True
         admin.is_active = True
+        admin.email_verified = True
         admin.role = User.Role.ADMIN
         if not admin.full_name:
             admin.full_name = 'מנהל מערכת'

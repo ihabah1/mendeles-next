@@ -14,6 +14,7 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "TE52", labelHe: "תנאי שימוש", paths: ["/terms"] },
   { code: "AC12", labelHe: "נגישות", paths: ["/accessibility"] },
   { code: "AU91", labelHe: "כניסה / הרשמה", paths: ["/auth"] },
+  { code: "AV52", labelHe: "אימות אימייל", paths: ["/auth/verify-email"] },
   { code: "AO38", labelHe: "OAuth", paths: ["/auth/oauth"] },
   { code: "PR64", labelHe: "פרופיל", paths: ["/profile"] },
   { code: "TU77", labelHe: "טעינת ארנק", paths: ["/topup"] },

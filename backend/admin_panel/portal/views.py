@@ -133,6 +133,7 @@ def user_create(request):
         user = form.save(commit=False)
         user.set_password(form.cleaned_data['password'])
         user.is_active = True
+        user.email_verified = True
         user.save()
         _ensure_profile_and_credit(user)
         for perm, _ in CustomerPermission.Perm.choices:
