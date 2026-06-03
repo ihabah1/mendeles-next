@@ -31,15 +31,25 @@ export async function GET() {
     }
 
     try {
-      const proxyRes = await fetch(`${origin}/api/auth/login/`, {
+      const siteOrigin =
+        process.env.FRONTEND_URL?.replace(/\/$/, "") ||
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+        "";
+      const proxyBase = siteOrigin ? `${siteOrigin}/django-api` : "";
+      const loginUrl = proxyBase
+        ? `${proxyBase}/auth/login/`
+        : `${origin}/api/auth/login/`;
+      const proxyRes = await fetch(loginUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: "health@check.invalid", password: "x" }),
         cache: "no-store",
         signal: AbortSignal.timeout(8000),
       });
-      proxyOk = proxyRes.status === 401 || proxyRes.status === 400;
-      proxyDetail = `HTTP ${proxyRes.status}`;
+      const text = await proxyRes.text();
+      proxyOk =
+        (proxyRes.status === 401 || proxyRes.status === 400) && text.length > 0;
+      proxyDetail = `HTTP ${proxyRes.status}, ${text.length} bytes`;
     } catch (e) {
       proxyDetail = e instanceof Error ? e.message : "fetch failed";
     }

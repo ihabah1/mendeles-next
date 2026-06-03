@@ -7,6 +7,7 @@ import {
 } from "@/lib/api/server-backend-url";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -18,6 +19,8 @@ const HOP_BY_HOP = new Set([
   "transfer-encoding",
   "upgrade",
   "host",
+  "content-length",
+  "content-encoding",
 ]);
 
 async function proxy(
@@ -51,12 +54,16 @@ async function proxy(
 
   try {
     const res = await fetch(target, init);
+    const body = await res.arrayBuffer();
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       if (HOP_BY_HOP.has(key.toLowerCase())) return;
       responseHeaders.set(key, value);
     });
-    return new NextResponse(res.body, {
+    if (body.byteLength > 0) {
+      responseHeaders.set("content-length", String(body.byteLength));
+    }
+    return new NextResponse(body, {
       status: res.status,
       statusText: res.statusText,
       headers: responseHeaders,
