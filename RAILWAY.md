@@ -61,10 +61,17 @@ SMS_PROVIDER=log
 
 ### Firebase Phone Auth (מומלץ — SMS דרך Firebase)
 
-**Frontend** (`mendeles-next-production`):
+**שני שירותים — שניהם חובה:**
+
+| שירות Railway | משתנים |
+|---------------|--------|
+| **Frontend** `mendeles-next` | כל `NEXT_PUBLIC_FIREBASE_*` (7 שורות) |
+| **Backend** `eloquent-perfection` | `FIREBASE_SERVICE_ACCOUNT_JSON` + `PHONE_VERIFICATION_ENABLED=true` |
+
+**Frontend** — Variables → הדבק מ-Firebase Console (Web app config):
 
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=<from Firebase Console>
+NEXT_PUBLIC_FIREBASE_API_KEY=<מהקונסול>
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=mendeles-79320.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=mendeles-79320
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=mendeles-79320.firebasestorage.app
@@ -73,27 +80,26 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:798759282681:web:efccbaff3828e20e0ebf28
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-MQRMQHNNRR
 ```
 
-**Backend** (`eloquent-perfection`):
-
-```env
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-```
-
-Firebase Console → Authentication → Phone → Enable.  
-Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
-
-> **חשוב:** אחרי הוספת `NEXT_PUBLIC_FIREBASE_*` — **Redeploy** לשירות Frontend.  
-> Next.js קורא אותם גם בזמן build וגם בזמן ריצה (`/api/config/firebase`).  
-> בדיקה: `https://mendeles-next-production.up.railway.app/api/config/firebase` → `"configured": true`
-
-זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
+**Backend** — Service account JSON (קובץ שלם בשורה אחת):
 
 ```env
 PHONE_VERIFICATION_ENABLED=true
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"mendeles-79320",...}
 ```
 
-בדיקה: `GET /api/auth/phone-verification-status/` → `required_after_email: true`, `firebase_ready: true`.
+איך להשיג `FIREBASE_SERVICE_ACCOUNT_JSON`:  
+Firebase Console → ⚙️ Project settings → **Service accounts** → **Generate new private key** → העתק את תוכן ה-JSON.
+
+Firebase Console → Authentication → **Phone** → Enable.  
+Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
+
+> **Redeploy** את **שני** השירותים אחרי שמירת המשתנים.
+
+**בדיקות:**
+- Frontend: `https://mendeles-next-production.up.railway.app/api/config/firebase` → `"configured": true`
+- Backend: `https://eloquent-perfection-production-de3d.up.railway.app/api/auth/phone-verification-status/` → `firebase_ready: true`
+
+זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
 
 ### iCount + הדפסה (Backend `eloquent-perfection` בלבד)
 
@@ -106,7 +112,7 @@ FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 ```env
 ICOUNT_API_TOKEN=API3E8-...your-token...
 ICOUNT_COMP_ID=mendeles
-ICOUNT_DOC_TYPE=305
+ICOUNT_DOC_TYPE=invrec
 PRINT_SERVER_URL=https://....ngrok-free.dev
 PRINT_API_KEY=...
 ```

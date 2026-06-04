@@ -53,10 +53,21 @@ def phone_verification_status() -> dict:
         'hint': None
         if enabled and fb.get('configured')
         else (
-            'הוסף FIREBASE_SERVICE_ACCOUNT_JSON ב-Backend + NEXT_PUBLIC_FIREBASE_* ב-Frontend'
+            'Railway Backend: FIREBASE_SERVICE_ACCOUNT_JSON + PHONE_VERIFICATION_ENABLED=true. '
+            'Railway Frontend: NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, '
+            'STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID (+ MEASUREMENT_ID). Redeploy שניהם.'
             if enabled
-            else 'הגדר PHONE_VERIFICATION_ENABLED=true ו-FIREBASE_SERVICE_ACCOUNT_JSON'
+            else 'הגדר PHONE_VERIFICATION_ENABLED=true ו-FIREBASE_SERVICE_ACCOUNT_JSON ב-Backend'
         ),
+        'required_backend': ['FIREBASE_SERVICE_ACCOUNT_JSON', 'PHONE_VERIFICATION_ENABLED'],
+        'required_frontend': [
+            'NEXT_PUBLIC_FIREBASE_API_KEY',
+            'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
+            'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+            'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
+            'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+            'NEXT_PUBLIC_FIREBASE_APP_ID',
+        ],
     }
 
 

@@ -11,15 +11,27 @@ logger = logging.getLogger(__name__)
 ICOUNT_DEFAULT_BASE = 'https://api.icount.co.il/api/v3.php'
 ICOUNT_CREATE_PATH = '/doc/create'
 
-# Legacy string doctypes → numeric codes (iCount v3 REST)
-DOC_TYPE_MAP = {
-    'invrec': '305',  # חשבונית מס קבלה
-    'inv': '320',
-    '320': '320',
-    '305': '305',
-    '405': '405',
-    'receipt': '405',
+# iCount doc/create expects string doctypes (bad_doctype if numeric-only in some accounts).
+# Numeric env values (305, 320) are aliases → string API values.
+DOC_TYPE_ALIASES = {
+    '305': 'invrec',
+    '320': 'invoice',
+    '405': 'receipt',
+    '400': 'refund',
+    '300': 'offer',
+    '100': 'delivery',
+    'invrec': 'invrec',
+    'invoice': 'invoice',
+    'inv': 'invoice',
+    'receipt': 'receipt',
+    'refund': 'refund',
+    'order': 'order',
+    'offer': 'offer',
+    'delivery': 'delivery',
+    'deal': 'deal',
 }
+
+_doctypes_cache: dict[str, str] | None = None
 
 
 class ICountError(Exception):
@@ -51,9 +63,84 @@ def _create_url() -> str:
     return f'{base}{ICOUNT_CREATE_PATH}'
 
 
+def _normalize_doctype_key(raw: str) -> str:
+    key = (raw or 'invrec').strip().lower()
+    return DOC_TYPE_ALIASES.get(key, key)
+
+
+def fetch_available_doctypes(*, force: bool = False) -> dict[str, str]:
+    """Return {doctype_code: hebrew_label} from iCount doc/types."""
+    global _doctypes_cache
+    if _doctypes_cache is not None and not force:
+        return _doctypes_cache
+
+    url = f'{_api_base_url()}/doc/types'
+    try:
+        res = requests.post(
+            url,
+            json=_with_company({}),
+            headers=_auth_headers(),
+            timeout=20,
+        )
+        res.raise_for_status()
+        data = _parse_icount_response(res)
+    except (ICountError, requests.RequestException) as exc:
+        logger.warning('iCount doc/types failed: %s', exc)
+        _doctypes_cache = {}
+        return {}
+
+    types_data = data.get('doctypes') or data.get('data') or data.get('types') or {}
+    parsed: dict[str, str] = {}
+    if isinstance(types_data, dict):
+        for type_id, type_name in types_data.items():
+            if type_id in ('api', 'status'):
+                continue
+            if isinstance(type_name, str):
+                parsed[str(type_id)] = type_name
+            elif isinstance(type_name, dict):
+                parsed[str(type_id)] = (
+                    type_name.get('name')
+                    or type_name.get('doc_type_name')
+                    or str(type_id)
+                )
+    _doctypes_cache = parsed
+    return parsed
+
+
 def _resolve_doctype() -> str:
-    raw = (getattr(settings, 'ICOUNT_DOC_TYPE', '305') or '305').strip().lower()
-    return DOC_TYPE_MAP.get(raw, raw)
+    raw = (getattr(settings, 'ICOUNT_DOC_TYPE', 'invrec') or 'invrec').strip()
+    normalized = _normalize_doctype_key(raw)
+    available = fetch_available_doctypes()
+
+    if not available:
+        return normalized
+
+    # Prefer exact key from account (string or numeric id)
+    for candidate in (raw, normalized):
+        if candidate in available:
+            return candidate
+        if candidate.lower() in available:
+            return candidate.lower()
+
+    # Map alias to a key that exists (e.g. invrec → 305 if account uses numeric keys)
+    for candidate in (normalized, raw):
+        for code, label in available.items():
+            if candidate == code.lower():
+                return code
+            if normalized == _normalize_doctype_key(code):
+                return code
+
+    return normalized
+
+
+def _bad_doctype_hint() -> str:
+    available = fetch_available_doctypes(force=True)
+    if available:
+        sample = ', '.join(f'{k} ({v})' for k, v in list(available.items())[:6])
+        return (
+            f'סוג מסמך לא תקין (bad_doctype). הגדר ICOUNT_DOC_TYPE=invrec או אחד מ: {sample}'
+        )
+    return 'סוג מסמך לא תקין (bad_doctype). נסה ICOUNT_DOC_TYPE=invrec'
 
 
 def icount_configured() -> bool:
@@ -95,11 +182,15 @@ def icount_config_status() -> dict:
             'auth_mode': None,
         }
     cid = _company_id()
+    doctype = _resolve_doctype()
+    available = fetch_available_doctypes()
     return {
         'configured': True,
         'auth_mode': 'api_token',
         'api_url': _create_url(),
-        'doctype': _resolve_doctype(),
+        'doctype': doctype,
+        'doctype_config': (getattr(settings, 'ICOUNT_DOC_TYPE', '') or '').strip() or 'invrec',
+        'available_doctypes': available,
         'company_id': cid or None,
         'hint': None,
     }
@@ -115,6 +206,9 @@ def _parse_icount_response(res: requests.Response) -> dict:
         return {'raw': data}
 
     if data.get('status') is False:
+        reason = str(data.get('reason') or data.get('error') or '')
+        if 'bad_doctype' in reason:
+            raise ICountError(_bad_doctype_hint())
         err = data.get('message') or data.get('error') or data.get('reason') or data
         raise ICountError(f'iCount: {err}')
 
@@ -127,8 +221,11 @@ def _parse_icount_response(res: requests.Response) -> dict:
         except (TypeError, ValueError):
             pass
 
-    if data.get('error'):
-        raise ICountError(f'iCount: {data.get("error")}')
+    err_field = data.get('error')
+    if err_field:
+        if 'bad_doctype' in str(err_field):
+            raise ICountError(_bad_doctype_hint())
+        raise ICountError(f'iCount: {err_field}')
 
     return data
 
