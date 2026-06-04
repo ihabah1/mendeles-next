@@ -118,7 +118,7 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 ICOUNT_API_TOKEN=API3E8-...your-token...
 ICOUNT_COMP_ID=mendeles
 ICOUNT_DOC_TYPE=auto
-PRINT_SERVER_URL=https://battered-festivity-domelike.ngrok-free.app/print
+PRINT_SERVER_URL=https://battered-festivity-domelike.ngrok-free.dev/print
 PRINT_API_KEY=...your-key...
 PRINT_API_KEY_HEADER=x-api-key
 PRINT_PAYLOAD_MODE=forms
@@ -128,7 +128,8 @@ PRINT_PAYLOAD_MODE=forms
 **`forms` (ברירת מחדל):** `id`, `name`, `phone`, `forms[]` → `tables[]` → `number`, `numbers`, `strong`.  
 **`pdf_url`:** רק אם המדפסת מצפה ל-`{"pdf_url":"..."}` (אחרת השאר `forms`).
 
-**HTTP 404:** לרוב **ngrok כבוי** (`endpoint … is offline`) — הפעל ngrok + מדפסת אצל אדם; אם URL השתנה, עדכן `PRINT_SERVER_URL` + Redeploy Backend.
+**HTTP 404 / offline:** ודא ש-`PRINT_SERVER_URL` משתמש ב-**`.ngrok-free.dev`** (לא `.app`) — אותו שם מנהרה, דומיין שונה.  
+אם ngrok כבוי — הפעל ngrok + מדפסת אצל אדם; אם URL השתנה, עדכן `PRINT_SERVER_URL` + Redeploy Backend.
 
 > **אל תשים** את הטוקן ב-Git. רק ב-Railway Variables או `backend/.env` מקומי.  
 > אחרי שמירה → **Redeploy Backend**. באדמין: סטטוס **iCount: מחובר** + לוג אינטגרציות.

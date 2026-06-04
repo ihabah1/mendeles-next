@@ -3,7 +3,7 @@ Send order to external print server.
 
 Railway / .env (מומלץ — כתובת POST מלאה)::
 
-    PRINT_SERVER_URL=https://....ngrok-free.app/print
+    PRINT_SERVER_URL=https://....ngrok-free.dev/print
     PRINT_API_KEY=...
     PRINT_API_KEY_HEADER=x-api-key
 
