@@ -1,4 +1,26 @@
-"""Send lotto order summary to external print server (POST /print)."""
+"""
+Send order to external print server.
+
+Railway / .env (מומלץ — כתובת POST מלאה)::
+
+    PRINT_SERVER_URL=https://....ngrok-free.app/print
+    PRINT_API_KEY=...
+    PRINT_API_KEY_HEADER=x-api-key
+
+Equivalent to::
+
+    requests.post(
+        os.environ['PRINT_SERVER_URL'],
+        headers={'x-api-key': os.environ['PRINT_API_KEY']},
+        json=payload,
+    )
+
+Payload (ברירת מחדל, לפי אדם — ``PRINT_PAYLOAD_MODE=forms``)::
+
+    id, name, phone, forms[] → tables[] → number, numbers, strong
+
+Optional ``PRINT_PAYLOAD_MODE=pdf_url`` → ``{"pdf_url": "..."}`` (מחייב icount_pdf_link).
+"""
 import logging
 import os
 
@@ -12,16 +34,6 @@ class PrintError(Exception):
     pass
 
 
-def _print_base() -> str:
-    base = (
-        getattr(settings, 'PRINT_SERVER_URL', '')
-        or os.getenv('PRINT_SERVER_URL', '')
-    ).strip().rstrip('/')
-    if not base:
-        raise PrintError('PRINT_SERVER_URL לא מוגדר ב-Backend')
-    return base
-
-
 def _print_path() -> str:
     path = (
         getattr(settings, 'PRINT_PATH', '')
@@ -33,9 +45,15 @@ def _print_path() -> str:
 
 
 def _print_url() -> str:
-    base = _print_base()
+    """Full POST URL — either PRINT_SERVER_URL as-is or base + PRINT_PATH."""
+    raw = (
+        getattr(settings, 'PRINT_SERVER_URL', '')
+        or os.getenv('PRINT_SERVER_URL', '')
+    ).strip()
+    if not raw:
+        raise PrintError('PRINT_SERVER_URL לא מוגדר ב-Backend')
+    base = raw.rstrip('/')
     path = _print_path()
-    # Avoid https://host/print/print when PRINT_SERVER_URL already includes /print
     if base.endswith(path):
         return base
     return f'{base}{path}'
@@ -61,11 +79,18 @@ def _print_api_key_header() -> str:
 
 
 def _print_headers() -> dict:
+    """Only x-api-key (+ ngrok hint); ``json=`` adds Content-Type."""
     return {
-        'Content-Type': 'application/json',
         _print_api_key_header(): _print_api_key(),
         'ngrok-skip-browser-warning': 'true',
     }
+
+
+def _print_payload_mode() -> str:
+    return (
+        getattr(settings, 'PRINT_PAYLOAD_MODE', '')
+        or os.getenv('PRINT_PAYLOAD_MODE', 'forms')
+    ).strip().lower() or 'forms'
 
 
 def print_configured() -> bool:
@@ -103,7 +128,7 @@ def build_print_forms(sets_json: list) -> list[dict]:
     return forms
 
 
-def build_print_payload(order) -> dict:
+def build_forms_print_payload(order) -> dict:
     customer = order.customer
     return {
         'id': order.id,
@@ -113,12 +138,30 @@ def build_print_payload(order) -> dict:
     }
 
 
+def build_print_payload(order) -> dict:
+    mode = _print_payload_mode()
+    if mode in ('pdf', 'pdf_url'):
+        pdf_url = (getattr(order, 'icount_pdf_link', None) or '').strip()
+        if not pdf_url:
+            raise PrintError(
+                'מצב pdf_url דורש קישור PDF (הנפק חשבונית לפני הדפסה) או החלף ל-PRINT_PAYLOAD_MODE=forms'
+            )
+        return {'pdf_url': pdf_url}
+    if mode not in ('forms', 'lotto', 'summary', ''):
+        raise PrintError(f'PRINT_PAYLOAD_MODE לא מוכר: {mode}')
+    return build_forms_print_payload(order)
+
+
 def send_order_to_printer(order) -> dict:
-    """POST print job to ngrok print server."""
     url = _print_url()
     payload = build_print_payload(order)
     try:
-        res = requests.post(url, json=payload, headers=_print_headers(), timeout=30)
+        res = requests.post(
+            url,
+            headers=_print_headers(),
+            json=payload,
+            timeout=30,
+        )
     except requests.RequestException as exc:
         logger.exception('Print server request failed')
         raise PrintError('שרת ההדפסה לא זמין') from exc
@@ -126,11 +169,13 @@ def send_order_to_printer(order) -> dict:
     if res.status_code >= 400:
         logger.error('Print server %s %s: %s', res.status_code, url, res.text[:500])
         if res.status_code == 404:
-            body = res.text[:300]
-            if 'ngrok' in body and 'offline' in body.lower():
+            body_lower = res.text[:2000].lower()
+            if 'ngrok' in body_lower and (
+                'offline' in body_lower or 'err_ngrok' in body_lower
+            ):
                 raise PrintError(
-                    'הדפסה נכשלה — מנהרת ngrok כבויה. הפעל ngrok + שרת המדפסת אצל אדם, '
-                    'עדכן PRINT_SERVER_URL ב-Railway אם ה-URL השתנה, ואז Redeploy Backend.'
+                    'הדפסה נכשלה — מנהרת ngrok כבויה. אדם צריך להפעיל שרת המדפסת + ngrok '
+                    '(אותו URL או לעדכן PRINT_SERVER_URL ב-Railway).'
                 )
             raise PrintError(
                 'הדפסה נכשלה (HTTP 404) — הנתיב לא נמצא. '

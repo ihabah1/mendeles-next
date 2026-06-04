@@ -118,12 +118,15 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 ICOUNT_API_TOKEN=API3E8-...your-token...
 ICOUNT_COMP_ID=mendeles
 ICOUNT_DOC_TYPE=auto
-PRINT_SERVER_URL=https://battered-festivity-domelike.ngrok-free.app
+PRINT_SERVER_URL=https://battered-festivity-domelike.ngrok-free.app/print
 PRINT_API_KEY=...your-key...
 PRINT_API_KEY_HEADER=x-api-key
+PRINT_PAYLOAD_MODE=forms
 ```
 
-**הדפסה:** `POST {PRINT_SERVER_URL}/print` עם כותרת **`x-api-key`** (לא Bearer). גוף JSON: `id`, `name`, `phone`, `forms[]` → `tables[]` → `number`, `numbers`, `strong`.
+**הדפסה:** `requests.post(PRINT_SERVER_URL, headers={x-api-key:…}, json=…)` — ה-URL **כולל** `/print`.  
+**`forms` (ברירת מחדל):** `id`, `name`, `phone`, `forms[]` → `tables[]` → `number`, `numbers`, `strong`.  
+**`pdf_url`:** רק אם המדפסת מצפה ל-`{"pdf_url":"..."}` (אחרת השאר `forms`).
 
 **HTTP 404:** לרוב **ngrok כבוי** (`endpoint … is offline`) — הפעל ngrok + מדפסת אצל אדם; אם URL השתנה, עדכן `PRINT_SERVER_URL` + Redeploy Backend.
 
