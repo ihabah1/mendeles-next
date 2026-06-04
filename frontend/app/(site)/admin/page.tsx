@@ -29,6 +29,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 const STATUS_ORDER = ["pending", "paid", "printing", "shipped", "completed", "cancelled"];
 
+function orderHasInvoice(o: Order): boolean {
+  return Boolean(o.invoiceIssuedAt || o.icountDocNumber?.trim());
+}
+
 export default function AdminPage() {
   return (
     <ProtectedRoute adminOnly>
@@ -159,18 +163,22 @@ function AdminPageInner() {
           ? `חשבונית ${res.doc_number} הונפקה`
           : res.detail || "חשבונית הונפקה",
       );
+      const issuedAt = new Date().toISOString();
+      const pdfLink = res.pdf_link?.trim();
       setOrders(prev =>
-        prev.map(o =>
-          o.id === orderId
-            ? {
-                ...o,
-                icountDocNumber: res.doc_number || o.icountDocNumber,
-                icountPdfLink: res.pdf_link || o.icountPdfLink,
-                invoiceIssuedAt: new Date().toISOString(),
-              }
-            : o,
-        ),
+        prev.map(o => {
+          if (o.id !== orderId) return o;
+          return {
+            ...o,
+            icountDocNumber: res.doc_number || o.icountDocNumber,
+            icountPdfLink: pdfLink || o.icountPdfLink,
+            invoiceIssuedAt: issuedAt,
+          };
+        }),
       );
+      if (pdfLink) {
+        setTimeout(() => window.open(pdfLink, "_blank", "noopener,noreferrer"), 300);
+      }
     } catch (e) {
       alert(extractApiError(e, "הנפקת חשבונית נכשלה"));
     } finally {
@@ -335,32 +343,40 @@ function AdminPageInner() {
                       >
                         {actionLoading === o.id ? "..." : "🖨️ הדפס"}
                       </button>
-                      {o.icountDocNumber ? (
-                        <button
-                          type="button"
-                          className="btn btn-gold"
-                          style={{ fontSize: ".68rem", padding: "4px 10px" }}
-                          disabled={actionLoading === o.id}
-                          onClick={() => viewInvoice(o)}
-                          title={
-                            o.invoiceIssuedAt
-                              ? `הונפקה ${new Date(o.invoiceIssuedAt).toLocaleDateString("he-IL")}`
-                              : undefined
-                          }
-                        >
-                          📄 הצג {o.icountDocNumber}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-gold"
-                          style={{ fontSize: ".68rem", padding: "4px 10px" }}
-                          disabled={actionLoading === o.id}
-                          onClick={() => issueInvoice(o.id)}
-                        >
-                          {actionLoading === o.id ? "..." : "📄 הנפק חשבונית"}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{
+                          fontSize: ".68rem",
+                          padding: "4px 10px",
+                          opacity: orderHasInvoice(o) ? 0.45 : 1,
+                        }}
+                        disabled={actionLoading === o.id || orderHasInvoice(o)}
+                        onClick={() => issueInvoice(o.id)}
+                        title={orderHasInvoice(o) ? "חשבונית כבר הונפקה" : undefined}
+                      >
+                        {actionLoading === o.id ? "..." : "📄 הנפק חשבונית"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-gold"
+                        style={{
+                          fontSize: ".68rem",
+                          padding: "4px 10px",
+                          opacity: orderHasInvoice(o) ? 1 : 0.45,
+                        }}
+                        disabled={actionLoading === o.id || !orderHasInvoice(o)}
+                        onClick={() => viewInvoice(o)}
+                        title={
+                          orderHasInvoice(o) && o.invoiceIssuedAt
+                            ? `הונפקה ${new Date(o.invoiceIssuedAt).toLocaleDateString("he-IL")}${
+                                o.icountDocNumber ? ` · ${o.icountDocNumber}` : ""
+                              }`
+                            : "הנפק חשבונית לפני הצגה"
+                        }
+                      >
+                        📄 הצג חשבונית
+                      </button>
                     </div>
                   )}
                 </div>
