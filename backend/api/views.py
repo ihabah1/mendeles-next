@@ -72,19 +72,44 @@ class RegisterView(CreateAPIView):
         import logging
 
         logger = logging.getLogger(__name__)
-        serializer = self.get_serializer(data=request.data)
+        email = (request.data.get('email') or '').strip().lower()
+        existing = User.objects.filter(email__iexact=email).first() if email else None
+
+        if existing and existing.email_verified:
+            return Response(
+                {
+                    'email': [
+                        'כתובת אימייל זו כבר רשומה. התחבר או השתמש ב"שכחתי סיסמה".',
+                    ],
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if existing and not existing.email_verified:
+            serializer = self.get_serializer(existing, data=request.data)
+            created_new = False
+        else:
+            serializer = self.get_serializer(data=request.data)
+            created_new = True
+
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         ensure_customer_records(user)
-        logger.info('Register endpoint: user=%s', user.email)
+        logger.info('Register endpoint: user=%s re_register=%s', user.email, not created_new)
         try:
             payload = issue_verification_or_delegate(user)
             if phone_verification_required_for(user):
                 payload['phone_verification_required'] = True
                 payload['firebase_phone_auth'] = firebase_phone_auth_enabled()
                 payload['phone'] = user.phone
+            if not created_new:
+                payload['detail'] = (
+                    'החשבון כבר היה קיים ללא אימות אימייל. '
+                    + payload.get('detail', 'נשלח שוב אימייל אימות.')
+                )
         except ResendError as exc:
-            user.delete()
+            if created_new:
+                user.delete()
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(payload, status=status.HTTP_201_CREATED)
 

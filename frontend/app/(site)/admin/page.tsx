@@ -13,6 +13,8 @@ interface Stats { total_users: number; new_today: number; active_subs: number; p
 interface Order extends UiOrder {
   user?: { name: string; phone?: string; email?: string };
   icountDocNumber?: string | null;
+  icountPdfLink?: string | null;
+  icountDocId?: string | null;
   invoiceIssuedAt?: string | null;
   printedAt?: string | null;
 }
@@ -36,7 +38,8 @@ export default function AdminPage() {
 }
 
 function AdminPageInner() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
+  const canManageOrders = isAdmin || isStaff;
   const backendOrigin = useBackendOrigin();
   const djangoAdminUrl = `${backendOrigin}/admin/`;
   const [legacyToken, setLegacyToken] = useState<string | null>(null);
@@ -59,6 +62,7 @@ function AdminPageInner() {
   });
   const [paisLotteryId, setPaisLotteryId] = useState("");
   const [paisLoading, setPaisLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const legacyAdminHeader = (): Record<string, string> =>
     legacyToken ? { "x-admin-token": legacyToken } : {};
@@ -104,7 +108,7 @@ function AdminPageInner() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      if (isAdmin) {
+      if (canManageOrders) {
         const [s, o] = await Promise.all([
           adminService.stats(),
           adminService.orders(filter || undefined),
@@ -123,10 +127,10 @@ function AdminPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, legacyToken, filter]);
+  }, [canManageOrders, legacyToken, filter]);
 
   const printOrder = async (orderId: number) => {
-    if (!isAdmin) return;
+    if (!canManageOrders) return;
     setActionLoading(orderId);
     try {
       const res = await adminService.printOrder(orderId);
@@ -146,7 +150,7 @@ function AdminPageInner() {
   };
 
   const issueInvoice = async (orderId: number) => {
-    if (!isAdmin) return;
+    if (!canManageOrders) return;
     setActionLoading(orderId);
     try {
       const res = await adminService.issueInvoice(orderId);
@@ -161,6 +165,7 @@ function AdminPageInner() {
             ? {
                 ...o,
                 icountDocNumber: res.doc_number || o.icountDocNumber,
+                icountPdfLink: res.pdf_link || o.icountPdfLink,
                 invoiceIssuedAt: new Date().toISOString(),
               }
             : o,
@@ -173,8 +178,38 @@ function AdminPageInner() {
     }
   };
 
+  const viewInvoice = async (order: Order) => {
+    if (!canManageOrders) return;
+    const link = order.icountPdfLink?.trim();
+    if (link) {
+      window.open(link, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setActionLoading(order.id);
+    try {
+      const res = await adminService.getInvoice(order.id);
+      if (res.pdf_link) {
+        setOrders(prev =>
+          prev.map(o =>
+            o.id === order.id ? { ...o, icountPdfLink: res.pdf_link || o.icountPdfLink } : o,
+          ),
+        );
+        window.open(res.pdf_link, "_blank", "noopener,noreferrer");
+        return;
+      }
+      alert(
+        `חשבונית ${res.doc_number} הונפקה ב-iCount.\n` +
+          "אין קישור PDF — פתח את המסמך בחשבון iCount שלך.",
+      );
+    } catch (e) {
+      alert(extractApiError(e, "לא ניתן לטעון את החשבונית"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const updateStatus = async (orderId: number, status: string) => {
-    if (isAdmin) {
+    if (canManageOrders) {
       await adminService.updateOrderStatus(orderId, status);
     } else if (legacyToken) {
       await fetch("/api/admin/notify", {
@@ -289,8 +324,8 @@ function AdminPageInner() {
                     style={{ background: "var(--navy)", border: "1px solid var(--navy-b)", borderRadius: 7, color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".72rem", padding: "4px 8px", cursor: "pointer" }}>
                     {STATUS_ORDER.map(v => <option key={v} value={v}>{STATUS_LABELS[v]}</option>)}
                   </select>
-                  {isAdmin && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {canManageOrders && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                       <button
                         type="button"
                         className="btn btn-outline"
@@ -300,16 +335,32 @@ function AdminPageInner() {
                       >
                         {actionLoading === o.id ? "..." : "🖨️ הדפס"}
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn-gold"
-                        style={{ fontSize: ".68rem", padding: "4px 10px" }}
-                        disabled={actionLoading === o.id || Boolean(o.icountDocNumber)}
-                        onClick={() => issueInvoice(o.id)}
-                        title={o.icountDocNumber ? `חשבונית ${o.icountDocNumber}` : undefined}
-                      >
-                        {o.icountDocNumber ? `📄 ${o.icountDocNumber}` : "📄 חשבונית"}
-                      </button>
+                      {o.icountDocNumber ? (
+                        <button
+                          type="button"
+                          className="btn btn-gold"
+                          style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                          disabled={actionLoading === o.id}
+                          onClick={() => viewInvoice(o)}
+                          title={
+                            o.invoiceIssuedAt
+                              ? `הונפקה ${new Date(o.invoiceIssuedAt).toLocaleDateString("he-IL")}`
+                              : undefined
+                          }
+                        >
+                          📄 הצג {o.icountDocNumber}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-gold"
+                          style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                          disabled={actionLoading === o.id}
+                          onClick={() => issueInvoice(o.id)}
+                        >
+                          {actionLoading === o.id ? "..." : "📄 הנפק חשבונית"}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

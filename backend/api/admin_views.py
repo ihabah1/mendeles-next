@@ -61,6 +61,8 @@ def admin_orders(request):
                 'drawDate': o.draw_name or '',
                 'createdAt': o.created_at.isoformat(),
                 'icountDocNumber': o.icount_doc_number or None,
+                'icountPdfLink': o.icount_pdf_link or None,
+                'icountDocId': o.icount_doc_id or None,
                 'invoiceIssuedAt': o.invoice_issued_at.isoformat() if o.invoice_issued_at else None,
                 'printedAt': o.printed_at.isoformat() if o.printed_at else None,
                 'user': {
@@ -114,18 +116,35 @@ def admin_order_print(request, order_id):
     })
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsStaffUser])
 def admin_order_invoice(request, order_id):
-    """Issue iCount invoice for order."""
+    """GET: invoice links. POST: issue iCount invoice for order."""
     order = Order.objects.select_related('customer').filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        if not order.icount_doc_number:
+            return Response(
+                {'detail': 'טרם הונפקה חשבונית להזמנה זו'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response({
+            'doc_number': order.icount_doc_number,
+            'doc_id': order.icount_doc_id,
+            'pdf_link': order.icount_pdf_link or None,
+            'invoice_issued_at': (
+                order.invoice_issued_at.isoformat() if order.invoice_issued_at else None
+            ),
+        })
+
     if order.icount_doc_number:
         return Response({
             'detail': 'חשבונית כבר הונפקה',
             'doc_number': order.icount_doc_number,
             'doc_id': order.icount_doc_id,
+            'pdf_link': order.icount_pdf_link or None,
         })
 
     try:
@@ -135,13 +154,21 @@ def admin_order_invoice(request, order_id):
 
     order.icount_doc_id = str(inv.get('doc_id') or '')
     order.icount_doc_number = str(inv.get('doc_number') or '')
+    order.icount_pdf_link = str(inv.get('pdf_link') or '')[:512]
     order.invoice_issued_at = timezone.now()
-    order.save(update_fields=['icount_doc_id', 'icount_doc_number', 'invoice_issued_at'])
+    order.save(
+        update_fields=[
+            'icount_doc_id',
+            'icount_doc_number',
+            'icount_pdf_link',
+            'invoice_issued_at',
+        ],
+    )
 
     return Response({
         'detail': 'חשבונית הונפקה בהצלחה',
         'doc_number': order.icount_doc_number,
         'doc_id': order.icount_doc_id,
-        'pdf_link': inv.get('pdf_link'),
+        'pdf_link': order.icount_pdf_link or inv.get('pdf_link'),
         'invoice_issued_at': order.invoice_issued_at.isoformat(),
     })

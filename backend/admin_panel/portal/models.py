@@ -57,6 +57,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     icount_doc_id = models.CharField('iCount doc id', max_length=64, blank=True)
     icount_doc_number = models.CharField('מספר חשבונית', max_length=32, blank=True)
+    icount_pdf_link = models.URLField('קישור PDF חשבונית', max_length=512, blank=True)
     invoice_issued_at = models.DateTimeField('חשבונית הונפקה', null=True, blank=True)
     printed_at = models.DateTimeField('הודפס', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

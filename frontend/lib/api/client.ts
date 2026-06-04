@@ -112,8 +112,13 @@ export function translateApiMessage(message: string): string {
   if (lower === "not found" || lower === "not found.") {
     return "הבקשה לא נמצאה — נסה שוב או פנה לתמיכה";
   }
-  if (lower.includes("already exists") || lower.includes("כבר רשומ") || lower.includes("קיימת כבר")) {
-    return "כתובת האימייל כבר רשומה. התחבר או שלח שוב אימייל אימות.";
+  if (
+    lower.includes("already exists") ||
+    lower.includes("כבר רשומ") ||
+    lower.includes("קיימת כבר") ||
+    lower.includes("קיים כבר")
+  ) {
+    return "כתובת האימייל כבר רשומה. אם לא אימתת — בדוק ספאם; אחרת לחץ «התחבר».";
   }
   return m;
 }

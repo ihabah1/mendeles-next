@@ -49,4 +49,19 @@ export const adminService = {
     }>(`/admin/orders/${orderId}/invoice/`);
     return data;
   },
+
+  async getInvoice(orderId: number): Promise<{
+    doc_number: string;
+    doc_id?: string;
+    pdf_link?: string | null;
+    invoice_issued_at?: string | null;
+  }> {
+    const { data } = await api.get<{
+      doc_number: string;
+      doc_id?: string;
+      pdf_link?: string | null;
+      invoice_issued_at?: string | null;
+    }>(`/admin/orders/${orderId}/invoice/`);
+    return data;
+  },
 };

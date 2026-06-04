@@ -49,14 +49,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         value = value.lower().strip()
+        if self.instance and self.instance.email.lower() == value:
+            return value
         existing = User.objects.filter(email__iexact=value).first()
         if existing:
             if existing.email_verified:
                 raise serializers.ValidationError(
                     'כתובת אימייל זו כבר רשומה. התחבר או השתמש ב"שכחתי סיסמה".',
                 )
-            # Allow completing registration if the previous attempt never verified email.
-            self.context['existing_unverified_user'] = existing
+            if not self.instance:
+                self.context['existing_unverified_user'] = existing
         return value
 
     def validate_phone(self, value):
@@ -82,6 +84,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.is_active = False
         user.save()
         return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password')
+        instance.first_name = validated_data.get('first_name', instance.first_name) or instance.first_name
+        instance.last_name = validated_data.get('last_name', instance.last_name) or instance.last_name
+        instance.phone = validated_data.get('phone', instance.phone) or instance.phone
+        instance.set_password(password)
+        instance.sync_full_name()
+        instance.email_verified = False
+        instance.phone_verified = not phone_verification_required_for(instance)
+        instance.is_active = False
+        instance.save()
+        return instance
 
 
 class LoginTokenSerializer(TokenObtainPairSerializer):

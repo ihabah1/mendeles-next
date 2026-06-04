@@ -53,7 +53,10 @@ async function proxy(
   }
 
   try {
-    const res = await fetch(target, init);
+    const res = await fetch(target, {
+      ...init,
+      signal: AbortSignal.timeout(45_000),
+    });
     const body = await res.arrayBuffer();
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {

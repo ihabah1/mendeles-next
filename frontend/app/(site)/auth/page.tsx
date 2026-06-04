@@ -167,7 +167,20 @@ function AuthForm() {
       if (res.dev_otp) setStatus((s) => `${s} קוד SMS (פיתוח): ${res.dev_otp}`.trim());
       go("verify-pending");
     } catch (err) {
-      setError(extractApiError(err, "ההרשמה נכשלה"));
+      const msg = extractApiError(err, "ההרשמה נכשלה");
+      if (/user not found/i.test(msg)) {
+        setError(
+          "האימייל כבר קיים במערכת. בדוק את תיבת הדואר (גם בספאם) לאימות, או לחץ «כבר רשום? התחבר».",
+        );
+      } else if (/כבר רשומ|קיימת כבר|קיים כבר/i.test(msg)) {
+        setError(
+          "האימייל כבר רשומה. אם לא אימתת — בדוק ספאם; אחרת התחבר עם הסיסמה שהגדרת.",
+        );
+      } else if (/לא ניתן להגיע ל-backend/i.test(msg)) {
+        setError("השרת לא זמין כרגע — המתן דקה ונסה שוב.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
