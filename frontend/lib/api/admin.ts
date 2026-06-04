@@ -12,17 +12,56 @@ export interface AdminStats {
   total_prize: number;
 }
 
+export interface IntegrationStatus {
+  configured: boolean;
+  hint?: string | null;
+  api_url?: string;
+  doctype?: string;
+}
+
+export interface IntegrationLogEntry {
+  id: number;
+  source: string;
+  level: string;
+  message: string;
+  orderId: number | null;
+  orderNumber: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
 export const adminService = {
   async stats(): Promise<AdminStats> {
     const { data } = await api.get<AdminStats>("/admin/stats/");
     return data;
   },
 
-  async orders(status?: string): Promise<{ orders: UiOrder[]; count: number }> {
-    const { data } = await api.get<{ orders: UiOrder[]; count: number }>(
-      "/admin/orders/",
-      { params: status ? { status } : undefined },
-    );
+  async orders(status?: string): Promise<{
+    orders: UiOrder[];
+    count: number;
+    integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
+    logs?: IntegrationLogEntry[];
+  }> {
+    const { data } = await api.get<{
+      orders: UiOrder[];
+      count: number;
+      integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
+      logs?: IntegrationLogEntry[];
+    }>("/admin/orders/", { params: status ? { status } : undefined });
+    return data;
+  },
+
+  async integrationLogs(params?: {
+    source?: string;
+    limit?: number;
+  }): Promise<{
+    logs: IntegrationLogEntry[];
+    integrations: { icount: IntegrationStatus; print: IntegrationStatus };
+  }> {
+    const { data } = await api.get<{
+      logs: IntegrationLogEntry[];
+      integrations: { icount: IntegrationStatus; print: IntegrationStatus };
+    }>("/admin/integration-logs/", { params });
     return data;
   },
 
@@ -41,11 +80,13 @@ export const adminService = {
     detail: string;
     doc_number?: string;
     pdf_link?: string;
+    invoice_issued_at?: string;
   }> {
     const { data } = await api.post<{
       detail: string;
       doc_number?: string;
       pdf_link?: string;
+      invoice_issued_at?: string;
     }>(`/admin/orders/${orderId}/invoice/`);
     return data;
   },

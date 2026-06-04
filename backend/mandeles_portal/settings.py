@@ -318,10 +318,16 @@ PHONE_VERIFICATION_ENABLED = os.getenv('PHONE_VERIFICATION_ENABLED', 'true').low
 )
 
 # ── iCount invoices ───────────────────────────────────────────────────────────
+# API v3: Bearer token (הגדרות → API ב-iCount). מספיק לרוב החשבונות.
 ICOUNT_API_TOKEN = _env_clean('ICOUNT_API_TOKEN', '')
 ICOUNT_API_URL = _env_clean('ICOUNT_API_URL', 'https://api.icount.co.il/api/v3.php')
-ICOUNT_DOC_TYPE = _env_clean('ICOUNT_DOC_TYPE', 'invrec')
+ICOUNT_DOC_TYPE = _env_clean('ICOUNT_DOC_TYPE', '305')
 ICOUNT_VAT_RATE = int(os.getenv('ICOUNT_VAT_RATE', '18'))
+# אופציונלי — מזהה חברה (cid), למשל mendeles
+ICOUNT_COMP_ID = _env_clean('ICOUNT_COMP_ID', '')
+# שורה ישנה (user+pass) — לא בשימוש אם יש ICOUNT_API_TOKEN
+ICOUNT_USER = _env_clean('ICOUNT_USER', '')
+ICOUNT_PASSWORD = _env_clean('ICOUNT_PASSWORD', '')
 
 # ── Print server (ngrok) ──────────────────────────────────────────────────────
 PRINT_SERVER_URL = _env_clean('PRINT_SERVER_URL', '')

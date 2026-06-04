@@ -7,9 +7,15 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from admin_panel.accounts.models import User
-from admin_panel.portal.models import Order
+from admin_panel.portal.models import IntegrationLog, Order
 
-from api.services.icount_service import ICountError, create_invoice_for_order, icount_config_status
+from api.services.icount_service import (
+    ICountError,
+    create_invoice_for_order,
+    fetch_document_pdf_link,
+    icount_config_status,
+)
+from api.services.integration_log import log_integration, recent_integration_logs
 from api.services.print_service import PrintError, print_configured, send_order_to_printer
 
 
@@ -78,6 +84,7 @@ def admin_orders(request):
                 'icount': icount_config_status(),
                 'print': {'configured': print_configured()},
             },
+            'logs': recent_integration_logs(limit=30),
         })
 
     order_id = request.data.get('order_id')
@@ -93,6 +100,23 @@ def admin_orders(request):
     return Response({'status': 'ok'})
 
 
+@api_view(['GET'])
+@permission_classes([IsStaffUser])
+def admin_integration_logs(request):
+    source = request.query_params.get('source', '').strip()
+    try:
+        limit = min(int(request.query_params.get('limit', 80)), 200)
+    except (TypeError, ValueError):
+        limit = 80
+    return Response({
+        'logs': recent_integration_logs(source=source, limit=limit),
+        'integrations': {
+            'icount': icount_config_status(),
+            'print': {'configured': print_configured()},
+        },
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsStaffUser])
 def admin_order_print(request, order_id):
@@ -100,15 +124,35 @@ def admin_order_print(request, order_id):
     order = Order.objects.select_related('customer').filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'שליחה להדפסה: {order.order_number}',
+        order=order,
+    )
     try:
         result = send_order_to_printer(order)
     except PrintError as exc:
+        log_integration(
+            IntegrationLog.Source.PRINT,
+            IntegrationLog.Level.ERROR,
+            str(exc),
+            order=order,
+            details={'order_number': order.order_number},
+        )
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     order.printed_at = timezone.now()
     if order.status == Order.Status.PAID:
         order.status = Order.Status.PRINTING
     order.save(update_fields=['printed_at', 'status'])
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'הודפס בהצלחה: {order.order_number}',
+        order=order,
+        details=result if isinstance(result, dict) else {'result': str(result)[:500]},
+    )
     return Response({
         'detail': 'נשלח להדפסה',
         'printed_at': order.printed_at.isoformat(),
@@ -125,21 +169,38 @@ def admin_order_invoice(request, order_id):
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        if not order.icount_doc_number:
+        doc_number = (order.icount_doc_number or '').strip()
+        doc_id = (order.icount_doc_id or '').strip()
+        pdf_link = (order.icount_pdf_link or '').strip()
+
+        if not doc_number and not doc_id and not pdf_link:
             return Response(
-                {'detail': 'טרם הונפקה חשבונית להזמנה זו'},
+                {
+                    'detail': 'טרם הונפקה חשבונית להזמנה זו — לחץ «הנפק חשבונית»',
+                    'can_issue': True,
+                },
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        if not pdf_link and (doc_id or doc_number):
+            fetched = fetch_document_pdf_link(doc_id=doc_id, doc_number=doc_number)
+            if fetched:
+                pdf_link = fetched
+                order.icount_pdf_link = fetched[:512]
+                if fetched and not order.invoice_issued_at:
+                    order.invoice_issued_at = timezone.now()
+                order.save(update_fields=['icount_pdf_link', 'invoice_issued_at'])
+
         return Response({
-            'doc_number': order.icount_doc_number,
-            'doc_id': order.icount_doc_id,
-            'pdf_link': order.icount_pdf_link or None,
+            'doc_number': doc_number or None,
+            'doc_id': doc_id or None,
+            'pdf_link': pdf_link or None,
             'invoice_issued_at': (
                 order.invoice_issued_at.isoformat() if order.invoice_issued_at else None
             ),
         })
 
-    if order.icount_doc_number:
+    if (order.icount_doc_number or '').strip():
         return Response({
             'detail': 'חשבונית כבר הונפקה',
             'doc_number': order.icount_doc_number,
@@ -147,13 +208,44 @@ def admin_order_invoice(request, order_id):
             'pdf_link': order.icount_pdf_link or None,
         })
 
+    log_integration(
+        IntegrationLog.Source.ICOUNT,
+        IntegrationLog.Level.INFO,
+        f'מנסה להנפיק חשבונית: {order.order_number}',
+        order=order,
+        details={
+            'amount_ils': float(order.amount_ils),
+            'customer': order.customer.email,
+        },
+    )
+
     try:
         inv = create_invoice_for_order(order)
     except ICountError as exc:
+        log_integration(
+            IntegrationLog.Source.ICOUNT,
+            IntegrationLog.Level.ERROR,
+            str(exc),
+            order=order,
+            details={'order_number': order.order_number},
+        )
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    order.icount_doc_id = str(inv.get('doc_id') or '')
-    order.icount_doc_number = str(inv.get('doc_number') or '')
+    doc_number = str(inv.get('doc_number') or '').strip()
+    doc_id = str(inv.get('doc_id') or '').strip()
+    if not doc_number and not doc_id:
+        msg = 'iCount לא החזיר מזהה מסמך — החשבונית לא נשמרה'
+        log_integration(
+            IntegrationLog.Source.ICOUNT,
+            IntegrationLog.Level.ERROR,
+            msg,
+            order=order,
+            details=inv.get('raw'),
+        )
+        return Response({'detail': msg}, status=status.HTTP_502_BAD_GATEWAY)
+
+    order.icount_doc_id = doc_id
+    order.icount_doc_number = doc_number
     order.icount_pdf_link = str(inv.get('pdf_link') or '')[:512]
     order.invoice_issued_at = timezone.now()
     order.save(
@@ -163,6 +255,18 @@ def admin_order_invoice(request, order_id):
             'icount_pdf_link',
             'invoice_issued_at',
         ],
+    )
+
+    log_integration(
+        IntegrationLog.Source.ICOUNT,
+        IntegrationLog.Level.INFO,
+        f'חשבונית {doc_number or doc_id} הונפקה: {order.order_number}',
+        order=order,
+        details={
+            'doc_number': doc_number,
+            'doc_id': doc_id,
+            'pdf_link': order.icount_pdf_link or None,
+        },
     )
 
     return Response({

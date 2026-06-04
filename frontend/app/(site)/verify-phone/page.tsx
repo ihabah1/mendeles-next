@@ -8,7 +8,7 @@ import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
 import { resolveApiBaseUrl } from "@/lib/api/config";
 import { tokenStore } from "@/lib/api/tokens";
-import { isFirebaseConfigured } from "@/lib/firebase";
+import { ensureFirebaseConfig } from "@/lib/firebase";
 import {
   confirmPhoneOtp,
   initRecaptcha,
@@ -40,10 +40,13 @@ function VerifyPhoneForm() {
       router.replace(`/auth?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
-    if (!isFirebaseConfigured()) {
-      setError("Firebase לא מוגדר ב-Frontend — הוסף NEXT_PUBLIC_FIREBASE_* ב-Railway");
-      return;
-    }
+    void ensureFirebaseConfig().then((cfg) => {
+      if (!cfg) {
+        setError(
+          "Firebase לא מוגדר — ודא NEXT_PUBLIC_FIREBASE_* ב-Railway (Frontend) ולחץ Redeploy",
+        );
+      }
+    });
     resolveApiBaseUrl()
       .then((base) => fetch(`${base}/auth/phone-verification-status/`, { cache: "no-store" }))
       .then((r) => (r.ok ? r.json() : null))
@@ -65,9 +68,9 @@ function VerifyPhoneForm() {
     return () => resetPhoneAuthSession();
   }, []);
 
-  const ensureRecaptcha = useCallback(() => {
+  const ensureRecaptcha = useCallback(async () => {
     if (!recaptchaReady.current) {
-      initRecaptcha("recaptcha-container");
+      await initRecaptcha("recaptcha-container");
       recaptchaReady.current = true;
     }
   }, []);
@@ -77,7 +80,7 @@ function VerifyPhoneForm() {
     setStatus("");
     setLoading(true);
     try {
-      ensureRecaptcha();
+      await ensureRecaptcha();
       const e164 = toE164(phone);
       await sendPhoneOtp(e164);
       setStep("code");

@@ -82,6 +82,10 @@ FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 Firebase Console → Authentication → Phone → Enable.  
 Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 
+> **חשוב:** אחרי הוספת `NEXT_PUBLIC_FIREBASE_*` — **Redeploy** לשירות Frontend.  
+> Next.js קורא אותם גם בזמן build וגם בזמן ריצה (`/api/config/firebase`).  
+> בדיקה: `https://mendeles-next-production.up.railway.app/api/config/firebase` → `"configured": true`
+
 זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
 
 ```env
@@ -91,15 +95,26 @@ FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 
 בדיקה: `GET /api/auth/phone-verification-status/` → `required_after_email: true`, `firebase_ready: true`.
 
-### iCount + הדפסה (Backend בלבד)
+### iCount + הדפסה (Backend `eloquent-perfection` בלבד)
+
+| משתנה | מה זה | חובה? |
+|--------|--------|--------|
+| `ICOUNT_API_TOKEN` | טוקן API מ-iCount → **הגדרות → API** (מתחיל ב-`API3E8-`) | **כן** |
+| `ICOUNT_COMP_ID` | מזהה חברה (`cid`), למשל `mendeles` | מומלץ |
+| `ICOUNT_USER` / `ICOUNT_PASSWORD` | התחברות ישנה (אימייל+סיסמה) — **לא** נדרש עם טוקן | לא |
 
 ```env
-ICOUNT_API_TOKEN=API3E8-...
+ICOUNT_API_TOKEN=API3E8-...your-token...
+ICOUNT_COMP_ID=mendeles
+ICOUNT_DOC_TYPE=305
 PRINT_SERVER_URL=https://....ngrok-free.dev
 PRINT_API_KEY=...
 ```
 
-אדמין → הזמנות → **הדפס** (`POST /api/admin/orders/{id}/print/`) | **חשבונית** (`POST /api/admin/orders/{id}/invoice/`).
+> **אל תשים** את הטוקן ב-Git. רק ב-Railway Variables או `backend/.env` מקומי.  
+> אחרי שמירה → **Redeploy Backend**. באדמין: סטטוס **iCount: מחובר** + לוג אינטגרציות.
+
+אדמין → הזמנות → **הנפק חשבונית** | **הצג חשבונית** | **הדפס**.
 
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`

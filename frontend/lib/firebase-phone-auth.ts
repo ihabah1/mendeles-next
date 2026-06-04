@@ -24,9 +24,9 @@ export function resetPhoneAuthSession(): void {
   confirmation = null;
 }
 
-export function initRecaptcha(containerId: string): RecaptchaVerifier {
+export async function initRecaptcha(containerId: string): Promise<RecaptchaVerifier> {
   resetPhoneAuthSession();
-  const auth = getFirebaseAuth();
+  const auth = await getFirebaseAuth();
   recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
     size: "invisible",
     callback: () => {},
@@ -39,7 +39,7 @@ export async function sendPhoneOtp(phoneE164: string): Promise<void> {
   if (!recaptchaVerifier) {
     throw new Error("reCAPTCHA לא אותחל");
   }
-  const auth = getFirebaseAuth();
+  const auth = await getFirebaseAuth();
   confirmation = await signInWithPhoneNumber(auth, phoneE164, recaptchaVerifier);
 }
 

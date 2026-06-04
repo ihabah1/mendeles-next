@@ -4,7 +4,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { adminService } from "@/lib/api/admin";
+import { adminService, type IntegrationLogEntry, type IntegrationStatus } from "@/lib/api/admin";
 import { extractApiError } from "@/lib/api/client";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 import type { UiOrder } from "@/lib/api/mappers";
@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_ORDER = ["pending", "paid", "printing", "shipped", "completed", "cancelled"];
 
 function orderHasInvoice(o: Order): boolean {
-  return Boolean(o.invoiceIssuedAt || o.icountDocNumber?.trim());
+  return Boolean(o.icountDocNumber?.trim() || o.icountPdfLink?.trim());
 }
 
 export default function AdminPage() {
@@ -67,6 +67,12 @@ function AdminPageInner() {
   const [paisLotteryId, setPaisLotteryId] = useState("");
   const [paisLoading, setPaisLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [integrations, setIntegrations] = useState<{
+    icount: IntegrationStatus;
+    print: IntegrationStatus;
+  } | null>(null);
+  const [integrationLogs, setIntegrationLogs] = useState<IntegrationLogEntry[]>([]);
+  const [logsExpanded, setLogsExpanded] = useState(true);
 
   const legacyAdminHeader = (): Record<string, string> =>
     legacyToken ? { "x-admin-token": legacyToken } : {};
@@ -119,6 +125,8 @@ function AdminPageInner() {
         ]);
         setStats(s);
         setOrders(o.orders);
+        if (o.integrations) setIntegrations(o.integrations);
+        if (o.logs) setIntegrationLogs(o.logs);
       } else if (legacyToken) {
         const h = { "x-admin-token": legacyToken };
         const [s, o] = await Promise.all([
@@ -158,29 +166,38 @@ function AdminPageInner() {
     setActionLoading(orderId);
     try {
       const res = await adminService.issueInvoice(orderId);
-      alert(
-        res.doc_number
-          ? `חשבונית ${res.doc_number} הונפקה`
-          : res.detail || "חשבונית הונפקה",
-      );
-      const issuedAt = new Date().toISOString();
+      if (!res.doc_number?.trim()) {
+        alert(res.detail || "הנפקת חשבונית נכשלה — אין מספר מסמך מ-iCount");
+        const logRes = await adminService.integrationLogs({ source: "icount", limit: 20 });
+        setIntegrationLogs(logRes.logs);
+        if (logRes.integrations) setIntegrations(logRes.integrations);
+        return;
+      }
+      alert(`חשבונית ${res.doc_number} הונפקה`);
+      const issuedAt = res.invoice_issued_at || new Date().toISOString();
       const pdfLink = res.pdf_link?.trim();
       setOrders(prev =>
         prev.map(o => {
           if (o.id !== orderId) return o;
           return {
             ...o,
-            icountDocNumber: res.doc_number || o.icountDocNumber,
+            icountDocNumber: res.doc_number,
             icountPdfLink: pdfLink || o.icountPdfLink,
             invoiceIssuedAt: issuedAt,
           };
         }),
       );
+      const logRes = await adminService.integrationLogs({ limit: 30 });
+      setIntegrationLogs(logRes.logs);
       if (pdfLink) {
         setTimeout(() => window.open(pdfLink, "_blank", "noopener,noreferrer"), 300);
       }
     } catch (e) {
       alert(extractApiError(e, "הנפקת חשבונית נכשלה"));
+      try {
+        const logRes = await adminService.integrationLogs({ source: "icount", limit: 20 });
+        setIntegrationLogs(logRes.logs);
+      } catch { /* ignore */ }
     } finally {
       setActionLoading(null);
     }
@@ -188,6 +205,10 @@ function AdminPageInner() {
 
   const viewInvoice = async (order: Order) => {
     if (!canManageOrders) return;
+    if (!orderHasInvoice(order)) {
+      alert("טרם הונפקה חשבונית — לחץ «הנפק חשבונית» קודם.");
+      return;
+    }
     const link = order.icountPdfLink?.trim();
     if (link) {
       window.open(link, "_blank", "noopener,noreferrer");
@@ -199,18 +220,39 @@ function AdminPageInner() {
       if (res.pdf_link) {
         setOrders(prev =>
           prev.map(o =>
-            o.id === order.id ? { ...o, icountPdfLink: res.pdf_link || o.icountPdfLink } : o,
+            o.id === order.id
+              ? {
+                  ...o,
+                  icountPdfLink: res.pdf_link || o.icountPdfLink,
+                  icountDocNumber: res.doc_number || o.icountDocNumber,
+                }
+              : o,
           ),
         );
         window.open(res.pdf_link, "_blank", "noopener,noreferrer");
         return;
       }
       alert(
-        `חשבונית ${res.doc_number} הונפקה ב-iCount.\n` +
-          "אין קישור PDF — פתח את המסמך בחשבון iCount שלך.",
+        res.doc_number
+          ? `חשבונית ${res.doc_number} ב-iCount — אין קישור PDF. פתח את המסמך באתר iCount.`
+          : "לא נמצא קישור לחשבונית — נסה «הנפק חשבונית» מחדש.",
       );
     } catch (e) {
-      alert(extractApiError(e, "לא ניתן לטעון את החשבונית"));
+      const msg = extractApiError(e, "לא ניתן לטעון את החשבונית");
+      alert(msg);
+      setOrders(prev =>
+        prev.map(o =>
+          o.id === order.id
+            ? {
+                ...o,
+                icountDocNumber: null,
+                icountPdfLink: null,
+                icountDocId: null,
+                invoiceIssuedAt: null,
+              }
+            : o,
+        ),
+      );
     } finally {
       setActionLoading(null);
     }
@@ -288,6 +330,61 @@ function AdminPageInner() {
                 {s.sub && <div style={{ fontSize: ".62rem", color: "var(--green)", marginTop: 2 }}>{s.sub}</div>}
               </div>
             ))}
+          </div>
+        )}
+
+        {canManageOrders && integrations && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14, fontSize: ".72rem" }}>
+            <span style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--navy-b)", background: integrations.icount.configured ? "rgba(29,185,106,.12)" : "rgba(255,107,122,.12)", color: integrations.icount.configured ? "var(--green)" : "#ff6b7a" }}>
+              iCount: {integrations.icount.configured ? "מחובר" : "לא מוגדר"}
+              {integrations.icount.doctype ? ` · סוג ${integrations.icount.doctype}` : ""}
+            </span>
+            <span style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--navy-b)", background: integrations.print.configured ? "rgba(29,185,106,.12)" : "rgba(255,179,71,.12)", color: integrations.print.configured ? "var(--green)" : "#ffb347" }}>
+              הדפסה: {integrations.print.configured ? "מחובר" : "לא מוגדר"}
+            </span>
+            {!integrations.icount.configured && integrations.icount.hint && (
+              <span style={{ color: "var(--muted)" }}>{integrations.icount.hint}</span>
+            )}
+          </div>
+        )}
+
+        {canManageOrders && (
+          <div style={{ background: "rgba(26,45,66,.85)", border: "1px solid var(--navy-b)", borderRadius: 14, marginBottom: 16, overflow: "hidden" }}>
+            <button
+              type="button"
+              onClick={() => setLogsExpanded(v => !v)}
+              style={{ width: "100%", padding: "11px 16px", border: "none", borderBottom: logsExpanded ? "1px solid var(--navy-b)" : "none", background: "transparent", color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", textAlign: "right", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <span>📋 לוג אינטגרציות (iCount / הדפסה)</span>
+              <span style={{ color: "var(--muted)", fontSize: ".7rem" }}>{logsExpanded ? "הסתר" : "הצג"} · {integrationLogs.length}</span>
+            </button>
+            {logsExpanded && (
+              <div style={{ maxHeight: 220, overflowY: "auto" }}>
+                {integrationLogs.length === 0 && (
+                  <div style={{ padding: 16, textAlign: "center", color: "var(--muted)", fontSize: ".75rem" }}>אין רשומות עדיין — הנפק חשבונית או הדפסה כדי לראות לוגים</div>
+                )}
+                {integrationLogs.map(log => (
+                  <div key={log.id} style={{ padding: "8px 16px", borderBottom: "1px solid var(--navy-b)", fontSize: ".7rem", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
+                    <span style={{ color: log.level === "error" ? "#ff6b7a" : log.level === "warning" ? "#ffb347" : "var(--green)", fontWeight: 700, minWidth: 52 }}>
+                      {log.source === "icount" ? "iCount" : log.source === "print" ? "הדפסה" : log.source}
+                    </span>
+                    <span style={{ color: "var(--muted)", fontSize: ".62rem" }}>
+                      {new Date(log.createdAt).toLocaleString("he-IL")}
+                    </span>
+                    {log.orderNumber && <span style={{ color: "var(--gold)" }}>{log.orderNumber}</span>}
+                    <span style={{ color: "var(--cream)", flex: "1 1 200px" }}>{log.message}</span>
+                    {Object.keys(log.details || {}).length > 0 && (
+                      <details style={{ width: "100%", color: "var(--muted)", fontSize: ".62rem" }}>
+                        <summary style={{ cursor: "pointer" }}>פרטים</summary>
+                        <pre style={{ margin: "4px 0 0", whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "monospace" }}>
+                          {JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

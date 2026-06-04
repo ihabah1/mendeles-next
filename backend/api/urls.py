@@ -52,6 +52,7 @@ admin_patterns = [
     path('orders/', admin_views.admin_orders, name='admin-orders'),
     path('orders/<int:order_id>/print/', admin_views.admin_order_print, name='admin-order-print'),
     path('orders/<int:order_id>/invoice/', admin_views.admin_order_invoice, name='admin-order-invoice'),
+    path('integration-logs/', admin_views.admin_integration_logs, name='admin-integration-logs'),
     path('service-flags/', service_flag_views.service_flags_view, name='admin-service-flags'),
 ]
 

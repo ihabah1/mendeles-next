@@ -71,6 +71,38 @@ class Order(models.Model):
         return self.order_number
 
 
+class IntegrationLog(models.Model):
+    class Source(models.TextChoices):
+        ICOUNT = 'icount', 'iCount'
+        PRINT = 'print', 'הדפסה'
+
+    class Level(models.TextChoices):
+        INFO = 'info', 'מידע'
+        WARNING = 'warning', 'אזהרה'
+        ERROR = 'error', 'שגיאה'
+
+    source = models.CharField(max_length=16, choices=Source.choices)
+    level = models.CharField(max_length=16, choices=Level.choices, default=Level.INFO)
+    message = models.CharField(max_length=500)
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='integration_logs',
+    )
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'לוג אינטגרציה'
+        verbose_name_plural = 'לוגי אינטגרציה'
+
+    def __str__(self):
+        return f'{self.source} {self.level}: {self.message[:40]}'
+
+
 class CreditAccount(models.Model):
     customer = models.OneToOneField(
         settings.AUTH_USER_MODEL,

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
 import { resolveApiBaseUrl } from "@/lib/api/config";
-import { isFirebaseConfigured } from "@/lib/firebase";
+import { ensureFirebaseConfig } from "@/lib/firebase";
 import { GOOGLE_OAUTH_ERRORS } from "@/lib/auth/google-oauth";
 
 type Mode = "login" | "register" | "forgot" | "verify-pending" | "phone-verify";
@@ -76,7 +76,9 @@ function AuthForm() {
       .then((d: { required_after_email?: boolean } | null) => {
         setSmsAfterEmail(Boolean(d?.required_after_email));
       })
-      .catch(() => setSmsAfterEmail(isFirebaseConfigured()));
+      .catch(() => {
+        void ensureFirebaseConfig().then((cfg) => setSmsAfterEmail(Boolean(cfg)));
+      });
   }, [params, isAuthenticated, router, redirect]);
 
   const go = (path: string) => { setError(""); setStatus(""); setMode(path as Mode); };
