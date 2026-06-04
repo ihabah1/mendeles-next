@@ -139,7 +139,7 @@ function AdminPageInner() {
         ),
       );
     } catch (e) {
-      alert(e instanceof Error ? e.message : "הדפסה נכשלה");
+      alert(extractApiError(e, "הדפסה נכשלה"));
     } finally {
       setActionLoading(null);
     }
@@ -167,7 +167,7 @@ function AdminPageInner() {
         ),
       );
     } catch (e) {
-      alert(e instanceof Error ? e.message : "הנפקת חשבונית נכשלה");
+      alert(extractApiError(e, "הנפקת חשבונית נכשלה"));
     } finally {
       setActionLoading(null);
     }
