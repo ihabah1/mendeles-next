@@ -13,6 +13,7 @@ import {
   confirmPhoneOtp,
   initRecaptcha,
   resetPhoneAuthSession,
+  formatFirebaseAuthError,
   sendPhoneOtp,
   toE164,
 } from "@/lib/firebase-phone-auth";
@@ -127,7 +128,7 @@ function VerifyPhoneForm() {
       setResendIn(RESEND_SECONDS);
       setStatus(`קוד נשלח ל-${e164}`);
     } catch (err) {
-      setError(extractApiError(err, "שליחת SMS נכשלה"));
+      setError(formatFirebaseAuthError(err, extractApiError(err, "שליחת SMS נכשלה")));
       resetPhoneAuthSession();
       recaptchaReady.current = false;
     } finally {
