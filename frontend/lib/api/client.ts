@@ -94,8 +94,35 @@ api.interceptors.response.use(
   },
 );
 
+/** Maps common English API / Firebase messages to Hebrew for the UI. */
+export function translateApiMessage(message: string): string {
+  const m = message.trim();
+  if (!m) return m;
+  const lower = m.toLowerCase();
+  if (lower.includes("no active account")) {
+    return "אימייל או סיסמה שגויים";
+  }
+  if (
+    lower === "user not found" ||
+    lower.includes("auth/user-not-found") ||
+    lower.includes("user-not-found")
+  ) {
+    return "לא נמצא חשבון — בדוק אימייל או הירשם מחדש";
+  }
+  if (lower === "not found" || lower === "not found.") {
+    return "הבקשה לא נמצאה — נסה שוב או פנה לתמיכה";
+  }
+  if (lower.includes("already exists") || lower.includes("כבר רשומ") || lower.includes("קיימת כבר")) {
+    return "כתובת האימייל כבר רשומה. התחבר או שלח שוב אימייל אימות.";
+  }
+  return m;
+}
+
 /** Extracts a human-friendly error message from a DRF error response. */
 export function extractApiError(error: unknown, fallback = "אירעה שגיאה"): string {
+  if (error instanceof Error && !axios.isAxiosError(error)) {
+    return translateApiMessage(error.message) || fallback;
+  }
   if (axios.isAxiosError(error)) {
     if (error.code === "ECONNABORTED") {
       return "השרת לא מגיב בזמן. ודא שה-backend (Django) רץ.";
@@ -124,19 +151,18 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
     const data = error.response.data as Record<string, unknown> | undefined;
     if (data) {
       if (typeof data.detail === "string") {
-        if (data.detail.includes("No active account")) {
-          return "אימייל או סיסמה שגויים";
-        }
-        return data.detail;
+        return translateApiMessage(data.detail);
       }
       const firstKey = Object.keys(data)[0];
       if (firstKey) {
         const val = data[firstKey];
-        if (Array.isArray(val) && val.length) return String(val[0]);
-        if (typeof val === "string") return val;
+        if (Array.isArray(val) && val.length) {
+          return translateApiMessage(String(val[0]));
+        }
+        if (typeof val === "string") return translateApiMessage(val);
       }
     }
-    return error.message || fallback;
+    return translateApiMessage(error.message || "") || fallback;
   }
   return fallback;
 }

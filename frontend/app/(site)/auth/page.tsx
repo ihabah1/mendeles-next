@@ -133,6 +133,14 @@ function AuthForm() {
         phone,
       });
       if (res.email_send_via === "frontend") {
+        if (!res.verification_payload) {
+          setError(
+            "החשבון נוצר אך חסר קישור אימות מהשרת. לחץ «שלח שוב אימייל אימות» בעמוד הבא.",
+          );
+          setPendingEmail(res.email);
+          go("verify-pending");
+          return;
+        }
         const sendRes = await fetch("/api/email/send-verification", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -143,7 +151,10 @@ function AuthForm() {
         });
         const sendData = await sendRes.json().catch(() => ({}));
         if (!sendRes.ok) {
-          setError((sendData as { detail?: string }).detail || "שליחת אימייל האימות נכשלה");
+          const detail = (sendData as { detail?: string }).detail;
+          setError(detail || "שליחת אימייל האימות נכשלה");
+          setPendingEmail(res.email);
+          go("verify-pending");
           return;
         }
         setStatus((sendData as { detail?: string }).detail || res.detail);

@@ -136,7 +136,10 @@ def verification_email_payload(request):
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
-        return Response({'detail': 'לא נמצא'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'detail': 'לא נמצא חשבון עם אימייל זה — השלם הרשמה או הירשם מחדש.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
     if user.email_verified:
         return Response({'detail': 'כבר מאומת'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -216,7 +219,10 @@ def send_phone_otp_view(request):
         return Response({'detail': 'נדרש אימייל'}, status=status.HTTP_400_BAD_REQUEST)
     user = User.objects.filter(email__iexact=email).first()
     if not user:
-        return Response({'detail': 'לא נמצא'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'detail': 'לא נמצא חשבון עם אימייל זה.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
     if not phone_verification_required_for(user) or user.phone_verified:
         return Response({'detail': 'אימות טלפון לא נדרש'}, status=status.HTTP_400_BAD_REQUEST)
     try:

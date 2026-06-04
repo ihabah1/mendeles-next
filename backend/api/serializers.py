@@ -49,8 +49,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         value = value.lower().strip()
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError('כתובת אימייל זו כבר רשומה.')
+        existing = User.objects.filter(email__iexact=value).first()
+        if existing:
+            if existing.email_verified:
+                raise serializers.ValidationError(
+                    'כתובת אימייל זו כבר רשומה. התחבר או השתמש ב"שכחתי סיסמה".',
+                )
+            # Allow completing registration if the previous attempt never verified email.
+            self.context['existing_unverified_user'] = existing
         return value
 
     def validate_phone(self, value):
@@ -61,7 +67,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
+        existing = self.context.get('existing_unverified_user')
+        if existing:
+            user = existing
+            user.first_name = validated_data.get('first_name', '') or user.first_name
+            user.last_name = validated_data.get('last_name', '') or user.last_name
+            user.phone = validated_data.get('phone', '') or user.phone
+        else:
+            user = User(**validated_data)
         user.set_password(password)
         user.sync_full_name()
         user.email_verified = False

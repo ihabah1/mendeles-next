@@ -100,7 +100,7 @@ def verify_phone_code(*, email: str, code: str) -> User:
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
-        raise ValueError('משתמש לא נמצא')
+        raise ValueError('לא נמצא חשבון עם אימייל זה — הירשם תחילה.')
 
     record = (
         PhoneVerificationOTP.objects.filter(user=user, used_at__isnull=True)

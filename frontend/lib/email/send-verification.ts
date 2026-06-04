@@ -41,7 +41,13 @@ async function fetchVerificationPayload(email: string): Promise<{
 
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(err.detail || "לא ניתן ליצור קישור אימות");
+    const detail = err.detail || "לא ניתן ליצור קישור אימות";
+    if (res.status === 404) {
+      throw new Error(
+        "לא נמצא חשבון עם אימייל זה — השלם הרשמה בדף «הרשמה» ואז שלח שוב אימייל.",
+      );
+    }
+    throw new Error(detail);
   }
 
   return res.json();
