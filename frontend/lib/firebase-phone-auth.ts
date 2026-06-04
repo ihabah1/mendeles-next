@@ -68,6 +68,13 @@ export function formatFirebaseAuthError(err: unknown, fallback: string): string 
       ? (err as { message: string }).message
       : String(err ?? "");
 
+  if (code === "auth/billing-not-enabled") {
+    return (
+      "Firebase דורש תוכנית Blaze (חיוב לפי שימוש) לשליחת SMS. " +
+      "Firebase Console → ⚙️ Project settings → Usage and billing → Upgrade to Blaze. " +
+      "לפיתוח: Authentication → Phone → Phone numbers for testing (ללא SMS אמיתי)."
+    );
+  }
   if (
     code === "auth/operation-not-allowed" ||
     message.includes("region enabled")
@@ -85,6 +92,12 @@ export function formatFirebaseAuthError(err: unknown, fallback: string): string 
   }
   if (code === "auth/captcha-check-failed") {
     return "reCAPTCHA נכשל — רענן את הדף ונסה שוב";
+  }
+  if (
+    message.toLowerCase().includes("user is inactive") ||
+    message.includes("user_inactive")
+  ) {
+    return "החשבון ממתין לאימות טלפון — נסה שוב. אם נמשך, התנתק והתחבר מחדש אחרי אימות אימייל.";
   }
   return message || fallback;
 }

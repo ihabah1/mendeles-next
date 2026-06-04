@@ -141,6 +141,9 @@ export function translateApiMessage(message: string): string {
   ) {
     return "כתובת האימייל כבר רשומה. אם לא אימתת — בדוק ספאם; אחרת לחץ «התחבר».";
   }
+  if (lower.includes("user is inactive") || lower.includes("user_inactive")) {
+    return "החשבון ממתין לאימות טלפון — נסה שוב לאחר פריסת השרת.";
+  }
   return m;
 }
 

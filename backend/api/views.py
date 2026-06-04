@@ -2,7 +2,7 @@
 import requests
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
@@ -18,6 +18,7 @@ from admin_panel.portal.models import (
     Order,
 )
 
+from .authentication import JWTAllowInactiveAuthentication
 from .permissions import IsAdminOrOwner, IsStaffOrReadOnlyOwner
 from .services.email_verification import (
     frontend_email_proxy_enabled,
@@ -294,6 +295,7 @@ def phone_verification_status_view(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAllowInactiveAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def firebase_verify_phone_view(request):
     """Verify Firebase Phone Auth ID token; mark phone_verified on the JWT user."""

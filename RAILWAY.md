@@ -95,7 +95,8 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 
 **SMS לישראל (+972) — חובה:** Authentication → **Settings** → **SMS region policy** → **Allow** → הוסף **Israel (IL)**.  
 ללא זה: `auth/operation-not-allowed` — "SMS unable to be sent until this region enabled".  
-תוכנית **Blaze** (לא Spark בלבד) נדרשת ל-SMS ב-production.
+תוכנית **Blaze** (לא Spark בלבד) נדרשת ל-SMS ב-production — בלי Blaze: `auth/billing-not-enabled`.  
+שדרוג: Firebase Console → ⚙️ **Usage and billing** → **Modify plan** → **Blaze**.
 
 > **Redeploy** את **שני** השירותים אחרי שמירת המשתנים.
 
