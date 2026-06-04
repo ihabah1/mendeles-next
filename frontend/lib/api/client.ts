@@ -22,6 +22,23 @@ import { tokenStore } from "./tokens";
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
+/** AllowAny auth routes — never send a stale JWT (causes "User not found"). */
+const PUBLIC_AUTH_PATHS = [
+  AUTH_ENDPOINTS.login,
+  AUTH_ENDPOINTS.register,
+  AUTH_ENDPOINTS.verifyEmail,
+  AUTH_ENDPOINTS.resendVerification,
+  AUTH_ENDPOINTS.sendPhoneOtp,
+  AUTH_ENDPOINTS.verifyPhone,
+  AUTH_ENDPOINTS.resendPhoneOtp,
+  AUTH_ENDPOINTS.smsStatus,
+  AUTH_ENDPOINTS.firebaseStatus,
+] as const;
+
+function isPublicAuthRequest(url: string): boolean {
+  return PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+}
+
 /** Called when the session can no longer be recovered (refresh failed). */
 let onAuthFailure: (() => void) | null = null;
 export function setOnAuthFailure(handler: (() => void) | null) {
@@ -36,9 +53,12 @@ export const api = axios.create({
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   config.baseURL = await resolveApiBaseUrl();
-  const token = tokenStore.getAccess();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const url = config.url ?? "";
+  if (!isPublicAuthRequest(url)) {
+    const token = tokenStore.getAccess();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -73,7 +93,8 @@ api.interceptors.response.use(
 
     const isAuthRoute =
       url.includes(AUTH_ENDPOINTS.refresh) ||
-      url.includes(AUTH_ENDPOINTS.login);
+      url.includes(AUTH_ENDPOINTS.login) ||
+      isPublicAuthRequest(url);
 
     if (status === 401 && original && !original._retry && !isAuthRoute) {
       original._retry = true;

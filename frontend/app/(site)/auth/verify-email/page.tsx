@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/Nav";
@@ -17,6 +17,7 @@ function VerifyEmailForm() {
 
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [message, setMessage] = useState("");
+  const verified = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -24,7 +25,11 @@ function VerifyEmailForm() {
       setMessage("קישור האימות לא תקין.");
       return;
     }
+    if (verified.current) return;
+    verified.current = true;
+
     (async () => {
+      tokenStore.clear();
       try {
         const res = await authService.verifyEmail(token);
         if (res.phone_verification_required) {
@@ -48,7 +53,18 @@ function VerifyEmailForm() {
         setTimeout(() => router.push(redirect), 1500);
       } catch (err) {
         setStatus("error");
-        setMessage(extractApiError(err, "אימות האימייל נכשל"));
+        const msg = extractApiError(err, "אימות האימייל נכשל");
+        if (/user not found/i.test(msg)) {
+          setMessage(
+            "קישור האימות לא תקף (ייתכן שכבר נעשה שימוש בו). נסה «שלח שוב אימייל אימות» מהרשמה, או התחבר.",
+          );
+        } else if (/לא תקף|פג תוקפו/i.test(msg)) {
+          setMessage(
+            "קישור האימות פג תוקף או כבר שומש. הירשם שוב או שלח אימייל אימות מחדש.",
+          );
+        } else {
+          setMessage(msg);
+        }
       }
     })();
   }, [token, redirect, router, refreshUser]);
