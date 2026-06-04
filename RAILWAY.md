@@ -118,9 +118,14 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 ICOUNT_API_TOKEN=API3E8-...your-token...
 ICOUNT_COMP_ID=mendeles
 ICOUNT_DOC_TYPE=auto
-PRINT_SERVER_URL=https://....ngrok-free.dev
-PRINT_API_KEY=...
+PRINT_SERVER_URL=https://battered-festivity-domelike.ngrok-free.app
+PRINT_API_KEY=...your-key...
+PRINT_API_KEY_HEADER=x-api-key
 ```
+
+**הדפסה:** `POST {PRINT_SERVER_URL}/print` עם כותרת **`x-api-key`** (לא Bearer). גוף JSON: `id`, `name`, `phone`, `forms[]` → `tables[]` → `number`, `numbers`, `strong`.
+
+**HTTP 404:** לרוב **ngrok כבוי** (`endpoint … is offline`) — הפעל ngrok + מדפסת אצל אדם; אם URL השתנה, עדכן `PRINT_SERVER_URL` + Redeploy Backend.
 
 > **אל תשים** את הטוקן ב-Git. רק ב-Railway Variables או `backend/.env` מקומי.  
 > אחרי שמירה → **Redeploy Backend**. באדמין: סטטוס **iCount: מחובר** + לוג אינטגרציות.
