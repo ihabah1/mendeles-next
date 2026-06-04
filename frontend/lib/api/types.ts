@@ -48,6 +48,12 @@ export interface VerifyPhoneResponse extends LoginResponse {
   detail: string;
 }
 
+export interface FirebaseVerifyPhoneResponse extends LoginResponse {
+  detail: string;
+  phone_number: string;
+  phone_verified: boolean;
+}
+
 export interface TokenPair {
   access: string;
   refresh: string;

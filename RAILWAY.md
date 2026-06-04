@@ -59,6 +59,30 @@ SMS_PROVIDER=log
 
 בדיקה: `GET /api/auth/sms-status/`
 
+### Firebase Phone Auth (מומלץ — SMS דרך Firebase)
+
+**Frontend** (`mendeles-next-production`):
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+```
+
+**Backend** (`eloquent-perfection`):
+
+```env
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+```
+
+Firebase Console → Authentication → Phone → Enable.  
+Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
+
+זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
+
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`
 7. בדוק בדפדפן: `https://<backend-url>/api/` → JSON

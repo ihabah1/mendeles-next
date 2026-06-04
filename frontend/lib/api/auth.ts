@@ -8,6 +8,7 @@ import type {
   RegisterPayload,
   RegisterResponse,
   VerifyEmailResponse,
+  FirebaseVerifyPhoneResponse,
   VerifyPhoneResponse,
 } from "./types";
 
@@ -62,6 +63,17 @@ export const authService = {
       AUTH_ENDPOINTS.resendPhoneOtp,
       { email },
     );
+    return data;
+  },
+
+  async verifyFirebasePhone(firebaseToken: string): Promise<FirebaseVerifyPhoneResponse> {
+    const { data } = await api.post<FirebaseVerifyPhoneResponse>(
+      AUTH_ENDPOINTS.firebaseVerifyPhone,
+      { firebase_token: firebaseToken },
+    );
+    if (data.access && data.refresh) {
+      tokenStore.set(data.access, data.refresh);
+    }
     return data;
   },
 

@@ -27,6 +27,9 @@ if not s['configured'] and not can_delegate_email_to_frontend():
 from api.services.sms import sms_config_status
 sms = sms_config_status()
 print('[startup] SMS verification:', sms.get('provider'), 'OK' if sms.get('configured') else sms.get('hint', 'disabled'))
+from api.services.firebase_service import firebase_config_status
+fb = firebase_config_status()
+print('[startup] Firebase Phone Auth:', 'OK' if fb.get('configured') else fb.get('hint', 'disabled'))
 " || true
 
 python manage.py migrate --noinput

@@ -310,6 +310,8 @@ SMS_OTP_MAX_ATTEMPTS = int(os.getenv('SMS_OTP_MAX_ATTEMPTS', '5'))
 TWILIO_ACCOUNT_SID = _env_clean('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = _env_clean('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
+# Firebase Phone Auth — paste full service account JSON (Railway multiline or single line)
+FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON', '')
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 _frontend_url = FRONTEND_URL

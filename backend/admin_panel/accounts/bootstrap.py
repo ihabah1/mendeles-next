@@ -41,6 +41,7 @@ def ensure_bootstrap_admin() -> tuple[User, bool]:
         admin.is_superuser = True
         admin.is_active = True
         admin.email_verified = True
+        admin.phone_verified = True
         admin.role = User.Role.ADMIN
         if not admin.full_name:
             admin.full_name = 'מנהל מערכת'

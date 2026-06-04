@@ -8,16 +8,32 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 
 from admin_panel.accounts.models import PhoneVerificationOTP
+from api.services.firebase_service import firebase_configured
 from api.services.sms import SmsError, normalize_phone, send_sms, sms_config_status, sms_verification_enabled
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def firebase_phone_auth_enabled() -> bool:
+    return firebase_configured()
+
+
 def phone_verification_required_for(user) -> bool:
+    if firebase_phone_auth_enabled():
+        return True
     if not sms_verification_enabled():
         return False
     return bool((user.phone or '').strip())
+
+
+def mark_phone_verified_from_firebase(user, *, phone_e164: str) -> User:
+    user.phone_verified = True
+    user.phone = phone_e164
+    if user.email_verified:
+        user.is_active = True
+    user.save(update_fields=['phone_verified', 'phone', 'is_active'])
+    return user
 
 
 def issue_phone_otp(user) -> dict:

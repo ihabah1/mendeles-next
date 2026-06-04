@@ -16,6 +16,7 @@ psycopg2-binary==2.9.9 ; sys_platform != "win32" or python_version < "3.13"
 
 # ── Misc utilities used by existing scripts/views ────────────────────────────
 requests==2.32.3
+firebase-admin==6.5.0
 
 # ── AI agent (AI_AGENT_ENABLED=true) ─────────────────────────────────────────
 google-generativeai==0.7.2

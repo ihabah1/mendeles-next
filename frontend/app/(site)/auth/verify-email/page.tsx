@@ -5,6 +5,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
+import { tokenStore } from "@/lib/api/tokens";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 function VerifyEmailForm() {
@@ -27,15 +28,17 @@ function VerifyEmailForm() {
       try {
         const res = await authService.verifyEmail(token);
         if (res.phone_verification_required) {
+          if (res.access && res.refresh) {
+            tokenStore.set(res.access, res.refresh);
+          }
           setStatus("ok");
           setMessage(res.detail);
-          const email = res.user?.email || "";
           setTimeout(
             () =>
               router.push(
-                `/auth?mode=phone-verify&email=${encodeURIComponent(email)}`,
+                `/verify-phone?redirect=${encodeURIComponent(redirect)}`,
               ),
-            2000,
+            1500,
           );
           return;
         }

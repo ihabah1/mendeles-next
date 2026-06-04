@@ -26,12 +26,16 @@ from .services.email_verification import (
     verification_payload_for_user,
     verify_token,
 )
+from .services.firebase_service import firebase_config_status, verify_firebase_id_token
 from .services.phone_verification import (
+    firebase_phone_auth_enabled,
     issue_phone_otp,
+    mark_phone_verified_from_firebase,
     phone_verification_required_for,
     resend_phone_otp,
     verify_phone_code,
 )
+from .services.sms import normalize_phone
 from .services.resend_email import ResendError, resend_config_status
 from .services.sms import SmsError, sms_config_status
 from .services.user_setup import ensure_customer_records
@@ -77,6 +81,7 @@ class RegisterView(CreateAPIView):
             payload = issue_verification_or_delegate(user)
             if phone_verification_required_for(user):
                 payload['phone_verification_required'] = True
+                payload['firebase_phone_auth'] = firebase_phone_auth_enabled()
                 payload['phone'] = user.phone
         except ResendError as exc:
             user.delete()
@@ -94,21 +99,25 @@ def verify_email_view(request):
     except ValueError as exc:
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+    phone_required = phone_verification_required_for(user) and not user.phone_verified
     body = {
         'detail': 'האימייל אומת בהצלחה.',
         'user': UserSerializer(user).data,
-        'phone_verification_required': phone_verification_required_for(user) and not user.phone_verified,
+        'phone_verification_required': phone_required,
+        'firebase_phone_auth': firebase_phone_auth_enabled(),
     }
-    if user.is_active:
-        refresh = RefreshToken.for_user(user)
-        body['access'] = str(refresh.access_token)
-        body['refresh'] = str(refresh)
-    elif body['phone_verification_required']:
-        try:
-            issue_phone_otp(user)
-            body['detail'] = 'האימייל אומת. הזן את קוד ה-SMS שנשלח לטלפון.'
-        except SmsError as exc:
-            body['detail'] = f'האימייל אומת. {exc}'
+    refresh = RefreshToken.for_user(user)
+    body['access'] = str(refresh.access_token)
+    body['refresh'] = str(refresh)
+    if phone_required:
+        if firebase_phone_auth_enabled():
+            body['detail'] = 'האימייל אומת. המשך לאימות טלפון (Firebase SMS).'
+        else:
+            try:
+                issue_phone_otp(user)
+                body['detail'] = 'האימייל אומת. הזן את קוד ה-SMS שנשלח לטלפון.'
+            except SmsError as exc:
+                body['detail'] = f'האימייל אומת. {exc}'
     return Response(body, status=status.HTTP_200_OK)
 
 
@@ -231,6 +240,49 @@ def verify_phone_view(request):
     return Response(
         {
             'detail': 'הטלפון אומת בהצלחה.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def firebase_auth_status(request):
+    return Response(firebase_config_status())
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def firebase_verify_phone_view(request):
+    """Verify Firebase Phone Auth ID token; mark phone_verified on the JWT user."""
+    firebase_token = (request.data.get('firebase_token') or '').strip()
+    try:
+        claims = verify_firebase_id_token(firebase_token)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if not user.email_verified:
+        return Response(
+            {'detail': 'יש לאמת אימייל לפני אימות טלפון.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        phone_e164 = normalize_phone(claims['phone_number'])
+    except Exception:
+        phone_e164 = claims['phone_number']
+
+    mark_phone_verified_from_firebase(user, phone_e164=phone_e164)
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            'detail': 'הטלפון אומת בהצלחה.',
+            'phone_number': user.phone,
+            'phone_verified': True,
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': UserSerializer(user).data,

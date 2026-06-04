@@ -42,6 +42,8 @@ export const AUTH_ENDPOINTS = {
   sendPhoneOtp: "/auth/send-phone-otp/",
   verifyPhone: "/auth/verify-phone/",
   resendPhoneOtp: "/auth/resend-phone-otp/",
+  firebaseVerifyPhone: "/auth/firebase/verify-phone/",
+  firebaseStatus: "/auth/firebase/status/",
   logout: "/auth/logout/",
   refresh: "/auth/refresh/",
   verify: "/auth/verify/",

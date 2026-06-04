@@ -94,7 +94,13 @@ function AuthForm() {
       }
       router.push(redirect);
     } catch (err) {
-      setError(extractApiError(err, "אימייל או סיסמה שגויים"));
+      const msg = extractApiError(err, "אימייל או סיסמה שגויים");
+      if (msg.includes("טלפון") || msg.includes("SMS")) {
+        setError(msg);
+        router.push(`/verify-phone?redirect=${encodeURIComponent(redirect)}`);
+        return;
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

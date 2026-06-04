@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from api.services.phone_verification import phone_verification_required_for
+from api.services.phone_verification import firebase_phone_auth_enabled, phone_verification_required_for
 from api.services.sms import sms_verification_enabled
 
 from admin_panel.portal.models import (
@@ -23,12 +23,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     display_name = serializers.CharField(read_only=True)
     is_admin = serializers.BooleanField(read_only=True)
+    phone_number = serializers.CharField(source='phone', read_only=True)
 
     class Meta:
         model = User
         fields = (
             'id', 'email', 'username', 'first_name', 'last_name', 'full_name',
-            'phone', 'role', 'is_active', 'is_staff', 'date_joined',
+            'phone', 'phone_number', 'role', 'is_active', 'is_staff', 'date_joined',
             'display_name', 'is_admin', 'email_verified', 'phone_verified',
         )
         read_only_fields = (
@@ -54,7 +55,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_phone(self, value):
         value = (value or '').strip()
-        if sms_verification_enabled() and not value:
+        if sms_verification_enabled() and not firebase_phone_auth_enabled() and not value:
             raise serializers.ValidationError('נדרש מספר טלפון לאימות SMS.')
         return value
 
