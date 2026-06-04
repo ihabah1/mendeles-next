@@ -195,3 +195,52 @@ def submit_order(request):
         'total_ils': float(total),
         'message': f'ההזמנה {order_number} התקבלה!',
     })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def print_summary(request):
+    """POST /api/lotto/print/ — send filled tables to external print server."""
+    from api.services.print_service import (
+        PrintError,
+        _print_payload_mode,
+        build_forms_payload_for_user,
+        normalize_print_tables,
+        print_configured,
+        send_print_payload,
+    )
+
+    if not print_configured():
+        return Response(
+            {'detail': 'שרת ההדפסה לא מוגדר (PRINT_SERVER_URL / PRINT_API_KEY)'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    if _print_payload_mode() in ('pdf', 'pdf_url'):
+        return Response(
+            {'detail': 'הדפסת טופס לוטו דורשת PRINT_PAYLOAD_MODE=forms'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    tables = normalize_print_tables(request.data.get('tables'))
+    if not tables:
+        return Response(
+            {'detail': 'מלא לפחות טבלה אחת (6 מספרים + מספר חזק)'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        order_id = int(request.data.get('order_id') or 0)
+    except (TypeError, ValueError):
+        order_id = 0
+
+    payload = build_forms_payload_for_user(
+        request.user,
+        order_id=order_id,
+        tables=tables,
+    )
+    try:
+        result = send_print_payload(payload)
+    except PrintError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    return Response({'detail': 'נשלח להדפסה', 'print_response': result})

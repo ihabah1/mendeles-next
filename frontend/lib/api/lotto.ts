@@ -39,6 +39,17 @@ export interface SubmitResponse {
   message: string;
 }
 
+export interface PrintTablePayload {
+  number: number;
+  numbers: number[];
+  strong: number;
+}
+
+export interface PrintSummaryResponse {
+  detail: string;
+  print_response?: Record<string, unknown>;
+}
+
 export const lottoService = {
   async mySets(drawDate?: string): Promise<MySetsResponse> {
     const { data } = await api.get<MySetsResponse>("/lotto/my-sets/", {
@@ -61,6 +72,14 @@ export const lottoService = {
     draw_date?: string;
   }): Promise<{ status: string; sets_count: number; expires_at: string; plan: string; draw_date: string }> {
     const { data } = await api.post("/lotto/subscribe/", payload);
+    return data;
+  },
+
+  async printSummary(payload: {
+    tables: PrintTablePayload[];
+    order_id?: number;
+  }): Promise<PrintSummaryResponse> {
+    const { data } = await api.post<PrintSummaryResponse>("/lotto/print/", payload);
     return data;
   },
 };

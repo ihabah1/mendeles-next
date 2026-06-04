@@ -161,6 +161,7 @@ function LottoPageInner() {
   const [allSets, setAllSets] = useState<RawSet[]>([]);
   const [userTier, setUserTier] = useState<'premium'|'registered'>('registered');
   const [submitting, setSubmitting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [isDouble, setIsDouble] = useState(false);
   const [result, setResult] = useState<{orderNumber:string;total:number;count:number}|null>(null);
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
@@ -251,6 +252,32 @@ function LottoPageInner() {
 
   const countFilled=useCallback(()=>Object.values(sel).filter(d=>d.nums.size===6&&d.strong).length,[sel]);
 
+  const buildPrintTables=useCallback(()=>
+    Object.entries(sel)
+      .filter(([,d])=>d.nums.size===6&&d.strong)
+      .map(([k,d])=>({
+        number:parseInt(k,10),
+        numbers:[...d.nums].sort((a,b)=>a-b),
+        strong:d.strong as number,
+      })),
+  [sel]);
+
+  const handlePrint=async()=>{
+    if(isDemo.current){ showToast('הדפסה לשרת לא זמינה בדמו','err'); return; }
+    if(!isAuthenticated){ router.push('/auth?redirect=/lotto'); return; }
+    const tables=buildPrintTables();
+    if(!tables.length){ showToast('מלא לפחות טבלה אחת (6 מספרים + חזק)','err'); return; }
+    setPrinting(true);
+    try{
+      const res=await lottoService.printSummary({ tables, order_id: 0 });
+      showToast(res.detail||'נשלח להדפסה 🖨️','ok');
+    }catch(err){
+      showToast(extractApiError(err,'הדפסה נכשלה'),'err');
+    }finally{
+      setPrinting(false);
+    }
+  };
+
   const submit=async()=>{
     const demo=isDemo.current;
     const filledEntries=Object.entries(sel).filter(([,d])=>d.nums.size===6&&d.strong);
@@ -293,7 +320,10 @@ function LottoPageInner() {
       <h2 style={{fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>{result.count} טבלאות נשלחו!</h2>
       <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>הזמנה: <strong style={{color:'var(--gold)'}}>{result.orderNumber}</strong></p>
       <p style={{color:'var(--muted)',fontSize:'.78rem',marginBottom:24}}>סה"כ: ₪{Number(result.total).toFixed(2)} — תקבל עדכון SMS ואימייל</p>
-      <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+      <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+        <button className="btn btn-outline" disabled={printing} onClick={handlePrint}>
+          {printing?'...מדפיס':'🖨️ הדפס למדפסת'}
+        </button>
         <button className="btn btn-gold" onClick={()=>{setSel(emptyTables());setResult(null);}}>מלא טפסים נוספים</button>
         <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
       </div>
@@ -421,7 +451,9 @@ function LottoPageInner() {
 
       <div style={{display:'flex',gap:8}}>
         <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
-        <button className="btn btn-outline" onClick={()=>window.print()}>🖨️ הדפס</button>
+        <button className="btn btn-outline" disabled={printing||filled===0} onClick={handlePrint}>
+          {printing?'...שולח להדפסה':'🖨️ הדפס'}
+        </button>
       </div>
     </div></>
   );

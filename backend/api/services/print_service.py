@@ -128,6 +128,36 @@ def build_print_forms(sets_json: list) -> list[dict]:
     return forms
 
 
+def build_print_forms_from_tables(tables: list) -> list[dict]:
+    """From [{number, numbers, strong}, ...] — same shape the print server expects."""
+    if not tables:
+        return [{'tables': []}]
+    sorted_tables = sorted(tables, key=lambda t: int(t.get('number', 0)))
+    forms = []
+    for i in range(0, len(sorted_tables), 14):
+        chunk = sorted_tables[i : i + 14]
+        forms.append({
+            'tables': [
+                {
+                    'number': int(t.get('number') or idx + 1),
+                    'numbers': [int(n) for n in (t.get('numbers') or [])],
+                    'strong': int(t.get('strong') or 0),
+                }
+                for idx, t in enumerate(chunk)
+            ],
+        })
+    return forms
+
+
+def build_forms_payload_for_user(user, *, order_id: int, tables: list) -> dict:
+    return {
+        'id': int(order_id or 0),
+        'name': user.display_name if hasattr(user, 'display_name') else user.email,
+        'phone': getattr(user, 'phone', None) or '',
+        'forms': build_print_forms_from_tables(tables),
+    }
+
+
 def build_forms_print_payload(order) -> dict:
     customer = order.customer
     return {
@@ -152,9 +182,8 @@ def build_print_payload(order) -> dict:
     return build_forms_print_payload(order)
 
 
-def send_order_to_printer(order) -> dict:
+def send_print_payload(payload: dict) -> dict:
     url = _print_url()
-    payload = build_print_payload(order)
     try:
         res = requests.post(
             url,
@@ -183,8 +212,36 @@ def send_order_to_printer(order) -> dict:
             )
         raise PrintError(f'הדפסה נכשלה (HTTP {res.status_code})')
 
-    logger.info('Print job sent order=%s id=%s', order.order_number, order.id)
+    logger.info('Print job sent id=%s', payload.get('id'))
     try:
         return res.json()
     except ValueError:
         return {'ok': True, 'raw': res.text[:200]}
+
+
+def send_order_to_printer(order) -> dict:
+    return send_print_payload(build_print_payload(order))
+
+
+def normalize_print_tables(raw_tables) -> list[dict]:
+    """Validate tables from lotto UI before POST to print server."""
+    if not isinstance(raw_tables, list):
+        return []
+    out = []
+    for item in raw_tables:
+        if not isinstance(item, dict):
+            continue
+        try:
+            numbers = [int(n) for n in (item.get('numbers') or [])]
+            strong = int(item.get('strong'))
+            number = int(item.get('number'))
+        except (TypeError, ValueError):
+            continue
+        if len(numbers) != 6 or len(set(numbers)) != 6:
+            continue
+        if not all(1 <= n <= 37 for n in numbers):
+            continue
+        if not (1 <= strong <= 7):
+            continue
+        out.append({'number': number, 'numbers': sorted(numbers), 'strong': strong})
+    return out
