@@ -33,6 +33,7 @@ def ensure_bootstrap_admin() -> tuple[User, bool]:
             is_superuser=True,
             is_active=True,
             email_verified=True,
+            phone_verified=True,
         )
     else:
         # אותו משתמש — רק מוודאים הרשאות (לא נוגעים ב-date_joined / last_login)

@@ -26,7 +26,14 @@ from .services.email_verification import (
     verification_payload_for_user,
     verify_token,
 )
+from .services.phone_verification import (
+    issue_phone_otp,
+    phone_verification_required_for,
+    resend_phone_otp,
+    verify_phone_code,
+)
 from .services.resend_email import ResendError, resend_config_status
+from .services.sms import SmsError, sms_config_status
 from .services.user_setup import ensure_customer_records
 from .serializers import (
     ActionLogSerializer,
@@ -68,6 +75,9 @@ class RegisterView(CreateAPIView):
         logger.info('Register endpoint: user=%s', user.email)
         try:
             payload = issue_verification_or_delegate(user)
+            if phone_verification_required_for(user):
+                payload['phone_verification_required'] = True
+                payload['phone'] = user.phone
         except ResendError as exc:
             user.delete()
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -84,16 +94,22 @@ def verify_email_view(request):
     except ValueError as exc:
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-    refresh = RefreshToken.for_user(user)
-    return Response(
-        {
-            'detail': 'האימייל אומת בהצלחה.',
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': UserSerializer(user).data,
-        },
-        status=status.HTTP_200_OK,
-    )
+    body = {
+        'detail': 'האימייל אומת בהצלחה.',
+        'user': UserSerializer(user).data,
+        'phone_verification_required': phone_verification_required_for(user) and not user.phone_verified,
+    }
+    if user.is_active:
+        refresh = RefreshToken.for_user(user)
+        body['access'] = str(refresh.access_token)
+        body['refresh'] = str(refresh)
+    elif body['phone_verification_required']:
+        try:
+            issue_phone_otp(user)
+            body['detail'] = 'האימייל אומת. הזן את קוד ה-SMS שנשלח לטלפון.'
+        except SmsError as exc:
+            body['detail'] = f'האימייל אומת. {exc}'
+    return Response(body, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -172,6 +188,69 @@ def resend_verification_view(request):
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response(
         {'detail': 'אם החשבון קיים וטרם אומת — נשלח אימייל אימות.'},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def sms_service_status(request):
+    """SMS OTP configuration (no secrets)."""
+    return Response(sms_config_status())
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def send_phone_otp_view(request):
+    email = (request.data.get('email') or '').strip().lower()
+    if not email:
+        return Response({'detail': 'נדרש אימייל'}, status=status.HTTP_400_BAD_REQUEST)
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        return Response({'detail': 'לא נמצא'}, status=status.HTTP_404_NOT_FOUND)
+    if not phone_verification_required_for(user) or user.phone_verified:
+        return Response({'detail': 'אימות טלפון לא נדרש'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        payload = issue_phone_otp(user)
+    except SmsError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response(payload)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verify_phone_view(request):
+    email = (request.data.get('email') or '').strip().lower()
+    code = (request.data.get('code') or '').strip()
+    try:
+        user = verify_phone_code(email=email, code=code)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            'detail': 'הטלפון אומת בהצלחה.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def resend_phone_otp_view(request):
+    email = (request.data.get('email') or '').strip()
+    if not email:
+        return Response({'detail': 'נדרש אימייל'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        resend_phone_otp(email)
+    except SmsError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response(
+        {'detail': 'אם החשבון קיים — נשלח קוד SMS.'},
         status=status.HTTP_200_OK,
     )
 

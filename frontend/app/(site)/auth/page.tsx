@@ -7,7 +7,7 @@ import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
 import { GOOGLE_OAUTH_ERRORS } from "@/lib/auth/google-oauth";
 
-type Mode = "login" | "register" | "forgot" | "verify-pending";
+type Mode = "login" | "register" | "forgot" | "verify-pending" | "phone-verify";
 
 function AuthForm() {
   const router = useRouter();
@@ -25,6 +25,8 @@ function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
   const [apiStatus, setApiStatus] = useState<{
     configured: boolean;
     backendReachable: boolean;
@@ -39,6 +41,14 @@ function AuthForm() {
     const oauthError = params.get("error");
     if (oauthError && GOOGLE_OAUTH_ERRORS[oauthError]) {
       setError(GOOGLE_OAUTH_ERRORS[oauthError]);
+    }
+    const modeParam = params.get("mode");
+    if (modeParam === "phone-verify") {
+      const em = params.get("email")?.trim().toLowerCase() || "";
+      if (em) {
+        setPendingEmail(em);
+        go("phone-verify");
+      }
     }
     fetch("/api/auth/google/status")
       .then((r) => r.json())
@@ -124,9 +134,49 @@ function AuthForm() {
         setStatus(res.detail);
       }
       setPendingEmail(res.email);
+      if (res.phone) setPendingPhone(res.phone);
+      if (res.dev_otp) setStatus((s) => `${s} קוד SMS (פיתוח): ${res.dev_otp}`.trim());
       go("verify-pending");
     } catch (err) {
       setError(extractApiError(err, "ההרשמה נכשלה"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    const targetEmail = pendingEmail || email.trim().toLowerCase();
+    const code = phoneOtp.trim();
+    if (!targetEmail || code.length < 4) {
+      setError("הזן קוד SMS בן 6 ספרות");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await authService.verifyPhone(targetEmail, code);
+      setStatus(res.detail);
+      router.push(redirect);
+    } catch (err) {
+      setError(extractApiError(err, "קוד שגוי או שפג תוקפו"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendPhoneOtp = async () => {
+    const target = pendingEmail || email.trim().toLowerCase();
+    if (!target) {
+      setError("חסר אימייל");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await authService.resendPhoneOtp(target);
+      setStatus(res.detail);
+    } catch (err) {
+      setError(extractApiError(err, "שליחה מחדש נכשלה"));
     } finally {
       setLoading(false);
     }
@@ -176,7 +226,7 @@ function AuthForm() {
     <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 380 }}>
         <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.3rem", fontWeight: 900, color: "var(--cream)", textAlign: "center", marginBottom: 20 }}>
-          🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : mode === "verify-pending" ? "אימות אימייל" : "שכחתי סיסמה"}
+          🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : mode === "verify-pending" ? "אימות אימייל" : mode === "phone-verify" ? "אימות SMS" : "שכחתי סיסמה"}
         </h1>
 
         {apiStatus && (!apiStatus.configured || !apiStatus.backendReachable) && (
@@ -269,8 +319,14 @@ function AuthForm() {
             <>
               <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
                 שלחנו קישור אימות ל-<strong style={{ color: "var(--cream)" }}>{pendingEmail}</strong>.
+                {pendingPhone && (
+                  <>
+                    <br />
+                    קוד SMS נשלח ל-<strong style={{ color: "var(--cream)" }}>{pendingPhone}</strong> (אחרי אימות אימייל).
+                  </>
+                )}
                 <br />
-                לחץ על הקישור באימייל כדי להפעיל את החשבון.
+                לחץ על הקישור באימייל כדי להמשיך.
               </p>
               <button
                 type="button"
@@ -280,6 +336,49 @@ function AuthForm() {
                 disabled={loading}
               >
                 {loading ? "שולח..." : "שלח שוב אימייל אימות"}
+              </button>
+              <button
+                style={{ background: "none", border: "none", color: "var(--muted)", fontSize: ".72rem", cursor: "pointer" }}
+                onClick={() => go("login")}
+              >
+                חזרה לכניסה
+              </button>
+            </>
+          )}
+          {mode === "phone-verify" && (
+            <>
+              <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
+                הזן את קוד ה-SMS שנשלח
+                {pendingPhone ? (
+                  <> ל-<strong style={{ color: "var(--cream)" }}>{pendingPhone}</strong></>
+                ) : null}
+                .
+              </p>
+              {inp({
+                placeholder: "קוד 6 ספרות",
+                inputMode: "numeric",
+                maxLength: 6,
+                value: phoneOtp,
+                onChange: (e) => setPhoneOtp(e.target.value.replace(/\D/g, "")),
+                onKeyDown: (e) => e.key === "Enter" && handleVerifyPhone(),
+              })}
+              <button
+                type="button"
+                className="btn btn-gold"
+                style={{ width: "100%", justifyContent: "center", padding: 12 }}
+                onClick={handleVerifyPhone}
+                disabled={loading}
+              >
+                {loading ? "מאמת..." : "אימות טלפון"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ width: "100%", justifyContent: "center", padding: 12 }}
+                onClick={handleResendPhoneOtp}
+                disabled={loading}
+              >
+                שלח קוד שוב
               </button>
               <button
                 style={{ background: "none", border: "none", color: "var(--muted)", fontSize: ".72rem", cursor: "pointer" }}

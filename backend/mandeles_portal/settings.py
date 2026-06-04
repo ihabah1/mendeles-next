@@ -299,6 +299,18 @@ EMAIL_VERIFICATION_HOURS = int(os.getenv('EMAIL_VERIFICATION_HOURS', '24'))
 # Same secret on Frontend + Backend — allows Next.js to send verification email via Resend
 EMAIL_PROXY_SECRET = _env_clean('EMAIL_PROXY_SECRET', '')
 
+# ── SMS OTP (phone verification) ──────────────────────────────────────────────
+# log = free dev (OTP in backend logs); twilio = production (free trial ~$15)
+SMS_VERIFICATION_ENABLED = os.getenv('SMS_VERIFICATION_ENABLED', 'false').lower() in (
+    '1', 'true', 'yes',
+)
+SMS_PROVIDER = _env_clean('SMS_PROVIDER', 'log').lower() or 'log'
+SMS_OTP_MINUTES = int(os.getenv('SMS_OTP_MINUTES', '10'))
+SMS_OTP_MAX_ATTEMPTS = int(os.getenv('SMS_OTP_MAX_ATTEMPTS', '5'))
+TWILIO_ACCOUNT_SID = _env_clean('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = _env_clean('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
+
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 _frontend_url = FRONTEND_URL
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:

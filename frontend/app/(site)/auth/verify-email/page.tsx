@@ -26,6 +26,19 @@ function VerifyEmailForm() {
     (async () => {
       try {
         const res = await authService.verifyEmail(token);
+        if (res.phone_verification_required) {
+          setStatus("ok");
+          setMessage(res.detail);
+          const email = res.user?.email || "";
+          setTimeout(
+            () =>
+              router.push(
+                `/auth?mode=phone-verify&email=${encodeURIComponent(email)}`,
+              ),
+            2000,
+          );
+          return;
+        }
         await refreshUser();
         setStatus("ok");
         setMessage(res.detail);

@@ -109,9 +109,14 @@ def verify_token(raw_token: str) -> User:
     if not record or not record.is_valid():
         raise ValueError('קישור האימות לא תקף או שפג תוקפו')
 
+    from api.services.phone_verification import phone_verification_required_for
+
     user = record.user
     user.email_verified = True
-    user.is_active = True
+    if phone_verification_required_for(user) and not user.phone_verified:
+        user.is_active = False
+    else:
+        user.is_active = True
     user.save(update_fields=['email_verified', 'is_active'])
 
     from django.utils import timezone

@@ -3,6 +3,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from api.services.phone_verification import phone_verification_required_for
+from api.services.sms import sms_verification_enabled
+
 from admin_panel.portal.models import (
     ActionLog,
     CreditAccount,
@@ -26,9 +29,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'email', 'username', 'first_name', 'last_name', 'full_name',
             'phone', 'role', 'is_active', 'is_staff', 'date_joined',
-            'display_name', 'is_admin', 'email_verified',
+            'display_name', 'is_admin', 'email_verified', 'phone_verified',
         )
-        read_only_fields = ('id', 'role', 'is_active', 'is_staff', 'date_joined', 'email_verified')
+        read_only_fields = (
+            'id', 'role', 'is_active', 'is_staff', 'date_joined',
+            'email_verified', 'phone_verified',
+        )
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -46,12 +52,19 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('כתובת אימייל זו כבר רשומה.')
         return value
 
+    def validate_phone(self, value):
+        value = (value or '').strip()
+        if sms_verification_enabled() and not value:
+            raise serializers.ValidationError('נדרש מספר טלפון לאימות SMS.')
+        return value
+
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
         user.sync_full_name()
         user.email_verified = False
+        user.phone_verified = not phone_verification_required_for(user)
         user.is_active = False
         user.save()
         return user
@@ -78,15 +91,21 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
             except User.DoesNotExist:
                 pass
             else:
-                if candidate.check_password(password) and (
-                    not candidate.is_active or not candidate.email_verified
-                ):
-                    raise serializers.ValidationError(
-                        {
-                            'detail': 'יש לאמת את כתובת האימייל לפני הכניסה. בדוק את תיבת הדואר.',
-                        },
-                        code='email_not_verified',
-                    )
+                if candidate.check_password(password):
+                    if not candidate.email_verified or not candidate.is_active:
+                        raise serializers.ValidationError(
+                            {
+                                'detail': 'יש לאמת את כתובת האימייל לפני הכניסה. בדוק את תיבת הדואר.',
+                            },
+                            code='email_not_verified',
+                        )
+                    if phone_verification_required_for(candidate) and not candidate.phone_verified:
+                        raise serializers.ValidationError(
+                            {
+                                'detail': 'יש לאמת את מספר הטלפון (קוד SMS) לפני הכניסה.',
+                            },
+                            code='phone_not_verified',
+                        )
         data = super().validate(attrs)
         data['user'] = UserSerializer(self.user).data
         return data

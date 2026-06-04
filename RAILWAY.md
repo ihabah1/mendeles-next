@@ -47,6 +47,18 @@ EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}
 
 > `EMAIL_PROXY_DERIVE_FROM` מקשר ל-`DJANGO_SECRET_KEY` של Backend — **אין חובה** על `RESEND_*` ב-Backend.
 
+### SMS OTP (אימות טלפון, בנוסף לאימייל)
+
+```env
+SMS_VERIFICATION_ENABLED=true
+SMS_PROVIDER=log
+```
+
+- **`log`** — חינם: קוד OTP מודפס בלוגי Backend (פיתוח).
+- **`twilio`** — ניסיון חינם ~$15, אחר כך בתשלום: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`.
+
+בדיקה: `GET /api/auth/sms-status/`
+
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`
 7. בדוק בדפדפן: `https://<backend-url>/api/` → JSON

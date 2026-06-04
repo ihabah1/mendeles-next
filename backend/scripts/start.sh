@@ -24,6 +24,9 @@ print('[startup] Email via frontend delegate:', 'enabled' if can_delegate_email_
 print('[startup] Email via frontend proxy secret:', 'enabled' if frontend_email_proxy_enabled() else 'disabled')
 if not s['configured'] and not can_delegate_email_to_frontend():
     print('[startup] WARNING: No email send path — add RESEND_* to THIS backend service or Frontend+EMAIL_PROXY_DERIVE_FROM')
+from api.services.sms import sms_config_status
+sms = sms_config_status()
+print('[startup] SMS verification:', sms.get('provider'), 'OK' if sms.get('configured') else sms.get('hint', 'disabled'))
 " || true
 
 python manage.py migrate --noinput

@@ -8,6 +8,7 @@ import type {
   RegisterPayload,
   RegisterResponse,
   VerifyEmailResponse,
+  VerifyPhoneResponse,
 } from "./types";
 
 export const authService = {
@@ -33,13 +34,32 @@ export const authService = {
       AUTH_ENDPOINTS.verifyEmail,
       { token },
     );
-    tokenStore.set(data.access, data.refresh);
+    if (data.access && data.refresh) {
+      tokenStore.set(data.access, data.refresh);
+    }
     return data;
   },
 
   async resendVerification(email: string): Promise<{ detail: string }> {
     const { data } = await api.post<{ detail: string }>(
       AUTH_ENDPOINTS.resendVerification,
+      { email },
+    );
+    return data;
+  },
+
+  async verifyPhone(email: string, code: string): Promise<VerifyPhoneResponse> {
+    const { data } = await api.post<VerifyPhoneResponse>(
+      AUTH_ENDPOINTS.verifyPhone,
+      { email, code },
+    );
+    tokenStore.set(data.access, data.refresh);
+    return data;
+  },
+
+  async resendPhoneOtp(email: string): Promise<{ detail: string }> {
+    const { data } = await api.post<{ detail: string }>(
+      AUTH_ENDPOINTS.resendPhoneOtp,
       { email },
     );
     return data;

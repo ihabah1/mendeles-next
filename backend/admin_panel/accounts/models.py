@@ -2,6 +2,7 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -39,6 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField('טלפון', max_length=20, blank=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     email_verified = models.BooleanField('אימייל מאומת', default=False)
+    phone_verified = models.BooleanField('טלפון מאומת', default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -131,6 +133,44 @@ class EmailVerificationToken(models.Model):
             user=user,
             token=secrets.token_urlsafe(32),
             expires_at=timezone.now() + timedelta(hours=hours),
+        )
+
+    def is_valid(self) -> bool:
+        return self.used_at is None and timezone.now() < self.expires_at
+
+
+class PhoneVerificationOTP(models.Model):
+    """Hashed SMS OTP for phone verification."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='phone_verification_otps',
+    )
+    phone_e164 = models.CharField(max_length=20, db_index=True)
+    code_hash = models.CharField(max_length=128)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'קוד אימות SMS'
+        verbose_name_plural = 'קודי אימות SMS'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.email} ({self.phone_e164[-4:]})'
+
+    @classmethod
+    def create_for_user(cls, user, *, code: str, phone_e164: str) -> 'PhoneVerificationOTP':
+        minutes = int(getattr(settings, 'SMS_OTP_MINUTES', 10))
+        cls.objects.filter(user=user, used_at__isnull=True).delete()
+        return cls.objects.create(
+            user=user,
+            phone_e164=phone_e164,
+            code_hash=make_password(code),
+            expires_at=timezone.now() + timedelta(minutes=minutes),
         )
 
     def is_valid(self) -> bool:

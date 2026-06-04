@@ -17,6 +17,7 @@ export interface ApiUser {
   display_name: string;
   is_admin: boolean;
   email_verified: boolean;
+  phone_verified: boolean;
 }
 
 export interface VerificationEmailPayload {
@@ -32,9 +33,18 @@ export interface RegisterResponse {
   email_send_via?: "backend" | "frontend" | "dev-log";
   /** Present when email_send_via is frontend — avoids EMAIL_PROXY_DERIVE_FROM on register. */
   verification_payload?: VerificationEmailPayload;
+  phone_verification_required?: boolean;
+  phone?: string;
+  /** DEBUG + SMS_PROVIDER=log only */
+  dev_otp?: string;
 }
 
 export interface VerifyEmailResponse extends LoginResponse {
+  detail: string;
+  phone_verification_required?: boolean;
+}
+
+export interface VerifyPhoneResponse extends LoginResponse {
   detail: string;
 }
 
