@@ -9,6 +9,9 @@ from rest_framework.response import Response
 from admin_panel.accounts.models import User
 from admin_panel.portal.models import Order
 
+from api.services.icount_service import ICountError, create_invoice_for_order, icount_config_status
+from api.services.print_service import PrintError, print_configured, send_order_to_printer
+
 
 class IsStaffUser(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -57,13 +60,23 @@ def admin_orders(request):
                 'status': o.status,
                 'drawDate': o.draw_name or '',
                 'createdAt': o.created_at.isoformat(),
+                'icountDocNumber': o.icount_doc_number or None,
+                'invoiceIssuedAt': o.invoice_issued_at.isoformat() if o.invoice_issued_at else None,
+                'printedAt': o.printed_at.isoformat() if o.printed_at else None,
                 'user': {
                     'name': customer.display_name,
                     'phone': customer.phone,
                     'email': customer.email,
                 },
             })
-        return Response({'orders': orders, 'count': len(orders)})
+        return Response({
+            'orders': orders,
+            'count': len(orders),
+            'integrations': {
+                'icount': icount_config_status(),
+                'print': {'configured': print_configured()},
+            },
+        })
 
     order_id = request.data.get('order_id')
     new_status = request.data.get('status')
@@ -76,3 +89,59 @@ def admin_orders(request):
     order.status = new_status
     order.save(update_fields=['status'])
     return Response({'status': 'ok'})
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_order_print(request, order_id):
+    """Send order to external print server (POST /print)."""
+    order = Order.objects.select_related('customer').filter(pk=order_id).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        result = send_order_to_printer(order)
+    except PrintError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    order.printed_at = timezone.now()
+    if order.status == Order.Status.PAID:
+        order.status = Order.Status.PRINTING
+    order.save(update_fields=['printed_at', 'status'])
+    return Response({
+        'detail': 'נשלח להדפסה',
+        'printed_at': order.printed_at.isoformat(),
+        'print_response': result,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_order_invoice(request, order_id):
+    """Issue iCount invoice for order."""
+    order = Order.objects.select_related('customer').filter(pk=order_id).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    if order.icount_doc_number:
+        return Response({
+            'detail': 'חשבונית כבר הונפקה',
+            'doc_number': order.icount_doc_number,
+            'doc_id': order.icount_doc_id,
+        })
+
+    try:
+        inv = create_invoice_for_order(order)
+    except ICountError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    order.icount_doc_id = str(inv.get('doc_id') or '')
+    order.icount_doc_number = str(inv.get('doc_number') or '')
+    order.invoice_issued_at = timezone.now()
+    order.save(update_fields=['icount_doc_id', 'icount_doc_number', 'invoice_issued_at'])
+
+    return Response({
+        'detail': 'חשבונית הונפקה בהצלחה',
+        'doc_number': order.icount_doc_number,
+        'doc_id': order.icount_doc_id,
+        'pdf_link': inv.get('pdf_link'),
+        'invoice_issued_at': order.invoice_issued_at.isoformat(),
+    })

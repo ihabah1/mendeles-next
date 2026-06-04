@@ -49,6 +49,8 @@ lotto_patterns = [
 admin_patterns = [
     path('stats/', admin_views.admin_stats, name='admin-stats'),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
+    path('orders/<int:order_id>/print/', admin_views.admin_order_print, name='admin-order-print'),
+    path('orders/<int:order_id>/invoice/', admin_views.admin_order_invoice, name='admin-order-invoice'),
     path('service-flags/', service_flag_views.service_flags_view, name='admin-service-flags'),
 ]
 

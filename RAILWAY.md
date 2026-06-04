@@ -84,6 +84,16 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 
 זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
 
+### iCount + הדפסה (Backend בלבד)
+
+```env
+ICOUNT_API_TOKEN=API3E8-...
+PRINT_SERVER_URL=https://....ngrok-free.dev
+PRINT_API_KEY=...
+```
+
+אדמין → הזמנות → **הדפס** (`POST /api/admin/orders/{id}/print/`) | **חשבונית** (`POST /api/admin/orders/{id}/invoice/`).
+
 5. **Settings** → **Networking** → **Generate Domain**
 6. העתק את ה-URL, למשל: `https://mandeles-backend-xxxx.up.railway.app`
 7. בדוק בדפדפן: `https://<backend-url>/api/` → JSON

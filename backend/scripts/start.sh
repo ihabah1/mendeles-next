@@ -30,6 +30,11 @@ print('[startup] SMS verification:', sms.get('provider'), 'OK' if sms.get('confi
 from api.services.firebase_service import firebase_config_status
 fb = firebase_config_status()
 print('[startup] Firebase Phone Auth:', 'OK' if fb.get('configured') else fb.get('hint', 'disabled'))
+from api.services.icount_service import icount_config_status
+from api.services.print_service import print_configured
+ic = icount_config_status()
+print('[startup] iCount:', 'OK' if ic.get('configured') else ic.get('hint', 'disabled'))
+print('[startup] Print server:', 'OK' if print_configured() else 'MISSING PRINT_SERVER_URL/PRINT_API_KEY')
 " || true
 
 python manage.py migrate --noinput

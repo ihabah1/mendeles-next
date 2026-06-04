@@ -29,4 +29,24 @@ export const adminService = {
   async updateOrderStatus(orderId: number, status: string): Promise<void> {
     await api.patch("/admin/orders/", { order_id: orderId, status });
   },
+
+  async printOrder(orderId: number): Promise<{ detail: string }> {
+    const { data } = await api.post<{ detail: string }>(
+      `/admin/orders/${orderId}/print/`,
+    );
+    return data;
+  },
+
+  async issueInvoice(orderId: number): Promise<{
+    detail: string;
+    doc_number?: string;
+    pdf_link?: string;
+  }> {
+    const { data } = await api.post<{
+      detail: string;
+      doc_number?: string;
+      pdf_link?: string;
+    }>(`/admin/orders/${orderId}/invoice/`);
+    return data;
+  },
 };

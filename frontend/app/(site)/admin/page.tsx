@@ -5,11 +5,17 @@ import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService } from "@/lib/api/admin";
+import { extractApiError } from "@/lib/api/client";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 import type { UiOrder } from "@/lib/api/mappers";
 
 interface Stats { total_users: number; new_today: number; active_subs: number; pending_orders: number; total_revenue: number; total_wins: number; total_prize: number; }
-interface Order extends UiOrder { user?: { name: string; phone?: string; email?: string }; }
+interface Order extends UiOrder {
+  user?: { name: string; phone?: string; email?: string };
+  icountDocNumber?: string | null;
+  invoiceIssuedAt?: string | null;
+  printedAt?: string | null;
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "ממתין 🕐", paid: "שולם ✅", printing: "בדפוס 🖨️", printed: "הודפס 🖨️",
@@ -118,6 +124,54 @@ function AdminPageInner() {
       setLoading(false);
     }
   }, [isAdmin, legacyToken, filter]);
+
+  const printOrder = async (orderId: number) => {
+    if (!isAdmin) return;
+    setActionLoading(orderId);
+    try {
+      const res = await adminService.printOrder(orderId);
+      alert(res.detail || "נשלח להדפסה");
+      setOrders(prev =>
+        prev.map(o =>
+          o.id === orderId
+            ? { ...o, status: o.status === "paid" ? "printing" : o.status, printedAt: new Date().toISOString() }
+            : o,
+        ),
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "הדפסה נכשלה");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const issueInvoice = async (orderId: number) => {
+    if (!isAdmin) return;
+    setActionLoading(orderId);
+    try {
+      const res = await adminService.issueInvoice(orderId);
+      alert(
+        res.doc_number
+          ? `חשבונית ${res.doc_number} הונפקה`
+          : res.detail || "חשבונית הונפקה",
+      );
+      setOrders(prev =>
+        prev.map(o =>
+          o.id === orderId
+            ? {
+                ...o,
+                icountDocNumber: res.doc_number || o.icountDocNumber,
+                invoiceIssuedAt: new Date().toISOString(),
+              }
+            : o,
+        ),
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "הנפקת חשבונית נכשלה");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const updateStatus = async (orderId: number, status: string) => {
     if (isAdmin) {
@@ -235,6 +289,29 @@ function AdminPageInner() {
                     style={{ background: "var(--navy)", border: "1px solid var(--navy-b)", borderRadius: 7, color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".72rem", padding: "4px 8px", cursor: "pointer" }}>
                     {STATUS_ORDER.map(v => <option key={v} value={v}>{STATUS_LABELS[v]}</option>)}
                   </select>
+                  {isAdmin && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                        disabled={actionLoading === o.id}
+                        onClick={() => printOrder(o.id)}
+                      >
+                        {actionLoading === o.id ? "..." : "🖨️ הדפס"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-gold"
+                        style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                        disabled={actionLoading === o.id || Boolean(o.icountDocNumber)}
+                        onClick={() => issueInvoice(o.id)}
+                        title={o.icountDocNumber ? `חשבונית ${o.icountDocNumber}` : undefined}
+                      >
+                        {o.icountDocNumber ? `📄 ${o.icountDocNumber}` : "📄 חשבונית"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
               {!loading && filteredOrders.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "var(--muted)", fontSize: ".78rem" }}>אין הזמנות</div>}

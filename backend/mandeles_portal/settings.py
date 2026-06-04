@@ -313,6 +313,16 @@ TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
 # Firebase Phone Auth — paste full service account JSON (Railway multiline or single line)
 FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON', '')
 
+# ── iCount invoices ───────────────────────────────────────────────────────────
+ICOUNT_API_TOKEN = _env_clean('ICOUNT_API_TOKEN', '')
+ICOUNT_API_URL = _env_clean('ICOUNT_API_URL', 'https://api.icount.co.il/api/v3.php')
+ICOUNT_DOC_TYPE = _env_clean('ICOUNT_DOC_TYPE', 'invrec')
+ICOUNT_VAT_RATE = int(os.getenv('ICOUNT_VAT_RATE', '18'))
+
+# ── Print server (ngrok) ──────────────────────────────────────────────────────
+PRINT_SERVER_URL = _env_clean('PRINT_SERVER_URL', '')
+PRINT_API_KEY = _env_clean('PRINT_API_KEY', '')
+
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 _frontend_url = FRONTEND_URL
 if _frontend_url and _frontend_url not in CORS_ALLOWED_ORIGINS:
