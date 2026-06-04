@@ -112,7 +112,7 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 ```env
 ICOUNT_API_TOKEN=API3E8-...your-token...
 ICOUNT_COMP_ID=mendeles
-ICOUNT_DOC_TYPE=invrec
+ICOUNT_DOC_TYPE=auto
 PRINT_SERVER_URL=https://....ngrok-free.dev
 PRINT_API_KEY=...
 ```

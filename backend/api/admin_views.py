@@ -227,7 +227,10 @@ def admin_order_invoice(request, order_id):
             IntegrationLog.Level.ERROR,
             str(exc),
             order=order,
-            details={'order_number': order.order_number},
+            details={
+                'order_number': order.order_number,
+                **(exc.details if getattr(exc, 'details', None) else {}),
+            },
         )
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 

@@ -44,21 +44,35 @@ def phone_verification_status() -> dict:
 
     fb = firebase_config_status()
     enabled = phone_verification_enabled()
+    backend_ok = fb.get('configured', False)
+    phone_flag = getattr(settings, 'PHONE_VERIFICATION_ENABLED', False)
+
+    missing = []
+    if not phone_flag:
+        missing.append('Backend: PHONE_VERIFICATION_ENABLED=true')
+    if not fb.get('json_present'):
+        missing.append(
+            'Backend (eloquent-perfection): FIREBASE_SERVICE_ACCOUNT_JSON — JSON מקובץ Service Account',
+        )
+    elif not fb.get('json_valid'):
+        missing.append(f"Backend: {fb.get('hint') or 'JSON לא תקין'}")
+
+    hint = None
+    if not backend_ok or not phone_flag:
+        hint = (
+            ' · '.join(missing)
+            if missing
+            else 'הגדר Firebase ב-Backend'
+        )
+
     return {
         'enabled': enabled,
         'required_after_email': enabled,
+        'phone_verification_enabled': phone_flag,
         'firebase_backend': fb,
-        'firebase_ready': fb.get('configured', False),
+        'firebase_ready': backend_ok and phone_flag,
         'sms_legacy': sms_verification_enabled(),
-        'hint': None
-        if enabled and fb.get('configured')
-        else (
-            'Railway Backend: FIREBASE_SERVICE_ACCOUNT_JSON + PHONE_VERIFICATION_ENABLED=true. '
-            'Railway Frontend: NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, '
-            'STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID (+ MEASUREMENT_ID). Redeploy שניהם.'
-            if enabled
-            else 'הגדר PHONE_VERIFICATION_ENABLED=true ו-FIREBASE_SERVICE_ACCOUNT_JSON ב-Backend'
-        ),
+        'hint': hint,
         'required_backend': ['FIREBASE_SERVICE_ACCOUNT_JSON', 'PHONE_VERIFICATION_ENABLED'],
         'required_frontend': [
             'NEXT_PUBLIC_FIREBASE_API_KEY',

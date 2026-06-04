@@ -29,13 +29,32 @@ DOC_TYPE_ALIASES = {
     'offer': 'offer',
     'delivery': 'delivery',
     'deal': 'deal',
+    'delcert': 'delcert',
+    'po': 'po',
 }
+
+# When invrec/invoice are not enabled on the account, pick the first match.
+DOCTYPE_PREFERENCE = (
+    'invrec',
+    'invoice',
+    'receipt',
+    'deal',
+    'order',
+    'offer',
+    'po',
+    'delcert',
+)
 
 _doctypes_cache: dict[str, str] | None = None
 
+# קבלה / חשבונית מס קבלה — חייבות פרטי תשלום ב-iCount
+DOCTYPES_REQUIRING_PAYMENT = frozenset({'receipt', 'invrec'})
+
 
 class ICountError(Exception):
-    pass
+    def __init__(self, message: str, *, details: dict | None = None):
+        super().__init__(message)
+        self.details = details or {}
 
 
 def _api_token() -> str:
@@ -107,40 +126,65 @@ def fetch_available_doctypes(*, force: bool = False) -> dict[str, str]:
     return parsed
 
 
+def _available_keys(available: dict[str, str]) -> dict[str, str]:
+    """Lowercase lookup → canonical key as returned by iCount."""
+    return {k.lower(): k for k in available}
+
+
+def _pick_from_available(available: dict[str, str], preferred: str = '') -> str | None:
+    if not available:
+        return None
+    by_lower = _available_keys(available)
+    if preferred and preferred.lower() not in ('', 'auto'):
+        norm = _normalize_doctype_key(preferred)
+        if norm in by_lower:
+            return by_lower[norm]
+        if preferred.lower() in by_lower:
+            return by_lower[preferred.lower()]
+        if preferred in available:
+            return preferred
+    for pref in DOCTYPE_PREFERENCE:
+        if pref in by_lower:
+            return by_lower[pref]
+    return next(iter(available.keys()), None)
+
+
 def _resolve_doctype() -> str:
-    raw = (getattr(settings, 'ICOUNT_DOC_TYPE', 'invrec') or 'invrec').strip()
-    normalized = _normalize_doctype_key(raw)
+    raw = (getattr(settings, 'ICOUNT_DOC_TYPE', 'auto') or 'auto').strip()
     available = fetch_available_doctypes()
 
     if not available:
-        return normalized
+        fallback = _normalize_doctype_key(raw) if raw.lower() != 'auto' else 'deal'
+        return fallback
 
-    # Prefer exact key from account (string or numeric id)
-    for candidate in (raw, normalized):
-        if candidate in available:
-            return candidate
-        if candidate.lower() in available:
-            return candidate.lower()
+    picked = _pick_from_available(available, raw)
+    if picked:
+        if raw.lower() not in ('', 'auto'):
+            configured = _normalize_doctype_key(raw)
+            if configured not in _available_keys(available):
+                logger.warning(
+                    'ICOUNT_DOC_TYPE=%s not in account; using %s. Available: %s',
+                    raw,
+                    picked,
+                    ', '.join(available.keys()),
+                )
+        return picked
 
-    # Map alias to a key that exists (e.g. invrec → 305 if account uses numeric keys)
-    for candidate in (normalized, raw):
-        for code, label in available.items():
-            if candidate == code.lower():
-                return code
-            if normalized == _normalize_doctype_key(code):
-                return code
-
-    return normalized
+    sample = ', '.join(available.keys())
+    raise ICountError(
+        f'ICOUNT_DOC_TYPE={raw} לא זמין בחשבון iCount. הגדר אחד מ: {sample}',
+    )
 
 
 def _bad_doctype_hint() -> str:
     available = fetch_available_doctypes(force=True)
     if available:
-        sample = ', '.join(f'{k} ({v})' for k, v in list(available.items())[:6])
+        sample = ', '.join(f'{k} ({v})' for k, v in list(available.items())[:8])
+        suggested = _pick_from_available(available) or 'deal'
         return (
-            f'סוג מסמך לא תקין (bad_doctype). הגדר ICOUNT_DOC_TYPE=invrec או אחד מ: {sample}'
+            f'סוג מסמך לא תקין (bad_doctype). נסה ICOUNT_DOC_TYPE={suggested} או: {sample}'
         )
-    return 'סוג מסמך לא תקין (bad_doctype). נסה ICOUNT_DOC_TYPE=invrec'
+    return 'סוג מסמך לא תקין (bad_doctype). הגדר ICOUNT_DOC_TYPE=deal או receipt'
 
 
 def icount_configured() -> bool:
@@ -189,11 +233,37 @@ def icount_config_status() -> dict:
         'auth_mode': 'api_token',
         'api_url': _create_url(),
         'doctype': doctype,
-        'doctype_config': (getattr(settings, 'ICOUNT_DOC_TYPE', '') or '').strip() or 'invrec',
+        'doctype_config': (getattr(settings, 'ICOUNT_DOC_TYPE', '') or '').strip() or 'auto',
         'available_doctypes': available,
         'company_id': cid or None,
         'hint': None,
     }
+
+
+def _format_icount_error(data: dict) -> str:
+    code = str(data.get('error') or data.get('reason') or '').strip()
+    message = str(data.get('message') or data.get('err_msg') or '').strip()
+    parts = []
+    if code:
+        parts.append(code)
+    if message and message != code:
+        parts.append(message)
+    extra = data.get('errors') or data.get('data')
+    if extra and isinstance(extra, (dict, list, str)):
+        parts.append(str(extra)[:200])
+    text = ' — '.join(parts) if parts else str(data)[:300]
+    if code == 'create_doc_failed':
+        text += (
+            '. לקבלה (receipt) נדרש תשלום; נסה גם ICOUNT_DOC_TYPE=order או deal'
+        )
+    return f'iCount: {text}'
+
+
+def _raise_icount_api_error(data: dict) -> None:
+    code = str(data.get('error') or data.get('reason') or '')
+    if 'bad_doctype' in code:
+        raise ICountError(_bad_doctype_hint(), details=data)
+    raise ICountError(_format_icount_error(data), details=data)
 
 
 def _parse_icount_response(res: requests.Response) -> dict:
@@ -206,28 +276,55 @@ def _parse_icount_response(res: requests.Response) -> dict:
         return {'raw': data}
 
     if data.get('status') is False:
-        reason = str(data.get('reason') or data.get('error') or '')
-        if 'bad_doctype' in reason:
-            raise ICountError(_bad_doctype_hint())
-        err = data.get('message') or data.get('error') or data.get('reason') or data
-        raise ICountError(f'iCount: {err}')
+        _raise_icount_api_error(data)
 
     status = data.get('status')
     if status is not None and status != 0 and status != '0' and status is not True:
         try:
             if int(status) != 0:
-                err = data.get('reason') or data.get('error') or data.get('message') or data
-                raise ICountError(f'iCount: {err}')
+                _raise_icount_api_error(data)
         except (TypeError, ValueError):
             pass
 
     err_field = data.get('error')
     if err_field:
-        if 'bad_doctype' in str(err_field):
-            raise ICountError(_bad_doctype_hint())
-        raise ICountError(f'iCount: {err_field}')
+        _raise_icount_api_error(data)
 
     return data
+
+
+def _build_create_doc_body(order, customer, *, amount: float, description: str, doctype: str) -> dict:
+    client_name = (customer.display_name or customer.email or 'לקוח').strip()
+    vat_rate = int(getattr(settings, 'ICOUNT_VAT_RATE', 18) or 18)
+
+    body: dict = {
+        'doctype': doctype,
+        'lang': 'he',
+        'currency_code': 'ILS',
+        'doc_date': date.today().isoformat(),
+        'client_name': client_name,
+        'hwc': order.order_number,
+        'items': [
+            {
+                'description': description,
+                'quantity': 1,
+                'unitprice': amount,
+                'tax_rate': vat_rate,
+            },
+        ],
+    }
+
+    email = (customer.email or '').strip()
+    if email:
+        body['email'] = email
+    phone = (customer.phone or '').strip()
+    if phone:
+        body['client_phone'] = phone
+
+    if doctype.lower() in DOCTYPES_REQUIRING_PAYMENT:
+        body['cash'] = {'sum': f'{amount:.2f}'}
+
+    return _with_company(body)
 
 
 def _extract_doc_fields(data: dict) -> dict:
@@ -258,23 +355,14 @@ def create_invoice_for_order(order) -> dict:
         f'({order.forms_count} טבלאות, הגרלה {order.draw_name or ""})'
     ).strip()
 
-    body = _with_company({
-        'doctype': _resolve_doctype(),
-        'lang': 'he',
-        'currency_code': 'ILS',
-        'doc_date': date.today().strftime('%Y%m%d'),
-        'client_name': customer.display_name or customer.email,
-        'email': customer.email,
-        'client_phone': customer.phone or '',
-        'hwc': order.order_number,
-        'items': [
-            {
-                'description': description,
-                'quantity': 1,
-                'unitprice': amount,
-            },
-        ],
-    })
+    doctype = _resolve_doctype()
+    body = _build_create_doc_body(
+        order,
+        customer,
+        amount=amount,
+        description=description,
+        doctype=doctype,
+    )
 
     url = _create_url()
 
@@ -285,10 +373,26 @@ def create_invoice_for_order(order) -> dict:
         raise ICountError('לא ניתן להתחבר ל-iCount') from exc
 
     if res.status_code >= 400:
-        logger.error('iCount HTTP %s order=%s body=%s', res.status_code, order.order_number, res.text[:500])
+        logger.error(
+            'iCount HTTP %s order=%s doctype=%s response=%s',
+            res.status_code,
+            order.order_number,
+            doctype,
+            res.text[:500],
+        )
         raise ICountError(f'iCount HTTP {res.status_code}: {res.text[:200]}')
 
-    data = _parse_icount_response(res)
+    try:
+        data = _parse_icount_response(res)
+    except ICountError:
+        logger.error(
+            'iCount create failed order=%s doctype=%s body=%s response=%s',
+            order.order_number,
+            doctype,
+            body,
+            res.text[:500],
+        )
+        raise
     parsed = _extract_doc_fields(data)
 
     if not parsed.get('doc_number') and not parsed.get('doc_id'):

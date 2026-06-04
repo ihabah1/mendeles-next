@@ -312,6 +312,7 @@ TWILIO_AUTH_TOKEN = _env_clean('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
 # Firebase Phone Auth — paste full service account JSON (Railway multiline or single line)
 FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON', '')
+FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON_BASE64', '')
 # Require SMS step after email verification (Firebase and/or legacy SMS)
 PHONE_VERIFICATION_ENABLED = os.getenv('PHONE_VERIFICATION_ENABLED', 'true').lower() in (
     '1', 'true', 'yes',
@@ -321,7 +322,7 @@ PHONE_VERIFICATION_ENABLED = os.getenv('PHONE_VERIFICATION_ENABLED', 'true').low
 # API v3: Bearer token (הגדרות → API ב-iCount). מספיק לרוב החשבונות.
 ICOUNT_API_TOKEN = _env_clean('ICOUNT_API_TOKEN', '')
 ICOUNT_API_URL = _env_clean('ICOUNT_API_URL', 'https://api.icount.co.il/api/v3.php')
-ICOUNT_DOC_TYPE = _env_clean('ICOUNT_DOC_TYPE', 'invrec')
+ICOUNT_DOC_TYPE = _env_clean('ICOUNT_DOC_TYPE', 'auto')
 ICOUNT_VAT_RATE = int(os.getenv('ICOUNT_VAT_RATE', '18'))
 # אופציונלי — מזהה חברה (cid), למשל mendeles
 ICOUNT_COMP_ID = _env_clean('ICOUNT_COMP_ID', '')

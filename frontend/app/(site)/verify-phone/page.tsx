@@ -40,22 +40,62 @@ function VerifyPhoneForm() {
       router.replace(`/auth?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
-    void ensureFirebaseConfig().then((cfg) => {
+
+    const checkFirebaseSetup = async () => {
+      const issues: string[] = [];
+
+      try {
+        const feRes = await fetch("/api/config/firebase", { cache: "no-store" });
+        const fe = feRes.ok
+          ? ((await feRes.json()) as { configured?: boolean; hint?: string })
+          : null;
+        if (!fe?.configured) {
+          issues.push(
+            fe?.hint ||
+              "Frontend (mendeles-next): הוסף NEXT_PUBLIC_FIREBASE_* ב-Railway ו-Redeploy",
+          );
+        }
+      } catch {
+        issues.push("Frontend: לא ניתן לבדוק /api/config/firebase");
+      }
+
+      try {
+        const base = await resolveApiBaseUrl();
+        const beRes = await fetch(`${base}/auth/phone-verification-status/`, {
+          cache: "no-store",
+        });
+        const be = beRes.ok
+          ? ((await beRes.json()) as {
+              firebase_ready?: boolean;
+              hint?: string;
+              firebase_backend?: { hint?: string; project_id?: string };
+            })
+          : null;
+        if (!be?.firebase_ready) {
+          issues.push(
+            be?.hint ||
+              be?.firebase_backend?.hint ||
+              "Backend (eloquent-perfection): FIREBASE_SERVICE_ACCOUNT_JSON + PHONE_VERIFICATION_ENABLED=true",
+          );
+        }
+      } catch {
+        issues.push("Backend: לא ניתן להתחבר ל-phone-verification-status");
+      }
+
+      if (issues.length > 0) {
+        setError(issues.join("\n\n"));
+        return;
+      }
+
+      const cfg = await ensureFirebaseConfig();
       if (!cfg) {
         setError(
-          "Firebase לא מוגדר — ודא NEXT_PUBLIC_FIREBASE_* ב-Railway (Frontend) ולחץ Redeploy",
+          "Firebase Frontend: בדוק NEXT_PUBLIC_FIREBASE_API_KEY ו-PROJECT_ID, ואז Redeploy",
         );
       }
-    });
-    resolveApiBaseUrl()
-      .then((base) => fetch(`${base}/auth/phone-verification-status/`, { cache: "no-store" }))
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { firebase_ready?: boolean; hint?: string } | null) => {
-        if (d && !d.firebase_ready && d.hint) {
-          setError(d.hint);
-        }
-      })
-      .catch(() => {});
+    };
+
+    void checkFirebaseSetup();
   }, [router, redirect]);
 
   useEffect(() => {
