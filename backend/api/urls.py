@@ -27,6 +27,7 @@ auth_patterns = [
     path('resend-phone-otp/', views.resend_phone_otp_view, name='auth-resend-phone-otp'),
     path('firebase/verify-phone/', views.firebase_verify_phone_view, name='auth-firebase-verify-phone'),
     path('firebase/status/', views.firebase_auth_status, name='auth-firebase-status'),
+    path('phone-verification-status/', views.phone_verification_status_view, name='auth-phone-verification-status'),
     path('google/', views.google_login, name='auth-google'),
     path('logout/', views.logout_view, name='auth-logout'),
     path('refresh/', TokenRefreshView.as_view(), name='auth-refresh'),

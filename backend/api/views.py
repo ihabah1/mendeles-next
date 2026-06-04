@@ -254,6 +254,14 @@ def firebase_auth_status(request):
     return Response(firebase_config_status())
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def phone_verification_status_view(request):
+    from api.services.phone_verification import phone_verification_status
+
+    return Response(phone_verification_status())
+
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def firebase_verify_phone_view(request):

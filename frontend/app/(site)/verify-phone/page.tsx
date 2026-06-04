@@ -6,6 +6,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
+import { resolveApiBaseUrl } from "@/lib/api/config";
 import { tokenStore } from "@/lib/api/tokens";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import {
@@ -40,8 +41,18 @@ function VerifyPhoneForm() {
       return;
     }
     if (!isFirebaseConfigured()) {
-      setError("Firebase לא מוגדר ב-Frontend (NEXT_PUBLIC_FIREBASE_*)");
+      setError("Firebase לא מוגדר ב-Frontend — הוסף NEXT_PUBLIC_FIREBASE_* ב-Railway");
+      return;
     }
+    resolveApiBaseUrl()
+      .then((base) => fetch(`${base}/auth/phone-verification-status/`, { cache: "no-store" }))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { firebase_ready?: boolean; hint?: string } | null) => {
+        if (d && !d.firebase_ready && d.hint) {
+          setError(d.hint);
+        }
+      })
+      .catch(() => {});
   }, [router, redirect]);
 
   useEffect(() => {

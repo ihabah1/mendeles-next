@@ -312,6 +312,10 @@ TWILIO_AUTH_TOKEN = _env_clean('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
 # Firebase Phone Auth — paste full service account JSON (Railway multiline or single line)
 FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON', '')
+# Require SMS step after email verification (Firebase and/or legacy SMS)
+PHONE_VERIFICATION_ENABLED = os.getenv('PHONE_VERIFICATION_ENABLED', 'true').lower() in (
+    '1', 'true', 'yes',
+)
 
 # ── iCount invoices ───────────────────────────────────────────────────────────
 ICOUNT_API_TOKEN = _env_clean('ICOUNT_API_TOKEN', '')

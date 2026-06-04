@@ -5,6 +5,8 @@ import Nav from "@/components/Nav";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
+import { resolveApiBaseUrl } from "@/lib/api/config";
+import { isFirebaseConfigured } from "@/lib/firebase";
 import { GOOGLE_OAUTH_ERRORS } from "@/lib/auth/google-oauth";
 
 type Mode = "login" | "register" | "forgot" | "verify-pending" | "phone-verify";
@@ -32,6 +34,7 @@ function AuthForm() {
     backendReachable: boolean;
     hint: string | null;
   } | null>(null);
+  const [smsAfterEmail, setSmsAfterEmail] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -66,6 +69,14 @@ function AuthForm() {
         });
       })
       .catch(() => setApiStatus({ configured: false, backendReachable: false, hint: null }));
+
+    resolveApiBaseUrl()
+      .then((base) => fetch(`${base}/auth/phone-verification-status/`, { cache: "no-store" }))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { required_after_email?: boolean } | null) => {
+        setSmsAfterEmail(Boolean(d?.required_after_email));
+      })
+      .catch(() => setSmsAfterEmail(isFirebaseConfigured()));
   }, [params, isAuthenticated, router, redirect]);
 
   const go = (path: string) => { setError(""); setStatus(""); setMode(path as Mode); };
@@ -141,6 +152,7 @@ function AuthForm() {
       }
       setPendingEmail(res.email);
       if (res.phone) setPendingPhone(res.phone);
+      if (res.phone_verification_required) setSmsAfterEmail(true);
       if (res.dev_otp) setStatus((s) => `${s} קוד SMS (פיתוח): ${res.dev_otp}`.trim());
       go("verify-pending");
     } catch (err) {
@@ -325,15 +337,26 @@ function AuthForm() {
             <>
               <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
                 שלחנו קישור אימות ל-<strong style={{ color: "var(--cream)" }}>{pendingEmail}</strong>.
-                {pendingPhone && (
-                  <>
-                    <br />
-                    קוד SMS נשלח ל-<strong style={{ color: "var(--cream)" }}>{pendingPhone}</strong> (אחרי אימות אימייל).
-                  </>
-                )}
                 <br />
                 לחץ על הקישור באימייל כדי להמשיך.
               </p>
+              {smsAfterEmail && (
+                <p
+                  style={{
+                    fontSize: ".78rem",
+                    color: "var(--gold)",
+                    textAlign: "center",
+                    lineHeight: 1.55,
+                    margin: "12px 0 0",
+                    padding: "10px 12px",
+                    background: "rgba(201,168,76,.08)",
+                    borderRadius: 8,
+                    border: "1px solid rgba(201,168,76,.25)",
+                  }}
+                >
+                  שלב 2: אחרי אימות האימייל תועבר ל-<strong>אימות SMS</strong> (Firebase) — הזן מספר טלפון וקוד שנשלח בהודעה.
+                </p>
+              )}
               <button
                 type="button"
                 className="btn btn-outline"

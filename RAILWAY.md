@@ -84,6 +84,13 @@ Authorized domains: `localhost`, `mendeles-next-production.up.railway.app`.
 
 זרימה: אימייל (Resend) → `/verify-phone` → Firebase SMS → `POST /api/auth/firebase/verify-phone/` (JWT חובה).
 
+```env
+PHONE_VERIFICATION_ENABLED=true
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+```
+
+בדיקה: `GET /api/auth/phone-verification-status/` → `required_after_email: true`, `firebase_ready: true`.
+
 ### iCount + הדפסה (Backend בלבד)
 
 ```env

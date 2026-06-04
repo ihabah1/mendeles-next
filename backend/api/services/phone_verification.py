@@ -19,12 +19,45 @@ def firebase_phone_auth_enabled() -> bool:
     return firebase_configured()
 
 
-def phone_verification_required_for(user) -> bool:
+def phone_verification_enabled() -> bool:
+    """Global switch: SMS step after email verification."""
+    if getattr(settings, 'PHONE_VERIFICATION_ENABLED', False):
+        return True
     if firebase_phone_auth_enabled():
+        return True
+    return sms_verification_enabled()
+
+
+def phone_verification_required_for(user) -> bool:
+    if not phone_verification_enabled():
+        return False
+    # Firebase / explicit flag: phone collected on /verify-phone after email
+    if firebase_phone_auth_enabled() or getattr(settings, 'PHONE_VERIFICATION_ENABLED', False):
         return True
     if not sms_verification_enabled():
         return False
     return bool((user.phone or '').strip())
+
+
+def phone_verification_status() -> dict:
+    from api.services.firebase_service import firebase_config_status
+
+    fb = firebase_config_status()
+    enabled = phone_verification_enabled()
+    return {
+        'enabled': enabled,
+        'required_after_email': enabled,
+        'firebase_backend': fb,
+        'firebase_ready': fb.get('configured', False),
+        'sms_legacy': sms_verification_enabled(),
+        'hint': None
+        if enabled and fb.get('configured')
+        else (
+            'הוסף FIREBASE_SERVICE_ACCOUNT_JSON ב-Backend + NEXT_PUBLIC_FIREBASE_* ב-Frontend'
+            if enabled
+            else 'הגדר PHONE_VERIFICATION_ENABLED=true ו-FIREBASE_SERVICE_ACCOUNT_JSON'
+        ),
+    }
 
 
 def mark_phone_verified_from_firebase(user, *, phone_e164: str) -> User:
