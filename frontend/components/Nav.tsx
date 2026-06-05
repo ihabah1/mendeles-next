@@ -34,7 +34,7 @@ export default function Nav() {
 
   const navLinks = [
     { href: "/lotto", label: "🎱 לוטו" },
-    { href: "/seven77", label: "7️⃣ 777" },
+    { href: "/seven77", label: "777" },
     { href: "/toto", label: "⚽ טוטו" },
     { href: "/profile", label: "👤 פרופיל" },
   ];

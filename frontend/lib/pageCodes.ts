@@ -9,6 +9,7 @@ export type PageCodeEntry = {
 const ENTRIES: PageCodeEntry[] = [
   { code: "HO47", labelHe: "דף ראשי", paths: ["/"] },
   { code: "LT83", labelHe: "לוטו", paths: ["/lotto"] },
+  { code: "S777", labelHe: "777", paths: ["/seven77"] },
   { code: "TT29", labelHe: "טוטו", paths: ["/toto"] },
   { code: "AB16", labelHe: "אודות", paths: ["/about"] },
   { code: "TE52", labelHe: "תנאי שימוש", paths: ["/terms"] },
