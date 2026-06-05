@@ -223,6 +223,23 @@ def send_order_to_printer(order) -> dict:
     return send_print_payload(build_print_payload(order))
 
 
+def print_success_detail(
+    *,
+    tables_count: int | None = None,
+    order_number: str | None = None,
+    result: dict | None = None,
+) -> str:
+    """Hebrew success message for UI toasts/alerts."""
+    parts = ['נשלח להדפסה בהצלחה']
+    if order_number:
+        parts.append(f'הזמנה {order_number}')
+    if tables_count is not None and tables_count > 0:
+        parts.append(f'{tables_count} טבלאות')
+    if isinstance(result, dict) and (result.get('printed') or result.get('success')):
+        parts.append('המדפסת אישרה')
+    return ' — '.join(parts)
+
+
 def normalize_print_tables(raw_tables) -> list[dict]:
     """Validate tables from lotto UI before POST to print server."""
     if not isinstance(raw_tables, list):

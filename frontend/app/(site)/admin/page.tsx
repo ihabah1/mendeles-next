@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService, type IntegrationLogEntry, type IntegrationStatus } from "@/lib/api/admin";
 import { extractApiError } from "@/lib/api/client";
+import { formatPrintSuccessMessage } from "@/lib/api/print-feedback";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 import type { UiOrder } from "@/lib/api/mappers";
 
@@ -146,7 +147,7 @@ function AdminPageInner() {
     setActionLoading(orderId);
     try {
       const res = await adminService.printOrder(orderId);
-      alert(res.detail || "נשלח להדפסה");
+      showToast(formatPrintSuccessMessage(res), "ok");
       setOrders(prev =>
         prev.map(o =>
           o.id === orderId
@@ -155,7 +156,7 @@ function AdminPageInner() {
         ),
       );
     } catch (e) {
-      alert(extractApiError(e, "הדפסה נכשלה"));
+      showToast(extractApiError(e, "הדפסה נכשלה"), "err", 5000);
     } finally {
       setActionLoading(null);
     }
@@ -302,6 +303,31 @@ function AdminPageInner() {
   return (
     <>
       <Nav />
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 999,
+            background: "var(--navy-c)",
+            border: `1px solid ${toast.type === "err" ? "#ff6b7a" : "var(--green)"}`,
+            borderRadius: 9,
+            padding: "10px 18px",
+            fontSize: ".8rem",
+            fontWeight: 600,
+            color: toast.type === "err" ? "#ff6b7a" : "var(--green)",
+            maxWidth: "min(92vw, 420px)",
+            textAlign: "center",
+            lineHeight: 1.45,
+            pointerEvents: "none",
+            boxShadow: "0 4px 20px rgba(0,0,0,.35)",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>🎯 דשבורד אדמין</span>

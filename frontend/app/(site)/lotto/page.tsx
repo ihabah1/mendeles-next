@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
 import { lottoService } from "@/lib/api/lotto";
+import { formatPrintSuccessMessage } from "@/lib/api/print-feedback";
 import { DEMO_ORDER, isDemoMode as checkDemoMode } from "@/lib/demo";
 
 interface TableSel { nums: Set<number>; strong: number | null; }
@@ -22,6 +23,41 @@ function emptyTables(): Selections {
   const s: Selections = {};
   for (let i = 1; i <= 14; i++) s[i] = { nums: new Set(), strong: null };
   return s;
+}
+
+function LottoToast({ toast }: { toast: { msg: string; type: string } | null }) {
+  if (!toast) return null;
+  const border =
+    toast.type === "err" ? "#ff6b7a" : toast.type === "info" ? "var(--gold)" : "var(--green)";
+  const color =
+    toast.type === "err" ? "#ff6b7a" : toast.type === "info" ? "var(--gold)" : "var(--green)";
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        top: 72,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        background: "var(--navy-c)",
+        border: `1px solid ${border}`,
+        borderRadius: 9,
+        padding: "10px 18px",
+        fontSize: ".85rem",
+        fontWeight: 700,
+        color,
+        maxWidth: "min(92vw, 420px)",
+        textAlign: "center",
+        lineHeight: 1.45,
+        pointerEvents: "none",
+        boxShadow: "0 4px 24px rgba(0,0,0,.45)",
+      }}
+    >
+      {toast.msg}
+    </div>
+  );
 }
 
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -168,8 +204,28 @@ function LottoPageInner() {
   const [showAuto, setShowAuto] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
   const isDemo = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showToast = useCallback((msg:string,type='ok')=>{ setToast({msg,type}); setTimeout(()=>setToast(null),2800); },[]);
+  const showToast = useCallback((msg: string, type = "ok", ms = 2800) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast({ msg, type });
+    if (ms > 0) {
+      toastTimerRef.current = setTimeout(() => {
+        setToast(null);
+        toastTimerRef.current = null;
+      }, ms);
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(()=>{
     isDemo.current = checkDemoMode();
@@ -263,16 +319,28 @@ function LottoPageInner() {
   [sel]);
 
   const handlePrint=async()=>{
-    if(isDemo.current){ showToast('הדפסה לשרת לא זמינה בדמו','err'); return; }
-    if(!isAuthenticated){ router.push('/auth?redirect=/lotto'); return; }
+    if(printing){
+      showToast('הדפסה בתהליך…','info',0);
+      return;
+    }
     const tables=buildPrintTables();
-    if(!tables.length){ showToast('מלא לפחות טבלה אחת (6 מספרים + חזק)','err'); return; }
+    if(!tables.length){
+      showToast('לבחירת הדפסה: מלא לפחות טבלה אחת — 6 מספרים + מספר חזק','err',5000);
+      return;
+    }
+    if(isDemo.current){ showToast('הדפסה לשרת לא זמינה בדמו','err',4000); return; }
+    if(!isAuthenticated){
+      showToast('יש להתחבר לפני הדפסה','err',3000);
+      router.push('/auth?redirect=/lotto');
+      return;
+    }
     setPrinting(true);
+    showToast('הדפסה בתהליך…','info',0);
     try{
       const res=await lottoService.printSummary({ tables, order_id: 0 });
-      showToast(res.detail||'נשלח להדפסה 🖨️','ok');
+      showToast(formatPrintSuccessMessage(res, tables.length),'ok',5000);
     }catch(err){
-      showToast(extractApiError(err,'הדפסה נכשלה'),'err');
+      showToast(extractApiError(err,'הדפסה נכשלה'),'err',6000);
     }finally{
       setPrinting(false);
     }
@@ -315,14 +383,15 @@ function LottoPageInner() {
 
   if(result) return(
     <><Nav />
+    <LottoToast toast={toast} />
     <div style={{maxWidth:520,margin:'0 auto',padding:'40px 16px',textAlign:'center'}}>
       <div style={{fontSize:'2.5rem',marginBottom:12}}>🎉</div>
       <h2 style={{fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>{result.count} טבלאות נשלחו!</h2>
       <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>הזמנה: <strong style={{color:'var(--gold)'}}>{result.orderNumber}</strong></p>
       <p style={{color:'var(--muted)',fontSize:'.78rem',marginBottom:24}}>סה"כ: ₪{Number(result.total).toFixed(2)} — תקבל עדכון SMS ואימייל</p>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button className="btn btn-outline" disabled={printing} onClick={handlePrint}>
-          {printing?'...מדפיס':'🖨️ הדפס למדפסת'}
+        <button type="button" className="btn btn-outline" disabled={printing} onClick={handlePrint}>
+          {printing?'הדפסה בתהליך…':'🖨️ הדפס למדפסת'}
         </button>
         <button className="btn btn-gold" onClick={()=>{setSel(emptyTables());setResult(null);}}>מלא טפסים נוספים</button>
         <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
@@ -334,7 +403,7 @@ function LottoPageInner() {
 
   return(
     <><Nav />
-    {toast&&<div style={{position:'fixed',top:12,left:'50%',transform:'translateX(-50%)',zIndex:999,background:'var(--navy-c)',border:`1px solid ${toast.type==='err'?'#ff6b7a':toast.type==='info'?'var(--gold)':'var(--green)'}`,borderRadius:9,padding:'8px 16px',fontSize:'.76rem',fontWeight:600,color:toast.type==='err'?'#ff6b7a':toast.type==='info'?'var(--gold)':'var(--green)',whiteSpace:'nowrap',pointerEvents:'none'}}>{toast.msg}</div>}
+    <LottoToast toast={toast} />
     <AutoFillModal open={showAuto} onClose={()=>setShowAuto(false)} onFill={handleAutoFill}/>
     <PasteModal open={showPaste} onClose={()=>setShowPaste(false)} onApply={handlePasteApply}/>
 
@@ -451,8 +520,19 @@ function LottoPageInner() {
 
       <div style={{display:'flex',gap:8}}>
         <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
-        <button className="btn btn-outline" disabled={printing||filled===0} onClick={handlePrint}>
-          {printing?'...שולח להדפסה':'🖨️ הדפס'}
+        <button
+          type="button"
+          className="btn btn-outline"
+          disabled={printing}
+          onClick={handlePrint}
+          title={filled===0?'מלא 6 מספרים + חזק בטבלה אחת לפחות':undefined}
+          style={{
+            flex:1,
+            opacity:filled===0&&!printing?0.55:1,
+            cursor:printing?'wait':filled===0?'help':'pointer',
+          }}
+        >
+          {printing?'הדפסה בתהליך…':filled===0?'🖨️ הדפס (מלא טבלה)':'🖨️ הדפס'}
         </button>
       </div>
     </div></>

@@ -69,10 +69,18 @@ export const adminService = {
     await api.patch("/admin/orders/", { order_id: orderId, status });
   },
 
-  async printOrder(orderId: number): Promise<{ detail: string }> {
-    const { data } = await api.post<{ detail: string }>(
-      `/admin/orders/${orderId}/print/`,
-    );
+  async printOrder(orderId: number): Promise<{
+    detail: string;
+    tables_count?: number;
+    order_number?: string;
+    printer_confirmed?: boolean;
+  }> {
+    const { data } = await api.post<{
+      detail: string;
+      tables_count?: number;
+      order_number?: string;
+      printer_confirmed?: boolean;
+    }>(`/admin/orders/${orderId}/print/`);
     return data;
   },
 

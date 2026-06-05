@@ -207,6 +207,7 @@ def print_summary(request):
         build_forms_payload_for_user,
         normalize_print_tables,
         print_configured,
+        print_success_detail,
         send_print_payload,
     )
 
@@ -243,4 +244,11 @@ def print_summary(request):
     except PrintError as exc:
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    return Response({'detail': 'נשלח להדפסה', 'print_response': result})
+    return Response({
+        'detail': print_success_detail(tables_count=len(tables), result=result),
+        'tables_count': len(tables),
+        'printer_confirmed': bool(
+            isinstance(result, dict) and (result.get('printed') or result.get('success'))
+        ),
+        'print_response': result,
+    })

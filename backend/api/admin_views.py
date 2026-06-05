@@ -16,7 +16,12 @@ from api.services.icount_service import (
     icount_config_status,
 )
 from api.services.integration_log import log_integration, recent_integration_logs
-from api.services.print_service import PrintError, print_configured, send_order_to_printer
+from api.services.print_service import (
+    PrintError,
+    print_configured,
+    print_success_detail,
+    send_order_to_printer,
+)
 
 
 class IsStaffUser(permissions.BasePermission):
@@ -153,8 +158,18 @@ def admin_order_print(request, order_id):
         order=order,
         details=result if isinstance(result, dict) else {'result': str(result)[:500]},
     )
+    tables_count = len(order.sets_json or [])
     return Response({
-        'detail': 'נשלח להדפסה',
+        'detail': print_success_detail(
+            tables_count=tables_count,
+            order_number=order.order_number,
+            result=result,
+        ),
+        'order_number': order.order_number,
+        'tables_count': tables_count,
+        'printer_confirmed': bool(
+            isinstance(result, dict) and (result.get('printed') or result.get('success'))
+        ),
         'printed_at': order.printed_at.isoformat(),
         'print_response': result,
     })

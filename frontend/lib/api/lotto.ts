@@ -47,6 +47,8 @@ export interface PrintTablePayload {
 
 export interface PrintSummaryResponse {
   detail: string;
+  tables_count?: number;
+  printer_confirmed?: boolean;
   print_response?: Record<string, unknown>;
 }
 
