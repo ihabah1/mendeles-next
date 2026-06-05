@@ -45,7 +45,7 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(4px)' }}>
-      <div style={{ background: 'var(--navy-c)', border: '1px solid var(--navy-b)', borderRadius: 16, padding: 24, maxWidth: 440, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,.6)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="card" style={{ padding: 24, maxWidth: 440, width: '100%', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: 12, left: 12, background: 'none', border: 'none', color: 'var(--muted)', fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
         {children}
       </div>
@@ -67,7 +67,7 @@ function AutoFillModal({ open, onClose, onFill }: { open: boolean; onClose: () =
     <Modal open={open} onClose={onClose}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>⚡</div>
-        <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '1.1rem', fontWeight: 900, color: 'var(--cream)', marginBottom: 8 }}>מילוי אוטומטי — איך זה עובד?</div>
+        <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>מילוי אוטומטי — איך זה עובד?</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: 16, lineHeight: 1.6, textAlign: 'right' }}>
           המספרים שיוכנסו לטבלאות <strong style={{ color: 'var(--gold)' }}>נלקחים מתוך 200 הסטים שרכשת</strong>.<br />
           כל סט כולל 6 מספרים + חזק שנבחרו במיוחד עבורך.<br />
@@ -78,12 +78,12 @@ function AutoFillModal({ open, onClose, onFill }: { open: boolean; onClose: () =
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
         {opts.map(o => (
           <div key={String(o.val)} onClick={() => setSelected(o.val as number | 'custom')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--navy)', border: `1px solid ${selected === o.val ? 'var(--gold)' : 'var(--navy-b)'}`, borderRadius: 9, padding: '10px 14px', cursor: 'pointer', transition: 'all .15s' }}>
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: selected === o.val ? 'var(--gold-bg)' : 'var(--bg3)', border: `1px solid ${selected === o.val ? 'var(--gold-border)' : 'var(--border)'}`, borderRadius: 9, padding: '10px 14px', cursor: 'pointer', transition: 'all .15s' }}>
             <div>
-              <div style={{ fontSize: '.82rem', fontWeight: 700, color: selected === o.val ? 'var(--gold)' : 'var(--cream)' }}>{o.label}</div>
+              <div style={{ fontSize: '.82rem', fontWeight: 700, color: selected === o.val ? 'var(--gold-dark)' : 'var(--text)' }}>{o.label}</div>
               <div style={{ fontSize: '.65rem', color: 'var(--muted)' }}>{o.sub}</div>
             </div>
-            <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selected === o.val ? 'var(--gold)' : 'var(--navy-b)'}`, background: selected === o.val ? 'var(--gold)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--navy)', fontSize: '.7rem', fontWeight: 900, flexShrink: 0 }}>
+            <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selected === o.val ? 'var(--gold)' : 'var(--border2)'}`, background: selected === o.val ? 'var(--gold)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--navy)', fontSize: '.7rem', fontWeight: 900, flexShrink: 0 }}>
               {selected === o.val ? '✓' : ''}
             </div>
           </div>
@@ -93,7 +93,8 @@ function AutoFillModal({ open, onClose, onFill }: { open: boolean; onClose: () =
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <label style={{ fontSize: '.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>כמה טבלאות:</label>
           <input type="number" min={2} max={14} step={2} value={custom} onChange={e => setCustom(parseInt(e.target.value)||2)}
-            style={{ width: 70, background: 'var(--navy)', border: '1px solid var(--navy-b)', borderRadius: 7, color: 'var(--cream)', fontFamily: 'Heebo,sans-serif', fontSize: '.88rem', padding: '6px 10px', textAlign: 'center' }} />
+            className="input"
+            style={{ width: 70, textAlign: 'center' }} />
         </div>
       )}
       <button onClick={() => { const c = selected === 'custom' ? custom : selected as number; onFill(c % 2 === 0 ? c : c - 1); onClose(); }}
@@ -120,7 +121,7 @@ function PasteModal({ open, onClose, onApply }: { open: boolean; onClose: () => 
   return (
     <Modal open={open} onClose={onClose}>
       <div style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: 8 }}>🎯</div>
-      <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '1.1rem', fontWeight: 900, color: 'var(--cream)', textAlign: 'center', marginBottom: 8 }}>מלא לפי הסטים שלך</div>
+      <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', textAlign: 'center', marginBottom: 8 }}>מלא לפי הסטים שלך</div>
       <div style={{ fontSize: '.74rem', color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
         הדבק את הסטים שלך — כל שורה היא סט אחד.<br />
         <strong>פורמט:</strong> 6 מספרים ואז מספר חזק, מופרדים בפסיקים או רווחים.<br />
@@ -133,7 +134,8 @@ function PasteModal({ open, onClose, onApply }: { open: boolean; onClose: () => 
         </div>
         <textarea value={text} onChange={e => { setText(e.target.value); setParsed(parse(e.target.value)); }}
           placeholder={"הדבק כאן את הסטים שלך...\n3, 7, 12, 25, 33, 36, 5\n1, 8, 14, 20, 29, 37, 3\n..."}
-          style={{ width: '100%', height: 150, background: 'var(--navy)', border: '1px solid var(--navy-b)', borderRadius: 9, color: 'var(--cream)', fontFamily: 'monospace', fontSize: '.8rem', padding: '10px 12px', resize: 'vertical', textAlign: 'right', lineHeight: 1.8, outline: 'none' }} />
+          className="input"
+          style={{ width: '100%', height: 150, fontFamily: 'monospace', fontSize: '.8rem', resize: 'vertical', lineHeight: 1.8 }} />
       </div>
       {parsed.length > 0 && (
         <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginBottom: 10, maxHeight: 60, overflowY: 'auto', lineHeight: 1.7 }}>
@@ -144,7 +146,8 @@ function PasteModal({ open, onClose, onApply }: { open: boolean; onClose: () => 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <label style={{ fontSize: '.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>כמה טבלאות למלות:</label>
         <input type="number" min={2} max={14} step={2} value={n} onChange={e=>setN(parseInt(e.target.value)||14)}
-          style={{ width: 70, background: 'var(--navy)', border: '1px solid var(--navy-b)', borderRadius: 7, color: 'var(--cream)', fontFamily: 'Heebo,sans-serif', fontSize: '.88rem', padding: '6px 10px', textAlign: 'center' }} />
+          className="input"
+          style={{ width: 70, textAlign: 'center' }} />
         <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>(זוגי בלבד)</span>
       </div>
       <button onClick={() => { if(!parsed.length) return; onApply(parsed, n%2===0?n:n-1); onClose(); }}
@@ -298,6 +301,7 @@ function LottoPageInner() {
       showToast('הדפסה בתהליך…','info',0);
       return;
     }
+    showToast('שולח להדפסה…','info',1500);
     const tables=buildPrintTables();
     if(!tables.length){
       showToast('לבחירת הדפסה: מלא לפחות טבלה אחת — 6 מספרים + מספר חזק','err',5000);
@@ -359,13 +363,13 @@ function LottoPageInner() {
   if(result) return(
     <><Nav />
     <LottoToast toast={toast} />
-    <div style={{maxWidth:520,margin:'0 auto',padding:'40px 16px',textAlign:'center'}}>
+    <div className="page-wrap" style={{textAlign:'center',paddingTop:40}}>
       <div style={{fontSize:'2.5rem',marginBottom:12}}>🎉</div>
-      <h2 style={{fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>{result.count} טבלאות נשלחו!</h2>
-      <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>הזמנה: <strong style={{color:'var(--gold)'}}>{result.orderNumber}</strong></p>
+      <h2 style={{fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>{result.count} טבלאות נשלחו!</h2>
+      <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>הזמנה: <strong style={{color:'var(--gold-dark)'}}>{result.orderNumber}</strong></p>
       <p style={{color:'var(--muted)',fontSize:'.78rem',marginBottom:24}}>סה"כ: ₪{Number(result.total).toFixed(2)} — תקבל עדכון SMS ואימייל</p>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button type="button" className="btn btn-outline" disabled={printing} onClick={handlePrint}>
+        <button type="button" className={`btn ${printing?'btn-ghost':'btn-gold'}`} onClick={handlePrint} aria-busy={printing}>
           {printing?'הדפסה בתהליך…':'🖨️ הדפס למדפסת'}
         </button>
         <button className="btn btn-gold" onClick={()=>{setSel(emptyTables());setResult(null);}}>מלא טפסים נוספים</button>
@@ -382,38 +386,37 @@ function LottoPageInner() {
     <AutoFillModal open={showAuto} onClose={()=>setShowAuto(false)} onFill={handleAutoFill}/>
     <PasteModal open={showPaste} onClose={()=>setShowPaste(false)} onApply={handlePasteApply}/>
 
-    <div style={{maxWidth:520,margin:'0 auto',padding:'20px 14px 80px'}}>
+    <div className="page-wrap">
       {userTier==='premium'?(
-        <div style={{background:'rgba(201,168,76,.08)',border:'1px solid rgba(201,168,76,.22)',borderRadius:9,padding:'8px 14px',marginBottom:12,fontSize:'.74rem',color:'var(--gold)'}}>
+        <div className="tier-premium" style={{marginBottom:12}}>
           ✨ <strong>מנוי פעיל</strong> — גישה מלאה ל-200 הסטים ולכל הפונקציות
         </div>
       ):(
-        <div style={{background:'rgba(138,170,190,.06)',border:'1px solid rgba(138,170,190,.18)',borderRadius:9,padding:'8px 14px',marginBottom:12,fontSize:'.74rem',color:'var(--muted)'}}>
+        <div className="tier-free" style={{marginBottom:12}}>
           ℹ️ <strong>גישה חינמית</strong> — ממלא טבלאות לבד או עם הסטים שלך.{' '}
-          <span style={{color:'var(--gold)',cursor:'pointer',textDecoration:'underline'}} onClick={()=>router.push('/')}>שדרג לפרימיום</span>
+          <span style={{color:'var(--gold-dark)',cursor:'pointer',textDecoration:'underline'}} onClick={()=>router.push('/')}>שדרג לפרימיום</span>
         </div>
       )}
 
-      <div style={{background:'rgba(26,45,66,.85)',border:'1px solid var(--navy-b)',borderRadius:10,padding:'10px 14px',marginBottom:12,display:'flex',justifyContent:'space-between',fontSize:'.76rem',color:'var(--muted)',flexWrap:'wrap',gap:8}}>
-        <span>הזמנה: <strong style={{color:'var(--gold)'}}>{data.order_number}</strong></span>
-        <span>הגרלה: <strong style={{color:'var(--cream)'}}>{data.draw_date}</strong></span>
-        <span>סטים זמינים: <strong style={{color:'var(--gold)'}}>{allSets.length}</strong></span>
-        <span>מולאו: <strong style={{color:'var(--gold)'}}>{filled}</strong>/14</span>
+      <div className="lotto-panel lotto-meta">
+        <span>הזמנה: <strong>{data.order_number}</strong></span>
+        <span>הגרלה: <strong>{data.draw_date}</strong></span>
+        <span>סטים זמינים: <strong>{allSets.length}</strong></span>
+        <span>מולאו: <strong>{filled}</strong>/14</span>
       </div>
 
       <div style={{display:'flex',gap:7,marginBottom:12,flexWrap:'wrap'}}>
-        <button onClick={()=>userTier==='premium'?setShowAuto(true):showToast('מילוי אוטומטי זמין למנויים בלבד 🔒','err')}
-          style={{display:'inline-flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:8,fontFamily:'Heebo,sans-serif',fontSize:'.78rem',fontWeight:700,cursor:'pointer',background:userTier==='premium'?'linear-gradient(135deg,var(--gold),var(--gold-l))':'var(--navy-b)',color:userTier==='premium'?'var(--navy)':'var(--muted)',border:'none',flex:1,justifyContent:'center'}}>
+        <button type="button" onClick={()=>userTier==='premium'?setShowAuto(true):showToast('מילוי אוטומטי זמין למנויים בלבד 🔒','err')}
+          className={`btn ${userTier==='premium'?'btn-gold':'btn-outline'}`} style={{flex:1}}>
           ⚡ מילוי אוטומטי מהסטים שלי {userTier!=='premium'&&'🔒'}
         </button>
-        <button onClick={()=>setShowPaste(true)}
-          style={{display:'inline-flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:8,fontFamily:'Heebo,sans-serif',fontSize:'.78rem',fontWeight:700,cursor:'pointer',background:'rgba(29,185,106,.15)',border:'1px solid rgba(29,185,106,.35)',color:'var(--green)',flex:1,justifyContent:'center'}}>
+        <button type="button" onClick={()=>setShowPaste(true)} className="btn btn-green" style={{flex:1}}>
           🎯 מלא לפי המספרים שלי
         </button>
-        <button onClick={clearAll} style={{display:'inline-flex',alignItems:'center',padding:'8px 12px',borderRadius:8,fontFamily:'Heebo,sans-serif',fontSize:'.78rem',fontWeight:700,cursor:'pointer',background:'transparent',border:'1px solid rgba(232,0,30,.3)',color:'#ff6b7a'}}>🗑️</button>
+        <button type="button" onClick={clearAll} className="btn btn-outline btn-sm">🗑️</button>
       </div>
 
-      <div style={{background:'#fff',borderRadius:12,overflow:'hidden',boxShadow:'0 8px 32px rgba(0,0,0,.45)',display:'flex',direction:'rtl',marginBottom:14}}>
+      <div className="lotto-form-wrap" style={{display:'flex',direction:'rtl',marginBottom:14}}>
         <div style={{background:'#e8001e',width:36,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',borderLeft:'2px solid #b50017'}}>
           <div style={{writingMode:'vertical-rl',transform:'rotate(180deg)',color:'#fff',fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1rem',fontWeight:900,letterSpacing:3,flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>לוטו</div>
           <div style={{writingMode:'vertical-rl',transform:'rotate(180deg)',fontSize:'.42rem',color:'rgba(255,255,255,.6)',padding:'5px 0',borderTop:'1px solid #b50017'}}>מפעל הפיס</div>
@@ -470,42 +473,41 @@ function LottoPageInner() {
         </div>
       </div>
 
-      <div style={{background:'rgba(26,45,66,.85)',border:'1px solid var(--navy-b)',borderRadius:10,padding:'12px 14px',marginBottom:10,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div className="lotto-panel" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <div style={{fontSize:'.82rem',fontWeight:700,color:'var(--cream)'}}>🎯 דאבל לוטו</div>
-          <div style={{fontSize:'.68rem',color:'var(--muted)',marginTop:2}}>הכפל את הסיכוי — מחיר כפול לכל טבלה</div>
+          <div className="lotto-panel-title">🎯 דאבל לוטו</div>
+          <div className="lotto-panel-sub">הכפל את הסיכוי — מחיר כפול לכל טבלה</div>
         </div>
-        <div onClick={()=>setIsDouble(p=>!p)} style={{width:44,height:24,borderRadius:12,background:isDouble?'var(--gold)':'var(--navy-b)',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}}>
-          <div style={{position:'absolute',top:2,width:20,height:20,borderRadius:'50%',background:'#fff',transition:'left .2s',left:isDouble?22:2}}/>
+        <div
+          role="switch"
+          aria-checked={isDouble}
+          className={`lotto-toggle${isDouble?' on':''}`}
+          onClick={()=>setIsDouble(p=>!p)}
+        >
+          <div className="lotto-toggle-knob" />
         </div>
       </div>
-      <div style={{background:'rgba(26,45,66,.9)',border:`2px solid ${canSend>=2?'rgba(29,185,106,.35)':'var(--navy-b)'}`,borderRadius:14,padding:'16px 18px',marginBottom:12}}>
-        <div style={{fontSize:'.82rem',fontWeight:700,color:'var(--cream)',marginBottom:6}}>שליחה</div>
-        <div style={{fontSize:'.74rem',color:'var(--muted)',marginBottom:12,lineHeight:1.7}}>
+      <div className={`lotto-submit${canSend>=2?' ready':''}`}>
+        <div className="lotto-panel-title" style={{marginBottom:6}}>שליחה</div>
+        <div className="lotto-panel-sub" style={{marginBottom:12,lineHeight:1.7}}>
           {filled===0&&'מלא לפחות 2 טבלאות לשליחה'}
           {filled===1&&'מלאת טבלה אחת — צריך עוד אחת'}
-          {filled>=2&&<>מולאו <strong style={{color:'var(--green)'}}>{filled}</strong> טבלאות — ניתן לשלוח <strong style={{color:'var(--gold)'}}>{canSend}</strong>{filled%2!==0&&<span style={{color:'#ffb347'}}> · טבלה אחת לא תישלח (צריך זוג)</span>}</>}
+          {filled>=2&&<>מולאו <strong style={{color:'var(--green)'}}>{filled}</strong> טבלאות — ניתן לשלוח <strong style={{color:'var(--gold-dark)'}}>{canSend}</strong>{filled%2!==0&&<span style={{color:'var(--heat-warm)'}}> · טבלה אחת לא תישלח (צריך זוג)</span>}</>}
         </div>
-        <button disabled={canSend<2||submitting} onClick={submit}
-          style={{width:'100%',background:canSend>=2?'linear-gradient(135deg,#1db96a,#17a25d)':'var(--navy-b)',color:'#fff',fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1rem',fontWeight:900,padding:13,borderRadius:10,border:'none',cursor:canSend<2?'not-allowed':'pointer',opacity:canSend<2?.4:1,display:'block'}}>
+        <button type="button" disabled={canSend<2||submitting} onClick={submit}
+          className={`btn btn-full btn-lg ${canSend>=2?'btn-green':'btn-outline'}`}>
           {submitting?'...שולח':canSend>=2?`שליחה — ${canSend} טבלאות ✉️`:'שליחה ✉️'}
         </button>
         <div style={{fontSize:'.63rem',color:'var(--muted)',textAlign:'center',marginTop:7}}>שליחה בזוגות בלבד · ₪{((TABLE_PRICE+COMMISSION)*(isDouble?2:1)).toFixed(1)} לטבלה{isDouble?' (דאבל)':''}</div>
       </div>
 
-      <div style={{display:'flex',gap:8}}>
-        <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
+      <div className="lotto-actions">
+        <button type="button" className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
         <button
           type="button"
-          className="btn btn-outline"
-          disabled={printing}
+          className={`btn btn-full ${printing?'btn-ghost':'btn-gold'}`}
           onClick={handlePrint}
-          title={filled===0?'מלא 6 מספרים + חזק בטבלה אחת לפחות':undefined}
-          style={{
-            flex:1,
-            opacity:filled===0&&!printing?0.55:1,
-            cursor:printing?'wait':filled===0?'help':'pointer',
-          }}
+          aria-busy={printing}
         >
           {printing?'הדפסה בתהליך…':filled===0?'🖨️ הדפס (מלא טבלה)':'🖨️ הדפס'}
         </button>

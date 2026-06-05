@@ -457,6 +457,64 @@ p  { line-height: 1.7; }
   to { opacity: 1; transform: none; }
 }
 
+/* ── Lotto page (LT83) ── */
+.lotto-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: .76rem;
+  color: var(--muted);
+}
+.lotto-meta strong { color: var(--gold-dark); }
+.lotto-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-card);
+}
+.lotto-panel-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.lotto-panel-sub { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+.lotto-submit {
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.lotto-submit.ready { border-color: #b0dfc0; background: var(--green-bg); }
+.lotto-actions { display: flex; gap: 8px; }
+.lotto-toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--border2);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .2s;
+}
+.lotto-toggle.on { background: var(--gold); }
+.lotto-toggle-knob {
+  position: absolute;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .2s;
+  left: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.lotto-toggle.on .lotto-toggle-knob { left: 22px; }
+
 /* ── Mobile ── */
 @media (max-width: 600px) {
   .grid-2col { grid-template-columns: 1fr; }
