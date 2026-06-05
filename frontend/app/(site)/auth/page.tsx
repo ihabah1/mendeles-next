@@ -263,13 +263,13 @@ function AuthForm() {
   };
 
   const inp = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} style={{ width: "100%", background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 8, color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".9rem", padding: "10px 12px", textAlign: "right", outline: "none", ...props.style }} />
+    <input {...props} className="input" style={props.style} />
   );
 
   return (
     <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 380 }}>
-        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.3rem", fontWeight: 900, color: "var(--cream)", textAlign: "center", marginBottom: 20 }}>
+      <div className="card" style={{ padding: "28px 24px", width: "100%", maxWidth: 380 }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", fontWeight: 900, color: "var(--text)", textAlign: "center", marginBottom: 20 }}>
           🎯 {mode === "login" ? "כניסה" : mode === "register" ? "הרשמה" : mode === "verify-pending" ? "אימות אימייל" : mode === "phone-verify" ? "אימות SMS" : "שכחתי סיסמה"}
         </h1>
 
@@ -334,7 +334,7 @@ function AuthForm() {
               {inp({ placeholder: "אימייל", type: "email", autoComplete: "email", value: email, onChange: e => setEmail(e.target.value) })}
               {inp({ placeholder: "סיסמה", type: "password", autoComplete: "current-password", value: password, onChange: e => setPassword(e.target.value), onKeyDown: e => e.key === "Enter" && handleLogin() })}
               <button type="button" className="btn btn-gold" style={{ width: "100%", justifyContent: "center", padding: 12 }} onClick={handleLogin} disabled={loading}>{loading ? "מתחבר..." : "כניסה"}</button>
-              <p style={{ fontSize: ".68rem", color: "var(--muted)", textAlign: "center", margin: 0 }}>
+              <p style={{ fontSize: ".68rem", color: "var(--text2)", textAlign: "center", margin: 0 }}>
                 מנהל: admin@admin.com / admin
               </p>
               {googleEnabled && (
@@ -362,7 +362,7 @@ function AuthForm() {
           {mode === "verify-pending" && (
             <>
               <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
-                שלחנו קישור אימות ל-<strong style={{ color: "var(--cream)" }}>{pendingEmail}</strong>.
+                שלחנו קישור אימות ל-<strong style={{ color: "var(--text)" }}>{pendingEmail}</strong>.
                 <br />
                 לחץ על הקישור באימייל כדי להמשיך.
               </p>
@@ -405,7 +405,7 @@ function AuthForm() {
               <p style={{ fontSize: ".8rem", color: "var(--muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
                 הזן את קוד ה-SMS שנשלח
                 {pendingPhone ? (
-                  <> ל-<strong style={{ color: "var(--cream)" }}>{pendingPhone}</strong></>
+                  <> ל-<strong style={{ color: "var(--text)" }}>{pendingPhone}</strong></>
                 ) : null}
                 .
               </p>
