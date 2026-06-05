@@ -40,45 +40,45 @@ export default function Nav() {
 
   const isActive = (href: string) => path === href || path?.startsWith(href + "/");
 
-  const linkStyle = (href: string) => ({
-    color: isActive(href) ? "var(--gold)" : "var(--muted)",
-    textDecoration: "none",
-    padding: "5px 10px",
-    borderRadius: 7,
-    fontSize: ".78rem",
-    background: isActive(href) ? "rgba(201,168,76,.08)" : "none",
-    transition: "all .15s",
-  });
-
   return (
-    <nav style={{ background: "var(--navy-m)", borderBottom: "1px solid var(--navy-b)", position: "sticky", top: 0, zIndex: 200 }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, padding: "0 16px", height: 52 }}>
-        <Link href="/" style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1rem", color: "var(--gold)", fontWeight: 700, textDecoration: "none", flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
-          🎯 Mandeles<span style={{ color: "var(--muted)", fontSize: ".7rem", fontFamily: "Heebo,sans-serif", fontWeight: 400 }}>.co.il</span>
+    <nav className="nav">
+      <div className="nav-inner">
+        <Link href="/" className="nav-logo">
+          🎯 Mandeles<span>.co.il</span>
           <PageCodeBadge />
         </Link>
 
-        <div style={{ display: "flex", gap: 2, flex: 1, justifyContent: "center" }}>
-          {navLinks.map(l => (
-            <Link key={l.href} href={l.href} style={linkStyle(l.href)}>{l.label}</Link>
+        <div className="nav-links">
+          {navLinks.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`nav-link${isActive(l.href) ? " active" : ""}`}
+            >
+              {l.label}
+            </Link>
           ))}
           {isStaff && (
-            <Link href="/admin" style={linkStyle("/admin")}>⚙️ ניהול</Link>
+            <Link
+              href="/admin"
+              className={`nav-link${isActive("/admin") ? " active" : ""}`}
+            >
+              ⚙️ ניהול
+            </Link>
           )}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="nav-actions">
           {isAuthenticated ? (
             <>
-              {isDemo && <span style={{ background: "rgba(232,160,48,.12)", border: "1px solid rgba(232,160,48,.3)", color: "#e8c870", borderRadius: 5, fontSize: ".65rem", fontWeight: 700, padding: "3px 8px" }}>🧪 DEMO</span>}
-              <Link href="/profile" style={{ background: "rgba(201,168,76,.12)", border: "1px solid #9a7a30", borderRadius: 6, padding: "4px 9px", fontSize: ".72rem", fontWeight: 700, color: "var(--gold)", textDecoration: "none" }}>
+              {isDemo && <span className="nav-demo">🧪 DEMO</span>}
+              <Link href="/profile" className="nav-balance">
                 💳 ₪{balance?.toFixed(2) ?? "..."}
               </Link>
               <button
                 type="button"
                 onClick={logout}
-                className="btn btn-outline"
-                style={{ fontSize: ".72rem", padding: "5px 10px", whiteSpace: "nowrap" }}
+                className="btn btn-outline btn-sm"
               >
                 התנתק
               </button>

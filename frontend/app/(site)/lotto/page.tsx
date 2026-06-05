@@ -27,34 +27,9 @@ function emptyTables(): Selections {
 
 function LottoToast({ toast }: { toast: { msg: string; type: string } | null }) {
   if (!toast) return null;
-  const border =
-    toast.type === "err" ? "#ff6b7a" : toast.type === "info" ? "var(--gold)" : "var(--green)";
-  const color =
-    toast.type === "err" ? "#ff6b7a" : toast.type === "info" ? "var(--gold)" : "var(--green)";
+  const kind = toast.type === "err" ? "err" : toast.type === "info" ? "info" : "ok";
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{
-        position: "fixed",
-        top: 72,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        background: "var(--navy-c)",
-        border: `1px solid ${border}`,
-        borderRadius: 9,
-        padding: "10px 18px",
-        fontSize: ".85rem",
-        fontWeight: 700,
-        color,
-        maxWidth: "min(92vw, 420px)",
-        textAlign: "center",
-        lineHeight: 1.45,
-        pointerEvents: "none",
-        boxShadow: "0 4px 24px rgba(0,0,0,.45)",
-      }}
-    >
+    <div role="status" aria-live="polite" className={`toast toast-${kind}`}>
       {toast.msg}
     </div>
   );

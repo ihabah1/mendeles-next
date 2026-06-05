@@ -305,25 +305,9 @@ function AdminPageInner() {
       <Nav />
       {toast && (
         <div
-          style={{
-            position: "fixed",
-            top: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 999,
-            background: "var(--navy-c)",
-            border: `1px solid ${toast.type === "err" ? "#ff6b7a" : "var(--green)"}`,
-            borderRadius: 9,
-            padding: "10px 18px",
-            fontSize: ".8rem",
-            fontWeight: 600,
-            color: toast.type === "err" ? "#ff6b7a" : "var(--green)",
-            maxWidth: "min(92vw, 420px)",
-            textAlign: "center",
-            lineHeight: 1.45,
-            pointerEvents: "none",
-            boxShadow: "0 4px 20px rgba(0,0,0,.35)",
-          }}
+          role="status"
+          aria-live="polite"
+          className={`toast toast-${toast.type === "err" ? "err" : "ok"}`}
         >
           {toast.msg}
         </div>
