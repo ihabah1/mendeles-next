@@ -74,6 +74,12 @@ function AdminPageInner() {
   } | null>(null);
   const [integrationLogs, setIntegrationLogs] = useState<IntegrationLogEntry[]>([]);
   const [logsExpanded, setLogsExpanded] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
+
+  const showToast = useCallback((msg: string, type = "ok", ms = 2800) => {
+    setToast({ msg, type });
+    if (ms > 0) setTimeout(() => setToast(null), ms);
+  }, []);
 
   const legacyAdminHeader = (): Record<string, string> =>
     legacyToken ? { "x-admin-token": legacyToken } : {};
