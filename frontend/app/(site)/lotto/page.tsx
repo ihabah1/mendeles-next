@@ -139,7 +139,7 @@ function PasteModal({ open, onClose, onApply }: { open: boolean; onClose: () => 
       </div>
       {parsed.length > 0 && (
         <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginBottom: 10, maxHeight: 60, overflowY: 'auto', lineHeight: 1.7 }}>
-          {parsed.slice(0,4).map((s,i)=><div key={i}><span style={{color:'var(--gold)'}}>סט {i+1}:</span> {s.nums.join(' – ')} | 💪{s.strong}</div>)}
+          {parsed.slice(0,4).map((s,i)=><div key={i}><span style={{color:'var(--gold)'}}>סט {i+1}:</span> {s.nums.join('')} | 💪{s.strong}</div>)}
           {parsed.length > 4 && <div>...ועוד {parsed.length-4}</div>}
         </div>
       )}
