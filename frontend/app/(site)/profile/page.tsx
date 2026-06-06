@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
+import BalancePill from "@/components/BalancePill";
 import Link from "next/link";
 import { DEMO_USER, DEMO_TRANSACTIONS, DEMO_ORDERS } from "@/lib/demo";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -172,20 +173,7 @@ function ProfilePageInner() {
               {user?.email || user?.phone}
             </div>
           </div>
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: 900,
-                color: "var(--gold)",
-              }}
-            >
-              ₪{balance.toFixed(2)}
-            </div>
-            <div style={{ fontSize: ".65rem", color: "var(--muted)" }}>
-              יתרת ארנק
-            </div>
-          </div>
+          <BalancePill balance={balance} name={user?.name} />
           <div style={{ display: "flex", gap: 8 }}>
             <Link
               href="/lotto"

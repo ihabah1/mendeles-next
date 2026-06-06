@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { walletService } from "@/lib/api/wallet";
 import PageCodeBadge from "@/components/PageCodeBadge";
+import BalancePill from "@/components/BalancePill";
 
 export default function Nav() {
   const router = useRouter();
@@ -73,9 +74,11 @@ export default function Nav() {
           {isAuthenticated ? (
             <>
               {isDemo && <span className="nav-demo">🧪 DEMO</span>}
-              <Link href="/profile" className="nav-balance">
-                💳 ₪{balance?.toFixed(2) ?? "..."}
-              </Link>
+              {balance !== null ? (
+                <BalancePill balance={balance} compact />
+              ) : (
+                <span className="nav-balance">💳 ...</span>
+              )}
               <button
                 type="button"
                 onClick={logout}
