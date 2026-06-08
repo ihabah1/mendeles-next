@@ -195,3 +195,45 @@ def customer_order_scan(request, order_id: int):
     if not request.user.is_staff and order.customer_id != request.user.id:
         return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
     return _scan_pdf_response(order, f'scan_{order.order_number}.pdf')
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def customer_order_invoice(request, order_id: int):
+    """GET /api/orders/<id>/invoice/ — customer invoice link (owner or staff)."""
+    from django.utils import timezone
+
+    from api.services.icount_service import fetch_document_pdf_link
+
+    order = Order.objects.filter(pk=order_id).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    if not request.user.is_staff and order.customer_id != request.user.id:
+        return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
+
+    doc_number = (order.icount_doc_number or '').strip()
+    doc_id = (order.icount_doc_id or '').strip()
+    pdf_link = (order.icount_pdf_link or '').strip()
+
+    if not doc_number and not doc_id and not pdf_link:
+        return Response(
+            {'detail': 'חשבונית טרם הונפקה להזמנה זו'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not pdf_link and (doc_id or doc_number):
+        fetched = fetch_document_pdf_link(doc_id=doc_id, doc_number=doc_number)
+        if fetched:
+            pdf_link = fetched
+            order.icount_pdf_link = fetched[:512]
+            if not order.invoice_issued_at:
+                order.invoice_issued_at = timezone.now()
+            order.save(update_fields=['icount_pdf_link', 'invoice_issued_at'])
+
+    return Response({
+        'doc_number': doc_number or None,
+        'pdf_link': pdf_link or None,
+        'invoice_issued_at': (
+            order.invoice_issued_at.isoformat() if order.invoice_issued_at else None
+        ),
+    })

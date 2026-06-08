@@ -18,6 +18,7 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "AV52", labelHe: "אימות אימייל", paths: ["/auth/verify-email"] },
   { code: "AO38", labelHe: "OAuth", paths: ["/auth/oauth"] },
   { code: "PR64", labelHe: "פרופיל", paths: ["/profile"] },
+  { code: "OR71", labelHe: "ההזמנות שלי", paths: ["/profile/orders"] },
   { code: "TU77", labelHe: "טעינת ארנק", paths: ["/topup"] },
   { code: "RP45", labelHe: "איפוס סיסמה", paths: ["/reset-password"] },
   { code: "AD33", labelHe: "ניהול Next.js", paths: ["/admin"] },

@@ -4,7 +4,7 @@
  * for the integration; extend with new resources as the API grows.
  */
 import api from "./client";
-import type { Order, Paginated } from "./types";
+import type { Order, OrderInvoice, Paginated } from "./types";
 
 export const contentService = {
   orders: {
@@ -31,6 +31,13 @@ export const contentService = {
       const url = URL.createObjectURL(data);
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    async invoice(orderId: number): Promise<OrderInvoice> {
+      const { data } = await api.get<OrderInvoice>(`/orders/${orderId}/invoice/`);
+      return data;
+    },
+    openInvoiceLink(link: string): void {
+      window.open(link, "_blank", "noopener,noreferrer");
     },
   },
 };

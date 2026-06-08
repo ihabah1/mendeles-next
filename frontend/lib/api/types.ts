@@ -71,6 +71,19 @@ export interface RegisterPayload {
   phone?: string;
 }
 
+export interface OrderSet {
+  set_index?: number;
+  nums?: number[];
+  n1?: number;
+  n2?: number;
+  n3?: number;
+  n4?: number;
+  n5?: number;
+  n6?: number;
+  strong?: number;
+  display?: string;
+}
+
 export interface Order {
   id: number;
   customer: number;
@@ -81,9 +94,22 @@ export interface Order {
   amount_ils: string;
   status: string;
   created_at: string;
+  sets_json?: OrderSet[];
+  is_double?: boolean;
+  lottery_id?: number | null;
   printed_at?: string | null;
   scanned_at?: string | null;
   has_scan?: boolean;
+  has_invoice?: boolean;
+  invoice_doc_number?: string;
+  invoice_pdf_link?: string;
+  invoice_issued_at?: string | null;
+}
+
+export interface OrderInvoice {
+  doc_number: string | null;
+  pdf_link: string | null;
+  invoice_issued_at: string | null;
 }
 
 export interface Paginated<T> {

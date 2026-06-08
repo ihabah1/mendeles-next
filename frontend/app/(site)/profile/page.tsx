@@ -10,11 +10,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import {
   contentService,
   extractApiError,
-  mapApiOrders,
-  orderStatusLabel,
   walletService,
 } from "@/lib/api";
-import type { UiOrder, UiTransaction } from "@/lib/api";
+import type { UiTransaction } from "@/lib/api";
 
 interface UserData {
   id: number;
@@ -29,7 +27,7 @@ function ProfilePageInner() {
   const { user: authUser, logout: authLogout } = useAuth();
   const [user, setUser] = useState<UserData | null>(null);
   const [balance, setBalance] = useState(0);
-  const [orders, setOrders] = useState<UiOrder[]>([]);
+  const [ordersCount, setOrdersCount] = useState(0);
   const [txs, setTxs] = useState<UiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,8 +46,7 @@ function ProfilePageInner() {
         createdAt: new Date().toISOString(),
       });
       setBalance(DEMO_USER.balance);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setOrders(DEMO_ORDERS as any);
+      setOrdersCount(DEMO_ORDERS.length);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setTxs(DEMO_TRANSACTIONS as any);
       setLoading(false);
@@ -74,7 +71,7 @@ function ProfilePageInner() {
           walletService.history(),
         ]);
         setBalance(wallet.balance);
-        setOrders(mapApiOrders(orderPage.results));
+        setOrdersCount(orderPage.count ?? orderPage.results.length);
         setTxs(history);
       } catch (err) {
         setError(extractApiError(err, "שגיאה בטעינת הנתונים"));
@@ -199,93 +196,48 @@ function ProfilePageInner() {
           </div>
         </div>
 
-        <div
+        <Link
+          href="/profile/orders"
           style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
             background: "rgba(26,45,66,.85)",
             border: "1px solid var(--navy-b)",
             borderRadius: 14,
-            overflow: "hidden",
+            padding: "16px 18px",
             marginBottom: 16,
+            textDecoration: "none",
+            transition: "border-color .15s",
           }}
         >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderBottom: "1px solid var(--navy-b)",
-              fontWeight: 700,
-              fontSize: ".82rem",
-              color: "var(--cream)",
-            }}
-          >
-            ההזמנות שלי
+          <div>
+            <div style={{ fontWeight: 700, fontSize: ".88rem", color: "var(--cream)", marginBottom: 4 }}>
+              📋 ההזמנות שלי
+            </div>
+            <div style={{ fontSize: ".72rem", color: "var(--muted)", lineHeight: 1.5 }}>
+              היסטוריה · טפסים שמולאו · צפייה בטפסים · סטטוס זכייה · חשבוניות
+            </div>
           </div>
-          {orders.length === 0 ? (
-            <div
+          <div style={{ textAlign: "left", flexShrink: 0 }}>
+            <span
               style={{
-                padding: 20,
-                textAlign: "center",
-                color: "var(--muted)",
+                display: "inline-block",
+                background: "rgba(201,168,76,.15)",
+                border: "1px solid rgba(201,168,76,.35)",
+                color: "var(--gold-l)",
+                borderRadius: 20,
+                padding: "4px 12px",
                 fontSize: ".78rem",
+                fontWeight: 700,
               }}
             >
-              אין הזמנות עדיין
-            </div>
-          ) : (
-            orders.map((o) => (
-              <div
-                key={o.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "11px 16px",
-                  borderBottom: "1px solid var(--navy-b)",
-                  fontSize: ".78rem",
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, color: "var(--gold)" }}>
-                    {o.orderNumber}
-                  </div>
-                  <div style={{ color: "var(--muted)", fontSize: ".68rem" }}>
-                    {o.tablesCount} טבלאות · {o.drawDate || "—"}
-                  </div>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "var(--cream)" }}>
-                    ₪{o.totalIls.toFixed(2)}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: ".65rem",
-                      color:
-                        o.status === "completed" || o.status === "delivered"
-                          ? "var(--green)"
-                          : "var(--muted)",
-                    }}
-                  >
-                    {orderStatusLabel(o.status)}
-                  </div>
-                  {o.hasScan && !isDemo && (
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      style={{ marginTop: 6, fontSize: ".62rem" }}
-                      onClick={() =>
-                        contentService.orders.openScanPdf(o.id).catch((err) =>
-                          setError(extractApiError(err, "לא ניתן לפתוח סריקה")),
-                        )
-                      }
-                    >
-                      📄 צפה בסריקה
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+              {ordersCount}
+            </span>
+            <div style={{ fontSize: ".65rem", color: "var(--muted)", marginTop: 4 }}>צפה ←</div>
+          </div>
+        </Link>
 
         <div
           style={{

@@ -77,5 +77,6 @@ urlpatterns = [
     path('print/', include(print_patterns)),
     path('admin/', include(admin_patterns)),
     path('orders/<int:order_id>/scan/', print_views.customer_order_scan, name='order-scan'),
+    path('orders/<int:order_id>/invoice/', print_views.customer_order_invoice, name='order-invoice'),
     path('', include(router.urls)),
 ]

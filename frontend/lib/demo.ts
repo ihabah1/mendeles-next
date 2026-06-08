@@ -32,9 +32,27 @@ export const DEMO_TRANSACTIONS = [
 
 export const DEMO_ORDERS = [
   {
-    id: 1, orderNumber: 'DEMO-001', tablesCount: 14, totalIls: 105,
-    status: 'delivered', drawDate: new Date().toISOString().slice(0, 10),
-    createdAt: new Date().toISOString(), sets_json: [],
+    id: 1,
+    orderNumber: 'DEMO-001',
+    tablesCount: 3,
+    totalIls: 22.5,
+    status: 'completed',
+    drawDate: new Date().toISOString().slice(0, 10),
+    createdAt: new Date().toISOString(),
+    sets: [
+      { set_index: 1, nums: [3, 7, 12, 25, 33, 36], strong: 5, display: '3 7 12 25 33 36 | 5' },
+      { set_index: 2, nums: [1, 8, 14, 20, 29, 37], strong: 3, display: '1 8 14 20 29 37 | 3' },
+      { set_index: 3, nums: [5, 11, 18, 22, 30, 35], strong: 7, display: '5 11 18 22 30 35 | 7' },
+    ],
+    isDouble: false,
+    lotteryId: null,
+    hasScan: true,
+    hasInvoice: true,
+    invoiceDocNumber: 'DEMO-1001',
+    invoicePdfLink: '',
+    invoiceIssuedAt: new Date().toISOString(),
+    printedAt: new Date().toISOString(),
+    scannedAt: new Date().toISOString(),
   },
 ];
 

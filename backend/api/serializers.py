@@ -150,11 +150,22 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
     has_scan = serializers.SerializerMethodField()
+    has_invoice = serializers.SerializerMethodField()
+    invoice_doc_number = serializers.CharField(source='icount_doc_number', read_only=True)
+    invoice_pdf_link = serializers.URLField(source='icount_pdf_link', read_only=True)
     printed_at = serializers.DateTimeField(read_only=True)
     scanned_at = serializers.DateTimeField(read_only=True)
+    invoice_issued_at = serializers.DateTimeField(read_only=True)
 
     def get_has_scan(self, obj) -> bool:
         return bool(obj.scan_pdf)
+
+    def get_has_invoice(self, obj) -> bool:
+        return bool(
+            (obj.icount_pdf_link or '').strip()
+            or (obj.icount_doc_number or '').strip()
+            or obj.invoice_issued_at
+        )
 
     class Meta:
         model = Order
@@ -163,8 +174,13 @@ class OrderSerializer(serializers.ModelSerializer):
             'forms_count', 'amount_ils', 'table_price_ils', 'commission_ils',
             'sets_json', 'is_double', 'lottery_id', 'status', 'created_at',
             'printed_at', 'scanned_at', 'has_scan',
+            'has_invoice', 'invoice_doc_number', 'invoice_pdf_link', 'invoice_issued_at',
         )
-        read_only_fields = ('id', 'created_at', 'customer_email', 'has_scan', 'printed_at', 'scanned_at')
+        read_only_fields = (
+            'id', 'created_at', 'customer_email', 'has_scan', 'has_invoice',
+            'invoice_doc_number', 'invoice_pdf_link', 'invoice_issued_at',
+            'printed_at', 'scanned_at',
+        )
 
 
 class CreditAccountSerializer(serializers.ModelSerializer):
