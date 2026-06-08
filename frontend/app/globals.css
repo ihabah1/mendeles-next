@@ -260,7 +260,7 @@ p  { line-height: 1.7; }
   text-align: right;
 }
 .input:focus { border-color: var(--gold); }
-.input::placeholder { color: var(--muted); opacity: 1; }
+.input::placeholder { color: var(--text2); opacity: 1; }
 
 /* ── Badges ── */
 .badge {

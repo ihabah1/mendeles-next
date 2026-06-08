@@ -106,22 +106,12 @@ function TopupPageInner() {
             ))}
           </div>
           <input
+            className="input"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             type="number"
             placeholder="סכום אחר (10–5000)"
-            style={{
-              width: "100%",
-              background: "var(--navy)",
-              border: "1px solid var(--navy-b)",
-              borderRadius: 8,
-              color: "var(--cream)",
-              fontFamily: "Heebo,sans-serif",
-              fontSize: ".9rem",
-              padding: "9px 12px",
-              textAlign: "right",
-              marginBottom: 14,
-            }}
+            style={{ marginBottom: 14 }}
           />
 
           {error && (

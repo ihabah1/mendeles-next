@@ -165,6 +165,13 @@ function AuthForm() {
       }
       setPendingEmail(res.email);
       if (res.phone) setPendingPhone(res.phone);
+      if (phone.trim()) {
+        try {
+          sessionStorage.setItem("reg_phone", phone.trim());
+        } catch {
+          /* ignore */
+        }
+      }
       if (res.phone_verification_required) setSmsAfterEmail(true);
       if (res.dev_otp) setStatus((s) => `${s} קוד SMS (פיתוח): ${res.dev_otp}`.trim());
       go("verify-pending");
@@ -353,7 +360,10 @@ function AuthForm() {
             <>
               {inp({ placeholder: "שם מלא", value: name, onChange: e => setName(e.target.value) })}
               {inp({ placeholder: "אימייל", type: "email", value: email, onChange: e => setEmail(e.target.value) })}
-              {inp({ placeholder: "טלפון (+972...)", value: phone, onChange: e => setPhone(e.target.value) })}
+              {inp({ placeholder: "טלפון (050-1234567)", type: "tel", value: phone, onChange: e => setPhone(e.target.value) })}
+              <p style={{ fontSize: ".7rem", color: "var(--text2)", margin: "-4px 0 0", lineHeight: 1.45 }}>
+                מספר זה ישמש לאימות SMS לאחר אימות האימייל
+              </p>
               {inp({ placeholder: "סיסמה", type: "password", value: password, onChange: e => setPassword(e.target.value), onKeyDown: e => e.key === "Enter" && handleRegister() })}
               <button className="btn btn-gold" style={{ width: "100%", justifyContent: "center", padding: 12 }} onClick={handleRegister} disabled={loading}>{loading ? "..." : "הרשמה"}</button>
               <button style={{ background: "none", border: "none", color: "var(--muted)", fontSize: ".72rem", cursor: "pointer" }} onClick={() => go("login")}>כבר רשום? התחבר</button>
@@ -380,7 +390,7 @@ function AuthForm() {
                     border: "1px solid rgba(201,168,76,.25)",
                   }}
                 >
-                  שלב 2: אחרי אימות האימייל תועבר ל-<strong>אימות SMS</strong> (Firebase) — הזן מספר טלפון וקוד שנשלח בהודעה.
+                  שלב 2: אחרי אימות האימייל יישלח קוד SMS למספר שהזנת בהרשמה — רק להזין את הקוד.
                 </p>
               )}
               <button

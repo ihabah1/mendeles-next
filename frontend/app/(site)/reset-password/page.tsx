@@ -28,17 +28,19 @@ function ResetForm() {
     setTimeout(() => router.push("/auth"), 2000);
   };
 
-  const inp = { style: { width: "100%", background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 8, color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".9rem", padding: "10px 12px", textAlign: "right" as const } };
+  const inp = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <input {...props} className="input" style={props.style} />
+  );
 
   return (
     <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "var(--navy-c)", border: "1px solid var(--navy-b)", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 380 }}>
-        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.3rem", fontWeight: 900, color: "var(--cream)", textAlign: "center", marginBottom: 20 }}>🔐 איפוס סיסמה</h1>
-        {error && <div style={{ background: "rgba(232,0,30,.1)", border: "1px solid rgba(232,0,30,.3)", color: "#ff6b7a", borderRadius: 8, padding: "8px 12px", fontSize: ".78rem", marginBottom: 14 }}>{error}</div>}
+      <div className="card" style={{ padding: "28px 24px", width: "100%", maxWidth: 380 }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", fontWeight: 900, color: "var(--text)", textAlign: "center", marginBottom: 20 }}>🔐 איפוס סיסמה</h1>
+        {error && <div style={{ background: "rgba(232,0,30,.1)", border: "1px solid rgba(232,0,30,.3)", color: "#c01820", borderRadius: 8, padding: "8px 12px", fontSize: ".78rem", marginBottom: 14 }}>{error}</div>}
         {status && <div style={{ background: "rgba(29,185,106,.1)", border: "1px solid rgba(29,185,106,.3)", color: "var(--green)", borderRadius: 8, padding: "8px 12px", fontSize: ".78rem", marginBottom: 14 }}>{status}</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <input {...inp} type="password" placeholder="סיסמה חדשה (לפחות 8 תווים)" value={password} onChange={e => setPassword(e.target.value)} />
-          <input {...inp} type="password" placeholder="אימות סיסמה" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} />
+          {inp({ type: "password", placeholder: "סיסמה חדשה (לפחות 8 תווים)", value: password, onChange: e => setPassword(e.target.value) })}
+          {inp({ type: "password", placeholder: "אימות סיסמה", value: confirm, onChange: e => setConfirm(e.target.value), onKeyDown: e => e.key === "Enter" && submit() })}
           <button className="btn btn-gold" style={{ width: "100%", justifyContent: "center", padding: 12 }} onClick={submit} disabled={loading}>
             {loading ? "..." : "עדכן סיסמה"}
           </button>

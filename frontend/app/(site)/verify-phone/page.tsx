@@ -20,6 +20,9 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const RESEND_SECONDS = 60;
+const REG_PHONE_KEY = "reg_phone";
+
+type Step = "loading" | "code" | "no-phone";
 
 function VerifyPhoneForm() {
   const router = useRouter();
@@ -29,75 +32,13 @@ function VerifyPhoneForm() {
 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "code">("phone");
+  const [step, setStep] = useState<Step>("loading");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [resendIn, setResendIn] = useState(0);
   const recaptchaReady = useRef(false);
-
-  useEffect(() => {
-    if (!tokenStore.hasSession()) {
-      router.replace(`/auth?redirect=${encodeURIComponent(redirect)}`);
-      return;
-    }
-
-    const checkFirebaseSetup = async () => {
-      const issues: string[] = [];
-
-      try {
-        const feRes = await fetch("/api/config/firebase", { cache: "no-store" });
-        const fe = feRes.ok
-          ? ((await feRes.json()) as { configured?: boolean; hint?: string })
-          : null;
-        if (!fe?.configured) {
-          issues.push(
-            fe?.hint ||
-              "Frontend (mendeles-next): הוסף NEXT_PUBLIC_FIREBASE_* ב-Railway ו-Redeploy",
-          );
-        }
-      } catch {
-        issues.push("Frontend: לא ניתן לבדוק /api/config/firebase");
-      }
-
-      try {
-        const base = await resolveApiBaseUrl();
-        const beRes = await fetch(`${base}/auth/phone-verification-status/`, {
-          cache: "no-store",
-        });
-        const be = beRes.ok
-          ? ((await beRes.json()) as {
-              firebase_ready?: boolean;
-              hint?: string;
-              firebase_backend?: { hint?: string; project_id?: string };
-            })
-          : null;
-        if (!be?.firebase_ready) {
-          issues.push(
-            be?.hint ||
-              be?.firebase_backend?.hint ||
-              "Backend (eloquent-perfection): FIREBASE_SERVICE_ACCOUNT_JSON + PHONE_VERIFICATION_ENABLED=true",
-          );
-        }
-      } catch {
-        issues.push("Backend: לא ניתן להתחבר ל-phone-verification-status");
-      }
-
-      if (issues.length > 0) {
-        setError(issues.join("\n\n"));
-        return;
-      }
-
-      const cfg = await ensureFirebaseConfig();
-      if (!cfg) {
-        setError(
-          "Firebase Frontend: בדוק NEXT_PUBLIC_FIREBASE_API_KEY ו-PROJECT_ID, ואז Redeploy",
-        );
-      }
-    };
-
-    void checkFirebaseSetup();
-  }, [router, redirect]);
+  const autoSent = useRef(false);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -116,25 +57,119 @@ function VerifyPhoneForm() {
     }
   }, []);
 
-  const handleSendOtp = async () => {
-    setError("");
-    setStatus("");
-    setLoading(true);
+  const checkFirebaseSetup = useCallback(async (): Promise<string[]> => {
+    const issues: string[] = [];
+
     try {
-      await ensureRecaptcha();
-      const e164 = toE164(phone);
-      await sendPhoneOtp(e164);
-      setStep("code");
-      setResendIn(RESEND_SECONDS);
-      setStatus(`קוד נשלח ל-${e164}`);
-    } catch (err) {
-      setError(formatFirebaseAuthError(err, extractApiError(err, "שליחת SMS נכשלה")));
-      resetPhoneAuthSession();
-      recaptchaReady.current = false;
-    } finally {
-      setLoading(false);
+      const feRes = await fetch("/api/config/firebase", { cache: "no-store" });
+      const fe = feRes.ok
+        ? ((await feRes.json()) as { configured?: boolean; hint?: string })
+        : null;
+      if (!fe?.configured) {
+        issues.push(
+          fe?.hint ||
+            "Frontend (mendeles-next): הוסף NEXT_PUBLIC_FIREBASE_* ב-Railway ו-Redeploy",
+        );
+      }
+    } catch {
+      issues.push("Frontend: לא ניתן לבדוק /api/config/firebase");
     }
-  };
+
+    try {
+      const base = await resolveApiBaseUrl();
+      const beRes = await fetch(`${base}/auth/phone-verification-status/`, {
+        cache: "no-store",
+      });
+      const be = beRes.ok
+        ? ((await beRes.json()) as {
+            firebase_ready?: boolean;
+            hint?: string;
+            firebase_backend?: { hint?: string; project_id?: string };
+          })
+        : null;
+      if (!be?.firebase_ready) {
+        issues.push(
+          be?.hint ||
+            be?.firebase_backend?.hint ||
+            "Backend (eloquent-perfection): FIREBASE_SERVICE_ACCOUNT_JSON + PHONE_VERIFICATION_ENABLED=true",
+        );
+      }
+    } catch {
+      issues.push("Backend: לא ניתן להתחבר ל-phone-verification-status");
+    }
+
+    const cfg = await ensureFirebaseConfig();
+    if (!cfg) {
+      issues.push(
+        "Firebase Frontend: בדוק NEXT_PUBLIC_FIREBASE_API_KEY ו-PROJECT_ID, ואז Redeploy",
+      );
+    }
+
+    return issues;
+  }, []);
+
+  const sendOtpToPhone = useCallback(
+    async (rawPhone: string) => {
+      setPhone(rawPhone);
+      setError("");
+      setLoading(true);
+      try {
+        await ensureRecaptcha();
+        const e164 = toE164(rawPhone);
+        await sendPhoneOtp(e164);
+        setStep("code");
+        setResendIn(RESEND_SECONDS);
+        setStatus(`קוד נשלח ל-${e164}`);
+      } catch (err) {
+        setError(formatFirebaseAuthError(err, extractApiError(err, "שליחת SMS נכשלה")));
+        resetPhoneAuthSession();
+        recaptchaReady.current = false;
+        setStep("code");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [ensureRecaptcha],
+  );
+
+  useEffect(() => {
+    if (!tokenStore.hasSession()) {
+      router.replace(`/auth?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    if (autoSent.current) return;
+    autoSent.current = true;
+
+    (async () => {
+      const issues = await checkFirebaseSetup();
+      if (issues.length > 0) {
+        setError(issues.join("\n\n"));
+        setStep("no-phone");
+        return;
+      }
+
+      const me = await refreshUser();
+      let savedPhone = me?.phone?.trim() || "";
+      if (!savedPhone) {
+        try {
+          savedPhone = sessionStorage.getItem(REG_PHONE_KEY)?.trim() || "";
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (!savedPhone) {
+        setStep("no-phone");
+        setError(
+          "לא נמצא מספר טלפון בחשבון. חזור להרשמה והזן מספר בשלב הראשון — הוא ישמש לאימות SMS.",
+        );
+        return;
+      }
+
+      await sendOtpToPhone(savedPhone);
+    })();
+  }, [router, redirect, refreshUser, checkFirebaseSetup, sendOtpToPhone]);
 
   const handleVerifyOtp = async () => {
     const code = otp.replace(/\D/g, "");
@@ -148,6 +183,11 @@ function VerifyPhoneForm() {
       const firebaseToken = await confirmPhoneOtp(code);
       const res = await authService.verifyFirebasePhone(firebaseToken);
       await refreshUser();
+      try {
+        sessionStorage.removeItem(REG_PHONE_KEY);
+      } catch {
+        /* ignore */
+      }
       setStatus(res.detail);
       setTimeout(() => router.push(redirect), 1200);
     } catch (err) {
@@ -158,23 +198,10 @@ function VerifyPhoneForm() {
   };
 
   const inp = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input
-      {...props}
-      style={{
-        width: "100%",
-        background: "var(--navy-c)",
-        border: "1px solid var(--navy-b)",
-        borderRadius: 8,
-        color: "var(--cream)",
-        fontFamily: "Heebo,sans-serif",
-        fontSize: ".9rem",
-        padding: "10px 12px",
-        textAlign: "right",
-        outline: "none",
-        ...props.style,
-      }}
-    />
+    <input {...props} className="input" style={props.style} />
   );
+
+  const maskedPhone = phone ? toE164(phone) : "";
 
   return (
     <div
@@ -186,22 +213,13 @@ function VerifyPhoneForm() {
         padding: 16,
       }}
     >
-      <div
-        style={{
-          background: "var(--navy-c)",
-          border: "1px solid var(--navy-b)",
-          borderRadius: 16,
-          padding: "28px 24px",
-          width: "100%",
-          maxWidth: 400,
-        }}
-      >
+      <div className="card" style={{ padding: "28px 24px", width: "100%", maxWidth: 400 }}>
         <h1
           style={{
-            fontFamily: "'Frank Ruhl Libre',serif",
+            fontFamily: "var(--font-display)",
             fontSize: "1.3rem",
             fontWeight: 900,
-            color: "var(--cream)",
+            color: "var(--text)",
             textAlign: "center",
             marginBottom: 8,
           }}
@@ -211,13 +229,17 @@ function VerifyPhoneForm() {
         <p
           style={{
             fontSize: ".78rem",
-            color: "var(--muted)",
+            color: "var(--text2)",
             textAlign: "center",
             marginBottom: 20,
             lineHeight: 1.5,
           }}
         >
-          שלב אחרון: אימות SMS דרך Firebase
+          {step === "loading"
+            ? "שולח קוד SMS למספר שהזנת בהרשמה..."
+            : maskedPhone
+              ? `הזן את קוד ה-SMS שנשלח ל-${maskedPhone}`
+              : "הזן את קוד ה-SMS שנשלח לטלפון שלך"}
         </p>
 
         <div id="recaptcha-container" />
@@ -228,12 +250,13 @@ function VerifyPhoneForm() {
             style={{
               background: "rgba(232,0,30,.12)",
               border: "1px solid rgba(232,0,30,.45)",
-              color: "#ff8a96",
+              color: "#c01820",
               borderRadius: 8,
               padding: "10px 12px",
               fontSize: ".8rem",
               marginBottom: 14,
               textAlign: "center",
+              whiteSpace: "pre-line",
             }}
           >
             {error}
@@ -257,26 +280,22 @@ function VerifyPhoneForm() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {step === "phone" && (
-            <>
-              {inp({
-                placeholder: "טלפון (050-1234567)",
-                type: "tel",
-                value: phone,
-                onChange: (e) => setPhone(e.target.value),
-                disabled: loading,
-              })}
-              <button
-                type="button"
-                className="btn btn-gold"
-                style={{ width: "100%", justifyContent: "center", padding: 12 }}
-                onClick={handleSendOtp}
-                disabled={loading || !phone.trim()}
-              >
-                {loading ? "שולח..." : "שלח קוד SMS"}
-              </button>
-            </>
+          {step === "loading" && (
+            <p style={{ textAlign: "center", color: "var(--text2)", fontSize: ".82rem" }}>
+              {loading ? "שולח..." : "מכין אימות..."}
+            </p>
           )}
+
+          {step === "no-phone" && (
+            <Link
+              href="/auth"
+              className="btn btn-gold"
+              style={{ width: "100%", justifyContent: "center", padding: 12 }}
+            >
+              חזרה להרשמה
+            </Link>
+          )}
+
           {step === "code" && (
             <>
               {inp({
@@ -297,39 +316,24 @@ function VerifyPhoneForm() {
               >
                 {loading ? "מאמת..." : "אימות קוד"}
               </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                style={{ width: "100%", justifyContent: "center", padding: 12 }}
-                onClick={handleSendOtp}
-                disabled={loading || resendIn > 0}
-              >
-                {resendIn > 0 ? `שלח שוב (${resendIn}s)` : "שלח קוד שוב"}
-              </button>
-              <button
-                type="button"
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--muted)",
-                  fontSize: ".72rem",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  setStep("phone");
-                  setOtp("");
-                  resetPhoneAuthSession();
-                  recaptchaReady.current = false;
-                }}
-              >
-                שנה מספר טלפון
-              </button>
+              {phone && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: "100%", justifyContent: "center", padding: 12 }}
+                  onClick={() => sendOtpToPhone(phone)}
+                  disabled={loading || resendIn > 0}
+                >
+                  {resendIn > 0 ? `שלח שוב (${resendIn}s)` : "שלח קוד שוב"}
+                </button>
+              )}
             </>
           )}
+
           <Link
             href="/auth"
             style={{
-              color: "var(--muted)",
+              color: "var(--text2)",
               fontSize: ".72rem",
               textAlign: "center",
               textDecoration: "none",
