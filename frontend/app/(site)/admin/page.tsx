@@ -158,12 +158,10 @@ function AdminPageInner() {
     setActionLoading(orderId);
     try {
       const res = await adminService.printOrder(orderId);
-      showToast(formatPrintSuccessMessage(res), "ok");
+      showToast(res.detail || formatPrintSuccessMessage(res), "ok");
       setOrders(prev =>
         prev.map(o =>
-          o.id === orderId
-            ? { ...o, status: o.status === "paid" ? "printing" : o.status, printedAt: new Date().toISOString() }
-            : o,
+          o.id === orderId ? { ...o, status: o.status === "paid" ? "paid" : o.status } : o,
         ),
       );
     } catch (e) {
@@ -326,7 +324,10 @@ function AdminPageInner() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>🎯 דשבורד אדמין</span>
-          <Link href="/admin/permissions" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+          <Link href="/admin/print-queue" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+            🖨️ תור הדפסה
+          </Link>
+          <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             🔐 מתן הרשאות
           </Link>
           <Link href="/admin/services" className="btn btn-outline" style={{ fontSize: ".72rem" }}>

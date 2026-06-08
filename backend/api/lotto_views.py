@@ -175,7 +175,7 @@ def submit_order(request):
         credit.total_charge_ils += total
         credit.save(update_fields=['balance_ils', 'total_charge_ils', 'updated_at'])
 
-        Order.objects.create(
+        order = Order.objects.create(
             customer=request.user,
             order_number=order_number,
             draw_name=draw_date,
@@ -194,12 +194,17 @@ def submit_order(request):
             f'amount:-{total} order:{order_number} ({len(sets)} tables)',
         )
 
+    from api.services.print_queue_service import auto_enqueue_enabled, enqueue_order
+
+    if auto_enqueue_enabled():
+        enqueue_order(order)
+
     return Response({
         'status': 'ok',
         'order_number': order_number,
         'tables_count': len(sets),
         'total_ils': float(total),
-        'message': f'ההזמנה {order_number} התקבלה!',
+        'message': f'ההזמנה {order_number} התקבלה ונכנסה לתור הדפסה!',
     })
 
 

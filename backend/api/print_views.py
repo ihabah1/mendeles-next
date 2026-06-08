@@ -104,6 +104,11 @@ def print_confirm(request):
     order.status = Order.Status.PRINTED
     order.printed_at = printed_at
     order.save(update_fields=['status', 'printed_at'])
+
+    from api.services.print_queue_service import complete_job_for_order
+
+    complete_job_for_order(order)
+
     log_integration(
         IntegrationLog.Source.PRINT,
         IntegrationLog.Level.INFO,

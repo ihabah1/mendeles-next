@@ -299,6 +299,76 @@ class LottoSet(models.Model):
         unique_together = [('customer', 'draw_date', 'set_index')]
 
 
+class PrintAgentHeartbeat(models.Model):
+    """Last-seen heartbeat from a local print agent (pull-based, no ngrok inbound)."""
+
+    agent_id = models.CharField('מזהה סוכן', max_length=64, unique=True, default='default')
+    hostname = models.CharField('מחשב', max_length=120, blank=True)
+    version = models.CharField('גרסה', max_length=40, blank=True)
+    printer_ready = models.BooleanField('מדפסת מוכנה', default=False)
+    printer_message = models.CharField('סטטוס מדפסת', max_length=200, blank=True)
+    last_seen_at = models.DateTimeField('נראה לאחרונה', null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'סוכן הדפסה'
+        verbose_name_plural = 'סוכני הדפסה'
+
+    def __str__(self):
+        return self.agent_id
+
+
+class PrintJob(models.Model):
+    """Cloud print queue — orders wait here until a local agent pulls and prints."""
+
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'בתור'
+        APPROVED = 'approved', 'מאושר'
+        CLAIMED = 'claimed', 'נלקח'
+        PRINTING = 'printing', 'בדפוס'
+        PRINTED = 'printed', 'הודפס'
+        FAILED = 'failed', 'נכשל'
+        CANCELLED = 'cancelled', 'בוטל'
+
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='print_job',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+        db_index=True,
+    )
+    priority = models.PositiveSmallIntegerField('עדיפות', default=0)
+    payload_json = models.JSONField('נתוני הדפסה', default=dict, blank=True)
+    attempts = models.PositiveSmallIntegerField('ניסיונות', default=0)
+    max_attempts = models.PositiveSmallIntegerField('מקסימום ניסיונות', default=3)
+    last_error = models.CharField('שגיאה אחרונה', max_length=500, blank=True)
+    approved_at = models.DateTimeField('אושר', null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_print_jobs',
+    )
+    claimed_at = models.DateTimeField('נלקח', null=True, blank=True)
+    claimed_by_agent = models.CharField('סוכן', max_length=64, blank=True)
+    completed_at = models.DateTimeField('הושלם', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-priority', 'created_at']
+        verbose_name = 'משימת הדפסה'
+        verbose_name_plural = 'תור הדפסה'
+
+    def __str__(self):
+        return f'{self.order.order_number} ({self.status})'
+
+
 class ServiceFlag(models.Model):
     """Runtime toggles for optional services (managed from /admin/services)."""
 

@@ -1,4 +1,27 @@
-# כלי סריקה — Mandeles
+# כלי הדפסה וסריקה — Mandeles
+
+## print_agent.py
+
+סוכן הדפסה מקומי — מושך משימות **מאושרות** מהענן (24/7) ושולח לשרת המדפסת על המחשב.
+
+### זרימה
+
+1. לקוח שולח טופס → נכנס אוטומטית ל**תור הדפסה** (`queued`)
+2. צוות מאשר ב-`/admin/print-queue` → `approved`
+3. **print_agent** מושך: `GET /api/print/jobs/pull` (x-api-key)
+4. שולח ל-`local_print_url` (מדפסת מקומית)
+5. מאשר: `POST /api/print/confirm` → `printed`
+
+### הרצה
+
+```bash
+pip install requests
+python tools/print_agent.py
+```
+
+קובץ הגדרות: `print_agent_config.json` (נוצר אוטומטית בפעם הראשונה).
+
+---
 
 ## scan_app.py
 

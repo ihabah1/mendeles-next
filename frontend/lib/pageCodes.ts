@@ -24,6 +24,7 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "OR71", labelHe: "היסטוריית רכישות", paths: ["/profile/orders", "/profile/forms"] },
   { code: "RP45", labelHe: "איפוס סיסמה", paths: ["/reset-password"] },
   { code: "AD33", labelHe: "ניהול Next.js", paths: ["/admin"] },
+  { code: "PQ55", labelHe: "תור הדפסה", paths: ["/admin/print-queue"] },
   { code: "PM41", labelHe: "מתן הרשאות", paths: ["/admin/permissions"] },
   { code: "AS88", labelHe: "שירותים (staff)", paths: ["/admin/services"] },
 ];

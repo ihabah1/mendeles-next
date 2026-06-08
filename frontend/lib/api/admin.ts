@@ -89,12 +89,14 @@ export const adminService = {
     tables_count?: number;
     order_number?: string;
     printer_confirmed?: boolean;
+    queued?: boolean;
   }> {
     const { data } = await api.post<{
       detail: string;
       tables_count?: number;
       order_number?: string;
       printer_confirmed?: boolean;
+      queued?: boolean;
     }>(`/admin/orders/${orderId}/print/`);
     return data;
   },

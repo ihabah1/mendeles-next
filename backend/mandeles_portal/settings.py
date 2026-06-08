@@ -336,6 +336,8 @@ PRINT_API_KEY = _env_clean('PRINT_API_KEY', '')
 PRINT_API_KEY_HEADER = _env_clean('PRINT_API_KEY_HEADER', 'x-api-key')
 PRINT_PATH = _env_clean('PRINT_PATH', '/print')
 PRINT_PAYLOAD_MODE = _env_clean('PRINT_PAYLOAD_MODE', 'forms')
+PRINT_QUEUE_AUTO_ENQUEUE = os.getenv('PRINT_QUEUE_AUTO_ENQUEUE', 'true').lower() in ('1', 'true', 'yes')
+PRINT_AGENT_ONLINE_SECONDS = int(_env_clean('PRINT_AGENT_ONLINE_SECONDS', '90') or '90')
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip().rstrip('/')
 _frontend_url = FRONTEND_URL

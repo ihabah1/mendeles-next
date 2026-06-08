@@ -16,12 +16,8 @@ from api.services.icount_service import (
     icount_config_status,
 )
 from api.services.integration_log import log_integration, recent_integration_logs
-from api.services.print_service import (
-    PrintError,
-    print_configured,
-    print_success_detail,
-    send_order_to_printer,
-)
+from api.services.print_queue_service import approve_job, enqueue_order, job_to_dict
+from api.services.print_service import print_configured
 
 
 class IsStaffUser(permissions.BasePermission):
@@ -128,56 +124,30 @@ def admin_integration_logs(request):
 @api_view(['POST'])
 @permission_classes([IsStaffUser])
 def admin_order_print(request, order_id):
-    """Send order to external print server (POST /print)."""
+    """Approve order for print queue — local agent pulls when online."""
     order = Order.objects.select_related('customer').filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
-    log_integration(
-        IntegrationLog.Source.PRINT,
-        IntegrationLog.Level.INFO,
-        f'שליחה להדפסה: {order.order_number}',
-        order=order,
-    )
-    try:
-        result = send_order_to_printer(order)
-    except PrintError as exc:
-        log_integration(
-            IntegrationLog.Source.PRINT,
-            IntegrationLog.Level.ERROR,
-            str(exc),
-            order=order,
-            details={'order_number': order.order_number},
-        )
-        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    order.printed_at = timezone.now()
-    printer_ok = isinstance(result, dict) and (result.get('printed') or result.get('success'))
-    if printer_ok:
-        order.status = Order.Status.PRINTED
-    elif order.status in (Order.Status.PAID, Order.Status.PENDING):
-        order.status = Order.Status.PRINTING
-    order.save(update_fields=['printed_at', 'status'])
+    job = enqueue_order(order)
+    approve_job(job, request.user)
     log_integration(
         IntegrationLog.Source.PRINT,
         IntegrationLog.Level.INFO,
-        f'הודפס בהצלחה: {order.order_number}',
+        f'אושר לתור הדפסה: {order.order_number}',
         order=order,
-        details=result if isinstance(result, dict) else {'result': str(result)[:500]},
     )
     tables_count = len(order.sets_json or [])
     return Response({
-        'detail': print_success_detail(
-            tables_count=tables_count,
-            order_number=order.order_number,
-            result=result,
+        'detail': (
+            f'ההזמנה {order.order_number} אושרה לתור הדפסה — '
+            f'סוכן המדפסת ימשוך כשמחובר'
         ),
         'order_number': order.order_number,
         'tables_count': tables_count,
-        'printer_confirmed': bool(
-            isinstance(result, dict) and (result.get('printed') or result.get('success'))
-        ),
-        'printed_at': order.printed_at.isoformat(),
-        'print_response': result,
+        'printer_confirmed': False,
+        'queued': True,
+        'job': job_to_dict(job),
     })
 
 

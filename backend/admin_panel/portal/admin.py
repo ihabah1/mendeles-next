@@ -9,6 +9,8 @@ from .models import (
     CustomerProfile,
     LottoSet,
     Order,
+    PrintAgentHeartbeat,
+    PrintJob,
     ServiceFlag,
     Subscription,
 )
@@ -18,6 +20,19 @@ from .models import (
 class CustomerProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'status', 'city', 'created_at')
     search_fields = ('user__email', 'user__full_name', 'user__phone')
+
+
+@admin.register(PrintJob)
+class PrintJobAdmin(admin.ModelAdmin):
+    list_display = ('order', 'status', 'priority', 'attempts', 'claimed_by_agent', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('order__order_number', 'claimed_by_agent')
+
+
+@admin.register(PrintAgentHeartbeat)
+class PrintAgentHeartbeatAdmin(admin.ModelAdmin):
+    list_display = ('agent_id', 'hostname', 'printer_ready', 'last_seen_at', 'updated_at')
+    list_filter = ('printer_ready',)
 
 
 admin.site.register(Order)

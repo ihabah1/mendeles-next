@@ -3,7 +3,16 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-from . import admin_views, lotto_views, permissions_views, print_views, service_flag_views, views, wallet_views
+from . import (
+    admin_views,
+    lotto_views,
+    permissions_views,
+    print_queue_views,
+    print_views,
+    service_flag_views,
+    views,
+    wallet_views,
+)
 
 router = DefaultRouter()
 router.register('users', views.UserViewSet, basename='user')
@@ -54,6 +63,9 @@ print_patterns = [
     path('confirm/', print_views.print_confirm, name='print-confirm'),
     path('scan/', print_views.print_scan_upload, name='print-scan-upload'),
     path('scan/<int:order_id>/', print_views.print_scan_download, name='print-scan-download'),
+    path('agent/heartbeat/', print_queue_views.print_agent_heartbeat, name='print-agent-heartbeat'),
+    path('jobs/pull/', print_queue_views.print_jobs_pull, name='print-jobs-pull'),
+    path('jobs/<int:job_id>/fail/', print_queue_views.print_job_fail, name='print-job-fail'),
 ]
 
 admin_patterns = [
@@ -69,6 +81,12 @@ admin_patterns = [
     path('orders/<int:order_id>/invoice/', admin_views.admin_order_invoice, name='admin-order-invoice'),
     path('integration-logs/', admin_views.admin_integration_logs, name='admin-integration-logs'),
     path('service-flags/', service_flag_views.service_flags_view, name='admin-service-flags'),
+    path('print-queue/', print_queue_views.admin_print_queue, name='admin-print-queue'),
+    path('print-queue/approve-bulk/', print_queue_views.admin_print_queue_approve_bulk, name='admin-print-queue-approve-bulk'),
+    path('print-queue/<int:job_id>/approve/', print_queue_views.admin_print_queue_approve, name='admin-print-queue-approve'),
+    path('print-queue/<int:job_id>/retry/', print_queue_views.admin_print_queue_retry, name='admin-print-queue-retry'),
+    path('print-queue/<int:job_id>/cancel/', print_queue_views.admin_print_queue_cancel, name='admin-print-queue-cancel'),
+    path('print-queue/enqueue/<int:order_id>/', print_queue_views.admin_print_queue_enqueue, name='admin-print-queue-enqueue'),
 ]
 
 urlpatterns = [
