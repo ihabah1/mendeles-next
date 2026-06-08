@@ -321,6 +321,9 @@ function AdminPageInner() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>🎯 דשבורד אדמין</span>
+          <Link href="/admin/permissions" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+            🔐 מתן הרשאות
+          </Link>
           <Link href="/admin/services" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             ⚙️ שירותים
           </Link>

@@ -21,6 +21,7 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "TU77", labelHe: "טעינת ארנק", paths: ["/topup"] },
   { code: "RP45", labelHe: "איפוס סיסמה", paths: ["/reset-password"] },
   { code: "AD33", labelHe: "ניהול Next.js", paths: ["/admin"] },
+  { code: "PM41", labelHe: "מתן הרשאות", paths: ["/admin/permissions"] },
   { code: "AS88", labelHe: "שירותים (staff)", paths: ["/admin/services"] },
 ];
 

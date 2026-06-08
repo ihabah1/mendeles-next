@@ -7,7 +7,7 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from admin_panel.portal.models import ActionLog, LottoSet, Order, Subscription
+from admin_panel.portal.models import ActionLog, CustomerPermission, LottoSet, Order, Subscription
 
 from .lotto_service import (
     COMMISSION,
@@ -30,10 +30,16 @@ def _log_charge(request, event: str, details: str) -> None:
 
 
 def _has_active_subscription(user) -> bool:
-    return Subscription.objects.filter(
+    if Subscription.objects.filter(
         customer=user,
         status='active',
         expires_at__gt=timezone.now(),
+    ).exists():
+        return True
+    return CustomerPermission.objects.filter(
+        customer=user,
+        permission=CustomerPermission.Perm.SUBSCRIPTION,
+        is_granted=True,
     ).exists()
 
 

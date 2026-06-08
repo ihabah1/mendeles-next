@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from admin_panel.accounts.models import User
-from admin_panel.portal.models import IntegrationLog, Order
+from admin_panel.portal.models import IntegrationLog, Order, Subscription
 
 from api.services.icount_service import (
     ICountError,
@@ -44,7 +44,10 @@ def admin_stats(request):
     return Response({
         'total_users': _managed_users().count(),
         'new_today': _managed_users().filter(date_joined__date=today).count(),
-        'active_subs': 0,
+        'active_subs': Subscription.objects.filter(
+            status='active',
+            expires_at__gt=timezone.now(),
+        ).count(),
         'pending_orders': orders.filter(status=Order.Status.PENDING).count(),
         'total_revenue': float(revenue),
         'total_wins': 0,

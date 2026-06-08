@@ -3,7 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-from . import admin_views, lotto_views, print_views, service_flag_views, views, wallet_views
+from . import admin_views, lotto_views, permissions_views, print_views, service_flag_views, views, wallet_views
 
 router = DefaultRouter()
 router.register('users', views.UserViewSet, basename='user')
@@ -57,6 +57,12 @@ print_patterns = [
 
 admin_patterns = [
     path('stats/', admin_views.admin_stats, name='admin-stats'),
+    path('permissions/users/', permissions_views.permissions_users_list, name='admin-permissions-users'),
+    path(
+        'permissions/users/<int:user_id>/',
+        permissions_views.permissions_user_detail,
+        name='admin-permissions-user',
+    ),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
     path('orders/<int:order_id>/print/', admin_views.admin_order_print, name='admin-order-print'),
     path('orders/<int:order_id>/invoice/', admin_views.admin_order_invoice, name='admin-order-invoice'),
