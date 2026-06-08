@@ -295,12 +295,74 @@ def queue_counts() -> dict[str, int]:
     counts = {s.value: 0 for s in PrintJob.Status}
     for row in PrintJob.objects.values('status').annotate(n=Count('id')):
         counts[row['status']] = row['n']
+    counts['awaiting_scan'] = PrintJob.objects.filter(
+        status=PrintJob.Status.PRINTED,
+        order__scan_pdf__isnull=True,
+    ).exclude(order__status=Order.Status.COMPLETED).count()
     return counts
+
+
+def _normalize_sets_for_ui(sets_json: list) -> list[dict]:
+    out = []
+    for s in sorted(sets_json or [], key=lambda x: x.get('set_index', 0)):
+        nums = s.get('nums') or []
+        if len(nums) != 6:
+            nums = [s.get(f'n{i}') for i in range(1, 7)]
+        try:
+            numbers = [int(n) for n in nums if n is not None]
+            strong = int(s.get('strong') or 0)
+        except (TypeError, ValueError):
+            continue
+        if len(numbers) != 6:
+            continue
+        out.append({
+            'setIndex': int(s.get('set_index') or len(out) + 1),
+            'numbers': numbers,
+            'strong': strong,
+            'display': s.get('display') or ' '.join(str(n) for n in sorted(numbers)) + f' | {strong}',
+        })
+    return out
+
+
+def _forms_from_sets(sets_json: list) -> list[dict]:
+    sets = _normalize_sets_for_ui(sets_json)
+    forms = []
+    for i in range(0, len(sets), 14):
+        chunk = sets[i : i + 14]
+        forms.append({
+            'formIndex': len(forms) + 1,
+            'tables': chunk,
+        })
+    return forms
+
+
+def skip_job_to_scan(job: PrintJob) -> PrintJob:
+    """Mark as printed without physical print — ready for scan_app."""
+    if job.status == PrintJob.Status.CANCELLED:
+        raise ValueError('לא ניתן לדלג על משימה שבוטלה')
+    order = job.order
+    if order.status == Order.Status.COMPLETED:
+        raise ValueError('ההזמנה כבר הושלמה')
+    if order.scan_pdf:
+        raise ValueError('כבר קיימת סריקה להזמנה זו')
+
+    now = timezone.now()
+    order.status = Order.Status.PRINTED
+    order.printed_at = order.printed_at or now
+    order.save(update_fields=['status', 'printed_at'])
+
+    job.status = PrintJob.Status.PRINTED
+    job.completed_at = now
+    job.last_error = ''
+    job.save(update_fields=['status', 'completed_at', 'last_error', 'updated_at'])
+    return job
 
 
 def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:
     order = job.order
     customer = order.customer
+    sets = _normalize_sets_for_ui(order.sets_json)
+    forms = _forms_from_sets(order.sets_json)
     data = {
         'id': job.id,
         'orderId': order.id,
@@ -311,14 +373,23 @@ def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:
         'maxAttempts': job.max_attempts,
         'lastError': job.last_error or None,
         'tablesCount': order.forms_count,
+        'formsCount': len(forms) or 1,
         'totalIls': float(order.amount_ils),
         'drawDate': order.draw_name or '',
+        'isDouble': bool(order.is_double),
+        'lotteryId': order.lottery_id,
         'orderStatus': order.status,
         'claimedByAgent': job.claimed_by_agent or None,
         'approvedAt': job.approved_at.isoformat() if job.approved_at else None,
         'claimedAt': job.claimed_at.isoformat() if job.claimed_at else None,
         'completedAt': job.completed_at.isoformat() if job.completed_at else None,
         'createdAt': job.created_at.isoformat(),
+        'orderCreatedAt': order.created_at.isoformat(),
+        'orderPrintedAt': order.printed_at.isoformat() if order.printed_at else None,
+        'orderScannedAt': order.scanned_at.isoformat() if order.scanned_at else None,
+        'hasScan': bool(order.scan_pdf),
+        'sets': sets,
+        'forms': forms,
         'user': {
             'name': customer.display_name,
             'phone': customer.phone,

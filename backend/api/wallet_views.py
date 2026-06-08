@@ -70,7 +70,7 @@ def wallet_history(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def wallet_topup(request):
-    """POST /api/wallet/topup/ { amount_ils } -> Stripe PaymentIntent or dev credit."""
+    """POST /api/wallet/topup/ { amount_ils } -> PayPal checkout (when configured)."""
     try:
         amount_ils = Decimal(str(request.data.get('amount_ils', '')))
     except Exception:
@@ -79,45 +79,22 @@ def wallet_topup(request):
     if amount_ils < 10 or amount_ils > 5000:
         return Response({'error': 'סכום לא תקין (10-5000)'}, status=status.HTTP_400_BAD_REQUEST)
 
-    stripe_key = os.getenv('STRIPE_SECRET_KEY', '').strip()
-    if stripe_key:
-        try:
-            import stripe  # noqa: WPS433 — optional runtime dependency
-        except ImportError:
-            return Response(
-                {'error': 'Stripe לא מותקן בשרת (pip install stripe)'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        stripe.api_key = stripe_key
-        intent = stripe.PaymentIntent.create(
-            amount=int(amount_ils * 100),
-            currency='ils',
-            metadata={
-                'user_id': str(request.user.id),
-                'type': 'wallet_topup',
-                'amount_ils': str(amount_ils),
+    paypal_client = os.getenv('PAYPAL_CLIENT_ID', '').strip()
+    if not paypal_client:
+        return Response(
+            {
+                'error': 'טעינת ארנק זמינה בקרוב דרך PayPal בלבד',
+                'payment_provider': 'paypal',
+                'paypal_required': True,
             },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        _log_wallet_action(
-            request,
-            'wallet.topup_intent',
-            f'amount:{amount_ils} payment:{intent.id}',
-        )
-        return Response({
-            'client_secret': intent.client_secret,
-            'payment_id': intent.id,
-            'amount_ils': float(amount_ils),
-        })
 
-    # Dev / no-Stripe: credit the wallet immediately.
-    _, credit = ensure_customer_records(request.user)
-    credit.balance_ils += amount_ils
-    credit.total_topup_ils += amount_ils
-    credit.save(update_fields=['balance_ils', 'total_topup_ils', 'updated_at'])
-    _log_wallet_action(request, 'wallet.topup', f'amount:{amount_ils}')
-    return Response({
-        'payment_id': f'dev-{request.user.id}-{credit.updated_at.timestamp():.0f}',
-        'amount_ils': float(amount_ils),
-        'balance': float(credit.balance_ils),
-        'dev_mode': True,
-    })
+    return Response(
+        {
+            'error': 'תשלום PayPal בקרוב — פנה לתמיכה לטעינה ידנית',
+            'payment_provider': 'paypal',
+            'amount_ils': float(amount_ils),
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )

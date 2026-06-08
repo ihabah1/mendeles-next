@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from admin_panel.portal.models import IntegrationLog, Order
 
 from api.services.integration_log import log_integration
+from api.staff import is_staff_portal_user
 
 
 def _print_api_key_header() -> str:
@@ -184,7 +185,7 @@ def print_scan_download(request, order_id: int):
 
     user = request.user
     if user and user.is_authenticated:
-        if user.is_staff or order.customer_id == user.id:
+        if is_staff_portal_user(user) or order.customer_id == user.id:
             return _scan_pdf_response(order, f'scan_{order.order_number}.pdf')
 
     return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
@@ -197,7 +198,7 @@ def customer_order_scan(request, order_id: int):
     order = Order.objects.filter(pk=order_id).first()
     if not order or not order.scan_pdf:
         return Response({'error': 'לא נמצאה סריקה'}, status=status.HTTP_404_NOT_FOUND)
-    if not request.user.is_staff and order.customer_id != request.user.id:
+    if not is_staff_portal_user(request.user) and order.customer_id != request.user.id:
         return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
     return _scan_pdf_response(order, f'scan_{order.order_number}.pdf')
 
@@ -213,7 +214,7 @@ def customer_order_invoice(request, order_id: int):
     order = Order.objects.filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
-    if not request.user.is_staff and order.customer_id != request.user.id:
+    if not is_staff_portal_user(request.user) and order.customer_id != request.user.id:
         return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
 
     doc_number = (order.icount_doc_number or '').strip()

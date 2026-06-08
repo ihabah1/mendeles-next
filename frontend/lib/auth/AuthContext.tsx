@@ -21,7 +21,13 @@ import { authService } from "@/lib/api/auth";
 import { setOnAuthFailure } from "@/lib/api/client";
 import { primeApiBaseUrl } from "@/lib/api/config";
 import { tokenStore } from "@/lib/api/tokens";
-import type { ApiUser, RegisterPayload, RegisterResponse } from "@/lib/api/types";
+import type { ApiUser, RegisterPayload, RegisterResponse, UserRole } from "@/lib/api/types";
+
+function canAccessAdminPortal(user: ApiUser | null): boolean {
+  if (!user?.is_staff) return false;
+  const role = user.role as UserRole;
+  return role === "team" || role === "admin";
+}
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -96,8 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       isAuthenticated: Boolean(user),
-      isAdmin: Boolean(user?.is_admin || user?.is_staff),
-      isStaff: Boolean(user?.is_staff),
+      isAdmin: Boolean(user?.is_admin) && canAccessAdminPortal(user),
+      isStaff: canAccessAdminPortal(user),
       login,
       register,
       logout,

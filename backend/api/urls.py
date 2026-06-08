@@ -52,6 +52,7 @@ wallet_patterns = [
 ]
 
 lotto_patterns = [
+    path('draw/', lotto_views.lotto_draw, name='lotto-draw'),
     path('my-sets/', lotto_views.my_sets, name='lotto-my-sets'),
     path('submit/', lotto_views.submit_order, name='lotto-submit'),
     path('subscribe/', lotto_views.subscribe, name='lotto-subscribe'),
@@ -86,7 +87,11 @@ admin_patterns = [
     path('print-queue/<int:job_id>/approve/', print_queue_views.admin_print_queue_approve, name='admin-print-queue-approve'),
     path('print-queue/<int:job_id>/retry/', print_queue_views.admin_print_queue_retry, name='admin-print-queue-retry'),
     path('print-queue/<int:job_id>/cancel/', print_queue_views.admin_print_queue_cancel, name='admin-print-queue-cancel'),
+    path('print-queue/<int:job_id>/skip-to-scan/', print_queue_views.admin_print_queue_skip_to_scan, name='admin-print-queue-skip-to-scan'),
     path('print-queue/enqueue/<int:order_id>/', print_queue_views.admin_print_queue_enqueue, name='admin-print-queue-enqueue'),
+    path('draw/', admin_views.admin_draw_status, name='admin-draw-status'),
+    path('draw/refresh/', admin_views.admin_refresh_draw, name='admin-draw-refresh'),
+    path('lotto/check-wins/', admin_views.admin_check_wins, name='admin-lotto-check-wins'),
 ]
 
 urlpatterns = [

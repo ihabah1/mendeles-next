@@ -24,14 +24,14 @@ export default function TopupPanel() {
     setError("");
     setSuccess("");
     try {
-      const result = await walletService.topup(finalAmount);
-      if (result.dev_mode) {
-        setSuccess(`נטענו ₪${result.amount_ils} לארנק. יתרה: ₪${result.balance?.toFixed(2)}`);
-      } else if (result.client_secret) {
-        setSuccess("בקשת תשלום נוצרה — השלמת Stripe תתווסף בקרוב.");
-      }
+      await walletService.topup(finalAmount);
     } catch (err) {
-      setError(extractApiError(err, "שגיאה בטעינת הארנק"));
+      const msg = extractApiError(err, "שגיאה בטעינת הארנק");
+      if (msg.includes("PayPal") || msg.includes("בקרוב")) {
+        setError("טעינת ארנק תתאפשר בקרוב דרך PayPal בלבד. לעזרה — פנה לתמיכה.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -40,7 +40,9 @@ export default function TopupPanel() {
   return (
     <div>
       <h2 className="profile-panel-title">💳 טעינת כסף לארנק</h2>
-      <p className="profile-panel-desc">בחר סכום לטעינה מאובטחת לארנק שלך</p>
+      <p className="profile-panel-desc">
+        טעינת ארנק תתבצע בקרוב דרך PayPal בלבד — ללא טעינה ידנית או מצב פיתוח.
+      </p>
 
       <div className="topup-grid">
         {AMOUNTS.map((a) => (
@@ -77,10 +79,10 @@ export default function TopupPanel() {
         onClick={handleTopup}
         disabled={loading}
       >
-        {loading ? "טוען..." : `טען ₪${finalAmount || 0} לארנק`}
+        {loading ? "טוען..." : `טען ₪${finalAmount || 0} דרך PayPal`}
       </button>
 
-      <p className="profile-hint">תשלום מאובטח (Stripe) · במצב פיתוח: טעינה מיידית</p>
+      <p className="profile-hint">תשלום מאובטח ב-PayPal · יופעל לאחר הגדרת מפתחות בשרת</p>
     </div>
   );
 }

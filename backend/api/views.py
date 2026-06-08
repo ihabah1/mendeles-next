@@ -20,6 +20,7 @@ from admin_panel.portal.models import (
 
 from .authentication import JWTAllowInactiveAuthentication
 from .permissions import IsAdminOrOwner, IsStaffOrReadOnlyOwner
+from .staff import is_staff_portal_user
 from .services.email_verification import (
     frontend_email_proxy_enabled,
     issue_verification_or_delegate,
@@ -479,12 +480,12 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Order.objects.select_related('customer')
-        if user.is_staff:
+        if is_staff_portal_user(user):
             return qs
         return qs.filter(customer=user)
 
     def perform_create(self, serializer):
-        if self.request.user.is_staff and serializer.validated_data.get('customer'):
+        if is_staff_portal_user(self.request.user) and serializer.validated_data.get('customer'):
             serializer.save()
         else:
             serializer.save(customer=self.request.user)
@@ -498,7 +499,7 @@ class CustomerProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = CustomerProfile.objects.select_related('user')
-        return qs if user.is_staff else qs.filter(user=user)
+        return qs if is_staff_portal_user(user) else qs.filter(user=user)
 
 
 class CreditAccountViewSet(viewsets.ModelViewSet):
@@ -509,7 +510,7 @@ class CreditAccountViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = CreditAccount.objects.select_related('customer')
-        return qs if user.is_staff else qs.filter(customer=user)
+        return qs if is_staff_portal_user(user) else qs.filter(customer=user)
 
 
 class CustomerMessageViewSet(viewsets.ModelViewSet):
@@ -520,7 +521,7 @@ class CustomerMessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = CustomerMessage.objects.select_related('customer')
-        return qs if user.is_staff else qs.filter(customer=user)
+        return qs if is_staff_portal_user(user) else qs.filter(customer=user)
 
 
 class ActionLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -539,4 +540,4 @@ class CustomerPermissionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = CustomerPermission.objects.select_related('customer')
-        return qs if user.is_staff else qs.filter(customer=user)
+        return qs if is_staff_portal_user(user) else qs.filter(customer=user)

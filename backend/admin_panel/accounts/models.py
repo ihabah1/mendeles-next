@@ -89,6 +89,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email.lower() == settings.ADMIN_EMAIL.lower()
 
     @property
+    def can_access_admin_portal(self) -> bool:
+        """Staff portal (/admin) — team/admin roles only, not regular customers."""
+        return self.is_staff and self.role in (self.Role.TEAM, self.Role.ADMIN)
+
+    @property
     def is_team_member(self):
         return self.role == self.Role.TEAM
 

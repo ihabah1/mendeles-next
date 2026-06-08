@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import prisma, { isDatabaseConfigured } from "@/lib/prisma";
-import { readFileSync } from "fs";
-import { join } from "path";
 
 export const revalidate = 300;
 
@@ -24,12 +22,26 @@ function calcRank(nums: number[], strong: number, drawNums: number[], drawStrong
   return null;
 }
 
-export async function GET() {
-  let drawData: DrawData | null = null;
+async function fetchDrawFromBackend(): Promise<DrawData | null> {
+  const apiBase =
+    process.env.API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    "http://localhost:8000/api";
   try {
-    const raw = readFileSync(join(process.cwd(), "draw_results.json"), "utf-8");
-    drawData = JSON.parse(raw);
-  } catch { drawData = null; }
+    const res = await fetch(`${apiBase.replace(/\/$/, "")}/lotto/draw/`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.last_draw) return null;
+    return data as DrawData;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET() {
+  const drawData = await fetchDrawFromBackend();
 
   const db = isDatabaseConfigured();
   const [totalUsers, totalOrders] = db

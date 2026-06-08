@@ -17,6 +17,9 @@ from .lotto_service import (
     lotto_set_to_api,
     read_last_lottery_id,
 )
+from api.staff import is_staff_portal_user
+
+from .services.pais_draw import read_draw_data
 from .services.user_setup import ensure_customer_records
 
 
@@ -41,6 +44,16 @@ def _has_active_subscription(user) -> bool:
         permission=CustomerPermission.Perm.SUBSCRIPTION,
         is_granted=True,
     ).exists()
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def lotto_draw(request):
+    """GET /api/lotto/draw/ — last published draw + prize table."""
+    data = read_draw_data()
+    if not data:
+        return Response({'last_draw': None, 'prizes': None, 'updated_at': None})
+    return Response(data)
 
 
 @api_view(['GET'])
@@ -212,7 +225,7 @@ def submit_order(request):
 @permission_classes([permissions.IsAuthenticated])
 def print_summary(request):
     """POST /api/lotto/print/ — staff-only legacy; customers use submit + print queue."""
-    if not getattr(request.user, 'is_staff', False):
+    if not is_staff_portal_user(request.user):
         return Response(
             {
                 'detail': 'הדפסה מתבצעת על ידי הצוות בתור ההדפסה — ההזמנה שלך כבר בתור.',

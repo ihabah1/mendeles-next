@@ -24,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.CharField(read_only=True)
     is_admin = serializers.BooleanField(read_only=True)
     phone_number = serializers.CharField(source='phone', read_only=True)
+    is_staff = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -36,6 +37,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'role', 'is_active', 'is_staff', 'date_joined',
             'email_verified', 'phone_verified',
         )
+
+    def get_is_staff(self, obj) -> bool:
+        return obj.can_access_admin_portal
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -79,6 +83,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             user = User(**validated_data)
         user.set_password(password)
         user.sync_full_name()
+        user.role = User.Role.CUSTOMER
+        user.is_staff = False
         user.email_verified = False
         user.phone_verified = not phone_verification_required_for(user)
         user.is_active = False

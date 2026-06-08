@@ -13,11 +13,9 @@ from admin_panel.accounts.models import User
 from admin_panel.portal.models import ActionLog, CustomerPermission, Subscription
 
 from api.services.user_setup import ensure_customer_records
+from api.staff_permissions import IsStaffPortalUser
 
-
-class IsStaffUser(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+IsStaffUser = IsStaffPortalUser
 
 
 PERM_META = {

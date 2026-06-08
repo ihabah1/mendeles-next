@@ -5,11 +5,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from admin_panel.portal.service_flags import list_flags, update_flags
+from api.staff import is_staff_portal_user
 
 
 class IsStaffUser(IsAuthenticated):
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and bool(request.user.is_staff)
+        return super().has_permission(request, view) and is_staff_portal_user(request.user)
 
 
 @api_view(['GET', 'PATCH'])

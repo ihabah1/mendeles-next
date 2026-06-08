@@ -21,6 +21,7 @@ from api.services.print_queue_service import (
     queue_counts,
     record_agent_heartbeat,
     retry_job,
+    skip_job_to_scan,
 )
 from admin_panel.portal.models import IntegrationLog, Order
 
@@ -36,6 +37,11 @@ def admin_print_queue(request):
     )
     if status_filter:
         qs = qs.filter(status=status_filter)
+    elif status_filter == 'awaiting_scan':
+        qs = qs.filter(
+            status=PrintJob.Status.PRINTED,
+            order__scan_pdf__isnull=True,
+        ).exclude(order__status=Order.Status.COMPLETED)
     else:
         qs = qs.filter(
             status__in=ACTIVE_STATUSES | {PrintJob.Status.FAILED},
@@ -107,6 +113,30 @@ def admin_print_queue_cancel(request, job_id: int):
         return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
     cancel_job(job)
     return Response({'status': 'ok', 'job': job_to_dict(job)})
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_skip_to_scan(request, job_id: int):
+    """Skip physical print — mark printed so scan_app can pick up the order."""
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        skip_job_to_scan(job)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'דילוג להדפסה — ממתין לסריקה: {job.order.order_number}',
+        order=job.order,
+    )
+    return Response({
+        'status': 'ok',
+        'detail': f'ההזמנה {job.order.order_number} סומנה כהודפסה — ניתן לסרוק ב-scan_app',
+        'job': job_to_dict(job),
+    })
 
 
 @api_view(['POST'])

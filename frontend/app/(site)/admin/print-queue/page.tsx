@@ -5,6 +5,8 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
+import LottoFormPreview from "@/components/admin/LottoFormPreview";
+import PrintJobTimeline from "@/components/admin/PrintJobTimeline";
 import {
   printQueueService,
   type PrinterStatus,
@@ -72,7 +74,10 @@ const FILTERS = [
   { key: "claimed", label: "נלקח" },
   { key: "printing", label: "בדפוס" },
   { key: "failed", label: "נכשל" },
+  { key: "awaiting_scan", label: "ממתין לסריקה" },
 ];
+
+const SKIP_STATUSES = new Set(["queued", "approved", "claimed", "printing", "failed"]);
 
 export default function AdminPrintQueuePage() {
   return (
@@ -93,6 +98,7 @@ function PrintQueuePageInner() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,6 +109,10 @@ function PrintQueuePageInner() {
       setCounts(res.counts);
       setPrinterStatus(res.printerStatus);
       setCanStartPrinting(res.canStartPrinting);
+      setExpandedId((prev) => {
+        if (prev && res.jobs.some((j) => j.id === prev)) return prev;
+        return res.jobs[0]?.id ?? null;
+      });
     } catch (e) {
       setError(extractApiError(e, "שגיאה בטעינת תור ההדפסה"));
     } finally {
@@ -234,109 +244,19 @@ function PrintQueuePageInner() {
         ) : !jobs.length ? (
           <p style={{ color: "var(--muted)" }}>אין משימות בתור — הזמנות חדשות נכנסות אוטומטית אחרי שליחה.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {jobs.map((j) => (
-              <div
+              <PrintJobCard
                 key={j.id}
-                className="card"
-                style={{
-                  padding: 14,
-                  borderRight: `4px solid ${STATUS_COLORS[j.status] || "#888"}`,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    {j.status === "queued" && (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(j.id)}
-                        onChange={() => toggleSelect(j.id)}
-                        aria-label={`בחר ${j.orderNumber}`}
-                      />
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 800, color: "var(--cream)" }}>
-                        {j.orderNumber}{" "}
-                        <span style={{ fontSize: ".8rem", color: STATUS_COLORS[j.status] }}>
-                          {STATUS_LABELS[j.status] || j.status}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: ".8rem", color: "var(--muted)", marginTop: 4 }}>
-                        {j.user?.name} · {j.tablesCount} טבלאות · ₪{j.totalIls.toFixed(2)} ·{" "}
-                        {new Date(j.createdAt).toLocaleString("he-IL")}
-                      </div>
-                      {j.lastError && (
-                        <div style={{ fontSize: ".75rem", color: "#ff6b7a", marginTop: 4 }}>
-                          {j.lastError}
-                        </div>
-                      )}
-                      {j.claimedByAgent && (
-                        <div style={{ fontSize: ".75rem", color: "var(--muted)", marginTop: 2 }}>
-                          סוכן: {j.claimedByAgent}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {j.status === "queued" && (
-                      <button
-                        type="button"
-                        className="btn btn-gold"
-                        style={{ fontSize: ".7rem" }}
-                        disabled={actionId === j.id}
-                        title={
-                          canStartPrinting
-                            ? "מדפסת מחוברת — יודפס מיד"
-                            : "יישמר כמאושר — יודפס כשהמדפסת תתחבר"
-                        }
-                        onClick={() =>
-                          run(
-                            j.id,
-                            () => printQueueService.approve(j.id),
-                            canStartPrinting ? "נשלח להדפסה" : "אושר לתור — ממתין למדפסת",
-                          )
-                        }
-                      >
-                        {canStartPrinting ? "▶ אשר והדפס" : "אשר לתור"}
-                      </button>
-                    )}
-                    {j.status === "failed" && (
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        style={{ fontSize: ".7rem" }}
-                        disabled={actionId === j.id}
-                        onClick={() =>
-                          run(j.id, () => printQueueService.retry(j.id), "חזר לתור")
-                        }
-                      >
-                        נסה שוב
-                      </button>
-                    )}
-                    {["queued", "approved", "failed"].includes(j.status) && (
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        style={{ fontSize: ".7rem", color: "#ff6b7a" }}
-                        disabled={actionId === j.id}
-                        onClick={() =>
-                          run(j.id, () => printQueueService.cancel(j.id), "בוטל")
-                        }
-                      >
-                        בטל
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                job={j}
+                expanded={expandedId === j.id}
+                onToggle={() => setExpandedId((id) => (id === j.id ? null : j.id))}
+                selected={selected.has(j.id)}
+                onSelectToggle={() => toggleSelect(j.id)}
+                canStartPrinting={canStartPrinting}
+                actionId={actionId}
+                onRun={run}
+              />
             ))}
           </div>
         )}
@@ -350,6 +270,7 @@ function PrintQueuePageInner() {
             <li>לקוח שולח טופס → נכנס אוטומטית לתור (סטטוס «בתור»).</li>
             <li>צוות מאשר → «מאושר» — הסוכן המקומי מושך ומדפיס.</li>
             <li>אחרי הדפסה → confirm → «הודפס» → scan_app → «הושלם».</li>
+            <li>«דלג לסריקה» — מדלג על הדפסה פיזית, מסמן כהודפס ומעביר ל-scan_app.</li>
           </ol>
         </div>
       </main>
@@ -360,6 +281,203 @@ function PrintQueuePageInner() {
         }
       `}</style>
     </>
+  );
+}
+
+function PrintJobCard({
+  job: j,
+  expanded,
+  onToggle,
+  selected,
+  onSelectToggle,
+  canStartPrinting,
+  actionId,
+  onRun,
+}: {
+  job: PrintQueueJob;
+  expanded: boolean;
+  onToggle: () => void;
+  selected: boolean;
+  onSelectToggle: () => void;
+  canStartPrinting: boolean;
+  actionId: number | null;
+  onRun: (jobId: number, fn: () => Promise<unknown>, ok: string) => Promise<void>;
+}) {
+  const skipToScan = () => {
+    if (
+      !window.confirm(
+        `לדלג על הדפסה עבור ${j.orderNumber}?\nההזמנה תסומן כ«הודפסה» ותופיע ב-scan_app לסריקה.`,
+      )
+    ) {
+      return;
+    }
+    void onRun(j.id, () => printQueueService.skipToScan(j.id), "הועבר לסריקה — פתח scan_app");
+  };
+
+  return (
+    <div
+      className="card"
+      style={{
+        padding: 14,
+        borderRight: `4px solid ${STATUS_COLORS[j.status] || "#888"}`,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+          alignItems: "flex-start",
+        }}
+      >
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flex: 1, minWidth: 220 }}>
+          {j.status === "queued" && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onSelectToggle}
+              aria-label={`בחר ${j.orderNumber}`}
+            />
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              textAlign: "right",
+              flex: 1,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: "var(--cream)", fontSize: "1rem" }}>
+              👤 {j.user?.name || "לקוח"}
+            </div>
+            <div style={{ fontWeight: 700, color: "var(--gold)", marginTop: 2 }}>
+              {j.orderNumber}{" "}
+              <span style={{ fontSize: ".78rem", color: STATUS_COLORS[j.status] }}>
+                {STATUS_LABELS[j.status] || j.status}
+              </span>
+            </div>
+            <div style={{ fontSize: ".78rem", color: "var(--muted)", marginTop: 4 }}>
+              {j.formsCount} טופס{j.formsCount !== 1 ? "ים" : ""} · {j.tablesCount} טבלאות · הגרלה{" "}
+              {j.drawDate || "—"}
+              {j.isDouble ? " · דאבל" : ""} · ₪{j.totalIls.toFixed(2)}
+            </div>
+            {j.user?.phone && (
+              <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>📱 {j.user.phone}</div>
+            )}
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <button type="button" className="btn btn-outline" style={{ fontSize: ".68rem" }} onClick={onToggle}>
+            {expanded ? "הסתר טופס ▲" : "הצג טופס ▼"}
+          </button>
+          {j.status === "queued" && (
+            <button
+              type="button"
+              className="btn btn-gold"
+              style={{ fontSize: ".68rem" }}
+              disabled={actionId === j.id}
+              onClick={() =>
+                onRun(
+                  j.id,
+                  () => printQueueService.approve(j.id),
+                  canStartPrinting ? "נשלח להדפסה" : "אושר לתור — ממתין למדפסת",
+                )
+              }
+            >
+              {canStartPrinting ? "▶ אשר והדפס" : "אשר לתור"}
+            </button>
+          )}
+          {SKIP_STATUSES.has(j.status) && !j.hasScan && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: ".68rem", borderColor: "#8aaabe", color: "#8aaabe" }}
+              disabled={actionId === j.id}
+              title="מדלג על הדפסה — מעביר ישירות ל-scan_app"
+              onClick={skipToScan}
+            >
+              ⏭ דלג לסריקה
+            </button>
+          )}
+          {j.status === "failed" && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: ".68rem" }}
+              disabled={actionId === j.id}
+              onClick={() => onRun(j.id, () => printQueueService.retry(j.id), "חזר לתור")}
+            >
+              נסה שוב
+            </button>
+          )}
+          {["queued", "approved", "failed"].includes(j.status) && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: ".68rem", color: "#ff6b7a" }}
+              disabled={actionId === j.id}
+              onClick={() => onRun(j.id, () => printQueueService.cancel(j.id), "בוטל")}
+            >
+              בטל
+            </button>
+          )}
+        </div>
+      </div>
+
+      <PrintJobTimeline
+        orderCreatedAt={j.orderCreatedAt}
+        createdAt={j.createdAt}
+        approvedAt={j.approvedAt}
+        claimedAt={j.claimedAt}
+        completedAt={j.completedAt}
+        orderPrintedAt={j.orderPrintedAt}
+        orderScannedAt={j.orderScannedAt}
+      />
+
+      {j.lastError && (
+        <div style={{ fontSize: ".75rem", color: "#ff6b7a", marginTop: 4 }}>{j.lastError}</div>
+      )}
+      {j.claimedByAgent && (
+        <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>סוכן: {j.claimedByAgent}</div>
+      )}
+
+      {expanded && (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 14,
+            borderTop: "1px solid var(--navy-b)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 16,
+            justifyContent: "flex-start",
+          }}
+        >
+          <LottoFormPreview
+            forms={j.forms}
+            drawDate={j.drawDate}
+            isDouble={j.isDouble}
+            customerName={j.user?.name}
+          />
+          <div style={{ flex: "1 1 200px", minWidth: 180, fontSize: ".75rem", color: "var(--muted)" }}>
+            <div style={{ fontWeight: 700, color: "var(--cream)", marginBottom: 8 }}>פרטי הזמנה</div>
+            <div>אימייל: {j.user?.email || "—"}</div>
+            <div>סטטוס הזמנה: {j.orderStatus}</div>
+            {j.lotteryId != null && <div>מספר הגרלה: {j.lotteryId}</div>}
+            {j.status === "printed" && !j.hasScan && (
+              <p style={{ marginTop: 10, color: "#8aaabe" }}>
+                ממתין לסריקה — הרץ scan_app ובחר הזמנה זו.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

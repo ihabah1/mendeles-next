@@ -1,6 +1,18 @@
 /** Print queue admin API — staff-only. */
 import api from "./client";
 
+export interface PrintQueueTable {
+  setIndex: number;
+  numbers: number[];
+  strong: number;
+  display?: string;
+}
+
+export interface PrintQueueForm {
+  formIndex: number;
+  tables: PrintQueueTable[];
+}
+
 export interface PrintQueueJob {
   id: number;
   orderId: number;
@@ -11,14 +23,23 @@ export interface PrintQueueJob {
   maxAttempts: number;
   lastError: string | null;
   tablesCount: number;
+  formsCount: number;
   totalIls: number;
   drawDate: string;
+  isDouble: boolean;
+  lotteryId?: number | null;
   orderStatus: string;
   claimedByAgent: string | null;
   approvedAt: string | null;
   claimedAt: string | null;
   completedAt: string | null;
   createdAt: string;
+  orderCreatedAt: string;
+  orderPrintedAt: string | null;
+  orderScannedAt: string | null;
+  hasScan: boolean;
+  sets: PrintQueueTable[];
+  forms: PrintQueueForm[];
   user?: { name: string; phone?: string; email?: string };
 }
 
@@ -96,5 +117,12 @@ export const printQueueService = {
       `/admin/print-queue/enqueue/${orderId}/`,
     );
     return data.job;
+  },
+
+  async skipToScan(jobId: number): Promise<{ detail: string; job: PrintQueueJob }> {
+    const { data } = await api.post<{ detail: string; job: PrintQueueJob }>(
+      `/admin/print-queue/${jobId}/skip-to-scan/`,
+    );
+    return data;
   },
 };

@@ -91,22 +91,43 @@ function AdminPageInner() {
 
   const fetchFromPais = async () => {
     setPaisLoading(true);
-    const url = paisLotteryId ? `/api/pais?id=${paisLotteryId}` : "/api/pais";
-    const r = await fetch(url);
-    const d = await r.json();
-    setPaisLoading(false);
-    if (!r.ok) { alert("❌ " + d.error); return; }
-    setDrawNums2(d.numbers?.join(", ") || "");
-    setDrawStrong2(String(d.strong || ""));
-    setDrawDate(d.date || drawDate);
-    if (d.prizes) {
-      const p: Record<string, number> = {};
-      Object.entries(d.prizes).forEach(([k, v]: [string, unknown]) => {
-        p[k] = (v as { ils: number }).ils || 0;
-      });
-      setDrawPrizes(prev => ({ ...prev, ...p }));
+    try {
+      if (canManageOrders) {
+        const d = await adminService.refreshDraw(paisLotteryId || undefined);
+        const ld = d.last_draw;
+        setDrawNums2(ld.numbers?.join(", ") || "");
+        setDrawStrong2(String(ld.strong || ""));
+        setDrawDate(ld.date || drawDate);
+        if (d.prizes) {
+          const p: Record<string, number> = {};
+          Object.entries(d.prizes).forEach(([k, v]) => {
+            p[k] = v.ils || 0;
+          });
+          setDrawPrizes(prev => ({ ...prev, ...p }));
+        }
+        alert(`✅ נטענו ושמרנו הגרלה ${ld.lottery_id} מפיס`);
+        return;
+      }
+      const url = paisLotteryId ? `/api/pais?id=${paisLotteryId}` : "/api/pais";
+      const r = await fetch(url);
+      const d = await r.json();
+      if (!r.ok) { alert("❌ " + d.error); return; }
+      setDrawNums2(d.numbers?.join(", ") || "");
+      setDrawStrong2(String(d.strong || ""));
+      setDrawDate(d.date || drawDate);
+      if (d.prizes) {
+        const p: Record<string, number> = {};
+        Object.entries(d.prizes).forEach(([k, v]: [string, unknown]) => {
+          p[k] = (v as { ils: number }).ils || 0;
+        });
+        setDrawPrizes(prev => ({ ...prev, ...p }));
+      }
+      alert(`✅ נטענו נתוני הגרלה ${d.lottery_id}`);
+    } catch (e) {
+      alert("❌ " + extractApiError(e, "שגיאה בטעינה מפיס"));
+    } finally {
+      setPaisLoading(false);
     }
-    alert(`✅ נטענו נתוני הגרלה ${d.lottery_id}`);
   };
 
   const saveDraw = async () => {
@@ -281,7 +302,22 @@ function AdminPageInner() {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
   };
 
-  const checkWins = async () => {
+  const checkWins = async (dryRun = false) => {
+    if (canManageOrders) {
+      try {
+        const d = await adminService.checkWins({ dry_run: dryRun });
+        setWinResult({
+          wins: d.wins,
+          total_prize_ils: d.total_prize_ils,
+        });
+        if (!dryRun && d.credited > 0) {
+          showToast(`זוכו ${d.credited} טבלאות — סה״כ ₪${d.total_prize_ils.toLocaleString()}`, "ok", 5000);
+        }
+      } catch (e) {
+        alert("❌ " + extractApiError(e, "בדיקת זכיות נכשלה"));
+      }
+      return;
+    }
     if (!legacyToken) {
       alert("בדיקת זכיות דורשת Legacy Admin Token (הגדר ב-sessionStorage: admin_token)");
       return;
@@ -510,7 +546,12 @@ function AdminPageInner() {
 
         {tab === "wins" && (
           <div style={{ background: "rgba(26,45,66,.85)", border: "1px solid var(--navy-b)", borderRadius: 14, padding: "20px 18px" }}>
-            <h3 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--cream)", marginBottom: 16 }}>הזן תוצאות הגרלה</h3>
+            <h3 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--cream)", marginBottom: 16 }}>תוצאות הגרלה וזכיות</h3>
+            {canManageOrders && (
+              <p style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 12 }}>
+                צוות: טען מפיס → בדוק זכיות (מזכה יתרות בארנק הלקוחות אוטומטית).
+              </p>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 5 }}>תאריך הגרלה:</div>
@@ -528,7 +569,20 @@ function AdminPageInner() {
                   style={{ width: 80, background: "var(--navy)", border: "1px solid var(--navy-b)", borderRadius: 8, color: "var(--cream)", padding: "8px 12px", fontFamily: "Heebo,sans-serif", fontSize: ".88rem", textAlign: "center" }} />
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                <button className="btn btn-gold" style={{ padding: "10px 20px" }} onClick={checkWins}>🔍 בדוק זכיות לקוחות</button>
+                {canManageOrders ? (
+                  <>
+                    <button className="btn btn-outline" style={{ padding: "10px 20px" }} onClick={() => checkWins(true)}>
+                      🔎 תצוגה מקדימה (ללא זיכוי)
+                    </button>
+                    <button className="btn btn-gold" style={{ padding: "10px 20px" }} onClick={() => checkWins(false)}>
+                      💰 בדוק זכיות וזכה ארנקים
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-gold" style={{ padding: "10px 20px" }} onClick={() => checkWins(false)}>
+                    🔍 בדוק זכיות לקוחות
+                  </button>
+                )}
               </div>
               <hr style={{ border: "none", borderTop: "1px solid var(--navy-b)", margin: "16px 0" }} />
               <h4 style={{ color: "var(--cream)", fontSize: ".88rem", marginBottom: 12 }}>💾 עדכן תוצאות הגרלה</h4>
@@ -578,7 +632,9 @@ function AdminPageInner() {
                     <>
                       <div style={{ fontWeight: 700, color: "var(--green)", fontSize: ".92rem", marginBottom: 4 }}>🎉 נמצאו {winResult.wins} זכיות!</div>
                       <div style={{ color: "var(--muted)", fontSize: ".76rem" }}>סה"כ פרסים: ₪{winResult.total_prize_ils.toLocaleString()}</div>
-                      <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>SMS נשלח לכל הזוכים</div>
+                      {canManageOrders && (
+                        <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>יתרות הארנק עודכנו בשרת</div>
+                      )}
                     </>
                   ) : (
                     <div style={{ color: "var(--muted)", fontSize: ".82rem" }}>אין זכיות בהגרלה זו</div>

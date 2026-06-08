@@ -33,10 +33,16 @@ export default function Nav() {
     router.push("/");
   };
 
+  /** Temporary: focus on Lotto only; set NEXT_PUBLIC_LOTTO_ONLY=false to show 777/Toto. */
+  const lottoOnly = process.env.NEXT_PUBLIC_LOTTO_ONLY !== "false";
   const navLinks = [
     { href: "/lotto", label: "🎱 לוטו" },
-    { href: "/seven77", label: "777" },
-    { href: "/toto", label: "⚽ טוטו" },
+    ...(lottoOnly
+      ? []
+      : [
+          { href: "/seven77", label: "777" },
+          { href: "/toto", label: "⚽ טוטו" },
+        ]),
     { href: "/profile", label: "👤 פרופיל" },
   ];
 

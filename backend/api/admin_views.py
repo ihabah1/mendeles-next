@@ -16,13 +16,13 @@ from api.services.icount_service import (
     icount_config_status,
 )
 from api.services.integration_log import log_integration, recent_integration_logs
+from api.services.lotto_wins import check_and_credit_wins
+from api.services.pais_draw import fetch_and_save_draw, read_draw_data
 from api.services.print_queue_service import approve_job, enqueue_order, job_to_dict
 from api.services.print_service import print_configured
+from api.staff_permissions import IsStaffPortalUser
 
-
-class IsStaffUser(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+IsStaffUser = IsStaffPortalUser
 
 
 def _managed_users():
@@ -270,3 +270,48 @@ def admin_order_invoice(request, order_id):
         'pdf_link': order.icount_pdf_link or inv.get('pdf_link'),
         'invoice_issued_at': order.invoice_issued_at.isoformat(),
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsStaffUser])
+def admin_draw_status(request):
+    """GET /api/admin/draw/ — last saved PAIS draw (staff)."""
+    data = read_draw_data()
+    if not data:
+        return Response({'last_draw': None, 'prizes': None, 'updated_at': None})
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_refresh_draw(request):
+    """POST /api/admin/draw/refresh/ — scrape pais.co.il and save draw_results.json."""
+    lottery_id = request.data.get('lottery_id')
+    try:
+        result = fetch_and_save_draw(lottery_id)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as exc:
+        return Response({'error': f'שגיאה בטעינה מפיס: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
+    return Response({
+        'detail': f'הגרלה {result["last_draw"]["lottery_id"]} עודכנה מפיס',
+        **result,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_check_wins(request):
+    """POST /api/admin/lotto/check-wins/ — credit wallets for winning sets."""
+    dry_run = bool(request.data.get('dry_run', False))
+    draw_data = read_draw_data()
+    if not draw_data:
+        return Response(
+            {'error': 'אין נתוני הגרלה — רענן מפיס קודם'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        result = check_and_credit_wins(draw_data, dry_run=dry_run)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(result)

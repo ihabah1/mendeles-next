@@ -116,6 +116,58 @@ export const adminService = {
     return data;
   },
 
+  async refreshDraw(lotteryId?: string | number): Promise<{
+    detail: string;
+    last_draw: {
+      date: string;
+      numbers: number[];
+      strong: number;
+      lottery_id: number;
+    };
+    prizes: Record<string, { name: string; ils: number; winners?: number }>;
+    updated_at?: string;
+  }> {
+    const { data } = await api.post("/admin/draw/refresh/", {
+      lottery_id: lotteryId || undefined,
+    });
+    return data;
+  },
+
+  async getDraw(): Promise<{
+    last_draw: {
+      date: string;
+      numbers: number[];
+      strong: number;
+      lottery_id: number;
+    } | null;
+    prizes: Record<string, { name: string; ils: number }> | null;
+    updated_at?: string | null;
+  }> {
+    const { data } = await api.get("/admin/draw/");
+    return data;
+  },
+
+  async checkWins(options?: { dry_run?: boolean }): Promise<{
+    lottery_id: number;
+    draw_date: string;
+    dry_run: boolean;
+    wins: number;
+    credited: number;
+    skipped_already: number;
+    total_prize_ils: number;
+    details: Array<{
+      order_number: string;
+      rank: string;
+      prize_ils: number;
+      status: string;
+    }>;
+  }> {
+    const { data } = await api.post("/admin/lotto/check-wins/", {
+      dry_run: options?.dry_run ?? false,
+    });
+    return data;
+  },
+
   async getInvoice(orderId: number): Promise<{
     doc_number: string;
     doc_id?: string;
