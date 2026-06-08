@@ -6,7 +6,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
 import { lottoService } from "@/lib/api/lotto";
-import { formatPrintSuccessMessage } from "@/lib/api/print-feedback";
 import { DEMO_ORDER, isDemoMode as checkDemoMode } from "@/lib/demo";
 
 interface TableSel { nums: Set<number>; strong: number | null; }
@@ -175,7 +174,6 @@ function LottoPageInner() {
   const [allSets, setAllSets] = useState<RawSet[]>([]);
   const [userTier, setUserTier] = useState<'premium'|'registered'>('registered');
   const [submitting, setSubmitting] = useState(false);
-  const [printing, setPrinting] = useState(false);
   const [isDouble, setIsDouble] = useState(false);
   const [result, setResult] = useState<{orderNumber:string;total:number;count:number}|null>(null);
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
@@ -286,45 +284,6 @@ function LottoPageInner() {
 
   const countFilled=useCallback(()=>Object.values(sel).filter(d=>d.nums.size===6&&d.strong).length,[sel]);
 
-  const buildPrintTables=useCallback(()=>
-    Object.entries(sel)
-      .filter(([,d])=>d.nums.size===6&&d.strong)
-      .map(([k,d])=>({
-        number:parseInt(k,10),
-        numbers:[...d.nums].sort((a,b)=>a-b),
-        strong:d.strong as number,
-      })),
-  [sel]);
-
-  const handlePrint=async()=>{
-    if(printing){
-      showToast('הדפסה בתהליך…','info',0);
-      return;
-    }
-    showToast('שולח להדפסה…','info',1500);
-    const tables=buildPrintTables();
-    if(!tables.length){
-      showToast('לבחירת הדפסה: מלא לפחות טבלה אחת — 6 מספרים + מספר חזק','err',5000);
-      return;
-    }
-    if(isDemo.current){ showToast('הדפסה לשרת לא זמינה בדמו','err',4000); return; }
-    if(!isAuthenticated){
-      showToast('יש להתחבר לפני הדפסה','err',3000);
-      router.push('/auth?redirect=/lotto');
-      return;
-    }
-    setPrinting(true);
-    showToast('הדפסה בתהליך…','info',0);
-    try{
-      const res=await lottoService.printSummary({ tables, order_id: 0 });
-      showToast(formatPrintSuccessMessage(res, tables.length),'ok',5000);
-    }catch(err){
-      showToast(extractApiError(err,'הדפסה נכשלה'),'err',6000);
-    }finally{
-      setPrinting(false);
-    }
-  };
-
   const submit=async()=>{
     const demo=isDemo.current;
     const filledEntries=Object.entries(sel).filter(([,d])=>d.nums.size===6&&d.strong);
@@ -365,13 +324,14 @@ function LottoPageInner() {
     <LottoToast toast={toast} />
     <div className="page-wrap" style={{textAlign:'center',paddingTop:40}}>
       <div style={{fontSize:'2.5rem',marginBottom:12}}>🎉</div>
-      <h2 style={{fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>{result.count} טבלאות נשלחו!</h2>
-      <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>הזמנה: <strong style={{color:'var(--gold-dark)'}}>{result.orderNumber}</strong></p>
-      <p style={{color:'var(--muted)',fontSize:'.78rem',marginBottom:24}}>סה"כ: ₪{Number(result.total).toFixed(2)} — תקבל עדכון SMS ואימייל</p>
+      <h2 style={{fontSize:'1.3rem',fontWeight:900,color:'var(--green)',marginBottom:8}}>ההזמנה התקבלה!</h2>
+      <p style={{color:'var(--muted)',fontSize:'.82rem',marginBottom:6}}>{result.count} טבלאות · הזמנה: <strong style={{color:'var(--gold-dark)'}}>{result.orderNumber}</strong></p>
+      <p style={{color:'var(--muted)',fontSize:'.78rem',marginBottom:8}}>סה"כ: ₪{Number(result.total).toFixed(2)} — תקבל עדכון SMS ואימייל</p>
+      <p style={{color:'var(--cream)',fontSize:'.8rem',marginBottom:24,maxWidth:360,margin:'0 auto 24px',lineHeight:1.6}}>
+        הטפסים נכנסו לתור הדפסה. הצוות ידפיס אותם — אין צורך לעשות דבר נוסף.
+      </p>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button type="button" className={`btn ${printing?'btn-ghost':'btn-gold'}`} onClick={handlePrint} aria-busy={printing}>
-          {printing?'הדפסה בתהליך…':'🖨️ הדפס למדפסת'}
-        </button>
+        <button className="btn btn-gold" onClick={()=>router.push('/profile/orders')}>📋 היסטוריית רכישות</button>
         <button className="btn btn-gold" onClick={()=>{setSel(emptyTables());setResult(null);}}>מלא טפסים נוספים</button>
         <button className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
       </div>
@@ -503,14 +463,6 @@ function LottoPageInner() {
 
       <div className="lotto-actions">
         <button type="button" className="btn btn-outline" onClick={()=>router.push('/profile')}>← פרופיל</button>
-        <button
-          type="button"
-          className={`btn btn-full ${printing?'btn-ghost':'btn-gold'}`}
-          onClick={handlePrint}
-          aria-busy={printing}
-        >
-          {printing?'הדפסה בתהליך…':filled===0?'🖨️ הדפס (מלא טבלה)':'🖨️ הדפס'}
-        </button>
       </div>
     </div></>
   );

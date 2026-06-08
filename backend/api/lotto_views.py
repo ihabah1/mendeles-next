@@ -211,7 +211,14 @@ def submit_order(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def print_summary(request):
-    """POST /api/lotto/print/ — send filled tables to external print server."""
+    """POST /api/lotto/print/ — staff-only legacy; customers use submit + print queue."""
+    if not getattr(request.user, 'is_staff', False):
+        return Response(
+            {
+                'detail': 'הדפסה מתבצעת על ידי הצוות בתור ההדפסה — ההזמנה שלך כבר בתור.',
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
     from api.services.print_service import (
         PrintError,
         _print_payload_mode,
