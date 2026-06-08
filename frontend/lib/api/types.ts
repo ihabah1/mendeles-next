@@ -81,6 +81,9 @@ export interface Order {
   amount_ils: string;
   status: string;
   created_at: string;
+  printed_at?: string | null;
+  scanned_at?: string | null;
+  has_scan?: boolean;
 }
 
 export interface Paginated<T> {

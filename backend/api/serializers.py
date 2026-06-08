@@ -149,6 +149,12 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    has_scan = serializers.SerializerMethodField()
+    printed_at = serializers.DateTimeField(read_only=True)
+    scanned_at = serializers.DateTimeField(read_only=True)
+
+    def get_has_scan(self, obj) -> bool:
+        return bool(obj.scan_pdf)
 
     class Meta:
         model = Order
@@ -156,8 +162,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'customer', 'customer_email', 'order_number', 'draw_name',
             'forms_count', 'amount_ils', 'table_price_ils', 'commission_ils',
             'sets_json', 'is_double', 'lottery_id', 'status', 'created_at',
+            'printed_at', 'scanned_at', 'has_scan',
         )
-        read_only_fields = ('id', 'created_at', 'customer_email')
+        read_only_fields = ('id', 'created_at', 'customer_email', 'has_scan', 'printed_at', 'scanned_at')
 
 
 class CreditAccountSerializer(serializers.ModelSerializer):

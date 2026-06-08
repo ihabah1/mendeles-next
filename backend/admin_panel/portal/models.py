@@ -36,6 +36,7 @@ class Order(models.Model):
         PENDING = 'pending', 'ממתין'
         PAID = 'paid', 'שולם'
         PRINTING = 'printing', 'בדפוס'
+        PRINTED = 'printed', 'הודפס'
         SHIPPED = 'shipped', 'נשלח'
         COMPLETED = 'completed', 'הושלם'
         CANCELLED = 'cancelled', 'בוטל'
@@ -60,6 +61,8 @@ class Order(models.Model):
     icount_pdf_link = models.URLField('קישור PDF חשבונית', max_length=512, blank=True)
     invoice_issued_at = models.DateTimeField('חשבונית הונפקה', null=True, blank=True)
     printed_at = models.DateTimeField('הודפס', null=True, blank=True)
+    scan_pdf = models.BinaryField('סריקת טופס', null=True, blank=True)
+    scanned_at = models.DateTimeField('נסרק', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

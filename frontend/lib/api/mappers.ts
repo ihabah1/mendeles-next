@@ -9,6 +9,7 @@ export interface UiOrder {
   status: string;
   drawDate: string;
   createdAt: string;
+  hasScan?: boolean;
 }
 
 export interface UiTransaction {
@@ -44,6 +45,7 @@ export function mapApiOrder(o: ApiOrder): UiOrder {
     status: o.status,
     drawDate: o.draw_name || "",
     createdAt: o.created_at,
+    hasScan: Boolean(o.has_scan),
   };
 }
 

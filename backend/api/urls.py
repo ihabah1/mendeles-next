@@ -3,7 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-from . import admin_views, lotto_views, service_flag_views, views, wallet_views
+from . import admin_views, lotto_views, print_views, service_flag_views, views, wallet_views
 
 router = DefaultRouter()
 router.register('users', views.UserViewSet, basename='user')
@@ -48,6 +48,13 @@ lotto_patterns = [
     path('print/', lotto_views.print_summary, name='lotto-print'),
 ]
 
+print_patterns = [
+    path('orders/', print_views.print_orders_list, name='print-orders'),
+    path('confirm/', print_views.print_confirm, name='print-confirm'),
+    path('scan/', print_views.print_scan_upload, name='print-scan-upload'),
+    path('scan/<int:order_id>/', print_views.print_scan_download, name='print-scan-download'),
+]
+
 admin_patterns = [
     path('stats/', admin_views.admin_stats, name='admin-stats'),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
@@ -61,6 +68,8 @@ urlpatterns = [
     path('auth/', include(auth_patterns)),
     path('wallet/', include(wallet_patterns)),
     path('lotto/', include(lotto_patterns)),
+    path('print/', include(print_patterns)),
     path('admin/', include(admin_patterns)),
+    path('orders/<int:order_id>/scan/', print_views.customer_order_scan, name='order-scan'),
     path('', include(router.urls)),
 ]

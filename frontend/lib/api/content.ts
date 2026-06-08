@@ -24,5 +24,13 @@ export const contentService = {
       const { data } = await api.patch<Order>(`/orders/${id}/`, patch);
       return data;
     },
+    async openScanPdf(orderId: number): Promise<void> {
+      const { data } = await api.get<Blob>(`/orders/${orderId}/scan/`, {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(data);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
   },
 };

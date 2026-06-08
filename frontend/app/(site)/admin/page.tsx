@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "#ffb347", paid: "#ffb347", printing: "#8aaabe", printed: "#8aaabe",
   shipped: "#c9a84c", sent: "#c9a84c", completed: "#1db96a", delivered: "#1db96a", cancelled: "#ff6b7a",
 };
-const STATUS_ORDER = ["pending", "paid", "printing", "shipped", "completed", "cancelled"];
+const STATUS_ORDER = ["pending", "paid", "printing", "printed", "shipped", "completed", "cancelled"];
 
 function orderHasInvoice(o: Order): boolean {
   return Boolean(o.icountDocNumber?.trim() || o.icountPdfLink?.trim());

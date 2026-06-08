@@ -148,7 +148,10 @@ def admin_order_print(request, order_id):
         return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     order.printed_at = timezone.now()
-    if order.status == Order.Status.PAID:
+    printer_ok = isinstance(result, dict) and (result.get('printed') or result.get('success'))
+    if printer_ok:
+        order.status = Order.Status.PRINTED
+    elif order.status in (Order.Status.PAID, Order.Status.PENDING):
         order.status = Order.Status.PRINTING
     order.save(update_fields=['printed_at', 'status'])
     log_integration(

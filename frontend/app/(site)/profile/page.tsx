@@ -241,6 +241,7 @@ function ProfilePageInner() {
                   padding: "11px 16px",
                   borderBottom: "1px solid var(--navy-b)",
                   fontSize: ".78rem",
+                  gap: 8,
                 }}
               >
                 <div>
@@ -266,6 +267,20 @@ function ProfilePageInner() {
                   >
                     {orderStatusLabel(o.status)}
                   </div>
+                  {o.hasScan && !isDemo && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ marginTop: 6, fontSize: ".62rem" }}
+                      onClick={() =>
+                        contentService.orders.openScanPdf(o.id).catch((err) =>
+                          setError(extractApiError(err, "לא ניתן לפתוח סריקה")),
+                        )
+                      }
+                    >
+                      📄 צפה בסריקה
+                    </button>
+                  )}
                 </div>
               </div>
             ))
