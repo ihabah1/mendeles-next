@@ -87,6 +87,7 @@ admin_patterns = [
     path('print-queue/<int:job_id>/approve/', print_queue_views.admin_print_queue_approve, name='admin-print-queue-approve'),
     path('print-queue/<int:job_id>/retry/', print_queue_views.admin_print_queue_retry, name='admin-print-queue-retry'),
     path('print-queue/<int:job_id>/cancel/', print_queue_views.admin_print_queue_cancel, name='admin-print-queue-cancel'),
+    path('print-queue/<int:job_id>/skip/', print_queue_views.admin_print_queue_skip, name='admin-print-queue-skip'),
     path('print-queue/<int:job_id>/skip-to-scan/', print_queue_views.admin_print_queue_skip_to_scan, name='admin-print-queue-skip-to-scan'),
     path('print-queue/enqueue/<int:order_id>/', print_queue_views.admin_print_queue_enqueue, name='admin-print-queue-enqueue'),
     path('draw/', admin_views.admin_draw_status, name='admin-draw-status'),

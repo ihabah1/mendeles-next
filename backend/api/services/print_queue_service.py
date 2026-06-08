@@ -299,6 +299,9 @@ def queue_counts() -> dict[str, int]:
         status=PrintJob.Status.PRINTED,
         order__scan_pdf__isnull=True,
     ).exclude(order__status=Order.Status.COMPLETED).count()
+    counts['scanned'] = PrintJob.objects.exclude(
+        order__scan_pdf__isnull=True,
+    ).exclude(order__scan_pdf=b'').count()
     return counts
 
 
@@ -336,26 +339,86 @@ def _forms_from_sets(sets_json: list) -> list[dict]:
     return forms
 
 
-def skip_job_to_scan(job: PrintJob) -> PrintJob:
-    """Mark as printed without physical print — ready for scan_app."""
+SKIP_STEPS = frozenset({'approve', 'claim', 'print', 'scan'})
+
+
+def skip_job_to_step(job: PrintJob, step: str, *, user=None) -> PrintJob:
+    """Advance a job past a workflow step without running the physical action."""
+    step = (step or '').strip().lower()
+    if step not in SKIP_STEPS:
+        raise ValueError('שלב דילוג לא תקין')
+
     if job.status == PrintJob.Status.CANCELLED:
         raise ValueError('לא ניתן לדלג על משימה שבוטלה')
+
     order = job.order
     if order.status == Order.Status.COMPLETED:
         raise ValueError('ההזמנה כבר הושלמה')
-    if order.scan_pdf:
+
+    if step == 'scan' and order.scan_pdf:
+        raise ValueError('כבר קיימת סריקה להזמנה זו')
+
+    if step == 'print' and order.scan_pdf:
         raise ValueError('כבר קיימת סריקה להזמנה זו')
 
     now = timezone.now()
-    order.status = Order.Status.PRINTED
-    order.printed_at = order.printed_at or now
-    order.save(update_fields=['status', 'printed_at'])
+    order_updates: list[str] = []
+    job_updates: list[str] = []
 
-    job.status = PrintJob.Status.PRINTED
-    job.completed_at = now
+    if step in ('approve', 'claim', 'print', 'scan'):
+        if job.status in (PrintJob.Status.QUEUED, PrintJob.Status.FAILED):
+            job.status = PrintJob.Status.APPROVED
+        if not job.approved_at:
+            job.approved_at = now
+            job_updates.append('approved_at')
+        if user and not job.approved_by_id:
+            job.approved_by = user
+            job_updates.append('approved_by')
+
+    if step in ('claim', 'print', 'scan'):
+        job.status = PrintJob.Status.CLAIMED
+        if not job.claimed_at:
+            job.claimed_at = now
+            job_updates.append('claimed_at')
+        if not job.claimed_by_agent:
+            job.claimed_by_agent = 'manual-skip'
+            job_updates.append('claimed_by_agent')
+        if order.status in (Order.Status.PAID, Order.Status.PENDING):
+            order.status = Order.Status.PRINTING
+            order_updates.append('status')
+
+    if step in ('print', 'scan'):
+        job.status = PrintJob.Status.PRINTED
+        if not job.completed_at:
+            job.completed_at = now
+            job_updates.append('completed_at')
+        if order.status != Order.Status.PRINTED:
+            order.status = Order.Status.PRINTED
+            order_updates.append('status')
+        if not order.printed_at:
+            order.printed_at = now
+            order_updates.append('printed_at')
+
+    if step == 'scan':
+        order.status = Order.Status.COMPLETED
+        order_updates.append('status')
+        if not order.scanned_at:
+            order.scanned_at = now
+            order_updates.append('scanned_at')
+
     job.last_error = ''
-    job.save(update_fields=['status', 'completed_at', 'last_error', 'updated_at'])
+    job_updates.extend(['status', 'last_error', 'updated_at'])
+    job.save(update_fields=list(dict.fromkeys(job_updates)))
+
+    if order_updates:
+        order.save(update_fields=list(dict.fromkeys(order_updates)))
+
     return job
+
+
+def skip_job_to_scan(job: PrintJob, *, user=None) -> PrintJob:
+    """Mark as printed without physical print — ready for scan_app."""
+    return skip_job_to_step(job, 'print', user=user)
 
 
 def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:

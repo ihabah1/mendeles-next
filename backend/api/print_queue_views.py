@@ -8,6 +8,7 @@ from admin_panel.portal.models import PrintJob
 from api.admin_views import IsStaffUser
 from api.print_views import _require_print_key
 from api.services.integration_log import log_integration
+from api.services.order_search import apply_order_search
 from api.services.print_queue_service import (
     ACTIVE_STATUSES,
     approve_job,
@@ -21,7 +22,7 @@ from api.services.print_queue_service import (
     queue_counts,
     record_agent_heartbeat,
     retry_job,
-    skip_job_to_scan,
+    skip_job_to_step,
 )
 from admin_panel.portal.models import IntegrationLog, Order
 
@@ -31,18 +32,25 @@ from admin_panel.portal.models import IntegrationLog, Order
 def admin_print_queue(request):
     """GET /api/admin/print-queue/?status=queued"""
     status_filter = (request.query_params.get('status') or '').strip()
+    search_q = (
+        request.query_params.get('q', '')
+        or request.query_params.get('search', '')
+    ).strip()
     qs = (
         PrintJob.objects.select_related('order', 'order__customer', 'approved_by')
         .order_by('-priority', '-created_at')
     )
-    if status_filter:
-        qs = qs.filter(status=status_filter)
-    elif status_filter == 'awaiting_scan':
+    qs = apply_order_search(qs, search_q, prefix='order__')
+    if status_filter == 'awaiting_scan':
         qs = qs.filter(
             status=PrintJob.Status.PRINTED,
             order__scan_pdf__isnull=True,
         ).exclude(order__status=Order.Status.COMPLETED)
-    else:
+    elif status_filter == 'scanned':
+        qs = qs.exclude(order__scan_pdf__isnull=True).exclude(order__scan_pdf=b'')
+    elif status_filter:
+        qs = qs.filter(status=status_filter)
+    elif not search_q:
         qs = qs.filter(
             status__in=ACTIVE_STATUSES | {PrintJob.Status.FAILED},
         )
@@ -115,6 +123,41 @@ def admin_print_queue_cancel(request, job_id: int):
     return Response({'status': 'ok', 'job': job_to_dict(job)})
 
 
+_SKIP_MESSAGES = {
+    'approve': 'סומן כאושר',
+    'claim': 'סומן כנלקח',
+    'print': 'סומן כהודפס — ניתן לסרוק ב-scan_app',
+    'scan': 'סומן כהושלם (ללא סריקה)',
+}
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_skip(request, job_id: int):
+    """POST /api/admin/print-queue/<id>/skip/ { step: approve|claim|print|scan }"""
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    step = (request.data.get('step') or 'print').strip().lower()
+    try:
+        skip_job_to_step(job, step, user=request.user)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'דילוג ({step}): {job.order.order_number}',
+        order=job.order,
+        details={'step': step},
+    )
+    msg = _SKIP_MESSAGES.get(step, 'עודכן')
+    return Response({
+        'status': 'ok',
+        'detail': f'ההזמנה {job.order.order_number} — {msg}',
+        'job': job_to_dict(job),
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsStaffUser])
 def admin_print_queue_skip_to_scan(request, job_id: int):
@@ -123,7 +166,7 @@ def admin_print_queue_skip_to_scan(request, job_id: int):
     if not job:
         return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
     try:
-        skip_job_to_scan(job)
+        skip_job_to_step(job, 'print', user=request.user)
     except ValueError as exc:
         return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     log_integration(
@@ -131,10 +174,11 @@ def admin_print_queue_skip_to_scan(request, job_id: int):
         IntegrationLog.Level.INFO,
         f'דילוג להדפסה — ממתין לסריקה: {job.order.order_number}',
         order=job.order,
+        details={'step': 'print'},
     )
     return Response({
         'status': 'ok',
-        'detail': f'ההזמנה {job.order.order_number} סומנה כהודפסה — ניתן לסרוק ב-scan_app',
+        'detail': f'ההזמנה {job.order.order_number} — {_SKIP_MESSAGES["print"]}',
         'job': job_to_dict(job),
     })
 

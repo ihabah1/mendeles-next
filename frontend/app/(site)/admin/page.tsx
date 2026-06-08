@@ -17,23 +17,38 @@ interface Order {
   status: string;
   drawDate: string;
   createdAt: string;
-  user?: { name: string; phone?: string; email?: string };
+  user?: { name: string; phone?: string; email?: string; username?: string | null };
   icountDocNumber?: string | null;
   icountPdfLink?: string | null;
   icountDocId?: string | null;
   invoiceIssuedAt?: string | null;
   printedAt?: string | null;
+  scannedAt?: string | null;
+  hasScan?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "ממתין 🕐", paid: "שולם ✅", printing: "בדפוס 🖨️", printed: "הודפס 🖨️",
   shipped: "נשלח 📬", sent: "נשלח 📬", completed: "הושלם ✅", delivered: "הוגש ✅", cancelled: "בוטל ❌",
+  scanned: "נסרק 📄",
 };
 const STATUS_COLORS: Record<string, string> = {
   pending: "#ffb347", paid: "#ffb347", printing: "#8aaabe", printed: "#8aaabe",
   shipped: "#c9a84c", sent: "#c9a84c", completed: "#1db96a", delivered: "#1db96a", cancelled: "#ff6b7a",
+  scanned: "#1db96a",
 };
 const STATUS_ORDER = ["pending", "paid", "printing", "printed", "shipped", "completed", "cancelled"];
+const STATUS_FILTERS = ["", "scanned", ...STATUS_ORDER];
+
+function orderStatusLabel(o: Order): string {
+  if (o.hasScan) return STATUS_LABELS.scanned;
+  return STATUS_LABELS[o.status] || o.status;
+}
+
+function orderStatusColor(o: Order): string {
+  if (o.hasScan) return STATUS_COLORS.scanned;
+  return STATUS_COLORS[o.status] || "var(--muted)";
+}
 
 function orderHasInvoice(o: Order): boolean {
   return Boolean(o.icountDocNumber?.trim() || o.icountPdfLink?.trim());
@@ -56,6 +71,8 @@ function AdminPageInner() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"orders"|"wins">("orders");
   const [winDate, setWinDate] = useState(new Date().toISOString().slice(0,10));
@@ -148,13 +165,21 @@ function AdminPageInner() {
     else alert("❌ " + d.error);
   };
 
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       if (canManageOrders) {
         const [s, o] = await Promise.all([
           adminService.stats(),
-          adminService.orders(filter || undefined),
+          adminService.orders({
+            status: filter || undefined,
+            q: searchDebounced || undefined,
+          }),
         ]);
         setStats(s);
         setOrders(o.orders);
@@ -172,7 +197,7 @@ function AdminPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [canManageOrders, legacyToken, filter]);
+  }, [canManageOrders, legacyToken, filter, searchDebounced]);
 
   const printOrder = async (orderId: number) => {
     if (!canManageOrders) return;
@@ -229,6 +254,21 @@ function AdminPageInner() {
         const logRes = await adminService.integrationLogs({ source: "icount", limit: 20 });
         setIntegrationLogs(logRes.logs);
       } catch { /* ignore */ }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const viewScan = async (order: Order) => {
+    if (!order.hasScan) {
+      alert("אין סריקה להזמנה זו — העלה סריקה דרך scan_app.");
+      return;
+    }
+    setActionLoading(order.id);
+    try {
+      await adminService.openOrderScan(order.id);
+    } catch (e) {
+      alert(extractApiError(e, "לא ניתן לפתוח סריקה"));
     } finally {
       setActionLoading(null);
     }
@@ -343,7 +383,7 @@ function AdminPageInner() {
     loadData();
   }, [loadData]);
 
-  const filteredOrders = filter ? orders.filter(o => o.status === filter) : orders;
+  const filteredOrders = orders;
 
   return (
     <>
@@ -462,9 +502,23 @@ function AdminPageInner() {
 
         {tab === "orders" && (
           <>
+            <div style={{ marginBottom: 14 }}>
+              <input
+                className="input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="🔍 חיפוש הזמנה / לקוח — מספר הזמנה, שם, משתמש או טלפון"
+                style={{ width: "100%", maxWidth: 480, fontSize: ".82rem" }}
+              />
+              {searchDebounced && (
+                <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 6 }}>
+                  תוצאות עבור: «{searchDebounced}»
+                </div>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-              {["", ...STATUS_ORDER].map(s => (
-                <button key={s} onClick={() => setFilter(s)}
+              {STATUS_FILTERS.map(s => (
+                <button key={s || "all"} onClick={() => setFilter(s)}
                   style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid var(--navy-b)", background: filter===s?"var(--gold)":"transparent", color: filter===s?"var(--navy)":"var(--muted)", fontFamily: "Heebo,sans-serif", fontSize: ".7rem", fontWeight: 700, cursor: "pointer" }}>
                   {s ? STATUS_LABELS[s] : "הכל"}
                 </button>
@@ -480,12 +534,22 @@ function AdminPageInner() {
                 <div key={o.id} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", padding: "11px 16px", borderBottom: "1px solid var(--navy-b)", fontSize: ".76rem" }}>
                   <div style={{ flex: "1 0 200px" }}>
                     <div style={{ fontWeight: 700, color: "var(--gold)" }}>{o.orderNumber}</div>
-                    <div style={{ color: "var(--muted)", fontSize: ".68rem" }}>{o.user?.name} · {o.user?.phone || o.user?.email}</div>
+                    <div style={{ color: "var(--muted)", fontSize: ".68rem" }}>
+                      {o.user?.name}
+                      {o.user?.username ? ` (@${o.user.username})` : ""}
+                      {" · "}
+                      {o.user?.phone || o.user?.email}
+                    </div>
                   </div>
                   <div style={{ color: "var(--muted)" }}>{o.tablesCount} טבלאות</div>
                   <div style={{ color: "var(--cream)" }}>₪{o.totalIls?.toFixed(2)}</div>
                   <div style={{ color: "var(--muted)" }}>{o.drawDate}</div>
-                  <div style={{ color: STATUS_COLORS[o.status] || "var(--muted)", fontWeight: 700, minWidth: 80 }}>{STATUS_LABELS[o.status] || o.status}</div>
+                  <div style={{ color: orderStatusColor(o), fontWeight: 700, minWidth: 80 }}>{orderStatusLabel(o)}</div>
+                  {o.scannedAt && (
+                    <div style={{ color: "var(--muted)", fontSize: ".64rem" }}>
+                      נסרק {new Date(o.scannedAt).toLocaleDateString("he-IL")}
+                    </div>
+                  )}
                   <select value={o.status} onChange={e => updateStatus(o.id, e.target.value)}
                     style={{ background: "var(--navy)", border: "1px solid var(--navy-b)", borderRadius: 7, color: "var(--cream)", fontFamily: "Heebo,sans-serif", fontSize: ".72rem", padding: "4px 8px", cursor: "pointer" }}>
                     {STATUS_ORDER.map(v => <option key={v} value={v}>{STATUS_LABELS[v]}</option>)}
@@ -534,6 +598,26 @@ function AdminPageInner() {
                         }
                       >
                         📄 הצג חשבונית
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{
+                          fontSize: ".68rem",
+                          padding: "4px 10px",
+                          borderColor: "#8aaabe",
+                          color: "#8aaabe",
+                          opacity: o.hasScan ? 1 : 0.45,
+                        }}
+                        disabled={actionLoading === o.id || !o.hasScan}
+                        onClick={() => viewScan(o)}
+                        title={
+                          o.hasScan && o.scannedAt
+                            ? `נסרק ${new Date(o.scannedAt).toLocaleDateString("he-IL")}`
+                            : "אין סריקה — העלה דרך scan_app"
+                        }
+                      >
+                        {actionLoading === o.id ? "..." : "📄 הראה סריקה"}
                       </button>
                     </div>
                   )}

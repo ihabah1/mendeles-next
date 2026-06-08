@@ -76,9 +76,12 @@ export interface PrintQueueResponse {
 }
 
 export const printQueueService = {
-  async list(status?: string): Promise<PrintQueueResponse> {
+  async list(params?: { status?: string; q?: string }): Promise<PrintQueueResponse> {
+    const query: Record<string, string> = {};
+    if (params?.status) query.status = params.status;
+    if (params?.q?.trim()) query.q = params.q.trim();
     const { data } = await api.get<PrintQueueResponse>("/admin/print-queue/", {
-      params: status ? { status } : undefined,
+      params: Object.keys(query).length ? query : undefined,
     });
     return data;
   },
@@ -119,10 +122,18 @@ export const printQueueService = {
     return data.job;
   },
 
-  async skipToScan(jobId: number): Promise<{ detail: string; job: PrintQueueJob }> {
+  async skipStep(
+    jobId: number,
+    step: "approve" | "claim" | "print" | "scan",
+  ): Promise<{ detail: string; job: PrintQueueJob }> {
     const { data } = await api.post<{ detail: string; job: PrintQueueJob }>(
-      `/admin/print-queue/${jobId}/skip-to-scan/`,
+      `/admin/print-queue/${jobId}/skip/`,
+      { step },
     );
     return data;
+  },
+
+  async skipToScan(jobId: number): Promise<{ detail: string; job: PrintQueueJob }> {
+    return this.skipStep(jobId, "print");
   },
 };

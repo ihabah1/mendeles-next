@@ -9,12 +9,14 @@ export interface AdminOrder {
   status: string;
   drawDate: string;
   createdAt: string;
-  user?: { name: string; phone?: string; email?: string };
+  user?: { name: string; phone?: string; email?: string; username?: string | null };
   icountDocNumber?: string | null;
   icountPdfLink?: string | null;
   icountDocId?: string | null;
   invoiceIssuedAt?: string | null;
   printedAt?: string | null;
+  scannedAt?: string | null;
+  hasScan?: boolean;
 }
 
 export interface AdminStats {
@@ -51,18 +53,21 @@ export const adminService = {
     return data;
   },
 
-  async orders(status?: string): Promise<{
+  async orders(params?: { status?: string; q?: string }): Promise<{
     orders: AdminOrder[];
     count: number;
     integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
     logs?: IntegrationLogEntry[];
   }> {
+    const query: Record<string, string> = {};
+    if (params?.status) query.status = params.status;
+    if (params?.q?.trim()) query.q = params.q.trim();
     const { data } = await api.get<{
       orders: AdminOrder[];
       count: number;
       integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
       logs?: IntegrationLogEntry[];
-    }>("/admin/orders/", { params: status ? { status } : undefined });
+    }>("/admin/orders/", { params: Object.keys(query).length ? query : undefined });
     return data;
   },
 
@@ -166,6 +171,15 @@ export const adminService = {
       dry_run: options?.dry_run ?? false,
     });
     return data;
+  },
+
+  async openOrderScan(orderId: number): Promise<void> {
+    const { data } = await api.get<Blob>(`/orders/${orderId}/scan/`, {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(data);
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 
   async getInvoice(orderId: number): Promise<{

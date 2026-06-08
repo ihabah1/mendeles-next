@@ -7,6 +7,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import LottoFormPreview from "@/components/admin/LottoFormPreview";
 import PrintJobTimeline from "@/components/admin/PrintJobTimeline";
+import { adminService } from "@/lib/api/admin";
 import {
   printQueueService,
   type PrinterStatus,
@@ -75,9 +76,8 @@ const FILTERS = [
   { key: "printing", label: "בדפוס" },
   { key: "failed", label: "נכשל" },
   { key: "awaiting_scan", label: "ממתין לסריקה" },
+  { key: "scanned", label: "נסרק 📄" },
 ];
-
-const SKIP_STATUSES = new Set(["queued", "approved", "claimed", "printing", "failed"]);
 
 export default function AdminPrintQueuePage() {
   return (
@@ -93,6 +93,8 @@ function PrintQueuePageInner() {
   const [printerStatus, setPrinterStatus] = useState<PrinterStatus | null>(null);
   const [canStartPrinting, setCanStartPrinting] = useState(false);
   const [filter, setFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
@@ -100,11 +102,19 @@ function PrintQueuePageInner() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await printQueueService.list(filter || undefined);
+      const res = await printQueueService.list({
+        status: filter || undefined,
+        q: searchDebounced || undefined,
+      });
       setJobs(res.jobs);
       setCounts(res.counts);
       setPrinterStatus(res.printerStatus);
@@ -118,7 +128,7 @@ function PrintQueuePageInner() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, searchDebounced]);
 
   useEffect(() => {
     load();
@@ -131,8 +141,12 @@ function PrintQueuePageInner() {
     setMessage("");
     setError("");
     try {
-      await fn();
-      setMessage(ok);
+      const result = await fn();
+      const detail =
+        result && typeof result === "object" && "detail" in result
+          ? String((result as { detail: string }).detail)
+          : ok;
+      setMessage(detail || ok);
       await load();
     } catch (e) {
       setError(extractApiError(e, "פעולה נכשלה"));
@@ -198,6 +212,21 @@ function PrintQueuePageInner() {
         </div>
 
         <PrinterStatusBanner status={printerStatus} counts={counts} loading={loading} />
+
+        <div style={{ marginBottom: 12 }}>
+          <input
+            className="input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 חיפוש — מספר הזמנה, שם לקוח, משתמש או טלפון"
+            style={{ width: "100%", maxWidth: 480, fontSize: ".82rem" }}
+          />
+          {searchDebounced && (
+            <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 6 }}>
+              תוצאות עבור: «{searchDebounced}»
+            </div>
+          )}
+        </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           {FILTERS.map((f) => (
@@ -303,15 +332,20 @@ function PrintJobCard({
   actionId: number | null;
   onRun: (jobId: number, fn: () => Promise<unknown>, ok: string) => Promise<void>;
 }) {
-  const skipToScan = () => {
-    if (
-      !window.confirm(
-        `לדלג על הדפסה עבור ${j.orderNumber}?\nההזמנה תסומן כ«הודפסה» ותופיע ב-scan_app לסריקה.`,
-      )
-    ) {
-      return;
-    }
-    void onRun(j.id, () => printQueueService.skipToScan(j.id), "הועבר לסריקה — פתח scan_app");
+  const viewScan = () => {
+    if (!j.hasScan) return;
+    void onRun(j.id, () => adminService.openOrderScan(j.orderId), "נפתחה סריקה");
+  };
+
+  const handleSkipStep = (step: "approve" | "claim" | "print" | "scan") => {
+    void onRun(
+      j.id,
+      async () => {
+        const res = await printQueueService.skipStep(j.id, step);
+        return res;
+      },
+      "עודכן",
+    );
   };
 
   return (
@@ -392,16 +426,20 @@ function PrintJobCard({
               {canStartPrinting ? "▶ אשר והדפס" : "אשר לתור"}
             </button>
           )}
-          {SKIP_STATUSES.has(j.status) && !j.hasScan && (
+          {j.hasScan && (
             <button
               type="button"
               className="btn btn-outline"
               style={{ fontSize: ".68rem", borderColor: "#8aaabe", color: "#8aaabe" }}
               disabled={actionId === j.id}
-              title="מדלג על הדפסה — מעביר ישירות ל-scan_app"
-              onClick={skipToScan}
+              title={
+                j.orderScannedAt
+                  ? `נסרק ${new Date(j.orderScannedAt).toLocaleString("he-IL")}`
+                  : "הצג טופס סרוק"
+              }
+              onClick={viewScan}
             >
-              ⏭ דלג לסריקה
+              📄 הראה סריקה
             </button>
           )}
           {j.status === "failed" && (
@@ -437,6 +475,11 @@ function PrintJobCard({
         completedAt={j.completedAt}
         orderPrintedAt={j.orderPrintedAt}
         orderScannedAt={j.orderScannedAt}
+        hasScan={j.hasScan}
+        jobStatus={j.status}
+        orderStatus={j.orderStatus}
+        onSkipStep={j.status !== "cancelled" ? handleSkipStep : undefined}
+        skipDisabled={actionId === j.id}
       />
 
       {j.lastError && (
@@ -469,6 +512,11 @@ function PrintJobCard({
             <div>אימייל: {j.user?.email || "—"}</div>
             <div>סטטוס הזמנה: {j.orderStatus}</div>
             {j.lotteryId != null && <div>מספר הגרלה: {j.lotteryId}</div>}
+            {j.hasScan && j.orderScannedAt && (
+              <p style={{ marginTop: 10, color: "#1db96a" }}>
+                נסרק {new Date(j.orderScannedAt).toLocaleString("he-IL")}
+              </p>
+            )}
             {j.status === "printed" && !j.hasScan && (
               <p style={{ marginTop: 10, color: "#8aaabe" }}>
                 ממתין לסריקה — הרץ scan_app ובחר הזמנה זו.

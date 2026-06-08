@@ -17,6 +17,7 @@ from api.services.icount_service import (
 )
 from api.services.integration_log import log_integration, recent_integration_logs
 from api.services.lotto_wins import check_and_credit_wins
+from api.services.order_search import apply_order_search
 from api.services.pais_draw import fetch_and_save_draw, read_draw_data
 from api.services.print_queue_service import approve_job, enqueue_order, job_to_dict
 from api.services.print_service import print_configured
@@ -56,9 +57,17 @@ def admin_stats(request):
 def admin_orders(request):
     if request.method == 'GET':
         status_filter = request.query_params.get('status', '').strip()
-        qs = Order.objects.select_related('customer').order_by('-created_at')[:500]
-        if status_filter:
+        search_q = (
+            request.query_params.get('q', '')
+            or request.query_params.get('search', '')
+        ).strip()
+        qs = Order.objects.select_related('customer').order_by('-created_at')
+        if status_filter == 'scanned':
+            qs = qs.exclude(scan_pdf__isnull=True).exclude(scan_pdf=b'')
+        elif status_filter:
             qs = qs.filter(status=status_filter)
+        qs = apply_order_search(qs, search_q)
+        qs = qs[:500]
         orders = []
         for o in qs:
             customer = o.customer
@@ -75,10 +84,13 @@ def admin_orders(request):
                 'icountDocId': o.icount_doc_id or None,
                 'invoiceIssuedAt': o.invoice_issued_at.isoformat() if o.invoice_issued_at else None,
                 'printedAt': o.printed_at.isoformat() if o.printed_at else None,
+                'scannedAt': o.scanned_at.isoformat() if o.scanned_at else None,
+                'hasScan': bool(o.scan_pdf),
                 'user': {
                     'name': customer.display_name,
                     'phone': customer.phone,
                     'email': customer.email,
+                    'username': customer.username or None,
                 },
             })
         return Response({
