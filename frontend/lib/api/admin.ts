@@ -1,6 +1,21 @@
 /** Admin dashboard service — staff-only endpoints on the Django API. */
 import api from "./client";
-import type { UiOrder } from "./mappers";
+/** Admin dashboard order row (camelCase from /admin/orders/). */
+export interface AdminOrder {
+  id: number;
+  orderNumber: string;
+  tablesCount: number;
+  totalIls: number;
+  status: string;
+  drawDate: string;
+  createdAt: string;
+  user?: { name: string; phone?: string; email?: string };
+  icountDocNumber?: string | null;
+  icountPdfLink?: string | null;
+  icountDocId?: string | null;
+  invoiceIssuedAt?: string | null;
+  printedAt?: string | null;
+}
 
 export interface AdminStats {
   total_users: number;
@@ -37,13 +52,13 @@ export const adminService = {
   },
 
   async orders(status?: string): Promise<{
-    orders: UiOrder[];
+    orders: AdminOrder[];
     count: number;
     integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
     logs?: IntegrationLogEntry[];
   }> {
     const { data } = await api.get<{
-      orders: UiOrder[];
+      orders: AdminOrder[];
       count: number;
       integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
       logs?: IntegrationLogEntry[];

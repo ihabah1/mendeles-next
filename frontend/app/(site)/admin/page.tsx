@@ -8,10 +8,15 @@ import { adminService, type IntegrationLogEntry, type IntegrationStatus } from "
 import { extractApiError } from "@/lib/api/client";
 import { formatPrintSuccessMessage } from "@/lib/api/print-feedback";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
-import type { UiOrder } from "@/lib/api/mappers";
-
 interface Stats { total_users: number; new_today: number; active_subs: number; pending_orders: number; total_revenue: number; total_wins: number; total_prize: number; }
-interface Order extends UiOrder {
+interface Order {
+  id: number;
+  orderNumber: string;
+  tablesCount: number;
+  totalIls: number;
+  status: string;
+  drawDate: string;
+  createdAt: string;
   user?: { name: string; phone?: string; email?: string };
   icountDocNumber?: string | null;
   icountPdfLink?: string | null;
