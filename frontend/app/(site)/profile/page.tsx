@@ -3,16 +3,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
 import BalancePill from "@/components/BalancePill";
+import MyOrdersList from "@/components/MyOrdersList";
 import Link from "next/link";
 import { DEMO_USER, DEMO_TRANSACTIONS, DEMO_ORDERS } from "@/lib/demo";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
+import type { DrawResult } from "@/lib/lotto-wins";
 import {
   contentService,
   extractApiError,
+  mapApiOrders,
   walletService,
+  type UiOrder,
+  type UiTransaction,
 } from "@/lib/api";
-import type { UiTransaction } from "@/lib/api";
 
 interface UserData {
   id: number;
@@ -27,15 +31,26 @@ function ProfilePageInner() {
   const { user: authUser, logout: authLogout } = useAuth();
   const [user, setUser] = useState<UserData | null>(null);
   const [balance, setBalance] = useState(0);
-  const [ordersCount, setOrdersCount] = useState(0);
+  const [orders, setOrders] = useState<UiOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [txs, setTxs] = useState<UiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isDemo, setIsDemo] = useState(false);
+  const [draw, setDraw] = useState<DrawResult | null>(null);
+  const [prizes, setPrizes] = useState<Record<string, { ils?: number }> | null>(null);
 
   useEffect(() => {
     const demo = localStorage.getItem("demo_mode") === "1";
     setIsDemo(demo);
+
+    fetch("/api/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((stats) => {
+        if (stats?.last_draw) setDraw(stats.last_draw);
+        if (stats?.prizes) setPrizes(stats.prizes);
+      })
+      .catch(() => {});
 
     if (demo) {
       setUser({
@@ -46,9 +61,11 @@ function ProfilePageInner() {
         createdAt: new Date().toISOString(),
       });
       setBalance(DEMO_USER.balance);
-      setOrdersCount(DEMO_ORDERS.length);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setOrders(DEMO_ORDERS as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setTxs(DEMO_TRANSACTIONS as any);
+      setOrdersLoading(false);
       setLoading(false);
       return;
     }
@@ -71,11 +88,12 @@ function ProfilePageInner() {
           walletService.history(),
         ]);
         setBalance(wallet.balance);
-        setOrdersCount(orderPage.count ?? orderPage.results.length);
+        setOrders(mapApiOrders(orderPage.results));
         setTxs(history);
       } catch (err) {
         setError(extractApiError(err, "שגיאה בטעינת הנתונים"));
       } finally {
+        setOrdersLoading(false);
         setLoading(false);
       }
     })();
@@ -101,9 +119,10 @@ function ProfilePageInner() {
   return (
     <>
       <Nav />
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 14px 60px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "20px 14px 60px" }}>
         {error && (
           <div
+            role="alert"
             style={{
               background: "rgba(232,0,30,.1)",
               border: "1px solid rgba(232,0,30,.3)",
@@ -136,8 +155,7 @@ function ProfilePageInner() {
               style={{ color: "var(--gold)", textDecoration: "underline" }}
             >
               התחבר עם חשבון אמיתי
-            </Link>{" "}
-            לראות הזמנות אמיתיות.
+            </Link>
           </div>
         )}
 
@@ -171,73 +189,79 @@ function ProfilePageInner() {
             </div>
           </div>
           <BalancePill balance={balance} name={user?.name} />
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link
-              href="/lotto"
-              className="btn btn-gold"
-              style={{ fontSize: ".78rem" }}
-            >
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href="/lotto" className="btn btn-gold" style={{ fontSize: ".78rem" }}>
               🎱 מלא טפסים
             </Link>
-            <Link
-              href="/topup"
-              className="btn btn-outline"
-              style={{ fontSize: ".78rem" }}
-            >
+            <Link href="/topup" className="btn btn-outline" style={{ fontSize: ".78rem" }}>
               💳 טעינה
             </Link>
-            <button
-              className="btn btn-outline"
-              onClick={logout}
-              style={{ fontSize: ".78rem" }}
-            >
+            <button className="btn btn-outline" onClick={logout} style={{ fontSize: ".78rem" }}>
               התנתק
             </button>
           </div>
         </div>
 
-        <Link
-          href="/profile/orders"
+        <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            background: "rgba(26,45,66,.85)",
-            border: "1px solid var(--navy-b)",
+            background: "var(--bg2)",
+            border: "1px solid var(--border)",
             borderRadius: 14,
-            padding: "16px 18px",
+            overflow: "hidden",
             marginBottom: 16,
-            textDecoration: "none",
-            transition: "border-color .15s",
+            boxShadow: "var(--shadow-card)",
           }}
         >
-          <div>
-            <div style={{ fontWeight: 700, fontSize: ".88rem", color: "var(--cream)", marginBottom: 4 }}>
-              📋 ההזמנות שלי
+          <div
+            style={{
+              padding: "12px 16px",
+              borderBottom: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: ".88rem",
+                  color: "var(--text)",
+                }}
+              >
+                📋 ההזמנות שלי
+              </div>
+              <div style={{ fontSize: ".68rem", color: "var(--text2)", marginTop: 2 }}>
+                היסטוריה · טפסים · סריקה · זכייה · חשבוניות
+              </div>
             </div>
-            <div style={{ fontSize: ".72rem", color: "var(--muted)", lineHeight: 1.5 }}>
-              היסטוריה · טפסים שמולאו · צפייה בטפסים · סטטוס זכייה · חשבוניות
-            </div>
-          </div>
-          <div style={{ textAlign: "left", flexShrink: 0 }}>
             <span
               style={{
-                display: "inline-block",
-                background: "rgba(201,168,76,.15)",
-                border: "1px solid rgba(201,168,76,.35)",
-                color: "var(--gold-l)",
+                background: "var(--gold-bg)",
+                border: "1px solid var(--gold-border)",
+                color: "var(--gold-dark)",
                 borderRadius: 20,
-                padding: "4px 12px",
-                fontSize: ".78rem",
+                padding: "3px 12px",
+                fontSize: ".74rem",
                 fontWeight: 700,
               }}
             >
-              {ordersCount}
+              {orders.length} הזמנות
             </span>
-            <div style={{ fontSize: ".65rem", color: "var(--muted)", marginTop: 4 }}>צפה ←</div>
           </div>
-        </Link>
+          <div style={{ padding: "12px 10px 14px" }}>
+            <MyOrdersList
+              orders={orders}
+              draw={draw}
+              prizes={prizes}
+              isDemo={isDemo}
+              loading={ordersLoading}
+              onError={setError}
+            />
+          </div>
+        </div>
 
         <div
           style={{
