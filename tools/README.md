@@ -6,8 +6,18 @@
 
 ### זרימה
 
-1. **אדמין** לוחץ «הדפס» → ההזמנה נשלחת לשרת המדפסת
-2. **שרת המדפסת** מעדכן את האתר: `POST /api/print/confirm/` → סטטוס **הודפס**
+1. **אדמין** לוחץ «הדפס» → ההזמנה נשלחת לשרת המדפסת (סטטוס **בדפוס**)
+2. **אחרי הדפסה מוצלחת** — שרת המדפסת קורא:
+
+   ```python
+   from tools.print_confirm import confirm_print_to_site
+
+   confirm_print_to_site(order_id, order_number, site_base_url=SITE_URL, api_key=PRINT_API_KEY)
+   ```
+
+   או ידנית: `POST {SITE}/api/print/confirm` עם header `x-api-key` וגוף `{ orderId, printedAt }` → סטטוס **הודפס**
+
+   CLI: `SITE_URL=... PRINT_API_KEY=... python tools/print_confirm.py 123 MAND-001`
 3. **scan_app** מושך הזמנות: `GET /api/print/orders/?status=printed`
 4. מפעיל סורק / בוחר PDF → `POST /api/print/scan/`
 5. סטטוס הופך ל-**הושלם** — הלקוח רואה «צפה בסריקה» בפרופיל

@@ -90,13 +90,27 @@ class ApiClient:
         self.base = base_url.rstrip("/")
         self.headers = {"x-api-key": api_key}
 
+    def _api_error(self, r: requests.Response) -> str:
+        if r.status_code == 401:
+            return (
+                "401 — ה-API Key לא מתאים. בדוק:\n"
+                "1. Railway → Backend → Variables → PRINT_API_KEY\n"
+                "2. שדה API Key באפליקציה — חייבים להיות זהים בדיוק"
+            )
+        try:
+            body = r.json()
+            return body.get("error") or body.get("detail") or r.text[:200]
+        except ValueError:
+            return r.text[:200] or f"HTTP {r.status_code}"
+
     def get_printed_orders(self):
         r = requests.get(
             f"{self.base}/api/print/orders",
             params={"status": "printed"},
             headers=self.headers, timeout=10
         )
-        r.raise_for_status()
+        if not r.ok:
+            raise RuntimeError(self._api_error(r))
         return r.json()
 
     def confirm_print(self, order_id: int):
@@ -105,7 +119,8 @@ class ApiClient:
             json={"orderId": order_id, "printedAt": datetime.now().isoformat()},
             headers=self.headers, timeout=10
         )
-        r.raise_for_status()
+        if not r.ok:
+            raise RuntimeError(self._api_error(r))
         return r.json()
 
     def upload_scan(self, order_id: int, pdf_bytes: bytes, order_number: str):
@@ -116,7 +131,8 @@ class ApiClient:
             data={"orderId": str(order_id)},
             timeout=30
         )
-        r.raise_for_status()
+        if not r.ok:
+            raise RuntimeError(self._api_error(r))
         return r.json()
 
 # ══════════════════════════════════════════════════════
