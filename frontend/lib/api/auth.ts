@@ -98,4 +98,15 @@ export const authService = {
     const { data } = await api.patch<ApiUser>(AUTH_ENDPOINTS.me, patch);
     return data;
   },
+
+  async changePassword(
+    current_password: string,
+    new_password: string,
+  ): Promise<{ detail: string }> {
+    const { data } = await api.post<{ detail: string }>(
+      AUTH_ENDPOINTS.changePassword,
+      { current_password, new_password },
+    );
+    return data;
+  },
 };

@@ -418,6 +418,33 @@ def google_login(request):
     )
 
 
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def change_password_view(request):
+    """POST { current_password, new_password } — authenticated password change."""
+    current = (request.data.get('current_password') or '').strip()
+    new_pw = (request.data.get('new_password') or '').strip()
+    if not current or not new_pw:
+        return Response(
+            {'detail': 'נדרשים סיסמה נוכחית וסיסמה חדשה.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(new_pw) < 8:
+        return Response(
+            {'detail': 'סיסמה חדשה חייבת להכיל לפחות 8 תווים.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    user = request.user
+    if not user.check_password(current):
+        return Response(
+            {'detail': 'הסיסמה הנוכחית שגויה.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    user.set_password(new_pw)
+    user.save(update_fields=['password'])
+    return Response({'detail': 'הסיסמה עודכנה בהצלחה.'})
+
+
 class MeView(RetrieveUpdateAPIView):
     """GET / PATCH the currently authenticated user."""
 

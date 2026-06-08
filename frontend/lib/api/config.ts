@@ -48,6 +48,7 @@ export const AUTH_ENDPOINTS = {
   refresh: "/auth/refresh/",
   verify: "/auth/verify/",
   me: "/auth/me/",
+  changePassword: "/auth/change-password/",
 } as const;
 
 let resolved: string | null = null;

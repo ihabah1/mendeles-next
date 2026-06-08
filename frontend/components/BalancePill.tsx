@@ -140,12 +140,12 @@ export default function BalancePill({ balance: initialBalance, name, compact }: 
       )}
 
       <div
-        onClick={isPurple ? dismiss : () => router.push("/topup")}
+        onClick={isPurple ? dismiss : () => router.push("/profile/topup")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             if (isPurple) dismiss();
-            else router.push("/topup");
+            else router.push("/profile/topup");
           }
         }}
         role="button"
@@ -240,7 +240,7 @@ export default function BalancePill({ balance: initialBalance, name, compact }: 
       {!compact && (
         <button
           type="button"
-          onClick={() => router.push("/topup")}
+          onClick={() => router.push("/profile/topup")}
           style={{
             background: "#c9a030",
             color: "#1c1208",

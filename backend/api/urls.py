@@ -33,6 +33,7 @@ auth_patterns = [
     path('refresh/', TokenRefreshView.as_view(), name='auth-refresh'),
     path('verify/', TokenVerifyView.as_view(), name='auth-verify'),
     path('me/', views.MeView.as_view(), name='auth-me'),
+    path('change-password/', views.change_password_view, name='auth-change-password'),
 ]
 
 wallet_patterns = [
