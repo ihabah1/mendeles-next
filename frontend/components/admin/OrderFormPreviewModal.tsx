@@ -49,7 +49,7 @@ export default function OrderFormPreviewModal({
         className="card"
         style={{
           width: "100%",
-          maxWidth: 480,
+          maxWidth: 440,
           padding: "18px 16px 20px",
           marginTop: 20,
         }}
