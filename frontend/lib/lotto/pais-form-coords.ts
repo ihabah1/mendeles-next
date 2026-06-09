@@ -1,6 +1,7 @@
 /**
  * Coordinates for marking numbers on the scanned PAIS lotto form image.
- * Row layout matches the official form (not the interactive web grid).
+ * Calibrated from public/images/pais-lotto-form.png (244×670).
+ * Row layout matches the official form (7 + 10 + 10 + 10 + strong column).
  */
 export const PAIS_FORM_IMAGE = "/images/pais-lotto-form.png";
 
@@ -14,16 +15,67 @@ export const PAIS_ROWS: readonly (readonly number[])[] = [
 
 export const PAIS_STRONG = [1, 2, 3, 4, 5, 6, 7] as const;
 
-/** Calibrated overlay (% of image width/height) for public/images/pais-lotto-form.png */
-const LAYOUT = {
-  tablesStartY: 10.6,
-  tablesEndY: 87.8,
-  tableCount: 14,
-  gridLeftX: 15.2,
-  gridRightX: 77.8,
-  strongCenterX: 86.8,
-  rowCenterY: [0.2, 0.4, 0.58, 0.76] as const,
-  strongCenterY: [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86] as const,
+/** Top edge (% of image height) for each of the 14 table bands. */
+const TABLE_TOPS = [
+  10.0, 15.672, 21.791, 27.463, 33.433, 39.254, 45.224, 52.09, 57.761, 63.731,
+  69.552, 75.522, 81.194, 87.164,
+] as const;
+
+/** Height (% of image) for each table band (non-uniform on the scan). */
+const TABLE_HEIGHTS = [
+  5.672, 6.119, 5.672, 5.97, 5.821, 5.97, 6.866, 5.672, 5.97, 5.821, 5.97, 5.672,
+  5.97, 5.373,
+] as const;
+
+/**
+ * Cell center within a table band: x = % of image width, y = % down from table top.
+ * Auto-detected from oval interiors on table 1.
+ */
+const CELL_IN_TABLE: Record<number | string, readonly [number, number]> = {
+  1: [11.475, 28.947],
+  2: [17.623, 28.947],
+  3: [23.77, 28.947],
+  4: [31.148, 28.947],
+  5: [38.115, 28.947],
+  6: [45.082, 28.947],
+  7: [52.049, 28.947],
+  8: [15.574, 44.737],
+  9: [24.18, 44.737],
+  10: [30.328, 44.737],
+  11: [37.295, 44.737],
+  12: [45.082, 44.737],
+  13: [52.049, 44.737],
+  14: [58.197, 44.737],
+  15: [65.164, 44.737],
+  16: [72.131, 44.737],
+  17: [77.459, 44.737],
+  18: [13.934, 63.158],
+  19: [20.902, 63.158],
+  20: [27.869, 63.158],
+  21: [34.836, 63.158],
+  22: [41.393, 63.158],
+  23: [48.361, 63.158],
+  24: [55.328, 63.158],
+  25: [62.295, 63.158],
+  26: [69.262, 63.158],
+  27: [76.23, 63.158],
+  28: [10.656, 78.947],
+  29: [17.213, 78.947],
+  30: [24.18, 78.947],
+  31: [31.148, 78.947],
+  32: [38.115, 78.947],
+  33: [44.672, 78.947],
+  34: [52.049, 78.947],
+  35: [58.607, 78.947],
+  36: [65.574, 78.947],
+  37: [72.541, 78.947],
+  s1: [81.557, 23.684],
+  s2: [83.197, 34.211],
+  s3: [81.557, 44.737],
+  s4: [84.016, 55.263],
+  s5: [83.197, 63.158],
+  s6: [85.656, 73.684],
+  s7: [86.475, 84.211],
 };
 
 export interface MarkPoint {
@@ -31,44 +83,33 @@ export interface MarkPoint {
   y: number;
 }
 
-function tableBand(setIndex: number) {
-  const span = LAYOUT.tablesEndY - LAYOUT.tablesStartY;
-  const h = span / LAYOUT.tableCount;
-  const top = LAYOUT.tablesStartY + (setIndex - 1) * h;
-  return { top, height: h };
+function tableGeometry(setIndex: number): { top: number; height: number } | null {
+  if (setIndex < 1 || setIndex > TABLE_TOPS.length) return null;
+  const i = setIndex - 1;
+  return { top: TABLE_TOPS[i], height: TABLE_HEIGHTS[i] };
 }
 
-function findNumberCell(num: number): { row: number; col: number } | null {
-  for (let row = 0; row < PAIS_ROWS.length; row++) {
-    const col = PAIS_ROWS[row].indexOf(num);
-    if (col >= 0) return { row, col };
-  }
-  return null;
+function pointInTable(
+  setIndex: number,
+  cell: readonly [number, number],
+): MarkPoint | null {
+  const geom = tableGeometry(setIndex);
+  if (!geom) return null;
+  const [x, yInTable] = cell;
+  return { x, y: geom.top + (yInTable / 100) * geom.height };
 }
 
 export function markForMainNumber(setIndex: number, num: number): MarkPoint | null {
-  if (setIndex < 1 || setIndex > 14) return null;
-  const cell = findNumberCell(num);
+  const cell = CELL_IN_TABLE[num];
   if (!cell) return null;
-
-  const { top, height } = tableBand(setIndex);
-  const cols = PAIS_ROWS[cell.row].length;
-  const y = top + LAYOUT.rowCenterY[cell.row] * height;
-  const xSpan = LAYOUT.gridRightX - LAYOUT.gridLeftX;
-  const x =
-    cols === 1
-      ? LAYOUT.gridLeftX + xSpan / 2
-      : LAYOUT.gridLeftX + (cell.col / (cols - 1)) * xSpan;
-  return { x, y };
+  return pointInTable(setIndex, cell);
 }
 
 export function markForStrongNumber(setIndex: number, strong: number): MarkPoint | null {
-  if (setIndex < 1 || setIndex > 14 || strong < 1 || strong > 7) return null;
-  const { top, height } = tableBand(setIndex);
-  return {
-    x: LAYOUT.strongCenterX,
-    y: top + LAYOUT.strongCenterY[strong - 1] * height,
-  };
+  if (strong < 1 || strong > 7) return null;
+  const cell = CELL_IN_TABLE[`s${strong}`];
+  if (!cell) return null;
+  return pointInTable(setIndex, cell);
 }
 
 export function marksForTable(
