@@ -8,13 +8,14 @@ Flow:
   4. Customer GET /orders/<id>/scan/ (JWT) or /print/scan/<id>/ (API key)
 """
 from django.conf import settings
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from admin_panel.portal.models import IntegrationLog, Order
+from admin_panel.portal.models import IntegrationLog, Order, PrintJob
 
 from api.services.integration_log import log_integration
 from api.staff import is_staff_portal_user
@@ -54,24 +55,44 @@ def _order_payload(o: Order) -> dict:
     }
 
 
+def _orders_awaiting_scan():
+    """Same rules as admin print-queue filter «ממתין לסריקה»."""
+    return (
+        Order.objects.select_related('customer')
+        .filter(
+            Q(print_job__status=PrintJob.Status.PRINTED)
+            | Q(status=Order.Status.PRINTED),
+        )
+        .filter(Q(scan_pdf__isnull=True) | Q(scan_pdf=b''))
+        .exclude(status=Order.Status.COMPLETED)
+        .order_by('-printed_at', '-created_at')
+        .distinct()[:100]
+    )
+
+
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def print_orders_list(request):
-    """GET /api/print/orders/?status=printed — for local scan app."""
+    """GET /api/print/orders/?status=awaiting_scan — for local scan app."""
     denied = _require_print_key(request)
     if denied:
         return denied
 
-    status_filter = (request.query_params.get('status') or 'printed').strip()
+    status_filter = (request.query_params.get('status') or 'awaiting_scan').strip()
     valid = {c.value for c in Order.Status}
-    if status_filter not in valid:
+    special = {'awaiting_scan', 'printed_pending_scan'}
+
+    if status_filter in special:
+        qs = _orders_awaiting_scan()
+    elif status_filter in valid:
+        qs = (
+            Order.objects.select_related('customer')
+            .filter(status=status_filter)
+            .order_by('-printed_at', '-created_at')[:100]
+        )
+    else:
         return Response({'error': 'סטטוס לא תקין'}, status=status.HTTP_400_BAD_REQUEST)
 
-    qs = (
-        Order.objects.select_related('customer')
-        .filter(status=status_filter)
-        .order_by('-printed_at', '-created_at')[:100]
-    )
     return Response([_order_payload(o) for o in qs])
 
 

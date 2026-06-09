@@ -286,6 +286,15 @@ def complete_job_for_order(order: Order) -> PrintJob | None:
     job.completed_at = timezone.now()
     job.last_error = ''
     job.save(update_fields=['status', 'completed_at', 'last_error', 'updated_at'])
+    order_updates: list[str] = []
+    if order.status not in (Order.Status.PRINTED, Order.Status.COMPLETED):
+        order.status = Order.Status.PRINTED
+        order_updates.append('status')
+    if not order.printed_at:
+        order.printed_at = timezone.now()
+        order_updates.append('printed_at')
+    if order_updates:
+        order.save(update_fields=order_updates)
     return job
 
 

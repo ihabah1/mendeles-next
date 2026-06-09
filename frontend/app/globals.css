@@ -731,6 +731,10 @@ p  { line-height: 1.7; }
   0%, 100% { filter: drop-shadow(0 0 4px rgba(232,192,96,.4)); }
   50% { filter: drop-shadow(0 0 12px rgba(232,192,96,.85)); }
 }
+@keyframes promo-ball-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
 @keyframes promo-cta-bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.04); }
@@ -868,7 +872,7 @@ p  { line-height: 1.7; }
 .promo-layout {
   display: grid;
   grid-template-columns: 1fr;
-  min-height: 0;
+  min-height: 100vh;
 }
 .promo-layout-main {
   min-width: 0;
@@ -879,23 +883,197 @@ p  { line-height: 1.7; }
 }
 @media (min-width: 1280px) {
   .promo-layout {
-    grid-template-columns: 168px minmax(0, 1fr) 168px;
+    grid-template-columns: 188px minmax(0, 1fr) 188px;
     gap: 0;
-    align-items: start;
+    align-items: stretch;
   }
   .promo-side-rail {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px 10px 24px;
+    gap: 10px;
+    padding: 0 10px 16px;
     position: sticky;
-    top: 58px;
-    max-height: calc(100vh - 70px);
+    top: 0;
+    min-height: 100vh;
+    max-height: 100vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+    background:
+      linear-gradient(180deg, #8a0e14 0%, #1c1208 108px, #221a12 180px, var(--bg4) 320px, var(--bg) 100%);
+    border-inline: 1px solid rgba(0,0,0,.06);
   }
-  .promo-side-rail--start { grid-column: 1; }
+  .promo-side-rail--start {
+    grid-column: 1;
+    border-inline-start: none;
+  }
   .promo-layout-main { grid-column: 2; }
-  .promo-side-rail--end { grid-column: 3; }
+  .promo-side-rail--end {
+    grid-column: 3;
+    border-inline-end: none;
+  }
+}
+
+.promo-side-rail-crown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 106px;
+  margin: 0 -10px 4px;
+  padding: 12px 8px;
+  background: linear-gradient(160deg, #b81820 0%, #8a0e14 55%, #1c1208 100%);
+  border-bottom: 2px solid #ffcc00;
+  overflow: hidden;
+}
+.promo-side-rail-crown-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,204,0,.28), transparent 65%);
+  animation: promo-glow-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+.promo-side-rail-crown-title {
+  position: relative;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #ffe8a0;
+  letter-spacing: 1px;
+}
+.promo-side-rail-crown-tag {
+  position: relative;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.82);
+}
+.promo-side-rail-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+}
+.promo-side-rail-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+.promo-side-rail-ticker {
+  position: relative;
+  min-height: 52px;
+  padding: 10px 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  text-align: center;
+}
+.promo-side-rail-ticker-line {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text2);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  padding: 0 6px;
+  line-height: 1.35;
+}
+.promo-side-rail-ticker-line.active {
+  opacity: 1;
+  transform: none;
+}
+.promo-side-rail-deco {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 8px;
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 10px,
+      rgba(201,160,48,.06) 10px,
+      rgba(201,160,48,.06) 11px
+    ),
+    var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  min-height: 180px;
+}
+.promo-side-rail-deco-orbit {
+  animation: promo-logo-pulse 2.8s ease-in-out infinite;
+}
+.promo-side-rail-deco-balls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  width: 100%;
+}
+.promo-side-rail-ball {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: var(--navy);
+  background: radial-gradient(circle at 35% 30%, #fff8e8, #e8c060 55%, #c9a030);
+  border: 1px solid #a07820;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,.12);
+  animation: promo-ball-float 3.6s ease-in-out infinite;
+}
+.promo-side-rail-ball:nth-child(2n) { animation-delay: 0.4s; }
+.promo-side-rail-ball:nth-child(3n) { animation-delay: 0.8s; }
+.promo-side-rail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.promo-side-rail-stat {
+  text-align: center;
+  padding: 6px 2px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.promo-side-rail-stat strong {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--gold-dark);
+  line-height: 1.1;
+}
+.promo-side-rail-stat small {
+  display: block;
+  font-size: 0.52rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.promo-side-rail-cta {
+  display: block;
+  text-align: center;
+  padding: 9px 10px;
+  font-size: 0.64rem;
+  font-weight: 900;
+  color: var(--navy);
+  background: linear-gradient(180deg, #ffe8a0, #e8c060);
+  border: 1px solid #c9a030;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.1);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.promo-side-rail-cta:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
 }
 
 .promo-side-rail-header {
@@ -959,6 +1137,16 @@ p  { line-height: 1.7; }
   border-color: #e84050;
   color: #ffe8ea;
 }
+.promo-rail-card--purple {
+  background: linear-gradient(160deg, #281838, #180c28);
+  border-color: #b060e8;
+  color: #f0e8ff;
+}
+.promo-rail-card--teal {
+  background: linear-gradient(160deg, #143038, #0a2028);
+  border-color: #40c8d8;
+  color: #e8ffff;
+}
 .promo-rail-card-icon { font-size: 1.6rem; line-height: 1; }
 .promo-rail-card-title {
   font-family: var(--font-display);
@@ -977,7 +1165,6 @@ p  { line-height: 1.7; }
   opacity: 0.75;
 }
 .promo-side-rail-badge {
-  margin-top: auto;
   text-align: center;
   padding: 10px 8px;
   background: var(--bg3);

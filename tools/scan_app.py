@@ -103,15 +103,24 @@ class ApiClient:
         except ValueError:
             return r.text[:200] or f"HTTP {r.status_code}"
 
-    def get_printed_orders(self):
+    def get_orders_awaiting_scan(self):
         r = requests.get(
             f"{self.base}/api/print/orders",
-            params={"status": "printed"},
+            params={"status": "awaiting_scan"},
             headers=self.headers, timeout=10
         )
         if not r.ok:
             raise RuntimeError(self._api_error(r))
-        return r.json()
+        data = r.json()
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("orders", "results", "data"):
+                if isinstance(data.get(key), list):
+                    return data[key]
+            if data.get("error") or data.get("detail"):
+                raise RuntimeError(data.get("error") or data.get("detail"))
+        raise RuntimeError(f"תשובה לא צפויה מהשרת: {str(data)[:200]}")
 
     def confirm_print(self, order_id: int):
         r = requests.post(
@@ -272,13 +281,20 @@ class ScanApp(tk.Tk):
         self.progress.start(10)
 
         def _fetch():
+            err_msg = None
             try:
-                orders = self.client.get_printed_orders()
+                orders = self.client.get_orders_awaiting_scan()
                 self.orders = orders
-                self.after(0, lambda: self._populate_table(orders))
-                self.after(0, lambda: self.set_status(f"✅ {len(orders)} הזמנות נטענו", "#1c8040"))
+                self.after(0, lambda o=orders: self._populate_table(o))
+                if orders:
+                    self.after(0, lambda n=len(orders): self.set_status(
+                        f"✅ {n} הזמנות ממתינות לסריקה", "#1c8040"))
+                else:
+                    self.after(0, lambda: self.set_status(
+                        "אין הזמנות לסריקה — סמן «הודפס» בדשבורד / תור הדפסה", "#5a4830"))
             except Exception as e:
-                self.after(0, lambda: self.set_status(f"❌ {e}", "#c01820"))
+                err_msg = str(e)
+                self.after(0, lambda msg=err_msg: self.set_status(f"❌ {msg}", "#c01820"))
             finally:
                 self.after(0, self.progress.stop)
                 self.after(0, lambda: self.progress.pack_forget())
@@ -341,8 +357,9 @@ class ScanApp(tk.Tk):
                 self.after(0, lambda: messagebox.showinfo(
                     "הצלחה", f"סריקה הועלתה בהצלחה!\nהלקוח יכול לראות אותה בחשבונו."))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("שגיאת סריקה", str(e)))
-                self.after(0, lambda: self.set_status(f"❌ {e}", "#c01820"))
+                err = str(e)
+                self.after(0, lambda msg=err: messagebox.showerror("שגיאת סריקה", msg))
+                self.after(0, lambda msg=err: self.set_status(f"❌ {msg}", "#c01820"))
             finally:
                 self.after(0, self.progress.stop)
                 self.after(0, lambda: self.progress.pack_forget())
@@ -375,7 +392,8 @@ class ScanApp(tk.Tk):
                     f"✅ הועלה — {o['orderNumber']}", "#1c8040"))
                 self.after(0, self.load_orders)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("שגיאה", str(e)))
+                err = str(e)
+                self.after(0, lambda msg=err: messagebox.showerror("שגיאה", msg))
             finally:
                 self.after(0, self.progress.stop)
                 self.after(0, lambda: self.progress.pack_forget())

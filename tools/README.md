@@ -41,7 +41,7 @@ python tools/print_agent.py
    או ידנית: `POST {SITE}/api/print/confirm` עם header `x-api-key` וגוף `{ orderId, printedAt }` → סטטוס **הודפס**
 
    CLI: `SITE_URL=... PRINT_API_KEY=... python tools/print_confirm.py 123 MAND-001`
-3. **scan_app** מושך הזמנות: `GET /api/print/orders/?status=printed`
+3. **scan_app** מושך הזמנות: `GET /api/print/orders/?status=awaiting_scan`
 4. מפעיל סורק / בוחר PDF → `POST /api/print/scan/`
 5. סטטוס הופך ל-**הושלם** — הלקוח רואה «צפה בסריקה» בפרופיל
 
