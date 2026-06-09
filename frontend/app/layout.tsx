@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import PromoLayout from "@/components/promo/PromoLayout";
 
 export const metadata: Metadata = {
   title: { template: "%s — Mandeles.co.il", default: "Mandeles.co.il — לוטו חכם" },
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <PromoLayout>{children}</PromoLayout>
+        </AuthProvider>
         <footer style={{ textAlign: "center", padding: "20px 16px", borderTop: "1px solid var(--border)", color: "var(--muted)", fontSize: ".7rem", lineHeight: 1.8, background: "var(--bg2)" }}>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <a href="/about" style={{ color: "var(--muted)", textDecoration: "none" }}>אודות</a>
