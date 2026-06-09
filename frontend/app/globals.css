@@ -134,8 +134,18 @@ p  { line-height: 1.7; }
 }
 .nav-link:hover  { color: #ffe8a0; background: rgba(255,255,255,.06); }
 .nav-link.active { color: #ffd860; background: rgba(201,168,76,.22); font-weight: 700; }
-.nav-links { display: flex; gap: 2px; flex: 1; justify-content: center; }
-.nav-actions { display: flex; align-items: center; gap: 6px; }
+.nav-links {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .nav-balance {
   background: var(--gold-bg);
   border: 1px solid var(--gold-border);
@@ -683,7 +693,16 @@ p  { line-height: 1.7; }
 @media (max-width: 600px) {
   .grid-2col { grid-template-columns: 1fr; }
   .perm-grid { grid-template-columns: 1fr !important; }
-  .nav-links { display: none; }
+  .nav { padding: 0 8px; }
+  .nav-inner { gap: 4px; }
+  .nav-links {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0;
+  }
+  .nav-link { font-size: 11px; padding: 4px 7px; }
+  .nav-logo .mandeles-logo-text { display: none; }
+  .nav-actions .btn-outline { padding: 4px 8px; font-size: 10px; }
   h1 { font-size: 1.5rem; }
 }
 

@@ -39,7 +39,7 @@ export default function Nav() {
   const hideToto = process.env.NEXT_PUBLIC_LOTTO_ONLY !== "false";
   const navLinks = [
     { href: "/lotto", label: "🎱 לוטו" },
-    { href: "/seven77", label: "777" },
+    { href: "/seven77", label: "🎰 777" },
     ...(hideToto ? [] : [{ href: "/toto", label: "⚽ טוטו" }]),
     { href: "/profile", label: "👤 פרופיל" },
   ];
