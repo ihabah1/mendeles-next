@@ -4,6 +4,7 @@
  * for the integration; extend with new resources as the API grows.
  */
 import api from "./client";
+import { openProtectedBlob } from "./blob-download";
 import type { Order, OrderInvoice, Paginated } from "./types";
 
 export const contentService = {
@@ -25,12 +26,7 @@ export const contentService = {
       return data;
     },
     async openScanPdf(orderId: number): Promise<void> {
-      const { data } = await api.get<Blob>(`/orders/${orderId}/scan/`, {
-        responseType: "blob",
-      });
-      const url = URL.createObjectURL(data);
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await openProtectedBlob(`/orders/${orderId}/scan/`);
     },
     async invoice(orderId: number): Promise<OrderInvoice> {
       const { data } = await api.get<OrderInvoice>(`/orders/${orderId}/invoice/`);

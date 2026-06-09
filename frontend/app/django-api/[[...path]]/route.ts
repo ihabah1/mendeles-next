@@ -52,17 +52,36 @@ async function proxy(
     init.body = await req.arrayBuffer();
   }
 
+  const isHeavyDownload =
+    req.method === "GET" &&
+    (suffix.includes("/scan") || suffix.includes("/invoice"));
+
   try {
     const res = await fetch(target, {
       ...init,
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(isHeavyDownload ? 120_000 : 45_000),
     });
-    const body = await res.arrayBuffer();
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       if (HOP_BY_HOP.has(key.toLowerCase())) return;
       responseHeaders.set(key, value);
     });
+
+    const contentType = res.headers.get("content-type") || "";
+    const streamBinary =
+      isHeavyDownload ||
+      contentType.includes("pdf") ||
+      contentType.includes("octet-stream");
+
+    if (streamBinary && res.body) {
+      return new NextResponse(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers: responseHeaders,
+      });
+    }
+
+    const body = await res.arrayBuffer();
     if (body.byteLength > 0) {
       responseHeaders.set("content-length", String(body.byteLength));
     }

@@ -1,5 +1,6 @@
 /** Admin dashboard service — staff-only endpoints on the Django API. */
 import api from "./client";
+import { openProtectedBlob } from "./blob-download";
 import type { PreviewForm } from "@/components/admin/LottoFormPreview";
 /** Admin dashboard order row (camelCase from /admin/orders/). */
 export interface AdminOrder {
@@ -205,12 +206,7 @@ export const adminService = {
   },
 
   async openOrderScan(orderId: number): Promise<void> {
-    const { data } = await api.get<Blob>(`/orders/${orderId}/scan/`, {
-      responseType: "blob",
-    });
-    const url = URL.createObjectURL(data);
-    window.open(url, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    await openProtectedBlob(`/orders/${orderId}/scan/`);
   },
 
   async getInvoice(orderId: number): Promise<{

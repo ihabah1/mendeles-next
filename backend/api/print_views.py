@@ -186,10 +186,15 @@ def print_scan_upload(request):
 
 
 def _scan_pdf_response(order: Order, filename: str) -> HttpResponse:
+    pdf = bytes(order.scan_pdf)
     return HttpResponse(
-        bytes(order.scan_pdf),
+        pdf,
         content_type='application/pdf',
-        headers={'Content-Disposition': f'inline; filename="{filename}"'},
+        headers={
+            'Content-Disposition': f'inline; filename="{filename}"',
+            'Content-Length': str(len(pdf)),
+            'Cache-Control': 'private, max-age=300',
+        },
     )
 
 
@@ -197,7 +202,11 @@ def _scan_pdf_response(order: Order, filename: str) -> HttpResponse:
 @permission_classes([permissions.AllowAny])
 def print_scan_download(request, order_id: int):
     """GET /api/print/scan/<id>/ — API key (scan app) or JWT owner/staff."""
-    order = Order.objects.select_related('customer').filter(pk=order_id).first()
+    order = (
+        Order.objects.filter(pk=order_id)
+        .only('id', 'order_number', 'scan_pdf', 'customer_id')
+        .first()
+    )
     if not order or not order.scan_pdf:
         return Response({'error': 'לא נמצאה סריקה'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -216,7 +225,11 @@ def print_scan_download(request, order_id: int):
 @permission_classes([permissions.IsAuthenticated])
 def customer_order_scan(request, order_id: int):
     """GET /api/orders/<id>/scan/ — customer downloads their form scan."""
-    order = Order.objects.filter(pk=order_id).first()
+    order = (
+        Order.objects.filter(pk=order_id)
+        .only('id', 'order_number', 'scan_pdf', 'customer_id')
+        .first()
+    )
     if not order or not order.scan_pdf:
         return Response({'error': 'לא נמצאה סריקה'}, status=status.HTTP_404_NOT_FOUND)
     if not is_staff_portal_user(request.user) and order.customer_id != request.user.id:
