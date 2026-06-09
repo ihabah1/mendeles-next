@@ -126,9 +126,13 @@ export function translateApiMessage(message: string): string {
   if (
     lower === "user not found" ||
     lower.includes("auth/user-not-found") ||
-    lower.includes("user-not-found")
+    lower.includes("user-not-found") ||
+    lower.includes("user_not_found")
   ) {
     return "לא נמצא חשבון — בדוק אימייל או הירשם מחדש";
+  }
+  if (m.includes("שם משתמש לא נמצא") || m.includes("משתמש לא נמצא")) {
+    return "החשבון לא נטען — נסה להתחבר עם האימייל והסיסמה, או שלח שוב אימייל אימות";
   }
   if (lower === "not found" || lower === "not found.") {
     return "הבקשה לא נמצאה — נסה שוב או פנה לתמיכה";

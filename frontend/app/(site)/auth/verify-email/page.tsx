@@ -13,7 +13,7 @@ function VerifyEmailForm() {
   const params = useSearchParams();
   const token = params.get("token") || "";
   const redirect = params.get("redirect") || "/lotto";
-  const { refreshUser } = useAuth();
+  const { establishSession, refreshUser } = useAuth();
 
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [message, setMessage] = useState("");
@@ -54,9 +54,12 @@ function VerifyEmailForm() {
       } catch (err) {
         setStatus("error");
         const msg = extractApiError(err, "אימות האימייל נכשל");
-        if (/user not found/i.test(msg)) {
+        if (
+          /user not found/i.test(msg) ||
+          /שם משתמש לא נמצא|משתמש לא נמצא|לא נמצא חשבון/i.test(msg)
+        ) {
           setMessage(
-            "קישור האימות לא תקף (ייתכן שכבר נעשה שימוש בו). נסה «שלח שוב אימייל אימות» מהרשמה, או התחבר.",
+            "האימייל אומת אך טעינת החשבון נכשלה. נסה להתחבר עם האימייל והסיסמה — אם לא עובד, שלח שוב אימייל אימות מהרשמה.",
           );
         } else if (/לא תקף|פג תוקפו/i.test(msg)) {
           setMessage(
@@ -67,7 +70,7 @@ function VerifyEmailForm() {
         }
       }
     })();
-  }, [token, redirect, router, refreshUser]);
+  }, [token, redirect, router, refreshUser, establishSession]);
 
   return (
     <div style={{ minHeight: "70vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>

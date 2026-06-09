@@ -39,6 +39,11 @@ interface AuthContextValue {
   register: (payload: RegisterPayload) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<ApiUser | null>;
+  /** Set session from verify-email / verify-phone without an extra /me/ round-trip. */
+  establishSession: (
+    user: ApiUser,
+    tokens?: { access: string; refresh: string },
+  ) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -97,6 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const establishSession = useCallback(
+    (sessionUser: ApiUser, tokens?: { access: string; refresh: string }) => {
+      if (tokens?.access && tokens?.refresh) {
+        tokenStore.set(tokens.access, tokens.refresh);
+      }
+      setUser(sessionUser);
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -108,8 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refreshUser,
+      establishSession,
     }),
-    [user, loading, login, register, logout, refreshUser],
+    [user, loading, login, register, logout, refreshUser, establishSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

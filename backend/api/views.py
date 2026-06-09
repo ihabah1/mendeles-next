@@ -450,6 +450,7 @@ class MeView(RetrieveUpdateAPIView):
     """GET / PATCH the currently authenticated user."""
 
     serializer_class = UserSerializer
+    authentication_classes = [JWTAllowInactiveAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
