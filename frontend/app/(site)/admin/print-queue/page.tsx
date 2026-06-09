@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
+import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
 import LottoFormPreview from "@/components/admin/LottoFormPreview";
 import PrintJobTimeline from "@/components/admin/PrintJobTimeline";
 import { adminService } from "@/lib/api/admin";
@@ -104,6 +105,8 @@ export function PrintQueuePageInner({
   const [printerStatus, setPrinterStatus] = useState<PrinterStatus | null>(null);
   const [canStartPrinting, setCanStartPrinting] = useState(false);
   const [filter, setFilter] = useState(defaultFilter);
+  const [hasScanFilter, setHasScanFilter] = useState<TriFilter>(null);
+  const [hasInvoiceFilter, setHasInvoiceFilter] = useState<TriFilter>(null);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [loading, setLoading] = useState(true);
@@ -131,6 +134,8 @@ export function PrintQueuePageInner({
       const res = await printQueueService.list({
         status: filter || undefined,
         q: searchDebounced || undefined,
+        has_scan: hasScanFilter ?? undefined,
+        has_invoice: hasInvoiceFilter ?? undefined,
       });
       setJobs(res.jobs);
       setCounts(res.counts);
@@ -145,7 +150,7 @@ export function PrintQueuePageInner({
     } finally {
       setLoading(false);
     }
-  }, [filter, searchDebounced]);
+  }, [filter, searchDebounced, hasScanFilter, hasInvoiceFilter]);
 
   useEffect(() => {
     load();
@@ -293,6 +298,13 @@ export function PrintQueuePageInner({
           )}
         </div>
 
+        <DocFilterChips
+          hasScan={hasScanFilter}
+          hasInvoice={hasInvoiceFilter}
+          onScanChange={setHasScanFilter}
+          onInvoiceChange={setHasInvoiceFilter}
+        />
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           {(isScanScreen
             ? FILTERS.filter((f) => ["", "awaiting_scan", "scanned", "printed"].includes(f.key))
@@ -312,6 +324,15 @@ export function PrintQueuePageInner({
           ))}
           <button type="button" className="btn btn-outline" style={{ fontSize: ".75rem" }} onClick={load}>
             🔄 רענון
+          </button>
+          <button
+            type="button"
+            className={`btn ${filter === "scanned" ? "btn-gold" : "btn-outline"}`}
+            style={{ fontSize: ".75rem" }}
+            onClick={() => setFilter((f) => (f === "scanned" ? "" : "scanned"))}
+          >
+            📄 הצג סריקות
+            {counts.scanned ? ` (${counts.scanned})` : ""}
           </button>
           {!isScanScreen && (
             <button

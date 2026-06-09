@@ -17,7 +17,8 @@ from api.services.icount_service import (
 )
 from api.services.integration_log import log_integration, recent_integration_logs
 from api.services.lotto_wins import check_and_credit_wins
-from api.services.order_search import apply_order_search
+from api.services.order_search import apply_order_doc_filters, apply_order_search
+from api.services.print_queue_service import _forms_from_sets
 from api.services.pais_draw import fetch_and_save_draw, read_draw_data
 from api.services.print_queue_service import approve_job, enqueue_order, job_to_dict
 from api.services.print_service import print_configured
@@ -67,6 +68,11 @@ def admin_orders(request):
         elif status_filter:
             qs = qs.filter(status=status_filter)
         qs = apply_order_search(qs, search_q)
+        qs = apply_order_doc_filters(
+            qs,
+            has_scan=request.query_params.get('has_scan'),
+            has_invoice=request.query_params.get('has_invoice'),
+        )
         qs = qs[:500]
         orders = []
         for o in qs:
@@ -114,6 +120,32 @@ def admin_orders(request):
     order.status = new_status
     order.save(update_fields=['status'])
     return Response({'status': 'ok'})
+
+
+@api_view(['GET'])
+@permission_classes([IsStaffUser])
+def admin_order_form_preview(request, order_id: int):
+    """GET /api/admin/orders/<id>/form-preview/ — marked lotto tables for staff UI."""
+    order = Order.objects.select_related('customer').filter(pk=order_id).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+
+    customer = order.customer
+    return Response({
+        'orderId': order.id,
+        'orderNumber': order.order_number,
+        'forms': _forms_from_sets(order.sets_json),
+        'drawDate': order.draw_name or '',
+        'isDouble': bool(order.is_double),
+        'lotteryId': order.lottery_id,
+        'tablesCount': order.forms_count,
+        'customerName': customer.display_name,
+        'user': {
+            'name': customer.display_name,
+            'phone': customer.phone,
+            'email': customer.email,
+        },
+    })
 
 
 @api_view(['GET'])

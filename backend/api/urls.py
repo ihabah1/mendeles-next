@@ -78,6 +78,11 @@ admin_patterns = [
         name='admin-permissions-user',
     ),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
+    path(
+        'orders/<int:order_id>/form-preview/',
+        admin_views.admin_order_form_preview,
+        name='admin-order-form-preview',
+    ),
     path('orders/<int:order_id>/print/', admin_views.admin_order_print, name='admin-order-print'),
     path('orders/<int:order_id>/invoice/', admin_views.admin_order_invoice, name='admin-order-invoice'),
     path('integration-logs/', admin_views.admin_integration_logs, name='admin-integration-logs'),

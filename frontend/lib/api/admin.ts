@@ -1,5 +1,6 @@
 /** Admin dashboard service — staff-only endpoints on the Django API. */
 import api from "./client";
+import type { PreviewForm } from "@/components/admin/LottoFormPreview";
 /** Admin dashboard order row (camelCase from /admin/orders/). */
 export interface AdminOrder {
   id: number;
@@ -53,7 +54,12 @@ export const adminService = {
     return data;
   },
 
-  async orders(params?: { status?: string; q?: string }): Promise<{
+  async orders(params?: {
+    status?: string;
+    q?: string;
+    has_scan?: boolean;
+    has_invoice?: boolean;
+  }): Promise<{
     orders: AdminOrder[];
     count: number;
     integrations?: { icount: IntegrationStatus; print: IntegrationStatus };
@@ -62,6 +68,10 @@ export const adminService = {
     const query: Record<string, string> = {};
     if (params?.status) query.status = params.status;
     if (params?.q?.trim()) query.q = params.q.trim();
+    if (params?.has_scan === true) query.has_scan = "true";
+    if (params?.has_scan === false) query.has_scan = "false";
+    if (params?.has_invoice === true) query.has_invoice = "true";
+    if (params?.has_invoice === false) query.has_invoice = "false";
     const { data } = await api.get<{
       orders: AdminOrder[];
       count: number;
@@ -170,6 +180,27 @@ export const adminService = {
     const { data } = await api.post("/admin/lotto/check-wins/", {
       dry_run: options?.dry_run ?? false,
     });
+    return data;
+  },
+
+  async getFormPreview(orderId: number): Promise<{
+    orderId: number;
+    orderNumber: string;
+    forms: PreviewForm[];
+    drawDate: string;
+    isDouble: boolean;
+    tablesCount: number;
+    customerName: string;
+  }> {
+    const { data } = await api.get<{
+      orderId: number;
+      orderNumber: string;
+      forms: PreviewForm[];
+      drawDate: string;
+      isDouble: boolean;
+      tablesCount: number;
+      customerName: string;
+    }>(`/admin/orders/${orderId}/form-preview/`);
     return data;
   },
 

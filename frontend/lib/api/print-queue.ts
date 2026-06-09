@@ -76,10 +76,19 @@ export interface PrintQueueResponse {
 }
 
 export const printQueueService = {
-  async list(params?: { status?: string; q?: string }): Promise<PrintQueueResponse> {
+  async list(params?: {
+    status?: string;
+    q?: string;
+    has_scan?: boolean;
+    has_invoice?: boolean;
+  }): Promise<PrintQueueResponse> {
     const query: Record<string, string> = {};
     if (params?.status) query.status = params.status;
     if (params?.q?.trim()) query.q = params.q.trim();
+    if (params?.has_scan === true) query.has_scan = "true";
+    if (params?.has_scan === false) query.has_scan = "false";
+    if (params?.has_invoice === true) query.has_invoice = "true";
+    if (params?.has_invoice === false) query.has_invoice = "false";
     const { data } = await api.get<PrintQueueResponse>("/admin/print-queue/", {
       params: Object.keys(query).length ? query : undefined,
     });

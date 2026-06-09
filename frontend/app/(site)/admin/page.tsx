@@ -3,6 +3,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
+import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
+import type { PreviewForm } from "@/components/admin/LottoFormPreview";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService, type IntegrationLogEntry, type IntegrationStatus } from "@/lib/api/admin";
 import { extractApiError } from "@/lib/api/client";
@@ -71,8 +74,20 @@ function AdminPageInner() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState("");
+  const [hasScanFilter, setHasScanFilter] = useState<TriFilter>(null);
+  const [hasInvoiceFilter, setHasInvoiceFilter] = useState<TriFilter>(null);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
+  const [formPreviewOpen, setFormPreviewOpen] = useState(false);
+  const [formPreviewLoading, setFormPreviewLoading] = useState(false);
+  const [formPreviewError, setFormPreviewError] = useState("");
+  const [formPreviewForms, setFormPreviewForms] = useState<PreviewForm[]>([]);
+  const [formPreviewMeta, setFormPreviewMeta] = useState<{
+    orderNumber: string;
+    customerName: string;
+    drawDate: string;
+    isDouble: boolean;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"orders"|"wins">("orders");
   const [winDate, setWinDate] = useState(new Date().toISOString().slice(0,10));
@@ -179,6 +194,8 @@ function AdminPageInner() {
           adminService.orders({
             status: filter || undefined,
             q: searchDebounced || undefined,
+            has_scan: hasScanFilter ?? undefined,
+            has_invoice: hasInvoiceFilter ?? undefined,
           }),
         ]);
         setStats(s);
@@ -197,7 +214,35 @@ function AdminPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [canManageOrders, legacyToken, filter, searchDebounced]);
+  }, [canManageOrders, legacyToken, filter, searchDebounced, hasScanFilter, hasInvoiceFilter]);
+
+  const viewFormSimulation = async (order: Order) => {
+    if (!canManageOrders) return;
+    setFormPreviewOpen(true);
+    setFormPreviewLoading(true);
+    setFormPreviewError("");
+    setFormPreviewForms([]);
+    setFormPreviewMeta({
+      orderNumber: order.orderNumber,
+      customerName: order.user?.name || "",
+      drawDate: order.drawDate,
+      isDouble: false,
+    });
+    try {
+      const data = await adminService.getFormPreview(order.id);
+      setFormPreviewForms(data.forms);
+      setFormPreviewMeta({
+        orderNumber: data.orderNumber,
+        customerName: data.customerName,
+        drawDate: data.drawDate,
+        isDouble: data.isDouble,
+      });
+    } catch (e) {
+      setFormPreviewError(extractApiError(e, "לא ניתן לטעון סימולציית טופס"));
+    } finally {
+      setFormPreviewLoading(false);
+    }
+  };
 
   const printOrder = async (orderId: number) => {
     if (!canManageOrders) return;
@@ -523,6 +568,12 @@ function AdminPageInner() {
                 </div>
               )}
             </div>
+            <DocFilterChips
+              hasScan={hasScanFilter}
+              hasInvoice={hasInvoiceFilter}
+              onScanChange={setHasScanFilter}
+              onInvoiceChange={setHasInvoiceFilter}
+            />
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               {STATUS_FILTERS.map(s => (
                 <button key={s || "all"} onClick={() => setFilter(s)}
@@ -563,6 +614,15 @@ function AdminPageInner() {
                   </select>
                   {canManageOrders && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        className="btn btn-gold"
+                        style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                        disabled={actionLoading === o.id}
+                        onClick={() => viewFormSimulation(o)}
+                      >
+                        📋 הצג סימולציה של הטופס
+                      </button>
                       <button
                         type="button"
                         className="btn btn-outline"
@@ -736,6 +796,18 @@ function AdminPageInner() {
           </div>
         )}
       </div>
+
+      <OrderFormPreviewModal
+        open={formPreviewOpen}
+        onClose={() => setFormPreviewOpen(false)}
+        orderNumber={formPreviewMeta?.orderNumber}
+        customerName={formPreviewMeta?.customerName}
+        drawDate={formPreviewMeta?.drawDate}
+        isDouble={formPreviewMeta?.isDouble}
+        forms={formPreviewForms}
+        loading={formPreviewLoading}
+        error={formPreviewError}
+      />
     </>
   );
 }

@@ -8,7 +8,7 @@ from admin_panel.portal.models import PrintJob
 from api.admin_views import IsStaffUser
 from api.print_views import _require_print_key
 from api.services.integration_log import log_integration
-from api.services.order_search import apply_order_search
+from api.services.order_search import apply_order_doc_filters, apply_order_search
 from api.services.print_queue_service import (
     ACTIVE_STATUSES,
     approve_job,
@@ -41,6 +41,12 @@ def admin_print_queue(request):
         .order_by('-priority', '-created_at')
     )
     qs = apply_order_search(qs, search_q, prefix='order__')
+    qs = apply_order_doc_filters(
+        qs,
+        has_scan=request.query_params.get('has_scan'),
+        has_invoice=request.query_params.get('has_invoice'),
+        prefix='order__',
+    )
     if status_filter == 'awaiting_scan':
         qs = qs.filter(
             status=PrintJob.Status.PRINTED,
