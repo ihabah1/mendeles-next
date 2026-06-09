@@ -400,7 +400,14 @@ function AdminPageInner() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>🎯 דשבורד אדמין</span>
-          <Link href="/admin/print-queue" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+          <Link
+            href="/admin/scan"
+            className="btn btn-gold"
+            style={{ fontSize: ".78rem", fontWeight: 800, boxShadow: "0 2px 10px rgba(29,185,106,.25)" }}
+          >
+            📷 מסך סריקה
+          </Link>
+          <Link href="/admin/print-queue" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             🖨️ תור הדפסה
           </Link>
           <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>

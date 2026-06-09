@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
@@ -79,20 +80,30 @@ const FILTERS = [
   { key: "scanned", label: "נסרק 📄" },
 ];
 
-export default function AdminPrintQueuePage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <PrintQueuePageInner />
-    </ProtectedRoute>
-  );
-}
+export type PrintQueuePageVariant = "queue" | "scan";
 
-function PrintQueuePageInner() {
+export type PrintQueuePageProps = {
+  variant?: PrintQueuePageVariant;
+  initialFilter?: string;
+};
+
+export function PrintQueuePageInner({
+  variant = "queue",
+  initialFilter = "",
+}: PrintQueuePageProps) {
+  const searchParams = useSearchParams();
+  const urlStatus = (searchParams.get("status") || "").trim();
+  const defaultFilter =
+    variant === "scan"
+      ? "awaiting_scan"
+      : urlStatus || initialFilter;
+
+  const isScanScreen = variant === "scan";
   const [jobs, setJobs] = useState<PrintQueueJob[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [printerStatus, setPrinterStatus] = useState<PrinterStatus | null>(null);
   const [canStartPrinting, setCanStartPrinting] = useState(false);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState(defaultFilter);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [loading, setLoading] = useState(true);
@@ -106,6 +117,12 @@ function PrintQueuePageInner() {
     const t = setTimeout(() => setSearchDebounced(search.trim()), 350);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    if (variant === "queue" && urlStatus) {
+      setFilter(urlStatus);
+    }
+  }, [urlStatus, variant]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -202,16 +219,64 @@ function PrintQueuePageInner() {
             flexWrap: "wrap",
           }}
         >
-          <span>🖨️ תור הדפסה</span>
+          <span>{isScanScreen ? "📷 מסך סריקה" : "🖨️ תור הדפסה"}</span>
+          {isScanScreen && counts.awaiting_scan ? (
+            <span
+              style={{
+                fontSize: ".78rem",
+                fontWeight: 700,
+                color: "#1db96a",
+                background: "rgba(29,185,106,.15)",
+                border: "1px solid #1db96a",
+                borderRadius: 999,
+                padding: "4px 12px",
+              }}
+            >
+              {counts.awaiting_scan} ממתינות לסריקה
+            </span>
+          ) : null}
           <Link href="/admin" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             ← דשבורד
           </Link>
-          <Link href="/admin/permissions" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+          {isScanScreen ? (
+            <Link href="/admin/print-queue" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
+              🖨️ תור הדפסה מלא
+            </Link>
+          ) : (
+            <Link href="/admin/scan" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
+              📷 מסך סריקה
+            </Link>
+          )}
+          <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             🔐 הרשאות
           </Link>
         </div>
 
-        <PrinterStatusBanner status={printerStatus} counts={counts} loading={loading} />
+        {isScanScreen && (
+          <div
+            className="card"
+            style={{
+              marginBottom: 16,
+              padding: "14px 16px",
+              fontSize: ".8rem",
+              lineHeight: 1.55,
+              borderColor: "#1db96a",
+              background: "rgba(29,185,106,.08)",
+            }}
+          >
+            <strong style={{ color: "var(--cream)" }}>סריקה מקומית (scan_app)</strong>
+            <p style={{ margin: "8px 0 0", color: "var(--muted)" }}>
+              הרץ על מחשב הסריקה:{" "}
+              <code style={{ color: "var(--gold)" }}>python tools/scan_app.py</code>
+              {" "}— הזמנות שסומנו כ<strong>הודפס</strong> יופיעו שם. אחרי העלאת PDF הסטטוס הופך ל
+              <strong> הושלם</strong> והלקוח רואה את הסריקה בפרופיל.
+            </p>
+          </div>
+        )}
+
+        {!isScanScreen && (
+          <PrinterStatusBanner status={printerStatus} counts={counts} loading={loading} />
+        )}
 
         <div style={{ marginBottom: 12 }}>
           <input
@@ -229,7 +294,10 @@ function PrintQueuePageInner() {
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          {FILTERS.map((f) => (
+          {(isScanScreen
+            ? FILTERS.filter((f) => ["", "awaiting_scan", "scanned", "printed"].includes(f.key))
+            : FILTERS
+          ).map((f) => (
             <button
               key={f.key || "all"}
               type="button"
@@ -245,20 +313,22 @@ function PrintQueuePageInner() {
           <button type="button" className="btn btn-outline" style={{ fontSize: ".75rem" }} onClick={load}>
             🔄 רענון
           </button>
-          <button
-            type="button"
-            className="btn btn-gold"
-            style={{ fontSize: ".75rem" }}
-            disabled={!selected.size || actionId !== null}
-            title={
-              canStartPrinting
-                ? "המדפסת מחוברת — האישור יישלח מיד להדפסה"
-                : "האישור יישמר בתור — ההדפסה תתחיל כשהמדפסת תתחבר"
-            }
-            onClick={approveSelected}
-          >
-            {canStartPrinting ? "▶ אשר והדפס" : "אשר לתור"} ({selected.size})
-          </button>
+          {!isScanScreen && (
+            <button
+              type="button"
+              className="btn btn-gold"
+              style={{ fontSize: ".75rem" }}
+              disabled={!selected.size || actionId !== null}
+              title={
+                canStartPrinting
+                  ? "המדפסת מחוברת — האישור יישלח מיד להדפסה"
+                  : "האישור יישמר בתור — ההדפסה תתחיל כשהמדפסת תתחבר"
+              }
+              onClick={approveSelected}
+            >
+              {canStartPrinting ? "▶ אשר והדפס" : "אשר לתור"} ({selected.size})
+            </button>
+          )}
         </div>
 
         {message && (
@@ -271,7 +341,11 @@ function PrintQueuePageInner() {
         {loading && !jobs.length ? (
           <p style={{ color: "var(--muted)" }}>טוען...</p>
         ) : !jobs.length ? (
-          <p style={{ color: "var(--muted)" }}>אין משימות בתור — הזמנות חדשות נכנסות אוטומטית אחרי שליחה.</p>
+          <p style={{ color: "var(--muted)" }}>
+            {isScanScreen
+              ? "אין הזמנות ממתינות לסריקה — סמן «הודפס» או «דלג לסריקה» בתור ההדפסה, ואז רענן scan_app."
+              : "אין משימות בתור — הזמנות חדשות נכנסות אוטומטית אחרי שליחה."}
+          </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {jobs.map((j) => (
@@ -290,18 +364,20 @@ function PrintQueuePageInner() {
           </div>
         )}
 
-        <div
-          className="card"
-          style={{ marginTop: 24, padding: 16, fontSize: ".82rem", color: "var(--muted)", lineHeight: 1.6 }}
-        >
-          <strong style={{ color: "var(--cream)" }}>איך זה עובד:</strong>
-          <ol style={{ margin: "8px 0 0", paddingRight: 20 }}>
-            <li>לקוח שולח טופס → נכנס אוטומטית לתור (סטטוס «בתור»).</li>
-            <li>צוות מאשר → «מאושר» — הסוכן המקומי מושך ומדפיס.</li>
-            <li>אחרי הדפסה → confirm → «הודפס» → scan_app → «הושלם».</li>
-            <li>«דלג לסריקה» — מדלג על הדפסה פיזית, מסמן כהודפס ומעביר ל-scan_app.</li>
-          </ol>
-        </div>
+        {!isScanScreen && (
+          <div
+            className="card"
+            style={{ marginTop: 24, padding: 16, fontSize: ".82rem", color: "var(--muted)", lineHeight: 1.6 }}
+          >
+            <strong style={{ color: "var(--cream)" }}>איך זה עובד:</strong>
+            <ol style={{ margin: "8px 0 0", paddingRight: 20 }}>
+              <li>לקוח שולח טופס → נכנס אוטומטית לתור (סטטוס «בתור»).</li>
+              <li>צוות מאשר → «מאושר» — הסוכן המקומי מושך ומדפיס.</li>
+              <li>אחרי הדפסה → confirm → «הודפס» → scan_app → «הושלם».</li>
+              <li>«דלג לסריקה» — מדלג על הדפסה פיזית, מסמן כהודפס ומעביר ל-scan_app.</li>
+            </ol>
+          </div>
+        )}
       </main>
       <style>{`
         @keyframes printer-pulse {
@@ -310,6 +386,16 @@ function PrintQueuePageInner() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function AdminPrintQueuePage() {
+  return (
+    <ProtectedRoute adminOnly>
+      <Suspense fallback={<p style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>טוען תור הדפסה...</p>}>
+        <PrintQueuePageInner variant="queue" />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
 
