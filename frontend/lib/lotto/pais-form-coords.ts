@@ -1,9 +1,10 @@
 /**
- * Coordinates for marking numbers on the scanned PAIS lotto form image.
- * Calibrated from public/images/pais-lotto-form.png (244×670).
- * Row layout matches the official form (7 + 10 + 10 + 10 + strong column).
+ * Pixel coordinates for marks on public/images/pais-lotto-form.png (244×670).
+ * Calibrated by scanning oval interiors; Y varies per table band.
  */
 export const PAIS_FORM_IMAGE = "/images/pais-lotto-form.png";
+export const PAIS_FORM_WIDTH = 244;
+export const PAIS_FORM_HEIGHT = 670;
 
 /** Official PAIS form rows — 7 + 10 + 10 + 10 cells. */
 export const PAIS_ROWS: readonly (readonly number[])[] = [
@@ -15,101 +16,86 @@ export const PAIS_ROWS: readonly (readonly number[])[] = [
 
 export const PAIS_STRONG = [1, 2, 3, 4, 5, 6, 7] as const;
 
-/** Top edge (% of image height) for each of the 14 table bands. */
-const TABLE_TOPS = [
-  10.0, 15.672, 21.791, 27.463, 33.433, 39.254, 45.224, 52.09, 57.761, 63.731,
-  69.552, 75.522, 81.194, 87.164,
-] as const;
-
-/** Height (% of image) for each table band (non-uniform on the scan). */
-const TABLE_HEIGHTS = [
-  5.672, 6.119, 5.672, 5.97, 5.821, 5.97, 6.866, 5.672, 5.97, 5.821, 5.97, 5.672,
-  5.97, 5.373,
-] as const;
-
-/**
- * Cell center within a table band: x = % of image width, y = % down from table top.
- * Auto-detected from oval interiors on table 1.
- */
-const CELL_IN_TABLE: Record<number | string, readonly [number, number]> = {
-  1: [11.475, 28.947],
-  2: [17.623, 28.947],
-  3: [23.77, 28.947],
-  4: [31.148, 28.947],
-  5: [38.115, 28.947],
-  6: [45.082, 28.947],
-  7: [52.049, 28.947],
-  8: [15.574, 44.737],
-  9: [24.18, 44.737],
-  10: [30.328, 44.737],
-  11: [37.295, 44.737],
-  12: [45.082, 44.737],
-  13: [52.049, 44.737],
-  14: [58.197, 44.737],
-  15: [65.164, 44.737],
-  16: [72.131, 44.737],
-  17: [77.459, 44.737],
-  18: [13.934, 63.158],
-  19: [20.902, 63.158],
-  20: [27.869, 63.158],
-  21: [34.836, 63.158],
-  22: [41.393, 63.158],
-  23: [48.361, 63.158],
-  24: [55.328, 63.158],
-  25: [62.295, 63.158],
-  26: [69.262, 63.158],
-  27: [76.23, 63.158],
-  28: [10.656, 78.947],
-  29: [17.213, 78.947],
-  30: [24.18, 78.947],
-  31: [31.148, 78.947],
-  32: [38.115, 78.947],
-  33: [44.672, 78.947],
-  34: [52.049, 78.947],
-  35: [58.607, 78.947],
-  36: [65.574, 78.947],
-  37: [72.541, 78.947],
-  s1: [81.557, 23.684],
-  s2: [83.197, 34.211],
-  s3: [81.557, 44.737],
-  s4: [84.016, 55.263],
-  s5: [83.197, 63.158],
-  s6: [85.656, 73.684],
-  s7: [86.475, 84.211],
+const NUM_ROW: Record<number, number> = {
+  1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0,
+  8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1,
+  18: 2, 19: 2, 20: 2, 21: 2, 22: 2, 23: 2, 24: 2, 25: 2, 26: 2, 27: 2,
+  28: 3, 29: 3, 30: 3, 31: 3, 32: 3, 33: 3, 34: 3, 35: 3, 36: 3, 37: 3,
 };
+
+/** X center (px) per number — shared across all 14 tables. */
+const NUM_X: Record<number, number> = {
+  1: 28, 2: 43, 3: 58, 4: 76, 5: 93, 6: 110, 7: 127,
+  8: 38, 9: 59, 10: 74, 11: 91, 12: 110, 13: 127, 14: 142, 15: 159, 16: 176, 17: 189,
+  18: 34, 19: 51, 20: 68, 21: 85, 22: 101, 23: 118, 24: 135, 25: 152, 26: 169, 27: 186,
+  28: 26, 29: 42, 30: 59, 31: 76, 32: 93, 33: 109, 34: 127, 35: 143, 36: 160, 37: 177,
+};
+
+const STRONG_X: Record<number, number> = {
+  1: 199, 2: 203, 3: 191, 4: 207, 5: 203, 6: 210, 7: 211,
+};
+
+/** Row Y center (px) for each of the 14 tables. */
+const TABLE_ROW_Y: readonly (readonly number[])[] = [
+  [78, 84, 91, 97],
+  [116, 123, 131, 138],
+  [157, 163, 170, 176],
+  [195, 202, 209, 216],
+  [235, 242, 248, 255],
+  [274, 281, 288, 295],
+  [315, 323, 332, 340],
+  [360, 366, 373, 379],
+  [398, 405, 412, 419],
+  [438, 445, 451, 458],
+  [477, 484, 491, 498],
+  [517, 523, 530, 536],
+  [555, 562, 569, 576],
+  [595, 601, 608, 614],
+] as const;
+
+const TABLE_STRONG_Y: readonly (readonly number[])[] = [
+  [76, 80, 84, 88, 91, 95, 99],
+  [115, 119, 123, 127, 131, 135, 139],
+  [155, 159, 163, 167, 170, 174, 178],
+  [194, 198, 202, 206, 210, 214, 218],
+  [233, 237, 241, 245, 249, 253, 257],
+  [273, 277, 281, 285, 289, 293, 297],
+  [313, 318, 323, 328, 332, 337, 342],
+  [358, 362, 366, 370, 373, 377, 381],
+  [397, 401, 405, 409, 413, 417, 421],
+  [436, 440, 444, 448, 452, 456, 460],
+  [476, 480, 484, 488, 492, 496, 500],
+  [515, 519, 523, 527, 530, 534, 538],
+  [554, 558, 562, 566, 570, 574, 578],
+  [593, 597, 601, 605, 608, 612, 616],
+] as const;
 
 export interface MarkPoint {
   x: number;
   y: number;
 }
 
-function tableGeometry(setIndex: number): { top: number; height: number } | null {
-  if (setIndex < 1 || setIndex > TABLE_TOPS.length) return null;
-  const i = setIndex - 1;
-  return { top: TABLE_TOPS[i], height: TABLE_HEIGHTS[i] };
-}
+export const MARK_WIDTH = 18;
+export const MARK_HEIGHT = 3;
 
-function pointInTable(
-  setIndex: number,
-  cell: readonly [number, number],
-): MarkPoint | null {
-  const geom = tableGeometry(setIndex);
-  if (!geom) return null;
-  const [x, yInTable] = cell;
-  return { x, y: geom.top + (yInTable / 100) * geom.height };
+function tableIndex(setIndex: number): number | null {
+  if (setIndex < 1 || setIndex > TABLE_ROW_Y.length) return null;
+  return setIndex - 1;
 }
 
 export function markForMainNumber(setIndex: number, num: number): MarkPoint | null {
-  const cell = CELL_IN_TABLE[num];
-  if (!cell) return null;
-  return pointInTable(setIndex, cell);
+  const ti = tableIndex(setIndex);
+  const row = NUM_ROW[num];
+  const x = NUM_X[num];
+  if (ti === null || row === undefined || x === undefined) return null;
+  return { x, y: TABLE_ROW_Y[ti][row] };
 }
 
 export function markForStrongNumber(setIndex: number, strong: number): MarkPoint | null {
-  if (strong < 1 || strong > 7) return null;
-  const cell = CELL_IN_TABLE[`s${strong}`];
-  if (!cell) return null;
-  return pointInTable(setIndex, cell);
+  const ti = tableIndex(setIndex);
+  const x = STRONG_X[strong];
+  if (ti === null || strong < 1 || strong > 7 || x === undefined) return null;
+  return { x, y: TABLE_STRONG_Y[ti][strong - 1] };
 }
 
 export function marksForTable(

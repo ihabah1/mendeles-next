@@ -1,28 +1,24 @@
 "use client";
 
 import {
+  MARK_HEIGHT,
+  MARK_WIDTH,
+  PAIS_FORM_HEIGHT,
   PAIS_FORM_IMAGE,
+  PAIS_FORM_WIDTH,
   marksForTable,
 } from "@/lib/lotto/pais-form-coords";
 import type { PreviewTable } from "./LottoFormPreview";
 
 function Mark({ x, y }: { x: number; y: number }) {
   return (
-    <span
-      className="pais-form-mark"
-      style={{
-        position: "absolute",
-        left: `${x}%`,
-        top: `${y}%`,
-        width: "4.1%",
-        height: "0.36%",
-        transform: "translate(-50%, -50%)",
-        background: "#1a1a2e",
-        borderRadius: 1,
-        boxShadow: "0 0 1px rgba(0,0,0,.35)",
-        pointerEvents: "none",
-      }}
-      aria-hidden
+    <rect
+      x={x - MARK_WIDTH / 2}
+      y={y - MARK_HEIGHT / 2}
+      width={MARK_WIDTH}
+      height={MARK_HEIGHT}
+      fill="#1a1a2e"
+      rx={0.5}
     />
   );
 }
@@ -91,17 +87,22 @@ export default function PaisLottoFormSheet({
           style={{ width: "100%", height: "auto", display: "block" }}
           draggable={false}
         />
-        <div
+        <svg
+          viewBox={`0 0 ${PAIS_FORM_WIDTH} ${PAIS_FORM_HEIGHT}`}
+          preserveAspectRatio="none"
           style={{
             position: "absolute",
             inset: 0,
+            width: "100%",
+            height: "100%",
             pointerEvents: "none",
           }}
+          aria-hidden
         >
           {marks.map((m, i) => (
             <Mark key={`${m.x}-${m.y}-${i}`} x={m.x} y={m.y} />
           ))}
-        </div>
+        </svg>
       </div>
       <p style={{ fontSize: ".58rem", color: "var(--muted)", textAlign: "center", marginTop: 6 }}>
         סימולציה על טופס פיס · קו שחור = סימון הלקוח
