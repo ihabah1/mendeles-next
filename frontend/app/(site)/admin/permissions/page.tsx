@@ -6,6 +6,7 @@ import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
+import { balanceAdminService } from "@/lib/api/balance-admin";
 import {
   permissionsAdminService,
   type ManagedUser,
@@ -30,6 +31,8 @@ function PermissionsPageInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceNote, setBalanceNote] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +58,11 @@ function PermissionsPageInner() {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
   }, [load]);
+
+  useEffect(() => {
+    setBalanceAmount("");
+    setBalanceNote("");
+  }, [selected?.id]);
 
   const run = async (fn: () => Promise<ManagedUser>, okMsg: string) => {
     setSaving(true);
@@ -148,6 +156,7 @@ function PermissionsPageInner() {
                     <span className="badge badge-muted">{u.roleLabel}</span>
                     {u.isPremium && <span className="badge badge-gold">Premium</span>}
                     {!u.isActive && <span className="badge badge-red">לא פעיל</span>}
+                    <span className="badge badge-gold">₪{(u.balanceIls ?? 0).toFixed(0)}</span>
                   </div>
                 </button>
               ))
@@ -201,6 +210,70 @@ function PermissionsPageInner() {
                       בטל Premium
                     </button>
                   </div>
+                </div>
+
+                <div className="lotto-panel" style={{ marginBottom: 14, padding: 12 }}>
+                  <div className="lotto-panel-title" style={{ marginBottom: 8 }}>💳 יתרת ארנק</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--gold)", marginBottom: 10 }}>
+                    ₪{(selected.balanceIls ?? 0).toFixed(2)}
+                  </div>
+                  <label style={{ display: "block", fontSize: ".72rem", color: "var(--text2)", marginBottom: 6 }}>
+                    הוסף יתרה (₪)
+                  </label>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={balanceAmount}
+                    onChange={(e) => setBalanceAmount(e.target.value)}
+                    placeholder="לדוגמה: 100"
+                    style={{ marginBottom: 8 }}
+                  />
+                  <input
+                    className="input"
+                    value={balanceNote}
+                    onChange={(e) => setBalanceNote(e.target.value)}
+                    placeholder="הערה (אופציונלי)"
+                    style={{ marginBottom: 10 }}
+                  />
+                  {balanceAmount && !Number.isNaN(parseFloat(balanceAmount)) && (
+                    <p style={{ fontSize: ".68rem", color: "var(--muted)", marginBottom: 10 }}>
+                      יתרה לאחר הוספה: ₪
+                      {(selected.balanceIls + parseFloat(balanceAmount.replace(",", "."))).toFixed(2)}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-gold btn-sm"
+                    disabled={saving || !balanceAmount.trim() || parseFloat(balanceAmount) <= 0}
+                    onClick={async () => {
+                      const amount = parseFloat(balanceAmount.replace(",", "."));
+                      if (Number.isNaN(amount) || amount <= 0) return;
+                      setSaving(true);
+                      setError("");
+                      setMessage("");
+                      try {
+                        const res = await balanceAdminService.adjustBalance(
+                          selected.id,
+                          amount,
+                          balanceNote.trim() || undefined,
+                        );
+                        const updated = { ...selected, balanceIls: res.user.balanceIls };
+                        setSelected(updated);
+                        setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+                        setBalanceAmount("");
+                        setBalanceNote("");
+                        setMessage(`נוספו ₪${amount.toFixed(2)} — יתרה: ₪${res.user.balanceIls.toFixed(2)}`);
+                      } catch (e) {
+                        setError(extractApiError(e, "שגיאה בעדכון יתרה"));
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    הוסף יתרה
+                  </button>
                 </div>
 
                 {isAdmin && (

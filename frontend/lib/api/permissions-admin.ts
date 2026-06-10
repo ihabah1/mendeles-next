@@ -21,6 +21,7 @@ export interface ManagedUser {
   isPremium: boolean;
   premiumExpiresAt: string | null;
   dateJoined: string;
+  balanceIls: number;
   permissions: PermissionRow[];
 }
 

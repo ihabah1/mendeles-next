@@ -104,6 +104,7 @@ def _user_summary(user) -> dict:
         .order_by('-expires_at')
         .first()
     )
+    _, credit = ensure_customer_records(user)
     return {
         'id': user.id,
         'email': user.email,
@@ -117,6 +118,7 @@ def _user_summary(user) -> dict:
         'isPremium': _is_premium(user),
         'premiumExpiresAt': sub.expires_at.isoformat() if sub and sub.expires_at else None,
         'dateJoined': user.date_joined.isoformat(),
+        'balanceIls': float(credit.balance_ils),
         'permissions': _permissions_list(user),
     }
 
