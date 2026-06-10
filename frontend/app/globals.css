@@ -558,6 +558,61 @@ p  { line-height: 1.7; }
 .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid #f0b0b0; }
 .badge-muted { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
 
+/* ── Admin nav tabs ── */
+.admin-tabs-shell {
+  margin-bottom: 18px;
+}
+.admin-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  background: #2f4570;
+  padding: 6px 6px 0;
+  gap: 0;
+  border-radius: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  border-radius: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.admin-tab--inactive {
+  background: #4a608f;
+  color: rgba(255, 255, 255, .92);
+  border-inline-start: 1px solid #3a5178;
+}
+.admin-tab--inactive:first-child {
+  border-inline-start: none;
+}
+.admin-tab--inactive:hover {
+  background: #556a99;
+  color: #fff;
+}
+.admin-tab--active {
+  background: var(--bg2);
+  color: var(--navy);
+  padding-bottom: 11px;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 -1px 0 var(--bg2);
+}
+.admin-tab--external {
+  margin-inline-start: auto;
+}
+
 /* ── Profile tabs ── */
 .profile-page {
   max-width: 820px;

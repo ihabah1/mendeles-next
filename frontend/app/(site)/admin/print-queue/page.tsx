@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Nav from "@/components/Nav";
+import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
@@ -211,10 +212,11 @@ export function PrintQueuePageInner({
     <>
       <Nav />
       <main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px" }}>
+        <AdminNavTabs active={isScanScreen ? "scan" : "print-queue"} />
         <div
           style={{
             fontFamily: "'Frank Ruhl Libre',serif",
-            fontSize: "1.4rem",
+            fontSize: "1.35rem",
             fontWeight: 900,
             color: "var(--cream)",
             marginBottom: 16,
@@ -224,7 +226,9 @@ export function PrintQueuePageInner({
             flexWrap: "wrap",
           }}
         >
-          <span>{isScanScreen ? "📷 מסך סריקה" : "🖨️ תור הדפסה"}</span>
+          <h1 style={{ margin: 0, font: "inherit" }}>
+            {isScanScreen ? "📷 מסך סריקה" : "🖨️ תור הדפסה"}
+          </h1>
           {isScanScreen && counts.awaiting_scan ? (
             <span
               style={{
@@ -240,21 +244,6 @@ export function PrintQueuePageInner({
               {counts.awaiting_scan} ממתינות לסריקה
             </span>
           ) : null}
-          <Link href="/admin" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            ← דשבורד
-          </Link>
-          {isScanScreen ? (
-            <Link href="/admin/print-queue" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-              🖨️ תור הדפסה מלא
-            </Link>
-          ) : (
-            <Link href="/admin/scan" className="btn btn-gold" style={{ fontSize: ".72rem" }}>
-              📷 מסך סריקה
-            </Link>
-          )}
-          <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            🔐 הרשאות
-          </Link>
         </div>
 
         {isScanScreen && (

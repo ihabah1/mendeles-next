@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import Nav from "@/components/Nav";
+import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
@@ -84,14 +84,10 @@ function PermissionsPageInner() {
     <>
       <Nav />
       <div className="page-wrap" style={{ maxWidth: 960 }}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <Link href="/admin" className="btn btn-outline btn-sm">
-            ← דשבורד
-          </Link>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: 0, flex: 1 }}>
-            🔐 מתן הרשאות
-          </h1>
-        </div>
+        <AdminNavTabs active="permissions" />
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--cream)" }}>
+          🔐 מתן הרשאות
+        </h1>
 
         <p style={{ color: "var(--text2)", fontSize: ".82rem", marginBottom: 16, lineHeight: 1.6 }}>
           ניהול הרשאות ללקוחות וחברי צוות — כולל הפעלת <strong>Premium</strong>, גישה לארנק, הדפסה ועוד.

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
 import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
 import type { PreviewForm } from "@/components/admin/LottoFormPreview";
@@ -10,7 +10,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService, type IntegrationLogEntry, type IntegrationStatus } from "@/lib/api/admin";
 import { extractApiError } from "@/lib/api/client";
 import { formatPrintSuccessMessage } from "@/lib/api/print-feedback";
-import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 interface Stats { total_users: number; new_today: number; active_subs: number; pending_orders: number; total_revenue: number; total_wins: number; total_prize: number; }
 interface Order {
   id: number;
@@ -68,8 +67,6 @@ export default function AdminPage() {
 function AdminPageInner() {
   const { isAdmin, isStaff } = useAuth();
   const canManageOrders = isAdmin || isStaff;
-  const backendOrigin = useBackendOrigin();
-  const djangoAdminUrl = `${backendOrigin}/admin/`;
   const [legacyToken, setLegacyToken] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -443,31 +440,10 @@ function AdminPageInner() {
         </div>
       )}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
-        <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span>🎯 דשבורד אדמין</span>
-          <Link
-            href="/admin/scan"
-            className="btn btn-gold"
-            style={{ fontSize: ".78rem", fontWeight: 800, boxShadow: "0 2px 10px rgba(29,185,106,.25)" }}
-          >
-            📷 מסך סריקה
-          </Link>
-          <Link href="/admin/print-queue" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            🖨️ תור הדפסה
-          </Link>
-          <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            🔐 מתן הרשאות
-          </Link>
-          <Link href="/admin/balance" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            💳 ניהול יתרות
-          </Link>
-          <Link href="/admin/services" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            ⚙️ שירותים
-          </Link>
-          <a href={djangoAdminUrl} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
-            Django Admin ↗
-          </a>
-        </div>
+        <AdminNavTabs active="dashboard" />
+        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.35rem", fontWeight: 900, color: "var(--cream)", margin: "0 0 20px" }}>
+          🎯 דשבורד אדמין
+        </h1>
 
         {/* Stats */}
         {stats && (

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import Nav from "@/components/Nav";
+import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import { serviceFlagsApi, type ServiceFlag } from "@/lib/api/serviceFlags";
@@ -65,13 +65,8 @@ function AdminServicesInner() {
     <>
       <Nav />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 14px 60px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-          <Link href="/admin" style={{ color: "var(--muted)", fontSize: ".75rem", textDecoration: "none" }}>
-            ← חזרה לדשבורד
-          </Link>
-        </div>
-
-        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.35rem", color: "var(--cream)", marginBottom: 8 }}>
+        <AdminNavTabs active="services" />
+        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.35rem", color: "var(--cream)", margin: "0 0 8px" }}>
           ⚙️ ניהול שירותים
         </h1>
         <p style={{ color: "var(--muted)", fontSize: ".78rem", marginBottom: 20 }}>
