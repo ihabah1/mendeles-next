@@ -30,8 +30,12 @@ export interface MarkPoint {
 }
 
 /** Horizontal bar centered in each pink cell. */
-export const MARK_WIDTH = 11;
-export const MARK_HEIGHT = 2.2;
+export const MARK_WIDTH = 10;
+export const MARK_HEIGHT = 2;
+
+/** Fine-tune overlay vs scan (px in 244×670 viewBox). */
+const MARK_X_BIAS = 0;
+const MARK_Y_BIAS = 0.5;
 
 function tableIndex(setIndex: number): number | null {
   if (setIndex < 1 || setIndex > MAIN_CELLS.length) return null;
@@ -43,7 +47,7 @@ export function markForMainNumber(setIndex: number, num: number): MarkPoint | nu
   if (ti === null) return null;
   const pt = MAIN_CELLS[ti][String(num)];
   if (!pt) return null;
-  return { x: pt[0], y: pt[1] };
+  return { x: pt[0] + MARK_X_BIAS, y: pt[1] + MARK_Y_BIAS };
 }
 
 export function markForStrongNumber(setIndex: number, strong: number): MarkPoint | null {
@@ -51,7 +55,7 @@ export function markForStrongNumber(setIndex: number, strong: number): MarkPoint
   if (ti === null || strong < 1 || strong > 7) return null;
   const pt = STRONG_CELLS[ti][String(strong)];
   if (!pt) return null;
-  return { x: pt[0], y: pt[1] };
+  return { x: pt[0] + MARK_X_BIAS, y: pt[1] + MARK_Y_BIAS };
 }
 
 export function marksForTable(

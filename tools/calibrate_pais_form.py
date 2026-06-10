@@ -18,6 +18,9 @@ ROWS = [
 ]
 STRONG = list(range(1, 8))
 
+ROW_FRACS = [0.26, 0.46, 0.64, 0.83]
+STRONG_FRACS = [0.22, 0.32, 0.43, 0.53, 0.63, 0.73, 0.84]
+
 
 def is_red(im, x: int, y: int) -> bool:
     r, g, b = im.getpixel((x, y))
@@ -92,8 +95,6 @@ def spacing_score(centers: list[int]) -> float:
     if len(centers) < 2:
         return 0.0
     gaps = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
-    if not gaps:
-        return 0.0
     avg = sum(gaps) / len(gaps)
     return -sum(abs(g - avg) for g in gaps)
 
@@ -115,11 +116,9 @@ def pick_centers(
 
     if len(centers) > expect:
         if mode == "seven":
-            # Row 1 (numbers 1–7) is the leftmost block on the sheet.
             first = centers[:expect]
             if spacing_score(first) > -80:
                 return first
-        # 10-cell rows: pick the most uniform window.
         best: list[int] | None = None
         best_score = float("-inf")
         for start in range(0, len(centers) - expect + 1):
@@ -133,27 +132,56 @@ def pick_centers(
     return centers
 
 
-def best_row_y(
+def dedupe_hits(hits: list[tuple[int, list[int]]], min_gap: int = 4) -> list[tuple[int, list[int]]]:
+    """Keep the best-spaced scan per Y cluster."""
+    if not hits:
+        return []
+    hits = sorted(hits, key=lambda h: h[0])
+    clusters: list[list[tuple[int, list[int]]]] = [[hits[0]]]
+    for y, centers in hits[1:]:
+        if y - clusters[-1][-1][0] < min_gap:
+            clusters[-1].append((y, centers))
+        else:
+            clusters.append([(y, centers)])
+    out: list[tuple[int, list[int]]] = []
+    for cluster in clusters:
+        best = max(cluster, key=lambda h: spacing_score(h[1]))
+        out.append(best)
+    return out
+
+
+def collect_band_scans(
     im,
     t0: int,
     band: int,
-    row_index: int,
-    expect: int,
+) -> tuple[list[tuple[int, list[int]]], list[tuple[int, list[int]]]]:
+    seven: list[tuple[int, list[int]]] = []
+    ten: list[tuple[int, list[int]]] = []
+    y_end = t0 + band - 2
+    for y in range(t0 + 4, y_end):
+        c7 = pick_centers(im, y, 7, mode="seven")
+        if c7:
+            seven.append((y, c7))
+        c10 = pick_centers(im, y, 10, mode="ten")
+        if c10:
+            ten.append((y, c10))
+    return dedupe_hits(seven), dedupe_hits(ten)
+
+
+def nearest_hit(
+    hits: list[tuple[int, list[int]]],
+    target_y: int,
+    used: set[int],
 ) -> tuple[int, list[int]] | None:
-    mode = "seven" if expect == 7 else "ten"
-    base = t0 + 8 + int((row_index + 0.5) * (band - 12) / 4)
     best: tuple[int, list[int]] | None = None
-    best_score = float("-inf")
-
-    for y in range(base - 7, base + 8):
-        centers = pick_centers(im, y, expect, mode=mode)
-        if not centers or len(centers) != expect:
+    best_dist = float("inf")
+    for y, centers in hits:
+        if y in used:
             continue
-        score = spacing_score(centers) - abs(y - base) * 0.25
-        if score > best_score:
-            best_score = score
+        dist = abs(y - target_y)
+        if dist < best_dist:
+            best_dist = dist
             best = (y, centers)
-
     return best
 
 
@@ -173,31 +201,89 @@ def table_headers(im) -> list[int]:
 
 
 def calibrate_strong(im, t0: int, band: int) -> dict[str, list[int]]:
-    hits: list[tuple[int, int]] = []
-    for si, _sn in enumerate(STRONG):
-        base = t0 + 8 + int((si + 0.5) * (band - 12) / 7)
+    strong_map: dict[str, list[int]] = {}
+    prev_y = t0
+
+    for sn, frac in zip(STRONG, STRONG_FRACS):
+        base = t0 + int(band * frac)
+        base = max(base, prev_y + 2)
         best: tuple[int, int] | None = None
+
         for y in range(base - 4, base + 5):
-            centers = centers_from_red_pairs(im, y, x0=186, x1=220, min_w=4, max_w=18)
+            if y < prev_y + 2:
+                continue
+            centers = centers_from_red_pairs(
+                im, y, x0=186, x1=220, min_w=4, max_w=18,
+            )
             if not centers:
-                centers = centers_from_interior_runs(im, y, x0=186, x1=220, min_w=6)
+                centers = centers_from_interior_runs(
+                    im, y, x0=188, x1=218, min_w=5,
+                )
             if not centers:
                 continue
-            cx = centers[len(centers) // 2]
+            cx = int(sum(centers) / len(centers))
             if best is None or abs(y - base) < abs(best[1] - base):
                 best = (cx, y)
+
         if best:
-            hits.append(best)
+            strong_map[str(sn)] = [best[0], best[1]]
+            prev_y = best[1]
 
-    if not hits:
-        return {}
+    if strong_map:
+        xs = sorted(v[0] for v in strong_map.values())
+        stable_x = xs[len(xs) // 2]
+        for key in strong_map:
+            strong_map[key][0] = stable_x
 
-    xs = sorted(h[0] for h in hits)
-    stable_x = xs[len(xs) // 2]
-    strong_map: dict[str, list[int]] = {}
-    for sn, (_cx, y) in zip(STRONG, hits):
-        strong_map[str(sn)] = [stable_x, y]
     return strong_map
+
+
+def calibrate_table(im, t0: int, band: int) -> dict[str, list[int]]:
+    seven_hits, ten_hits = collect_band_scans(im, t0, band)
+    row_map: dict[str, list[int]] = {}
+    used_seven: set[int] = set()
+    used_ten: set[int] = set()
+    assigned_ten: list[tuple[int, list[int]]] = []
+    row0_y: int | None = None
+
+    for ri, nums in enumerate(ROWS):
+        target_y = t0 + int(band * ROW_FRACS[ri])
+        if ri == 0:
+            hit = nearest_hit(seven_hits, target_y, used_seven)
+            if hit:
+                y, centers = hit
+                used_seven.add(y)
+            elif ten_hits:
+                y, centers = ten_hits[0][0], ten_hits[0][1][:7]
+            else:
+                continue
+            row0_y = y
+        else:
+            hit = nearest_hit(ten_hits, target_y, used_ten)
+            if hit:
+                y, centers = hit
+                used_ten.add(y)
+                assigned_ten.append((y, centers))
+            elif ri == 1 and row0_y is not None and ten_hits:
+                next_y, next_c = ten_hits[0]
+                y = (row0_y + next_y) // 2
+                centers = next_c
+                assigned_ten.append((y, centers))
+            elif assigned_ten:
+                gaps = [assigned_ten[i + 1][0] - assigned_ten[i][0] for i in range(len(assigned_ten) - 1)]
+                step = round(sum(gaps) / len(gaps)) if gaps else 8
+                y = assigned_ten[-1][0] + max(step, 3)
+                centers = assigned_ten[-1][1]
+                assigned_ten.append((y, centers))
+            elif ten_hits:
+                y, centers = ten_hits[-1]
+            else:
+                continue
+
+        for num, cx in zip(nums, centers):
+            row_map[str(num)] = [cx, y]
+
+    return row_map
 
 
 def calibrate() -> dict:
@@ -211,39 +297,7 @@ def calibrate() -> dict:
         t0 = headers[ti]
         t1 = headers[ti + 1] if ti + 1 < len(headers) else t0 + 38
         band = t1 - t0
-        row_map: dict[str, list[int]] = {}
-
-        # Prefer a shared 10-column grid from the middle rows for stability.
-        grid10: list[int] | None = None
-        for ri in (1, 2, 3):
-            hit = best_row_y(im, t0, band, ri, 10)
-            if hit and (grid10 is None or spacing_score(hit[1]) > spacing_score(grid10)):
-                grid10 = hit[1]
-
-        y7: int | None = None
-        hit7 = best_row_y(im, t0, band, 0, 7)
-        if hit7:
-            y7 = hit7[0]
-
-        for ri, nums in enumerate(ROWS):
-            expect = 7 if ri == 0 else 10
-            if ri == 0 and grid10 and y7 is not None:
-                centers = grid10[:7]
-                y = y7
-            else:
-                hit = best_row_y(im, t0, band, ri, expect)
-                if not hit and expect == 10 and grid10:
-                    y_fallback = t0 + 8 + int((ri + 0.5) * (band - 12) / 4)
-                    hit = (y_fallback, grid10)
-                if not hit:
-                    continue
-                y, centers = hit
-                if expect == 10 and grid10:
-                    centers = grid10
-            for num, cx in zip(nums, centers):
-                row_map[str(num)] = [cx, y]
-
-        main.append(row_map)
+        main.append(calibrate_table(im, t0, band))
         strong.append(calibrate_strong(im, t0, band))
 
     return {"w": w, "h": h, "main": main, "strong": strong}
