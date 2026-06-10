@@ -1,0 +1,204 @@
+{% extends "portal/base.html" %}
+{% block title %}טטריס AB16 — Mandeles{% endblock %}
+{% block content %}
+{# Requested path: /tetris-ab16/ #}
+<div class="page-code-bar" title="טטריס AB16 — מקרא לבקשות AI">
+  <span class="page-code-label">מקרא דף</span>
+  <strong class="page-code-value">AB16</strong>
+<h1 class="page-title">🎮 משחק טטריס וינטג'</h1>
+<p class="meta">תהנה ממשחק טטריס קלאסי!</p>
+
+<div id="game-container" style="display:flex;justify-content:center;margin-top:20px;">
+  <canvas id="tetrisCanvas" width="240" height="400" style="border:2px solid var(--gold);background-color:#000;"></canvas>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Basic Tetris game logic (placeholder for a full game)
+  const canvas = document.getElementById('tetrisCanvas');
+  const ctx = canvas.getContext('2d');
+  const COLS = 10;
+  const ROWS = 20;
+  const BLOCK_SIZE = 20;
+
+  let board = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
+  let currentPiece;
+  let score = 0;
+  let gameOver = false;
+
+  const COLORS = [
+    '#000', // Empty
+    'cyan', 'blue', 'orange', 'yellow', 'green', 'purple', 'red'
+  ];
+
+  const SHAPES = [
+    [], // No shape for index 0
+    [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]], // I
+    [[2,0,0], [2,2,2], [0,0,0]], // J
+    [[0,0,3], [3,3,3], [0,0,0]], // L
+    [[4,4], [4,4]], // O
+    [[0,5,5], [5,5,0], [0,0,0]], // S
+    [[0,6,0], [6,6,6], [0,0,0]], // T
+    [[7,7,0], [0,7,7], [0,0,0]]  // Z
+  ];
+
+  function drawBlock(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+    ctx.strokeStyle = '#333';
+    ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+  }
+
+  function drawBoard() {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        drawBlock(c, r, COLORS[board[r][c]]);
+      }
+    }
+  }
+
+  function newPiece() {
+    const rand = Math.floor(Math.random() * (SHAPES.length - 1)) + 1;
+    const shape = SHAPES[rand];
+    currentPiece = {
+      shape: shape,
+      color: COLORS[rand],
+      x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+      y: 0
+    };
+    if (!isValidMove(0, 0, currentPiece.shape)) {
+      gameOver = true;
+      alert('Game Over! Score: ' + score);
+    }
+  }
+
+  function drawPiece() {
+    for (let r = 0; r < currentPiece.shape.length; r++) {
+      for (let c = 0; c < currentPiece.shape[r].length; c++) {
+        if (currentPiece.shape[r][c]) {
+          drawBlock(currentPiece.x + c, currentPiece.y + r, currentPiece.color);
+        }
+      }
+    }
+  }
+
+  function isValidMove(offsetX, offsetY, newShape) {
+    for (let r = 0; r < newShape.length; r++) {
+      for (let c = 0; c < newShape[r].length; c++) {
+        if (newShape[r][c]) {
+          const newX = currentPiece.x + c + offsetX;
+          const newY = currentPiece.y + r + offsetY;
+
+          if (newX < 0 || newX >= COLS || newY >= ROWS) {
+            return false; // Out of bounds
+          }
+          if (newY < 0) continue; // Allow pieces to start above board
+          if (board[newY][newX] !== 0) {
+            return false; // Collision with existing block
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  function mergePiece() {
+    for (let r = 0; r < currentPiece.shape.length; r++) {
+      for (let c = 0; c < currentPiece.shape[r].length; c++) {
+        if (currentPiece.shape[r][c]) {
+          board[currentPiece.y + r][currentPiece.x + c] = COLORS.indexOf(currentPiece.color);
+        }
+      }
+    }
+  }
+
+  function clearLines() {
+    let linesCleared = 0;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r].every(cell => cell !== 0)) {
+        linesCleared++;
+        for (let rowToMove = r; rowToMove > 0; rowToMove--) {
+          board[rowToMove] = [...board[rowToMove - 1]];
+        }
+        board[0] = Array(COLS).fill(0); // Clear top row
+        r++; // Recheck the same row as it's now filled with new blocks
+      }
+    }
+    if (linesCleared > 0) {
+      score += linesCleared * 100; // Simple scoring
+    }
+  }
+
+  function rotate(shape) {
+    const N = shape.length;
+    const newShape = Array(N).fill(0).map(() => Array(N).fill(0));
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        newShape[c][N - 1 - r] = shape[r][c];
+      }
+    }
+    return newShape;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (gameOver) return;
+    let newX = currentPiece.x;
+    let newY = currentPiece.y;
+    let newShape = currentPiece.shape;
+
+    if (e.key === 'ArrowLeft') newX--;
+    else if (e.key === 'ArrowRight') newX++;
+    else if (e.key === 'ArrowDown') newY++;
+    else if (e.key === 'ArrowUp') newShape = rotate(currentPiece.shape);
+    else if (e.key === ' ') { // Space for hard drop
+      while (isValidMove(0, 1, currentPiece.shape)) {
+        currentPiece.y++;
+      }
+      mergePiece();
+      clearLines();
+      newPiece();
+      return;
+    }
+
+    if (isValidMove(newX - currentPiece.x, newY - currentPiece.y, newShape)) {
+      currentPiece.x = newX;
+      currentPiece.y = newY;
+      currentPiece.shape = newShape;
+    }
+  });
+
+  let dropCounter = 0;
+  let dropInterval = 1000; // milliseconds
+  let lastTime = 0;
+
+  function update(time = 0) {
+    const deltaTime = time - lastTime;
+    lastTime = time;
+
+    dropCounter += deltaTime;
+    if (dropCounter > dropInterval) {
+      currentPiece.y++;
+      if (!isValidMove(0, 0, currentPiece.shape)) {
+        currentPiece.y--;
+        mergePiece();
+        clearLines();
+        newPiece();
+      }
+      dropCounter = 0;
+    }
+
+    draw();
+    if (!gameOver) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBoard();
+    drawPiece();
+    // Display score (simple text overlay)
+    ctx.fillStyle = 'white';
+    ctx.font = '16px
