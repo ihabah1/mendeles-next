@@ -11,6 +11,7 @@ export type AdminTabId =
   | "permissions"
   | "balance"
   | "messages"
+  | "support"
   | "services";
 
 const TABS: { id: AdminTabId; href: string; label: string }[] = [
@@ -20,6 +21,7 @@ const TABS: { id: AdminTabId; href: string; label: string }[] = [
   { id: "permissions", href: "/admin/permissions", label: "הרשאות" },
   { id: "balance", href: "/admin/balance", label: "יתרות" },
   { id: "messages", href: "/admin/messages", label: "מכתבים" },
+  { id: "support", href: "/admin/support", label: "בקשות נציג" },
   { id: "services", href: "/admin/services", label: "שירותים" },
 ];
 
@@ -29,6 +31,7 @@ function activeTabFromPath(pathname: string): AdminTabId {
   if (pathname.startsWith("/admin/permissions")) return "permissions";
   if (pathname.startsWith("/admin/balance")) return "balance";
   if (pathname.startsWith("/admin/messages")) return "messages";
+  if (pathname.startsWith("/admin/support")) return "support";
   if (pathname.startsWith("/admin/services")) return "services";
   return "dashboard";
 }

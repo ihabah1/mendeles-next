@@ -17,8 +17,8 @@ function Mark({ x, y }: { x: number; y: number }) {
       y={y - MARK_HEIGHT / 2}
       width={MARK_WIDTH}
       height={MARK_HEIGHT}
-      fill="#1a1a2e"
-      rx={0.4}
+      fill="#111"
+      rx={0.2}
     />
   );
 }

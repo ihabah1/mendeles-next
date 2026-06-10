@@ -29,13 +29,13 @@ export interface MarkPoint {
   y: number;
 }
 
-/** Horizontal bar centered in each pink cell. */
-export const MARK_WIDTH = 10;
-export const MARK_HEIGHT = 2;
+/** Horizontal bar centered in each pink cell (matches pen stroke on scan). */
+export const MARK_WIDTH = 11;
+export const MARK_HEIGHT = 2.2;
 
 /** Fine-tune overlay vs scan (px in 244×670 viewBox). */
 const MARK_X_BIAS = 0;
-const MARK_Y_BIAS = 0.5;
+const MARK_Y_BIAS = 0;
 
 function tableIndex(setIndex: number): number | null {
   if (setIndex < 1 || setIndex > MAIN_CELLS.length) return null;

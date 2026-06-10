@@ -188,15 +188,20 @@ def nearest_hit(
 def table_headers(im) -> list[int]:
     _w, h = im.size
     headers: list[int] = []
-    for y in range(40, h - 60):
+    for y in range(30, h - 40):
         cnt = sum(
             1
             for x in range(22, 185)
             if im.getpixel((x, y))[0] > 200 and im.getpixel((x, y))[1] < 80
         )
-        if cnt > 40:
-            if not headers or y - headers[-1] > 25:
+        if cnt > 20:
+            if not headers or y - headers[-1] > 18:
                 headers.append(y)
+    # Logo band at top — keep the 14 table header rows only.
+    while len(headers) > 14:
+        headers.pop(0)
+    if len(headers) < 14:
+        raise RuntimeError(f"expected 14 table headers, found {len(headers)}: {headers}")
     return headers
 
 

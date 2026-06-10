@@ -7,6 +7,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from api.services.support_chat import notify_staff_chat_request, wants_human_agent
+
 SITE_MAP = """
 דפים באתר Mandeles.co.il:
 - / דף ראשי
@@ -91,10 +93,11 @@ def _gemini_reply(message: str) -> dict | None:
     except ImportError:
         return None
 
-    system = f"""אתה מדריך ניווט ידידותי באתר Mandeles.co.il. ענה בעברית, קצר (2-4 משפטים).
-הצע קישורים בפורמט [תווית](/path) כשמתאים.
+    system = f"""אתה נציג דיגיטלי ידידותי באתר Mandeles.co.il. ענה בעברית, קצר (2-4 משפטים).
+עזור בניווט, לוטו, ארנק והרשמה. הצע קישורים בפורמט [תווית](/path) כשמתאים.
 {SITE_MAP}
-אל תמציא דפים שלא ברשימה. אם לא בטוח — הפנה לדף הראשי או לוטו."""
+אם הלקוח מבקש נציג אנושי, תמיכה אישית או עזרה שלא יכולה להיפתר בניווט — אמר שפנית לצוות ויחזרו אליו.
+אל תמציא דפים שלא ברשימה."""
 
     try:
         genai.configure(api_key=api_key)
@@ -113,14 +116,52 @@ def _gemini_reply(message: str) -> dict | None:
         return None
 
 
+def _client_ip(request) -> str | None:
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def guide_chat(request):
-    """POST /api/guide/chat/ { message } -> navigation help."""
+    """POST /api/guide/chat/ { message, history?, page_path? } -> site help."""
     message = (request.data.get("message") or "").strip()
     if len(message) > 500:
         return Response({"error": "הודעה ארוכה מדי"}, status=status.HTTP_400_BAD_REQUEST)
+    if not message:
+        return Response({
+            "text": "איך ניתן לעזור?",
+            "links": [],
+            "source": "local",
+            "escalated": False,
+        })
 
-    ai = _gemini_reply(message) if message else None
+    history = request.data.get("history") or []
+    if not isinstance(history, list):
+        history = []
+    page_path = (request.data.get("page_path") or "").strip()[:200]
+    already_escalated = bool(request.data.get("already_escalated"))
+
+    ai = _gemini_reply(message)
     payload = ai or _local_reply(message)
+
+    escalated = False
+    if wants_human_agent(message) and not already_escalated:
+        escalated = notify_staff_chat_request(
+            user=request.user,
+            message=message,
+            history=history,
+            guest_name=(request.data.get("guest_name") or "").strip()[:80],
+            page_path=page_path,
+            ip_address=_client_ip(request),
+        )
+        if escalated:
+            payload["text"] = (
+                f"{payload.get('text', '').strip()}\n\n"
+                "✅ העברנו את הבקשה לצוות האתר. נציג יחזור אליך בהקדם האפשרי."
+            ).strip()
+
+    payload["escalated"] = escalated
     return Response(payload)

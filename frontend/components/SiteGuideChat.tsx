@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import SiteIcon from "@/components/SiteIcon";
 import { guideService } from "@/lib/api/guide";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { GUIDE_QUICK_PROMPTS, GUIDE_WELCOME, type GuideLink } from "@/lib/site-guide";
 
 type ChatMsg = {
@@ -14,18 +16,40 @@ type ChatMsg = {
 };
 
 const HIDE_ON = ["/admin", "/auth"];
+const BALLOON_DISMISS_KEY = "mandeles-guide-balloon-dismissed";
 
 export default function SiteGuideChat() {
   const path = usePathname() ?? "";
+  const { user } = useAuth();
   const hidden = HIDE_ON.some((p) => path === p || path.startsWith(`${p}/`));
   const [open, setOpen] = useState(false);
+  const [balloonDismissed, setBalloonDismissed] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [escalated, setEscalated] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: 0, role: "assistant", text: GUIDE_WELCOME },
   ]);
   const nextId = useRef(1);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      setBalloonDismissed(sessionStorage.getItem(BALLOON_DISMISS_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const dismissBalloon = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBalloonDismissed(true);
+    try {
+      sessionStorage.setItem(BALLOON_DISMISS_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const scrollDown = useCallback(() => {
     requestAnimationFrame(() => {
@@ -38,12 +62,19 @@ export default function SiteGuideChat() {
     const q = text.trim();
     if (!q || loading) return;
     const userId = nextId.current++;
+    const history = messages.map((m) => ({ role: m.role, text: m.text }));
     setMessages((m) => [...m, { id: userId, role: "user", text: q }]);
     setInput("");
     setLoading(true);
     scrollDown();
     try {
-      const res = await guideService.chat(q);
+      const res = await guideService.chat(q, {
+        history,
+        pagePath: path,
+        guestName: user?.display_name || user?.full_name || "",
+        alreadyEscalated: escalated,
+      });
+      if (res.escalated) setEscalated(true);
       setMessages((m) => [
         ...m,
         {
@@ -64,10 +95,13 @@ export default function SiteGuideChat() {
   return (
     <div className="site-guide-root">
       {open && (
-        <div className="site-guide-panel" role="dialog" aria-label="מדריך האתר">
+        <div className="site-guide-panel site-guide-panel--open" role="dialog" aria-label="צ'אט עזרה">
           <div className="site-guide-header">
-            <span>🤖 מדריך האתר</span>
-            <button type="button" className="site-guide-close" onClick={() => setOpen(false)} aria-label="סגור">
+            <span className="site-guide-header-brand">
+              <SiteIcon size={26} />
+              <span>עזרה וניווט</span>
+            </span>
+            <button type="button" className="site-guide-close" onClick={() => setOpen(false)} aria-label="סגור צ'אט">
               ✕
             </button>
           </div>
@@ -110,7 +144,7 @@ export default function SiteGuideChat() {
               className="site-guide-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="לאן ללכת? למשל: איך טוענים ארנק?"
+              placeholder="כתבו שאלה או בקשה לנציג…"
               disabled={loading}
               maxLength={500}
             />
@@ -120,15 +154,42 @@ export default function SiteGuideChat() {
           </form>
         </div>
       )}
-      <button
-        type="button"
-        className="site-guide-fab"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-label="פתח מדריך AI"
-      >
-        {open ? "✕" : "💬"}
-      </button>
+
+      {!open && !balloonDismissed && (
+        <div className="site-guide-balloon-wrap">
+          <div className="site-guide-balloon">
+            <button
+              type="button"
+              className="site-guide-balloon-close"
+              onClick={dismissBalloon}
+              aria-label="סגור בלון"
+            >
+              ✕
+            </button>
+            <button
+              type="button"
+              className="site-guide-balloon-body"
+              onClick={() => setOpen(true)}
+              aria-label="פתח צ'אט עזרה"
+            >
+              <SiteIcon size={34} />
+              <span className="site-guide-balloon-text">איך ניתן לעזור?</span>
+            </button>
+          </div>
+          <span className="site-guide-balloon-tail" aria-hidden />
+        </div>
+      )}
+
+      {balloonDismissed && !open && (
+        <button
+          type="button"
+          className="site-guide-fab site-guide-fab--mini"
+          onClick={() => setOpen(true)}
+          aria-label="פתח צ'אט עזרה"
+        >
+          <SiteIcon size={28} />
+        </button>
+      )}
     </div>
   );
 }
