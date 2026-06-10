@@ -458,6 +458,9 @@ function AdminPageInner() {
           <Link href="/admin/permissions" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             🔐 מתן הרשאות
           </Link>
+          <Link href="/admin/balance" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
+            💳 ניהול יתרות
+          </Link>
           <Link href="/admin/services" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
             ⚙️ שירותים
           </Link>

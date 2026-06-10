@@ -11,6 +11,7 @@ from . import (
     print_views,
     service_flag_views,
     views,
+    wallet_admin_views,
     wallet_views,
 )
 
@@ -76,6 +77,12 @@ admin_patterns = [
         'permissions/users/<int:user_id>/',
         permissions_views.permissions_user_detail,
         name='admin-permissions-user',
+    ),
+    path('balance/users/', wallet_admin_views.balance_users_list, name='admin-balance-users'),
+    path(
+        'balance/users/<int:user_id>/',
+        wallet_admin_views.balance_user_detail,
+        name='admin-balance-user',
     ),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
     path(
