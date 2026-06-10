@@ -23,7 +23,8 @@ export default function AboutPage() {
           </section>
         ))}
 
-        <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
+        <p style={{ color: "var(--muted)", fontSize: ".75rem", marginTop: 40, textAlign: "center" }}>הדף נוצר ע"י צוות מנצח</p>
+        <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
           <Link href="/terms" className="btn btn-outline">תנאי שימוש</Link>
           <Link href="/accessibility" className="btn btn-outline">הצהרת נגישות</Link>
           <Link href="/" className="btn btn-gold">חזרה לדף הבית</Link>
