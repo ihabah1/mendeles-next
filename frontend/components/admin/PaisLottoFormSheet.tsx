@@ -18,7 +18,7 @@ function Mark({ x, y }: { x: number; y: number }) {
       width={MARK_WIDTH}
       height={MARK_HEIGHT}
       fill="#1a1a2e"
-      rx={0.5}
+      rx={0.4}
     />
   );
 }
@@ -69,7 +69,6 @@ export default function PaisLottoFormSheet({
       <div
         className="pais-form-sheet-frame"
         style={{
-          position: "relative",
           width: "100%",
           maxWidth: 380,
           margin: "0 auto",
@@ -80,25 +79,17 @@ export default function PaisLottoFormSheet({
           background: "#fff",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={PAIS_FORM_IMAGE}
-          alt="טופס לוטו מפעל הפיס"
-          style={{ width: "100%", height: "auto", display: "block" }}
-          draggable={false}
-        />
         <svg
           viewBox={`0 0 ${PAIS_FORM_WIDTH} ${PAIS_FORM_HEIGHT}`}
-          preserveAspectRatio="none"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-          }}
-          aria-hidden
+          style={{ width: "100%", height: "auto", display: "block" }}
+          aria-label="טופס לוטו מפעל הפיס"
         >
+          <image
+            href={PAIS_FORM_IMAGE}
+            width={PAIS_FORM_WIDTH}
+            height={PAIS_FORM_HEIGHT}
+            preserveAspectRatio="xMidYMid meet"
+          />
           {marks.map((m, i) => (
             <Mark key={`${m.x}-${m.y}-${i}`} x={m.x} y={m.y} />
           ))}
