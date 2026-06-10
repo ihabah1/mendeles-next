@@ -23,7 +23,11 @@ export default function AboutPage() {
           </section>
         ))}
 
-        <p style={{ color: "var(--muted)", fontSize: ".75rem", marginTop: 40, textAlign: "center" }}>הדף נוצר ע"י צוות מנצח</p>
+        <div style={{ border: "2px dashed var(--gold)", padding: "20px", textAlign: "center", marginTop: 40, marginBottom: 20, color: "var(--gold)" }}>
+          <h2 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>משחק טטריס (בקרוב!)</h2>
+          <p style={{ fontSize: ".9rem" }}>המקום הזה מיועד למשחק טטריס אינטראקטיבי.</p>
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: ".75rem", textAlign: "center" }}>הדף נוצר ע"י צוות מנצח</p>
         <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
           <Link href="/terms" className="btn btn-outline">תנאי שימוש</Link>
           <Link href="/accessibility" className="btn btn-outline">הצהרת נגישות</Link>
