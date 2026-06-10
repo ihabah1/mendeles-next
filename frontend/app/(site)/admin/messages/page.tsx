@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -58,7 +58,8 @@ function MessagesPageInner() {
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [aiActionKey, setAiActionKey] = useState<string | null>(null);
+  const aiResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [aiNotice, setAiNotice] = useState("");
@@ -106,6 +107,12 @@ function MessagesPageInner() {
     return () => clearTimeout(t);
   }, [loadUsers]);
 
+  useEffect(() => {
+    return () => {
+      if (aiResetTimer.current) clearTimeout(aiResetTimer.current);
+    };
+  }, []);
+
   const selectUser = (user: MessagesUser) => {
     setSelected(user);
     setSubject("");
@@ -116,14 +123,20 @@ function MessagesPageInner() {
     loadUserDetail(user.id);
   };
 
-  const runAi = async (mode: AiTextMode, field: AiTextField) => {
+  const runAi = async (mode: AiTextMode, field: AiTextField, actionKey: string) => {
+    if (!body.trim() && !subject.trim()) {
+      setError("כתוב נושא או תוכן לפני שיפור ב-AI");
+      return;
+    }
     if (!body.trim() && field !== "subject") {
       setError("כתוב תוכן לפני שיפור ב-AI");
       return;
     }
-    setAiLoading(true);
+    if (aiResetTimer.current) clearTimeout(aiResetTimer.current);
+    setAiActionKey(actionKey);
     setError("");
     setAiNotice("");
+    aiResetTimer.current = setTimeout(() => setAiActionKey(null), 25000);
     try {
       const res = await messagesAdminService.aiTextFix({
         subject,
@@ -131,8 +144,12 @@ function MessagesPageInner() {
         mode,
         field,
       });
-      if (field === "subject" || field === "both") setSubject(res.subject);
-      if (field === "body" || field === "both") setBody(res.body);
+      if (field === "subject" || field === "both") {
+        setSubject(res.subject?.trim() || subject);
+      }
+      if (field === "body" || field === "both") {
+        setBody(res.body?.trim() || body);
+      }
       const src = res.source === "gemini" ? "Gemini" : "מקומי";
       setAiNotice(
         res.notice
@@ -142,7 +159,8 @@ function MessagesPageInner() {
     } catch (e) {
       setError(extractApiError(e, "שגיאה בשיפור טקסט"));
     } finally {
-      setAiLoading(false);
+      if (aiResetTimer.current) clearTimeout(aiResetTimer.current);
+      setAiActionKey(null);
     }
   };
 
@@ -179,7 +197,7 @@ function MessagesPageInner() {
       <Nav />
       <div className="page-wrap" style={{ maxWidth: 1100 }}>
         <AdminNavTabs active="messages" />
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--cream)" }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--text)" }}>
           📬 ניהול מכתבים ללקוחות
         </h1>
 
@@ -242,10 +260,12 @@ function MessagesPageInner() {
                     borderBottom: "1px solid var(--border)",
                     background: selected?.id === u.id ? "rgba(201,168,76,.12)" : "transparent",
                     cursor: "pointer",
-                    color: "var(--cream)",
+                    color: "var(--text)",
                   }}
                 >
-                  <div style={{ fontWeight: 700, fontSize: ".82rem" }}>{u.displayName || u.email}</div>
+                  <div style={{ fontWeight: 800, fontSize: ".86rem", color: "var(--navy)" }}>
+                    {u.displayName || u.email}
+                  </div>
                   <div style={{ fontSize: ".68rem", color: "var(--muted)" }}>{u.email}</div>
                   <div style={{ fontSize: ".68rem", color: "var(--text2)", marginTop: 4 }}>
                     {u.messageCount} הודעות
@@ -289,7 +309,7 @@ function MessagesPageInner() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                        <strong style={{ fontSize: ".78rem", color: "var(--cream)" }}>{m.subject}</strong>
+                        <strong style={{ fontSize: ".78rem", color: "var(--navy)" }}>{m.subject}</strong>
                         <span style={{ fontSize: ".62rem", color: "var(--muted)" }}>{formatDate(m.sentAt)}</span>
                       </div>
                       <div style={{ fontSize: ".62rem", color: "var(--gold-dark)", margin: "2px 0 4px" }}>
@@ -319,7 +339,7 @@ function MessagesPageInner() {
                 <p style={{ color: "var(--muted)", fontSize: ".82rem" }}>בחר לקוח כדי לכתוב מכתב</p>
               ) : (
                 <>
-                  <h2 style={{ fontSize: ".95rem", margin: "0 0 12px", color: "var(--cream)" }}>
+                  <h2 style={{ fontSize: ".95rem", margin: "0 0 12px", color: "var(--navy)" }}>
                     מכתב חדש — {selected.displayName || selected.email}
                   </h2>
 
@@ -363,28 +383,37 @@ function MessagesPageInner() {
                   />
 
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                    {AI_ACTIONS.map((action) => (
-                      <button
-                        key={`${action.mode}-${action.field}`}
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() => runAi(action.mode, action.field)}
-                        disabled={aiLoading}
-                      >
-                        {aiLoading ? "…" : action.label}
-                      </button>
-                    ))}
+                    {AI_ACTIONS.map((action) => {
+                      const key = `${action.mode}-${action.field}`;
+                      const busy = aiActionKey === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => runAi(action.mode, action.field, key)}
+                          disabled={aiActionKey !== null}
+                        >
+                          {busy ? "מעבד…" : action.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <button
                     type="button"
                     className="btn btn-gold"
                     onClick={send}
-                    disabled={saving || !subject.trim() || !body.trim()}
+                    disabled={saving || !body.trim()}
                     style={{ width: "100%" }}
                   >
                     {saving ? "שולח…" : "📤 שלח לתיבת הדואר"}
                   </button>
+                  {!subject.trim() && body.trim() && (
+                    <p style={{ fontSize: ".64rem", color: "var(--muted)", marginTop: 8, textAlign: "center" }}>
+                      נושא ריק — יילקח משורת הראשונה של התוכן
+                    </p>
+                  )}
                 </>
               )}
             </div>

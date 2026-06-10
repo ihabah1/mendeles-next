@@ -1,5 +1,6 @@
 """Staff AI helpers — polish Hebrew message copy for customer inbox."""
 import json
+import logging
 import re
 
 from django.conf import settings
@@ -10,6 +11,8 @@ from rest_framework.response import Response
 from api.staff_permissions import IsStaffPortalUser
 
 IsStaffUser = IsStaffPortalUser
+
+logger = logging.getLogger(__name__)
 
 MAX_SUBJECT = 200
 MAX_BODY = 4000
@@ -24,21 +27,43 @@ MODE_PROMPTS = {
 }
 
 
+def _fallback_subject(subject: str, body: str) -> str:
+    if subject.strip():
+        return subject.strip()[:MAX_SUBJECT]
+    first = (body.strip().split('\n')[0] or 'הודעה מהמערכת')[:80]
+    return first
+
+
 def _local_text_fix(subject: str, body: str, mode: str, field: str) -> dict:
     """Minimal fallback when Gemini is unavailable."""
-    out_subject = subject
-    out_body = body
-    if mode == 'shorten' and len(body) > 120:
-        out_body = body[:117].rstrip() + '…'
-    if mode == 'subject' and body.strip() and not subject.strip():
-        first_line = body.strip().split('\n')[0][:80]
-        out_subject = first_line
+    out_subject = _fallback_subject(subject, body)
+    out_body = body.strip() or subject.strip()
+    if mode == 'shorten' and len(out_body) > 120:
+        out_body = out_body[:117].rstrip() + '…'
+    if mode == 'subject':
+        out_subject = _fallback_subject('', body)
+    if not out_body:
+        out_body = body or subject
     return {
         'subject': out_subject[:MAX_SUBJECT],
         'body': out_body[:MAX_BODY],
         'source': 'local',
         'notice': 'Gemini לא זמין — בוצע שיפור בסיסי בלבד',
     }
+
+
+def _safe_gemini_text(result) -> str:
+    try:
+        text = getattr(result, 'text', None)
+        if text:
+            return str(text).strip()
+    except (ValueError, AttributeError):
+        pass
+    try:
+        parts = result.candidates[0].content.parts
+        return ''.join(getattr(p, 'text', '') for p in parts).strip()
+    except (IndexError, AttributeError, TypeError, KeyError):
+        return ''
 
 
 def _parse_json_reply(raw: str) -> dict | None:
@@ -95,17 +120,22 @@ def _gemini_text_fix(subject: str, body: str, mode: str, field: str) -> dict | N
             system_instruction=system,
         )
         result = model.generate_content(user_prompt)
-        parsed = _parse_json_reply(result.text or '')
+        parsed = _parse_json_reply(_safe_gemini_text(result))
         if not parsed:
             return None
         out_subject = str(parsed.get('subject', subject) or subject).strip()[:MAX_SUBJECT]
         out_body = str(parsed.get('body', body) or body).strip()[:MAX_BODY]
+        if not out_body:
+            out_body = body.strip() or subject.strip()
+        if not out_subject:
+            out_subject = _fallback_subject(subject, out_body or body)
         if field == 'subject':
-            out_body = body
+            out_body = body.strip() or out_body
         elif field == 'body':
-            out_subject = subject
+            out_subject = _fallback_subject(subject, body)
         return {'subject': out_subject, 'body': out_body, 'source': 'gemini', 'notice': ''}
-    except Exception:
+    except Exception as exc:
+        logger.warning('Gemini text-fix failed: %s', exc)
         return None
 
 
@@ -129,6 +159,11 @@ def ai_text_fix(request):
     if field == 'body' and not body:
         return Response({'error': 'נדרש תוכן לשיפור'}, status=status.HTTP_400_BAD_REQUEST)
 
-    ai = _gemini_text_fix(subject, body, mode, field)
-    payload = ai or _local_text_fix(subject, body, mode, field)
+    try:
+        ai = _gemini_text_fix(subject, body, mode, field)
+        payload = ai or _local_text_fix(subject, body, mode, field)
+    except Exception as exc:
+        logger.exception('ai_text_fix failed')
+        payload = _local_text_fix(subject, body, mode, field)
+        payload['notice'] = f'שגיאת שרת — {exc}'
     return Response(payload)
