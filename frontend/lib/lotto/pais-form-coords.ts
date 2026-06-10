@@ -29,9 +29,9 @@ export interface MarkPoint {
   y: number;
 }
 
-/** Horizontal bar sized to fit inside red ovals (~14×14 px cells). */
-export const MARK_WIDTH = 13;
-export const MARK_HEIGHT = 2.5;
+/** Horizontal bar centered in each pink cell. */
+export const MARK_WIDTH = 11;
+export const MARK_HEIGHT = 2.2;
 
 function tableIndex(setIndex: number): number | null {
   if (setIndex < 1 || setIndex > MAIN_CELLS.length) return null;

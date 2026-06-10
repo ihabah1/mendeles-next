@@ -36,10 +36,11 @@ export default function PaisLottoFormSheet({
   isDouble?: boolean;
   customerName?: string;
 }) {
-  /** Row on the physical sheet is 1–14 per form, not global set_index. */
-  const marks = tables.flatMap((t, idx) =>
-    marksForTable(idx + 1, t.numbers, t.strong),
-  );
+  /** Map global setIndex to row 1–14 on this physical form sheet. */
+  const marks = tables.flatMap((t) => {
+    const rowOnForm = ((t.setIndex - 1) % 14) + 1;
+    return marksForTable(rowOnForm, t.numbers, t.strong);
+  });
 
   return (
     <div className="pais-form-sheet">
@@ -86,9 +87,11 @@ export default function PaisLottoFormSheet({
         >
           <image
             href={PAIS_FORM_IMAGE}
+            x={0}
+            y={0}
             width={PAIS_FORM_WIDTH}
             height={PAIS_FORM_HEIGHT}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
           />
           {marks.map((m, i) => (
             <Mark key={`${m.x}-${m.y}-${i}`} x={m.x} y={m.y} />

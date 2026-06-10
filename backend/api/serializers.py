@@ -208,7 +208,8 @@ class CreditAccountSerializer(serializers.ModelSerializer):
 class CustomerMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerMessage
-        fields = '__all__'
+        fields = ('id', 'channel', 'subject', 'body', 'sent_at', 'is_read')
+        read_only_fields = fields
 
 
 class ActionLogSerializer(serializers.ModelSerializer):

@@ -2,7 +2,7 @@
 import requests
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
@@ -40,6 +40,7 @@ from .services.phone_verification import (
 from .services.sms import normalize_phone
 from .services.resend_email import ResendError, resend_config_status
 from .services.sms import SmsError, sms_config_status
+from .services.customer_messages import send_welcome_if_needed
 from .services.user_setup import ensure_customer_records
 from .serializers import (
     ActionLogSerializer,
@@ -97,6 +98,8 @@ class RegisterView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         ensure_customer_records(user)
+        if created_new:
+            send_welcome_if_needed(user)
         logger.info('Register endpoint: user=%s re_register=%s', user.email, not created_new)
         try:
             payload = issue_verification_or_delegate(user)
@@ -514,7 +517,7 @@ class CreditAccountViewSet(viewsets.ModelViewSet):
         return qs if is_staff_portal_user(user) else qs.filter(customer=user)
 
 
-class CustomerMessageViewSet(viewsets.ModelViewSet):
+class CustomerMessageViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CustomerMessageSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminOrOwner]
     owner_field = 'customer'
@@ -523,6 +526,24 @@ class CustomerMessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = CustomerMessage.objects.select_related('customer')
         return qs if is_staff_portal_user(user) else qs.filter(customer=user)
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': count})
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        message = self.get_object()
+        if not message.is_read:
+            message.is_read = True
+            message.save(update_fields=['is_read'])
+        return Response(self.get_serializer(message).data)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        updated = self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({'marked_read': updated})
 
 
 class ActionLogViewSet(viewsets.ReadOnlyModelViewSet):

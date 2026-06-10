@@ -5,6 +5,9 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from . import (
     admin_views,
+    ai_compose_views,
+    guide_views,
+    messages_admin_views,
     lotto_views,
     permissions_views,
     print_queue_views,
@@ -84,6 +87,13 @@ admin_patterns = [
         wallet_admin_views.balance_user_detail,
         name='admin-balance-user',
     ),
+    path('messages/users/', messages_admin_views.messages_users_list, name='admin-messages-users'),
+    path(
+        'messages/users/<int:user_id>/',
+        messages_admin_views.messages_user_detail,
+        name='admin-messages-user',
+    ),
+    path('ai/text-fix/', ai_compose_views.ai_text_fix, name='admin-ai-text-fix'),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
     path(
         'orders/<int:order_id>/form-preview/',
@@ -108,6 +118,7 @@ admin_patterns = [
 ]
 
 urlpatterns = [
+    path('guide/chat/', guide_views.guide_chat, name='guide-chat'),
     path('auth/', include(auth_patterns)),
     path('wallet/', include(wallet_patterns)),
     path('lotto/', include(lotto_patterns)),

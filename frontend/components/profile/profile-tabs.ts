@@ -1,4 +1,4 @@
-export type ProfileTabId = "details" | "password" | "topup" | "orders";
+export type ProfileTabId = "details" | "password" | "topup" | "orders" | "inbox";
 
 export const PROFILE_TABS: {
   id: ProfileTabId;
@@ -10,6 +10,7 @@ export const PROFILE_TABS: {
   { id: "password", href: "/profile/password", label: "סיסמה", icon: "🔐" },
   { id: "topup", href: "/profile/topup", label: "טעינת כסף", icon: "💳" },
   { id: "orders", href: "/profile/orders", label: "היסטוריית רכישות", icon: "📋" },
+  { id: "inbox", href: "/profile/inbox", label: "תיבת דואר", icon: "📬" },
 ];
 
 export function tabFromPath(pathname: string | null): ProfileTabId {

@@ -112,6 +112,17 @@ export interface OrderInvoice {
   invoice_issued_at: string | null;
 }
 
+export type InboxChannel = "system" | "sms" | "email" | "push";
+
+export interface InboxMessage {
+  id: number;
+  channel: InboxChannel;
+  subject: string;
+  body: string;
+  sent_at: string;
+  is_read: boolean;
+}
+
 export interface Paginated<T> {
   count: number;
   next: string | null;

@@ -10,6 +10,7 @@ export type AdminTabId =
   | "print-queue"
   | "permissions"
   | "balance"
+  | "messages"
   | "services";
 
 const TABS: { id: AdminTabId; href: string; label: string }[] = [
@@ -18,6 +19,7 @@ const TABS: { id: AdminTabId; href: string; label: string }[] = [
   { id: "print-queue", href: "/admin/print-queue", label: "תור הדפסה" },
   { id: "permissions", href: "/admin/permissions", label: "הרשאות" },
   { id: "balance", href: "/admin/balance", label: "יתרות" },
+  { id: "messages", href: "/admin/messages", label: "מכתבים" },
   { id: "services", href: "/admin/services", label: "שירותים" },
 ];
 
@@ -26,6 +28,7 @@ function activeTabFromPath(pathname: string): AdminTabId {
   if (pathname.startsWith("/admin/print-queue")) return "print-queue";
   if (pathname.startsWith("/admin/permissions")) return "permissions";
   if (pathname.startsWith("/admin/balance")) return "balance";
+  if (pathname.startsWith("/admin/messages")) return "messages";
   if (pathname.startsWith("/admin/services")) return "services";
   return "dashboard";
 }

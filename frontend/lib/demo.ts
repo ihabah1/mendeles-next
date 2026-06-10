@@ -25,6 +25,25 @@ export const DEMO_SETS = Array.from({ length: 200 }, (_, i) => {
   };
 });
 
+export const DEMO_MESSAGES = [
+  {
+    id: 1,
+    channel: 'system' as const,
+    subject: 'ברוכים הבאים',
+    body: 'שלום דמו,\n\nתודה שנרשמת למנדלס! כאן בתיבת הדואר שלך תקבל מכתבי מערכת, עדכונים על הזמנות, זכיות ועוד.\n\nבהצלחה בהגרלות!',
+    sent_at: new Date().toISOString(),
+    is_read: false,
+  },
+  {
+    id: 2,
+    channel: 'system' as const,
+    subject: 'טיפ: מלא טפסים מהיר',
+    body: 'ניתן למלא עד 14 טבלאות בטופס אחד ולשלם מהיתרה באזור האישי.',
+    sent_at: new Date(Date.now() - 86400000).toISOString(),
+    is_read: true,
+  },
+];
+
 export const DEMO_TRANSACTIONS = [
   { id: 1, type: 'deposit', description: 'טעינת דמו', amountIls: 500, amount_ils: 500, createdAt: new Date().toISOString(), created_at: new Date().toISOString() },
   { id: 2, type: 'charge', description: 'מנוי חודשי', amountIls: -50, amount_ils: -50, createdAt: new Date().toISOString(), created_at: new Date().toISOString() },

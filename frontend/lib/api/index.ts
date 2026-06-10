@@ -8,6 +8,8 @@ export { contentService } from "./content";
 export { walletService } from "./wallet";
 export { adminService } from "./admin";
 export { lottoService } from "./lotto";
+export { inboxService } from "./inbox";
+export { messagesAdminService } from "./messages-admin";
 export { mapApiOrder, mapApiOrders, orderStatusLabel } from "./mappers";
 export type { UiOrder, UiTransaction } from "./mappers";
 export type * from "./types";

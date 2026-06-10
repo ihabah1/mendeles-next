@@ -119,9 +119,11 @@ def verify_token(raw_token: str) -> User:
         user.is_active = True
     user.save(update_fields=['email_verified', 'is_active'])
 
+    from api.services.customer_messages import send_welcome_if_needed
     from api.services.user_setup import ensure_customer_records
 
     ensure_customer_records(user)
+    send_welcome_if_needed(user)
 
     from django.utils import timezone
 
