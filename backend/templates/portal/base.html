@@ -4,20 +4,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Mandeles ניהול{% endblock %}</title>
+  <title>{% block title %}Mandeles נהל{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'portal/dashboard.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <a class="brand" href="{% url 'portal:dashboard' %}">🎯 Mandeles ניהול</a>
+      <a class="brand" href="{% url 'portal:dashboard' %}">🎯 Mandeles נהל</a>
       <nav>
         <a href="{% url 'portal:customers' %}" {% if request.resolver_match.url_name == 'customers' or request.resolver_match.url_name == 'customer_detail' or request.resolver_match.url_name == 'user_create' %}class="active"{% endif %}>👥 לקוחות</a>
         <a href="{% url 'portal:orders' %}" {% if request.resolver_match.url_name == 'orders' %}class="active"{% endif %}>📋 הזמנות</a>
         <a href="{% url 'portal:logs' %}" {% if request.resolver_match.url_name == 'logs' %}class="active"{% endif %}>📜 לוגים</a>
         {% if AI_AGENT_ENABLED %}
-        <a href="{% url 'portal:ai_requests' %}" {% if 'ai_request' in request.resolver_match.url_name or request.resolver_match.url_name == 'ai_requests' %}class="active"{% endif %}>🤖 ניהול AI</a>
+        <a href="{% url 'portal:ai_requests' %}" {% if 'ai_request' in request.resolver_match.url_name or request.resolver_match.url_name == 'ai_requests' %}class="active"{% endif %}>🤖 נהל AI</a>
         <a href="{% url 'portal:ai_jobs' %}" {% if request.resolver_match.url_name == 'ai_jobs' %}class="active"{% endif %}>⚙️ תור AI</a>
         {% endif %}
         <a href="/space-invaders-ab16/" class="{% if request.resolver_match.url_name == 'space_invaders_ab16' %}active{% endif %}" style="color: white;">🎮 Space Invaders AB16</a>
