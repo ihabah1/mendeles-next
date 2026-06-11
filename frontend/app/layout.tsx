@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PromoLayout>{children}</PromoLayout>
           <SiteGuideChat />
         </AuthProvider>
-        <footer style={{ textAlign: "center", padding: "20px 16px", borderTop: "1px solid var(--border)", color: "var(--muted)", fontSize: ".7rem", lineHeight: 1.8, background: "var(--bg2)" }}>
+        <footer style={{ textAlign: "center", padding: "20px 16px", borderTop: "1px solid var(--border)", color: "var(--muted)", fontSize: ".7rem", lineHeight: 1.8, background: "var(--bg4)" }}>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <a href="/about" style={{ color: "var(--muted)", textDecoration: "none" }}>אודות</a>
             <a href="/terms" style={{ color: "var(--muted)", textDecoration: "none" }}>תנאי שימוש</a>

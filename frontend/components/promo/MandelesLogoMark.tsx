@@ -27,7 +27,8 @@ export default function MandelesLogoMark({
       </svg>
       {showText && (
         <span className="mandeles-logo-text">
-          Mandeles<span className="mandeles-logo-tld">.co.il</span>
+          <span className="mandeles-logo-name">Mandeles</span>
+          <span className="mandeles-logo-tld">.co.il</span>
         </span>
       )}
     </span>

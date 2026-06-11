@@ -9,6 +9,13 @@ import BalancePill from "@/components/BalancePill";
 import PromoTopBanner from "@/components/promo/PromoTopBanner";
 import MandelesLogoMark from "@/components/promo/MandelesLogoMark";
 
+type NavLink = {
+  href: string;
+  label: string;
+  exact?: boolean;
+  badge?: string;
+};
+
 export default function Nav() {
   const router = useRouter();
   const path = usePathname();
@@ -16,6 +23,7 @@ export default function Nav() {
   const [balance, setBalance] = useState<number | null>(null);
 
   const isDemo = authUser?.email === "demo@mandeles.co.il";
+  const isHome = path === "/";
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -35,69 +43,78 @@ export default function Nav() {
     router.push("/");
   };
 
-  /** Toto hidden by default; set NEXT_PUBLIC_LOTTO_ONLY=false to show it. 777 always visible. */
   const hideToto = process.env.NEXT_PUBLIC_LOTTO_ONLY !== "false";
-  const navLinks = [
-    { href: "/lotto", label: "🎱 לוטו" },
-    { href: "/seven77", label: "🎰 777" },
-    ...(hideToto ? [] : [{ href: "/toto", label: "⚽ טוטו" }]),
-    { href: "/profile", label: "👤 פרופיל" },
+  const navLinks: NavLink[] = [
+    { href: "/", label: "ראשי", exact: true },
+    { href: "/lotto", label: "לוטו" },
+    { href: "/seven77", label: "777" },
+    ...(hideToto ? [] : [{ href: "/toto", label: "טוטו" }]),
+    { href: "/about", label: "מידע" },
+    { href: "/lotto", label: "מבצעים", badge: "3" },
+    { href: "/profile/orders", label: "תוצאות" },
+    { href: "/terms", label: "משחקים באחריות" },
   ];
 
-  const isActive = (href: string) => path === href || path?.startsWith(href + "/");
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? path === href : path === href || (path?.startsWith(href + "/") ?? false);
+
   const hidePromo = path?.startsWith("/admin") || path?.startsWith("/auth");
 
   return (
     <>
-      {!hidePromo && <PromoTopBanner />}
-    <nav className="nav">
-      <div className="nav-inner">
-        <Link href="/" className="nav-logo">
-          <MandelesLogoMark size="sm" />
-          <PageCodeBadge />
-        </Link>
+      {!hidePromo && !isHome && <PromoTopBanner />}
+      <nav className="nav">
+        <div className="nav-inner">
+          <Link href="/" className="nav-logo">
+            <MandelesLogoMark size="sm" />
+            <PageCodeBadge />
+          </Link>
 
-        <div className="nav-links">
-          {navLinks.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`nav-link${isActive(l.href) ? " active" : ""}`}
-            >
-              {l.label}
-            </Link>
-          ))}
-          {isStaff && (
-            <Link
-              href="/admin"
-              className={`nav-link${isActive("/admin") ? " active" : ""}`}
-            >
-              ⚙️ ניהול
-            </Link>
-          )}
-        </div>
-
-        <div className="nav-actions">
-          {isAuthenticated ? (
-            <>
-              {isDemo && <span className="nav-demo">🧪 DEMO</span>}
-              {balance !== null ? (
-                <BalancePill balance={balance} compact />
-              ) : (
-                <span className="nav-balance">💳 ...</span>
-              )}
-              <button
-                type="button"
-                onClick={logout}
-                className="btn btn-outline btn-sm"
+          <div className="nav-links">
+            {navLinks.map((l) => (
+              <Link
+                key={`${l.href}-${l.label}`}
+                href={l.href}
+                className={`nav-link${isActive(l.href, l.exact) ? " active" : ""}`}
               >
-                התנתק
-              </button>
-            </>
-          ) : null}
+                {l.label}
+                {l.badge ? <span className="nav-link-badge">{l.badge}</span> : null}
+              </Link>
+            ))}
+            {isStaff && (
+              <Link
+                href="/admin"
+                className={`nav-link${isActive("/admin") ? " active" : ""}`}
+              >
+                ניהול
+              </Link>
+            )}
+          </div>
+
+          <div className="nav-actions">
+            <span className="nav-search" aria-hidden>
+              🔍 חיפוש
+            </span>
+            {isAuthenticated ? (
+              <>
+                {isDemo && <span className="nav-demo">DEMO</span>}
+                {balance !== null ? (
+                  <BalancePill balance={balance} compact />
+                ) : (
+                  <span className="nav-balance">...</span>
+                )}
+                <button type="button" onClick={logout} className="nav-logout-btn">
+                  התנתק
+                </button>
+              </>
+            ) : (
+              <Link href="/auth" className="nav-login-btn">
+                👤 כניסה / הרשמה
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
     </>
   );
 }
