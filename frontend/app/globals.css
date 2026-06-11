@@ -20,12 +20,14 @@
   --text2:     #5a4830;
   --muted:     #9a8878;
 
-  --gold:      #c9a030;
-  --gold-dark: #a07820;
-  --gold-bg:   #fdf5e4;
-  --gold-border: #e8c060;
+  /* Primary brand / header color (Winner red) */
+  --navy:      #c01820;
 
-  --navy:      #1c1208;
+  /* Accent / CTA gold tuned brighter for banner/buttons */
+  --gold:      #ffd200;
+  --gold-dark: #a06f00;
+  --gold-bg:   #fff6cc;
+  --gold-border: #ffdf88;
 
   --green:     #1c8040;
   --green-bg:  #f0faf4;
@@ -89,7 +91,7 @@ p  { line-height: 1.7; }
 /* ── Navigation ── */
 .nav {
   background: var(--navy);
-  height: 50px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -97,7 +99,7 @@ p  { line-height: 1.7; }
   position: sticky;
   top: 0;
   z-index: 200;
-  border-bottom: 1px solid #2a2010;
+  border-bottom: 1px solid rgba(0,0,0,.12);
 }
 .nav-inner {
   max-width: 1100px;
@@ -110,9 +112,9 @@ p  { line-height: 1.7; }
 }
 .nav-logo {
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  color: #e8c060;
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
   letter-spacing: 1.5px;
   text-decoration: none;
   display: flex;
@@ -122,18 +124,18 @@ p  { line-height: 1.7; }
 }
 .nav-logo span { color: #c8b898; font-weight: 400; font-size: 11px; }
 .nav-link {
-  color: #f0e8d8;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 600;
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
   border-radius: var(--r-sm);
   letter-spacing: .3px;
   transition: color .15s, background .15s;
   text-decoration: none;
   white-space: nowrap;
 }
-.nav-link:hover  { color: #ffe8a0; background: rgba(255,255,255,.06); }
-.nav-link.active { color: #ffd860; background: rgba(201,168,76,.22); font-weight: 700; }
+.nav-link:hover  { color: #fffdd6; background: rgba(255,255,255,.06); }
+.nav-link.active { color: var(--gold); background: rgba(255,223,136,.12); font-weight: 800; }
 .nav-links {
   display: flex;
   gap: 2px;
@@ -272,7 +274,11 @@ p  { line-height: 1.7; }
 .input:focus { border-color: var(--gold); }
 .input::placeholder { color: var(--text2); opacity: 1; }
 
-/* ── Badges ── */
+.nav-logo {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -610,8 +616,8 @@ p  { line-height: 1.7; }
   position: relative;
   z-index: 1;
   border: 2px solid var(--navy);
-  border-bottom: 2px solid var(--bg);
-}
+.nav-link:hover  { color: #fffdd6; background: rgba(255,255,255,.06); }
+.nav-link.active { color: var(--gold); background: rgba(255,223,136,.12); font-weight: 800; }
 .admin-tab--external {
   margin-inline-start: auto;
 }
