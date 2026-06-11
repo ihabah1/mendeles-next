@@ -15,17 +15,18 @@
   --border2:   #d0c8c0;
 
   --text:      #1c1208;
-  --text2:     #5a4830;
-  --muted:     #9a8878;
+  --text2:     #3d2f24;
+  --muted:     #827061;
 
   /* Primary brand / header color (Winner red) */
   --navy:      #c01820;
 
   /* Accent / CTA gold tuned brighter for banner/buttons */
-  --gold:      #ffd200;
-  --gold-dark: #a06f00;
-  --gold-bg:   #fff6cc;
-  --gold-border: #ffdf88;
+  --gold:      #f2b705;
+  --gold-dark: #b07a00;
+  --gold-bg:   #fff7df;
+  --gold-border: #f2c84d;
+  --accent:    #c91820;
 
   --green:     #1c8040;
   --green-bg:  #f0faf4;
@@ -85,6 +86,10 @@ h2 { font-size: 1.4rem; font-weight: 900; }
 h3 { font-size: 1.1rem; font-weight: 700; }
 h4 { font-size: .9rem;  font-weight: 700; }
 p  { line-height: 1.7; }
+
+/* Hero / prominent headings */
+h1, .page-head-title { color: var(--gold); text-shadow: 0 2px 0 rgba(0,0,0,0.03); }
+h2, .home-section-title { color: var(--text2); }
 
 /* ── Navigation ── */
 .nav-inner {
@@ -174,6 +179,7 @@ p  { line-height: 1.7; }
 .btn:disabled { opacity: .55; cursor: wait; transform: none; }
 
 .btn-gold    { background: var(--gold);  color: var(--navy); }
+.btn-gold { background: linear-gradient(180deg, var(--gold) 0%, #e6af00 100%); box-shadow: 0 6px 20px rgba(240,180,50,.18); border: 1px solid var(--gold-border); }
 .btn-dark    { background: var(--navy);  color: #fff; }
 .btn-green   { background: var(--green); color: #fff; }
 .btn-red     { background: var(--red);   color: #fff; }
@@ -194,8 +200,8 @@ p  { line-height: 1.7; }
 .card {
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  border-radius: calc(var(--r-md) + 2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.08);
 }
 .card-head {
   background: var(--bg3);
@@ -292,6 +298,14 @@ p  { line-height: 1.7; }
 }
 .page-head-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
 .page-head-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: .3px; }
+
+/* Hero section styling */
+.home-hero {
+  text-align: center;
+  padding: 42px 20px 28px;
+}
+.home-hero .cta { display:inline-flex; gap:12px; margin-top:18px; }
+.home-hero .cta .btn { font-size: 1rem; padding: 12px 20px; }
 
 /* ── Layout ── */
 .container { max-width: 1100px; margin: 0 auto; padding: 0 var(--gap-lg); }
