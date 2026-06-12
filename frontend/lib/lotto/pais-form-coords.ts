@@ -29,9 +29,9 @@ export interface MarkPoint {
   y: number;
 }
 
-/** Horizontal bar centered in each pink cell (matches pen stroke on scan). */
-export const MARK_WIDTH = 11;
-export const MARK_HEIGHT = 2.2;
+/** Horizontal bar centered in each cell (matches pen stroke on scan). */
+export const MARK_WIDTH = 9;
+export const MARK_HEIGHT = 2.6;
 
 /** Fine-tune overlay vs scan (px in 244×670 viewBox). */
 const MARK_X_BIAS = 0;
