@@ -17,6 +17,10 @@ type ChatMsg = {
 
 const HIDE_ON = ["/admin", "/auth"];
 const BALLOON_DISMISS_KEY = "mandeles-guide-balloon-dismissed";
+const BALLOON_POS_KEY = "mandeles-guide-balloon-pos";
+const DRAG_THRESHOLD = 6;
+
+type Pos = { x: number; y: number };
 
 export default function SiteGuideChat() {
   const path = usePathname() ?? "";
@@ -33,13 +37,92 @@ export default function SiteGuideChat() {
   const nextId = useRef(1);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<Pos | null>(null);
+  const dragState = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    dragging: boolean;
+  } | null>(null);
+  const wasDragged = useRef(false);
+
   useEffect(() => {
     try {
       setBalloonDismissed(sessionStorage.getItem(BALLOON_DISMISS_KEY) === "1");
+      const saved = localStorage.getItem(BALLOON_POS_KEY);
+      if (saved) {
+        const p = JSON.parse(saved) as Pos;
+        if (typeof p.x === "number" && typeof p.y === "number") setPos(p);
+      }
     } catch {
       /* ignore */
     }
   }, []);
+
+  const clampPos = useCallback((p: Pos): Pos => {
+    const el = rootRef.current;
+    const w = el?.offsetWidth ?? 200;
+    const h = el?.offsetHeight ?? 60;
+    return {
+      x: Math.min(Math.max(p.x, 8), window.innerWidth - w - 8),
+      y: Math.min(Math.max(p.y, 8), window.innerHeight - h - 8),
+    };
+  }, []);
+
+  const onDragPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const el = rootRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragState.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      dragging: false,
+    };
+    wasDragged.current = false;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onDragPointerMove = (e: React.PointerEvent) => {
+    const st = dragState.current;
+    if (!st || st.pointerId !== e.pointerId) return;
+    const dx = e.clientX - st.startX;
+    const dy = e.clientY - st.startY;
+    if (!st.dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    st.dragging = true;
+    wasDragged.current = true;
+    setPos(clampPos({ x: st.originX + dx, y: st.originY + dy }));
+  };
+
+  const onDragPointerUp = (e: React.PointerEvent) => {
+    const st = dragState.current;
+    if (!st || st.pointerId !== e.pointerId) return;
+    dragState.current = null;
+    if (st.dragging) {
+      setPos((p) => {
+        if (p) {
+          try {
+            localStorage.setItem(BALLOON_POS_KEY, JSON.stringify(p));
+          } catch {
+            /* ignore */
+          }
+        }
+        return p;
+      });
+    }
+  };
+
+  useEffect(() => {
+    const onResize = () => setPos((p) => (p ? clampPos(p) : p));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampPos]);
 
   const dismissBalloon = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -92,8 +175,19 @@ export default function SiteGuideChat() {
 
   if (hidden) return null;
 
+  /** When dragged, panel opens above or below depending on free space. */
+  const panelBelow = pos !== null && pos.y < 300;
+
   return (
-    <div className="site-guide-root">
+    <div
+      ref={rootRef}
+      className={`site-guide-root${panelBelow ? " site-guide-root--panel-below" : ""}`}
+      style={
+        pos
+          ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", insetInlineStart: "auto", insetInlineEnd: "auto" }
+          : undefined
+      }
+    >
       {open && (
         <div className="site-guide-panel site-guide-panel--open" role="dialog" aria-label="צ'אט עזרה">
           <div className="site-guide-header">
@@ -156,12 +250,21 @@ export default function SiteGuideChat() {
       )}
 
       {!open && !balloonDismissed && (
-        <div className="site-guide-balloon-wrap">
+        <div
+          className="site-guide-balloon-wrap site-guide-draggable"
+          onPointerDown={onDragPointerDown}
+          onPointerMove={onDragPointerMove}
+          onPointerUp={onDragPointerUp}
+          onPointerCancel={onDragPointerUp}
+        >
           <div className="site-guide-balloon">
             <button
               type="button"
               className="site-guide-balloon-close"
-              onClick={dismissBalloon}
+              onClick={(e) => {
+                if (wasDragged.current) return;
+                dismissBalloon(e);
+              }}
               aria-label="סגור בלון"
             >
               ✕
@@ -169,7 +272,10 @@ export default function SiteGuideChat() {
             <button
               type="button"
               className="site-guide-balloon-body"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                if (wasDragged.current) return;
+                setOpen(true);
+              }}
               aria-label="פתח צ'אט עזרה"
             >
               <SiteIcon size={34} />
@@ -183,8 +289,15 @@ export default function SiteGuideChat() {
       {balloonDismissed && !open && (
         <button
           type="button"
-          className="site-guide-fab site-guide-fab--mini"
-          onClick={() => setOpen(true)}
+          className="site-guide-fab site-guide-fab--mini site-guide-draggable"
+          onPointerDown={onDragPointerDown}
+          onPointerMove={onDragPointerMove}
+          onPointerUp={onDragPointerUp}
+          onPointerCancel={onDragPointerUp}
+          onClick={() => {
+            if (wasDragged.current) return;
+            setOpen(true);
+          }}
           aria-label="פתח צ'אט עזרה"
         >
           <SiteIcon size={28} />

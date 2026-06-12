@@ -1522,6 +1522,17 @@ h2, .home-section-title { color: var(--text); }
   animation: site-guide-panel-in .22s ease-out forwards;
   pointer-events: auto;
 }
+.site-guide-draggable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.site-guide-draggable:active { cursor: grabbing; }
+/* When dragged near the top, open the panel below the balloon instead of above. */
+.site-guide-root--panel-below .site-guide-panel {
+  bottom: auto;
+  top: 72px;
+}
 @keyframes site-guide-panel-in {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
