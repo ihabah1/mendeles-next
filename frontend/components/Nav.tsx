@@ -51,16 +51,34 @@ export default function Nav() {
   const [balance, setBalance] = useState<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return SEARCH_TARGETS;
-    return SEARCH_TARGETS.filter((target) => {
+    // Autocomplete ranking: label prefix matches first, then any match.
+    const starts: SearchTarget[] = [];
+    const contains: SearchTarget[] = [];
+    for (const target of SEARCH_TARGETS) {
+      const label = target.label.toLowerCase();
       const normalized = `${target.label} ${target.subtitle} ${target.code} ${target.href}`.toLowerCase();
-      return normalized.includes(query);
-    });
+      if (label.startsWith(query)) starts.push(target);
+      else if (normalized.includes(query)) contains.push(target);
+    }
+    return [...starts, ...contains];
   }, [searchQuery]);
+
+  /** Inline autocomplete hint — rest of the first label that starts with the query. */
+  const completionHint = useMemo(() => {
+    const query = searchQuery.trim();
+    if (!query) return "";
+    const first = searchResults[0];
+    if (first && first.label.toLowerCase().startsWith(query.toLowerCase()) && first.label.length > query.length) {
+      return first.label.slice(query.length);
+    }
+    return "";
+  }, [searchQuery, searchResults]);
 
   const isDemo = authUser?.email === "demo@mandeles.co.il";
   const isHome = path === "/";
@@ -88,6 +106,10 @@ export default function Nav() {
     setSearchQuery("");
   }, [path]);
 
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [searchQuery]);
+
   const handleSearchSelect = (href: string) => {
     setSearchOpen(false);
     setSearchQuery("");
@@ -96,8 +118,22 @@ export default function Nav() {
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (searchResults.length > 0) {
-      handleSearchSelect(searchResults[0].href);
+    const target = searchResults[activeIndex] ?? searchResults[0];
+    if (target) {
+      handleSearchSelect(target.href);
+    }
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, searchResults.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if ((event.key === "Tab" || event.key === "ArrowLeft") && completionHint) {
+      event.preventDefault();
+      setSearchQuery(searchQuery + completionHint);
     }
   };
 
@@ -168,9 +204,11 @@ export default function Nav() {
           </div>
 
           <div className="nav-actions">
-            <button type="button" className="nav-search" onClick={() => setSearchOpen(true)}>
-              🔍 חיפוש
-            </button>
+            {isAuthenticated && (
+              <button type="button" className="nav-search" onClick={() => setSearchOpen(true)}>
+                🔍 חיפוש
+              </button>
+            )}
             {isAuthenticated ? (
               <>
                 {isDemo && <span className="nav-demo">DEMO</span>}
@@ -191,31 +229,42 @@ export default function Nav() {
           </div>
         </div>
       </nav>
-      {searchOpen && (
+      {searchOpen && isAuthenticated && (
         <div className="search-backdrop" role="dialog" aria-modal="true" onClick={() => setSearchOpen(false)}>
           <div className="search-dialog" onClick={(event) => event.stopPropagation()}>
             <form className="search-form" onSubmit={handleSearchSubmit}>
               <label htmlFor="nav-search-input" className="sr-only">
                 חיפוש דפים
               </label>
-              <input
-                id="nav-search-input"
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="search-input"
-                placeholder="חפש דף, קוד או נושא..."
-                aria-label="חפש דף"
-              />
+              <div className="search-input-wrap">
+                {completionHint && (
+                  <span className="search-completion" aria-hidden>
+                    <span className="search-completion-typed">{searchQuery}</span>
+                    <span className="search-completion-rest">{completionHint}</span>
+                  </span>
+                )}
+                <input
+                  id="nav-search-input"
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  className="search-input"
+                  placeholder="הקלד מילת חיפוש"
+                  aria-label="חפש דף"
+                  autoComplete="off"
+                />
+              </div>
             </form>
             <div className="search-list">
               {searchResults.length ? (
-                searchResults.map((target) => (
+                searchResults.map((target, idx) => (
                   <button
                     key={target.href}
                     type="button"
-                    className="search-item"
+                    className={`search-item${idx === activeIndex ? " active" : ""}`}
                     onClick={() => handleSearchSelect(target.href)}
+                    onMouseEnter={() => setActiveIndex(idx)}
                   >
                     <span>
                       <span>{target.label}</span>
