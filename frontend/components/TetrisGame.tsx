@@ -252,12 +252,13 @@ export default function TetrisGame() {
           </div>
         )}
       </div>
-      <div className="tetris-controls" aria-label="כפתורי שליטה">
-        <button type="button" onClick={() => move(0, -1)} aria-label="שמאלה">→</button>
+      {/* dir=ltr keeps the visual order fixed so each arrow matches its movement direction */}
+      <div className="tetris-controls" aria-label="כפתורי שליטה" dir="ltr">
+        <button type="button" onClick={() => move(0, -1)} aria-label="שמאלה">←</button>
         <button type="button" onClick={doRotate} aria-label="סובב">⟳</button>
         <button type="button" onClick={() => move(1, 0)} aria-label="למטה">↓</button>
         <button type="button" onClick={hardDrop} aria-label="הפל">⤓</button>
-        <button type="button" onClick={() => move(0, 1)} aria-label="ימינה">←</button>
+        <button type="button" onClick={() => move(0, 1)} aria-label="ימינה">→</button>
       </div>
     </div>
   );
