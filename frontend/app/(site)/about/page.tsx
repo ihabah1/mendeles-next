@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import Link from "next/link";
+import TetrisGame from "@/components/TetrisGame";
 
 export const metadata = { title: "אודות — Mandeles.co.il" };
 
@@ -25,9 +26,7 @@ export default function AboutPage() {
 
         <div style={{ border: "2px dashed var(--gold)", padding: "20px", textAlign: "center", marginTop: 40, marginBottom: 20, color: "var(--gold)" }}>
           <h2 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 700, marginBottom: 10 }}>משחק טטריס</h2>
-          <div id="tetris-game-container" style={{ width: '200px', height: '400px', margin: '20px auto', backgroundColor: 'black', border: '1px solid var(--gold)' }}>
-            {/* The Tetris game will be initialized here by JavaScript */}
-          </div>
+          <TetrisGame />
         </div>
         <p style={{ color: "var(--muted)", fontSize: ".75rem", textAlign: "center" }}>הדף נוצר ע"י צוות מנצח</p>
         <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
