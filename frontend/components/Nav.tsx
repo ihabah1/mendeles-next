@@ -161,7 +161,7 @@ export default function Nav() {
                 href="/admin"
                 className={`nav-link${isActive("/admin") ? " active" : ""}`}
               >
-                ניהול
+                נהל
               </Link>
             )}
           </div>
