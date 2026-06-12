@@ -271,7 +271,6 @@ function AdminPageInner() {
         if (logRes.integrations) setIntegrations(logRes.integrations);
         return;
       }
-      alert(`חשבונית ${res.doc_number} הונפקה`);
       const issuedAt = res.invoice_issued_at || new Date().toISOString();
       const pdfLink = res.pdf_link?.trim();
       setOrders(prev =>
