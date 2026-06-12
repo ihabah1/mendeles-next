@@ -30,6 +30,7 @@ _PUBLIC: list[PageCodeEntry] = [
     PageCodeEntry('TU77', 'טעינת ארנק', ('frontend/app/(site)/profile/topup/page.tsx',), frontend_paths=('/profile/topup', '/topup')),
     PageCodeEntry('OR71', 'היסטוריית רכישות', ('frontend/app/(site)/profile/orders/page.tsx',), frontend_paths=('/profile/orders', '/profile/forms')),
     PageCodeEntry('RP45', 'איפוס סיסמה', ('frontend/app/(site)/reset-password/page.tsx',), frontend_paths=('/reset-password',)),
+    PageCodeEntry('SE21', 'חיפוש', ('frontend/app/(site)/search/page.tsx',), frontend_paths=('/search',)),
     PageCodeEntry('AD33', 'ניהול Next.js', ('frontend/app/(site)/admin/page.tsx',), frontend_paths=('/admin',)),
     PageCodeEntry('PQ55', 'תור הדפסה', ('frontend/app/(site)/admin/print-queue/page.tsx',), frontend_paths=('/admin/print-queue',)),
     PageCodeEntry('PM41', 'מתן הרשאות', ('frontend/app/(site)/admin/permissions/page.tsx',), frontend_paths=('/admin/permissions',)),
