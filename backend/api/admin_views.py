@@ -10,10 +10,9 @@ from admin_panel.accounts.models import User
 from admin_panel.portal.models import IntegrationLog, Order, Subscription
 
 from api.services.icount_service import (
-    ICountError,
-    create_invoice_for_order,
     fetch_document_pdf_link,
     icount_config_status,
+    issue_invoice_if_needed,
 )
 from api.services.integration_log import log_integration, recent_integration_logs
 from api.services.lotto_wins import check_and_credit_wins
@@ -204,6 +203,9 @@ def admin_order_invoice(request, order_id):
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
+        issue_invoice_if_needed(order, trigger='admin_view')
+        order.refresh_from_db()
+
         doc_number = (order.icount_doc_number or '').strip()
         doc_id = (order.icount_doc_id or '').strip()
         pdf_link = (order.icount_pdf_link or '').strip()
@@ -211,7 +213,7 @@ def admin_order_invoice(request, order_id):
         if not doc_number and not doc_id and not pdf_link:
             return Response(
                 {
-                    'detail': 'טרם הונפקה חשבונית להזמנה זו — לחץ «הנפק חשבונית»',
+                    'detail': 'טרם הונפקה חשבונית להזמנה זו',
                     'can_issue': True,
                 },
                 status=status.HTTP_404_NOT_FOUND,
@@ -235,83 +237,26 @@ def admin_order_invoice(request, order_id):
             ),
         })
 
-    if (order.icount_doc_number or '').strip():
+    inv = issue_invoice_if_needed(order, trigger='admin_manual')
+    if inv and inv.get('already_issued'):
         return Response({
             'detail': 'חשבונית כבר הונפקה',
             'doc_number': order.icount_doc_number,
             'doc_id': order.icount_doc_id,
             'pdf_link': order.icount_pdf_link or None,
         })
-
-    log_integration(
-        IntegrationLog.Source.ICOUNT,
-        IntegrationLog.Level.INFO,
-        f'מנסה להנפיק חשבונית: {order.order_number}',
-        order=order,
-        details={
-            'amount_ils': float(order.amount_ils),
-            'customer': order.customer.email,
-        },
-    )
-
-    try:
-        inv = create_invoice_for_order(order)
-    except ICountError as exc:
-        log_integration(
-            IntegrationLog.Source.ICOUNT,
-            IntegrationLog.Level.ERROR,
-            str(exc),
-            order=order,
-            details={
-                'order_number': order.order_number,
-                **(exc.details if getattr(exc, 'details', None) else {}),
-            },
+    if not inv:
+        return Response(
+            {'detail': 'הנפקת חשבונית נכשלה — ראה יומן אינטגרציות'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    doc_number = str(inv.get('doc_number') or '').strip()
-    doc_id = str(inv.get('doc_id') or '').strip()
-    if not doc_number and not doc_id:
-        msg = 'iCount לא החזיר מזהה מסמך — החשבונית לא נשמרה'
-        log_integration(
-            IntegrationLog.Source.ICOUNT,
-            IntegrationLog.Level.ERROR,
-            msg,
-            order=order,
-            details=inv.get('raw'),
-        )
-        return Response({'detail': msg}, status=status.HTTP_502_BAD_GATEWAY)
-
-    order.icount_doc_id = doc_id
-    order.icount_doc_number = doc_number
-    order.icount_pdf_link = str(inv.get('pdf_link') or '')[:512]
-    order.invoice_issued_at = timezone.now()
-    order.save(
-        update_fields=[
-            'icount_doc_id',
-            'icount_doc_number',
-            'icount_pdf_link',
-            'invoice_issued_at',
-        ],
-    )
-
-    log_integration(
-        IntegrationLog.Source.ICOUNT,
-        IntegrationLog.Level.INFO,
-        f'חשבונית {doc_number or doc_id} הונפקה: {order.order_number}',
-        order=order,
-        details={
-            'doc_number': doc_number,
-            'doc_id': doc_id,
-            'pdf_link': order.icount_pdf_link or None,
-        },
-    )
-
+    order.refresh_from_db()
     return Response({
         'detail': 'חשבונית הונפקה בהצלחה',
         'doc_number': order.icount_doc_number,
         'doc_id': order.icount_doc_id,
-        'pdf_link': order.icount_pdf_link or inv.get('pdf_link'),
+        'pdf_link': order.icount_pdf_link or None,
         'invoice_issued_at': order.invoice_issued_at.isoformat(),
     })
 

@@ -243,13 +243,16 @@ def customer_order_invoice(request, order_id: int):
     """GET /api/orders/<id>/invoice/ — customer invoice link (owner or staff)."""
     from django.utils import timezone
 
-    from api.services.icount_service import fetch_document_pdf_link
+    from api.services.icount_service import fetch_document_pdf_link, issue_invoice_if_needed
 
     order = Order.objects.filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
     if not is_staff_portal_user(request.user) and order.customer_id != request.user.id:
         return Response({'error': 'אין הרשאה'}, status=status.HTTP_403_FORBIDDEN)
+
+    issue_invoice_if_needed(order, trigger='customer_view')
+    order.refresh_from_db()
 
     doc_number = (order.icount_doc_number or '').strip()
     doc_id = (order.icount_doc_id or '').strip()

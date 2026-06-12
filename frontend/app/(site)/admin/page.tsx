@@ -291,9 +291,6 @@ function AdminPageInner() {
       );
       const logRes = await adminService.integrationLogs({ limit: 30 });
       setIntegrationLogs(logRes.logs);
-      if (pdfLink) {
-        setTimeout(() => window.open(pdfLink, "_blank", "noopener,noreferrer"), 300);
-      }
     } catch (e) {
       showToast(extractApiError(e, "הנפקת חשבונית נכשלה"), "err", 5000);
       try {
@@ -322,10 +319,6 @@ function AdminPageInner() {
 
   const viewInvoice = async (order: Order) => {
     if (!canManageOrders) return;
-    if (!orderHasInvoice(order)) {
-      alert("טרם הונפקה חשבונית — לחץ «הנפק חשבונית» קודם.");
-      return;
-    }
     const link = order.icountPdfLink?.trim();
     if (link) {
       window.open(link, "_blank", "noopener,noreferrer");
@@ -632,19 +625,15 @@ function AdminPageInner() {
                       <button
                         type="button"
                         className="btn btn-gold"
-                        style={{
-                          fontSize: ".68rem",
-                          padding: "4px 10px",
-                          opacity: orderHasInvoice(o) ? 1 : 0.45,
-                        }}
-                        disabled={actionLoading === o.id || !orderHasInvoice(o)}
+                        style={{ fontSize: ".68rem", padding: "4px 10px" }}
+                        disabled={actionLoading === o.id}
                         onClick={() => viewInvoice(o)}
                         title={
                           orderHasInvoice(o) && o.invoiceIssuedAt
                             ? `הונפקה ${new Date(o.invoiceIssuedAt).toLocaleDateString("he-IL")}${
                                 o.icountDocNumber ? ` · ${o.icountDocNumber}` : ""
                               }`
-                            : "הנפק חשבונית לפני הצגה"
+                            : "פתח חשבונית"
                         }
                       >
                         📄 הצג חשבונית

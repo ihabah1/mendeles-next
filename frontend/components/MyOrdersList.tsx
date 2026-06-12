@@ -230,22 +230,17 @@ export default function MyOrdersList({
                   📄 סריקה
                 </button>
               )}
-              {(o.hasInvoice || o.invoicePdfLink) ? (
+              {!isDemo && (
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
                   style={{ fontSize: ".66rem", padding: "4px 8px" }}
                   disabled={invoiceLoading === o.id}
                   onClick={() => openInvoice(o)}
+                  title="הצג חשבונית"
                 >
-                  {invoiceLoading === o.id ? "..." : "🧾 חשבונית"}
+                  {invoiceLoading === o.id ? "..." : "🧾 הצג חשבונית"}
                 </button>
-              ) : (
-                !isDemo && (
-                  <span style={{ fontSize: ".64rem", color: "var(--muted)", alignSelf: "center" }}>
-                    חשבונית — בהמתנה
-                  </span>
-                )
               )}
             </div>
 

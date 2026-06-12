@@ -207,8 +207,10 @@ def submit_order(request):
             f'amount:-{total} order:{order_number} ({len(sets)} tables)',
         )
 
+    from api.services.icount_service import issue_invoice_if_needed
     from api.services.print_queue_service import auto_enqueue_enabled, enqueue_order
 
+    issue_invoice_if_needed(order, trigger='order_create')
     if auto_enqueue_enabled():
         enqueue_order(order)
 

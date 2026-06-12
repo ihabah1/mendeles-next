@@ -409,6 +409,114 @@ def create_invoice_for_order(order) -> dict:
     return parsed
 
 
+def _order_has_invoice(order) -> bool:
+    return bool(
+        (order.icount_doc_number or '').strip()
+        or (order.icount_doc_id or '').strip()
+        or (order.icount_pdf_link or '').strip()
+    )
+
+
+def issue_invoice_if_needed(order, *, trigger: str = 'auto') -> dict | None:
+    """
+    Issue an iCount invoice when the order has none yet.
+    Never raises — failures are logged and return None.
+    """
+    if _order_has_invoice(order):
+        return {
+            'doc_number': order.icount_doc_number,
+            'doc_id': order.icount_doc_id,
+            'pdf_link': order.icount_pdf_link,
+            'already_issued': True,
+        }
+
+    if not icount_configured():
+        logger.info(
+            'skip auto invoice order=%s trigger=%s (iCount not configured)',
+            order.order_number,
+            trigger,
+        )
+        return None
+
+    from django.utils import timezone
+
+    from admin_panel.portal.models import IntegrationLog
+    from api.services.integration_log import log_integration
+
+    log_integration(
+        IntegrationLog.Source.ICOUNT,
+        IntegrationLog.Level.INFO,
+        f'מנסה להנפיק חשבונית ({trigger}): {order.order_number}',
+        order=order,
+        details={
+            'amount_ils': float(order.amount_ils or 0),
+            'customer': getattr(order.customer, 'email', ''),
+            'trigger': trigger,
+        },
+    )
+
+    try:
+        inv = create_invoice_for_order(order)
+    except ICountError as exc:
+        log_integration(
+            IntegrationLog.Source.ICOUNT,
+            IntegrationLog.Level.ERROR,
+            str(exc),
+            order=order,
+            details={
+                'order_number': order.order_number,
+                'trigger': trigger,
+                **(exc.details if getattr(exc, 'details', None) else {}),
+            },
+        )
+        return None
+
+    doc_number = str(inv.get('doc_number') or '').strip()
+    doc_id = str(inv.get('doc_id') or '').strip()
+    if not doc_number and not doc_id:
+        msg = 'iCount לא החזיר מזהה מסמך — החשבונית לא נשמרה'
+        log_integration(
+            IntegrationLog.Source.ICOUNT,
+            IntegrationLog.Level.ERROR,
+            msg,
+            order=order,
+            details={'trigger': trigger, **(inv.get('raw') or {})},
+        )
+        return None
+
+    order.icount_doc_id = doc_id
+    order.icount_doc_number = doc_number
+    order.icount_pdf_link = str(inv.get('pdf_link') or '')[:512]
+    order.invoice_issued_at = timezone.now()
+    order.save(
+        update_fields=[
+            'icount_doc_id',
+            'icount_doc_number',
+            'icount_pdf_link',
+            'invoice_issued_at',
+        ],
+    )
+
+    log_integration(
+        IntegrationLog.Source.ICOUNT,
+        IntegrationLog.Level.INFO,
+        f'חשבונית {doc_number or doc_id} הונפקה: {order.order_number}',
+        order=order,
+        details={
+            'doc_number': doc_number,
+            'doc_id': doc_id,
+            'pdf_link': order.icount_pdf_link or None,
+            'trigger': trigger,
+        },
+    )
+    return {
+        'doc_number': doc_number,
+        'doc_id': doc_id,
+        'pdf_link': order.icount_pdf_link or inv.get('pdf_link'),
+        'invoice_issued_at': order.invoice_issued_at.isoformat(),
+    }
+
+
 def fetch_document_pdf_link(*, doc_id: str = '', doc_number: str = '') -> str | None:
     """Resolve PDF URL from iCount doc/info when not stored on the order."""
     doc_id = (doc_id or '').strip()
