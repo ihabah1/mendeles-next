@@ -550,8 +550,14 @@ h2, .home-section-title { color: var(--text); }
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, #1a3a1a 0%, #0d2818 40%, #1a1a2e 100%);
+  background-size: 200% 200%;
+  animation: hero-gradient-shift 10s ease-in-out infinite;
   border-bottom: 2px solid var(--border);
   min-height: 120px;
+}
+@keyframes hero-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 .winner-hero-bg {
   position: absolute;
@@ -560,6 +566,51 @@ h2, .home-section-title { color: var(--text); }
     radial-gradient(ellipse 80% 120% at 70% 50%, rgba(30,120,50,.35) 0%, transparent 60%),
     radial-gradient(ellipse 50% 80% at 20% 80%, rgba(227,6,19,.15) 0%, transparent 50%);
   pointer-events: none;
+  animation: hero-glow-breathe 5s ease-in-out infinite;
+}
+@keyframes hero-glow-breathe {
+  0%, 100% { opacity: .7; }
+  50% { opacity: 1; }
+}
+.winner-hero-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.08) 48%, rgba(255,204,0,.1) 52%, transparent 65%);
+  background-size: 250% 100%;
+  animation: hero-shine-sweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes hero-shine-sweep {
+  0%, 25% { background-position: 130% 0; }
+  70%, 100% { background-position: -130% 0; }
+}
+.winner-hero-balls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.winner-hero-ball {
+  position: absolute;
+  bottom: -44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff8e0 0%, var(--gold) 45%, #c89a00 100%);
+  color: #1a1a1a;
+  font-weight: 900;
+  box-shadow: 0 3px 10px rgba(0,0,0,.4), inset 0 -3px 6px rgba(0,0,0,.18);
+  opacity: 0;
+  animation-name: hero-ball-float;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes hero-ball-float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  8% { opacity: .85; }
+  85% { opacity: .85; }
+  100% { transform: translateY(-220px) rotate(180deg); opacity: 0; }
 }
 .winner-hero-inner {
   position: relative;
@@ -588,10 +639,32 @@ h2, .home-section-title { color: var(--text); }
   text-decoration: none;
   white-space: nowrap;
 }
-.winner-hero-cta:hover { filter: brightness(1.08); }
+.winner-hero-cta:hover { filter: brightness(1.08); animation-play-state: paused; }
+.winner-hero-cta {
+  animation: hero-cta-pulse 2.2s ease-in-out infinite;
+}
+@keyframes hero-cta-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(0,0,0,.3), 0 0 0 0 rgba(46,208,106,.5); }
+  50% { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 10px rgba(46,208,106,0); }
+}
+.winner-hero-cta-arrow {
+  display: inline-block;
+  animation: hero-arrow-nudge 1.4s ease-in-out infinite;
+}
+@keyframes hero-arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-4px); }
+}
 .winner-hero-note {
   font-size: 0.65rem;
   color: rgba(255,255,255,.55);
+}
+.winner-hero-text {
+  animation: hero-text-in .7s ease-out both;
+}
+@keyframes hero-text-in {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: none; }
 }
 .winner-hero-title {
   font-family: var(--font-display);
@@ -604,6 +677,18 @@ h2, .home-section-title { color: var(--text); }
   font-size: 0.78rem;
   color: rgba(255,255,255,.75);
   margin-top: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .winner-hero,
+  .winner-hero-bg,
+  .winner-hero-shine,
+  .winner-hero-ball,
+  .winner-hero-cta,
+  .winner-hero-cta-arrow,
+  .winner-hero-text {
+    animation: none;
+  }
+  .winner-hero-ball { opacity: .5; }
 }
 
 /* ── Winner tab bar ── */
