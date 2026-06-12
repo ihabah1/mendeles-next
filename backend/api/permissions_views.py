@@ -123,13 +123,35 @@ def _user_summary(user) -> dict:
     }
 
 
-def _log(request, event: str, customer: User, details: str = ''):
+def _log(request, event: str, customer: User | None = None, details: str = ''):
     ActionLog.objects.create(
         customer=customer,
         performed_by=request.user,
         event=event,
         details=details[:500],
     )
+
+
+def _require_admin_for_delete(request) -> Response | None:
+    if not getattr(request.user, 'is_admin', False):
+        return Response(
+            {'error': 'רק מנהל ראשי יכול למחוק משתמשים'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
+
+
+def _delete_managed_user(request, user: User) -> Response | None:
+    """Delete a managed user. Returns error Response or None on success."""
+    denied = _require_admin_for_delete(request)
+    if denied:
+        return denied
+    if user.pk == request.user.pk:
+        return Response({'error': 'לא ניתן למחוק את המשתמש המחובר'}, status=status.HTTP_400_BAD_REQUEST)
+    email = user.email
+    _log(request, 'user.deleted', details=email)
+    user.delete()
+    return None
 
 
 def _grant_premium_with_request(request, user: User, days: int = 30):
@@ -185,12 +207,18 @@ def permissions_users_list(request):
     return Response({'users': users, 'count': len(users)})
 
 
-@api_view(['GET', 'PATCH', 'POST'])
+@api_view(['GET', 'PATCH', 'POST', 'DELETE'])
 @permission_classes([IsStaffUser])
 def permissions_user_detail(request, user_id: int):
     user = _get_managed_user(user_id)
     if not user:
         return Response({'error': 'משתמש לא נמצא'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        err = _delete_managed_user(request, user)
+        if err:
+            return err
+        return Response({'detail': f'משתמש {user.email} נמחק'})
 
     if request.method == 'GET':
         _ensure_permission_rows(user, request.user)
@@ -259,3 +287,49 @@ def permissions_user_detail(request, user_id: int):
         return Response({'detail': 'תפקיד עודכן', 'user': _user_summary(user)})
 
     return Response({'error': 'לא סופק עדכון'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def permissions_users_bulk_delete(request):
+    denied = _require_admin_for_delete(request)
+    if denied:
+        return denied
+
+    raw_ids = request.data.get('user_ids') or []
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return Response({'error': 'לא נבחרו משתמשים למחיקה'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_ids = [int(uid) for uid in raw_ids]
+    except (TypeError, ValueError):
+        return Response({'error': 'רשימת מזהים לא תקינה'}, status=status.HTTP_400_BAD_REQUEST)
+
+    deleted: list[str] = []
+    skipped: list[str] = []
+
+    for uid in user_ids:
+        user = _get_managed_user(uid)
+        if not user:
+            skipped.append(str(uid))
+            continue
+        if user.pk == request.user.pk:
+            skipped.append(user.email)
+            continue
+        email = user.email
+        _log(request, 'user.deleted', details=email)
+        user.delete()
+        deleted.append(email)
+
+    if not deleted:
+        return Response(
+            {'error': 'לא נמחק אף משתמש', 'skipped': skipped},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response({
+        'detail': f'נמחקו {len(deleted)} משתמשים',
+        'deleted': deleted,
+        'skipped': skipped,
+        'count': len(deleted),
+    })

@@ -97,4 +97,26 @@ export const permissionsAdminService = {
     );
     return data.user;
   },
+
+  async deleteUser(userId: number): Promise<{ detail: string }> {
+    const { data } = await api.delete<{ detail: string }>(
+      `/admin/permissions/users/${userId}/`,
+    );
+    return data;
+  },
+
+  async deleteUsers(userIds: number[]): Promise<{
+    detail: string;
+    deleted: string[];
+    skipped: string[];
+    count: number;
+  }> {
+    const { data } = await api.post<{
+      detail: string;
+      deleted: string[];
+      skipped: string[];
+      count: number;
+    }>("/admin/permissions/users/bulk-delete/", { user_ids: userIds });
+    return data;
+  },
 };

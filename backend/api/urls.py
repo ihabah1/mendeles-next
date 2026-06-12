@@ -78,6 +78,11 @@ admin_patterns = [
     path('stats/', admin_views.admin_stats, name='admin-stats'),
     path('permissions/users/', permissions_views.permissions_users_list, name='admin-permissions-users'),
     path(
+        'permissions/users/bulk-delete/',
+        permissions_views.permissions_users_bulk_delete,
+        name='admin-permissions-users-bulk-delete',
+    ),
+    path(
         'permissions/users/<int:user_id>/',
         permissions_views.permissions_user_detail,
         name='admin-permissions-user',

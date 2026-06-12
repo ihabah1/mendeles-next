@@ -33,6 +33,7 @@ function PermissionsPageInner() {
   const [message, setMessage] = useState("");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceNote, setBalanceNote] = useState("");
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,9 +44,13 @@ function PermissionsPageInner() {
         role: roleFilter || undefined,
       });
       setUsers(res.users);
+      setCheckedIds((prev) => {
+        const valid = new Set(res.users.map((u) => u.id));
+        return new Set([...prev].filter((id) => valid.has(id)));
+      });
       setSelected((prev) => {
         if (!prev) return null;
-        return res.users.find((u) => u.id === prev.id) ?? prev;
+        return res.users.find((u) => u.id === prev.id) ?? null;
       });
     } catch (e) {
       setError(extractApiError(e, "שגיאה בטעינה"));
@@ -63,6 +68,39 @@ function PermissionsPageInner() {
     setBalanceAmount("");
     setBalanceNote("");
   }, [selected?.id]);
+
+  const toggleChecked = (userId: number, on: boolean) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  };
+
+  const deleteUsers = async (ids: number[], confirmMsg: string) => {
+    if (!isAdmin || ids.length === 0) return;
+    if (!window.confirm(confirmMsg)) return;
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      if (ids.length === 1) {
+        const res = await permissionsAdminService.deleteUser(ids[0]);
+        setMessage(res.detail);
+      } else {
+        const res = await permissionsAdminService.deleteUsers(ids);
+        setMessage(res.detail);
+      }
+      setSelected(null);
+      setCheckedIds(new Set());
+      await load();
+    } catch (e) {
+      setError(extractApiError(e, "שגיאה במחיקה"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const run = async (fn: () => Promise<ManagedUser>, okMsg: string) => {
     setSaving(true);
@@ -91,7 +129,9 @@ function PermissionsPageInner() {
 
         <p style={{ color: "var(--text2)", fontSize: ".82rem", marginBottom: 16, lineHeight: 1.6 }}>
           ניהול הרשאות ללקוחות וחברי צוות — כולל הפעלת <strong>Premium</strong>, גישה לארנק, הדפסה ועוד.
-          {isAdmin ? " מנהל ראשי יכול גם להגדיר חברי צוות." : " שינוי תפקיד צוות — מנהל בלבד."}
+          {isAdmin
+            ? " מנהל ראשי יכול גם להגדיר חברי צוות ולמחוק משתמשים (בודד או מרובה)."
+            : " שינוי תפקיד צוות ומחיקת משתמשים — מנהל בלבד."}
         </p>
 
         {error && <div className="result-fail" style={{ marginBottom: 12 }}>{error}</div>}
@@ -122,8 +162,34 @@ function PermissionsPageInner() {
 
         <div className="perm-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", gap: 14 }}>
           <div className="card" style={{ padding: 0, overflow: "hidden", maxHeight: 520, overflowY: "auto" }}>
-            <div className="lotto-panel-title" style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
-              משתמשים ({users.length})
+            <div
+              style={{
+                padding: "12px 14px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <div className="lotto-panel-title">משתמשים ({users.length})</div>
+              {isAdmin && checkedIds.size > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: ".68rem", color: "#ff6b7a", borderColor: "#ff6b7a" }}
+                  disabled={saving}
+                  onClick={() =>
+                    deleteUsers(
+                      [...checkedIds],
+                      `למחוק ${checkedIds.size} משתמשים? פעולה זו בלתי הפיכה.`,
+                    )
+                  }
+                >
+                  🗑 מחק נבחרים ({checkedIds.size})
+                </button>
+              )}
             </div>
             {loading && users.length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: "var(--muted)" }}>טוען…</div>
@@ -131,30 +197,58 @@ function PermissionsPageInner() {
               <div style={{ padding: 24, textAlign: "center", color: "var(--muted)" }}>לא נמצאו משתמשים</div>
             ) : (
               users.map((u) => (
-                <button
+                <div
                   key={u.id}
-                  type="button"
-                  onClick={() => setSelected(u)}
                   style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "right",
-                    padding: "10px 14px",
-                    border: "none",
+                    display: "flex",
+                    alignItems: "stretch",
                     borderBottom: "1px solid var(--border)",
                     background: selected?.id === u.id ? "var(--gold-bg)" : "transparent",
-                    cursor: "pointer",
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: "var(--text)", fontSize: ".82rem" }}>{u.displayName}</div>
-                  <div style={{ fontSize: ".68rem", color: "var(--muted)" }}>{u.email}</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                    <span className="badge badge-muted">{u.roleLabel}</span>
-                    {u.isPremium && <span className="badge badge-gold">Premium</span>}
-                    {!u.isActive && <span className="badge badge-red">לא פעיל</span>}
-                    <span className="badge badge-gold">₪{(u.balanceIls ?? 0).toFixed(0)}</span>
-                  </div>
-                </button>
+                  {isAdmin && (
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "0 10px",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checkedIds.has(u.id)}
+                        onChange={(e) => toggleChecked(u.id, e.target.checked)}
+                        aria-label={`בחר ${u.displayName}`}
+                      />
+                    </label>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelected(u)}
+                    style={{
+                      display: "block",
+                      flex: 1,
+                      minWidth: 0,
+                      textAlign: "right",
+                      padding: "10px 14px 10px 0",
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: "var(--text)", fontSize: ".82rem" }}>{u.displayName}</div>
+                    <div style={{ fontSize: ".68rem", color: "var(--muted)" }}>{u.email}</div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                      <span className="badge badge-muted">{u.roleLabel}</span>
+                      {u.isPremium && <span className="badge badge-gold">Premium</span>}
+                      {!u.isActive && <span className="badge badge-red">לא פעיל</span>}
+                      <span className="badge badge-gold">₪{(u.balanceIls ?? 0).toFixed(0)}</span>
+                    </div>
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -344,6 +438,37 @@ function PermissionsPageInner() {
                     />
                   ))}
                 </div>
+
+                {isAdmin && (
+                  <div
+                    style={{
+                      marginTop: 18,
+                      paddingTop: 14,
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <div className="lotto-panel-title" style={{ marginBottom: 8, color: "#ff6b7a" }}>
+                      מחיקת משתמש
+                    </div>
+                    <p style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                      מוחק לצמיתות את המשתמש, ההזמנות והנתונים המשויכים. לא ניתן לבטל.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ color: "#ff6b7a", borderColor: "#ff6b7a" }}
+                      disabled={saving}
+                      onClick={() =>
+                        deleteUsers(
+                          [selected.id],
+                          `למחוק את ${selected.displayName} (${selected.email})?`,
+                        )
+                      }
+                    >
+                      🗑 מחק משתמש
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
