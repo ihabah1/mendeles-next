@@ -28,6 +28,7 @@ const SEARCH_TARGETS: SearchTarget[] = [
   { href: "/lotto", label: "לוטו", subtitle: "בסיס המשחק המרכזי", code: "LT83" },
   { href: "/seven77", label: "777", subtitle: "משחק מזל מהיר", code: "S777" },
   { href: "/toto", label: "טוטו", subtitle: "ניתוח סטטיסטי", code: "TT29" },
+  { href: "/promotions", label: "מבצעים", subtitle: "הטבות ומתנות", code: "PM33" },
   { href: "/about", label: "אודות", subtitle: "למה אנחנו", code: "AB16" },
   { href: "/terms", label: "תנאי שימוש", subtitle: "מידע משפטי", code: "TE52" },
   { href: "/auth", label: "כניסה / הרשמה", subtitle: "התחברות לאתר", code: "AU91" },
@@ -125,7 +126,7 @@ export default function Nav() {
     { href: "/seven77", label: "777" },
     ...(hideToto ? [] : [{ href: "/toto", label: "טוטו" }]),
     { href: "/about", label: "מידע" },
-    { href: "/lotto", label: "מבצעים", badge: "3" },
+    { href: "/promotions", label: "מבצעים", badge: "3" },
     { href: "/profile/orders", label: "תוצאות" },
     { href: "/terms", label: "משחקים באחריות" },
   ];

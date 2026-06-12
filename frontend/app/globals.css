@@ -1037,6 +1037,128 @@ h2, .home-section-title { color: var(--text); }
   margin-inline-start: auto;
 }
 
+/* ── Promotions page (Winner-style) ── */
+.promos-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px 56px;
+}
+.promos-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 4px;
+  font-size: .78rem;
+  color: var(--muted);
+}
+.promos-breadcrumb a {
+  color: var(--text2);
+  text-decoration: none;
+}
+.promos-breadcrumb a:hover { color: var(--gold); }
+.promos-breadcrumb-current {
+  background: var(--gold);
+  color: #1a1a1a;
+  font-weight: 900;
+  padding: 4px 14px;
+  border-radius: 3px;
+  border: 2px solid #1a1a1a;
+  outline: 1px solid var(--gold);
+}
+.promos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.promo-card {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+}
+.promo-card-media {
+  position: relative;
+  min-height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.promo-card-emoji {
+  font-size: 4rem;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.4));
+}
+.promo-card-days {
+  position: absolute;
+  bottom: 10px;
+  inset-inline-start: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 2px solid var(--gold);
+  border-radius: 4px;
+  padding: 4px 10px;
+  transform: skewX(-6deg);
+}
+.promo-card-days strong {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #1a1a1a;
+}
+.promo-card-days small {
+  font-size: .6rem;
+  font-weight: 700;
+  color: #555;
+}
+.promo-card-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.promo-card-title {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.4;
+}
+.promo-card-desc {
+  font-size: .8rem;
+  color: var(--text2);
+  line-height: 1.65;
+  flex: 1;
+}
+.promo-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.promo-card-cta {
+  background: linear-gradient(180deg, #1c8040, #14602e);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 800;
+  padding: 9px 22px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: filter .15s;
+}
+.promo-card-cta:hover { filter: brightness(1.1); }
+.promo-card-terms {
+  font-size: .76rem;
+  font-weight: 700;
+  color: #2ed06a;
+  text-decoration: underline;
+}
+@media (max-width: 720px) {
+  .promo-card { grid-template-columns: 1fr; }
+  .promo-card-media { min-height: 130px; }
+}
+
 /* ── Accessibility widget ── */
 .a11y-root {
   position: fixed;
