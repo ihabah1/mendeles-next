@@ -29,12 +29,12 @@ const SLIDES = [
 ] as const;
 
 function Confetti() {
-  const pieces = Array.from({ length: 18 }, (_, i) => ({
+  const pieces = Array.from({ length: 30 }, (_, i) => ({
     id: i,
-    left: `${(i * 5.7 + 3) % 100}%`,
-    delay: `${(i * 0.35) % 3}s`,
-    color: ["#ffcc00", "#e8c060", "#7ee8a8", "#ff6b7a", "#8ec8ff"][i % 5],
-    size: 4 + (i % 3) * 2,
+    left: `${(i * 3.4 + 1.7) % 100}%`,
+    delay: `${(i * 0.27) % 3.2}s`,
+    color: ["#ffcc00", "#2ed06a", "#ff6b7a", "#8ec8ff", "#ffffff", "#ff9933", "#a85cd6"][i % 7],
+    size: 4 + (i % 4) * 2,
   }));
 
   return (

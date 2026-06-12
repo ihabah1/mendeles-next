@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const BALLS = [
   { n: 7, left: "8%", delay: "0s", dur: "6.5s", size: 34 },
@@ -12,11 +13,96 @@ const BALLS = [
   { n: 3, left: "89%", delay: "0.3s", dur: "7.8s", size: 36 },
 ] as const;
 
-export default function HomeHero() {
+const SLIDES = [
+  {
+    id: "lotto",
+    theme: "red",
+    badge: "חדש!",
+    title: "בוא תהיה מלך הלוטו!",
+    sub: "200 סטים חכמים · מילוי מקצועי · הגשה אישית לפיס",
+    note: "*הסטים מחושבים לפי אלגוריתם מנדל — פיזור מקסימלי",
+    cta: "בוא להרוויח",
+    href: "/lotto",
+    emoji: "👑",
+  },
+  {
+    id: "premium",
+    theme: "green",
+    badge: "פרימיום",
+    title: "אלגוריתם מנדל — פיזור מקסימלי",
+    sub: "סטים ייחודיים לכל לקוח פרימיום · כיסוי מלא של 1–37",
+    note: "*מנוי פרימיום מקבל סטים בלעדיים בכל הגרלה",
+    cta: "למנוי פרימיום",
+    href: "/#pricing",
+    emoji: "💎",
+  },
+  {
+    id: "track",
+    theme: "purple",
+    badge: "בלעדי",
+    title: "מעקב מלא — עד הסריקה!",
+    sub: "הדפסה · הגשה לדוכן · עדכון זכיות ישירות לארנק",
+    note: "*עדכוני SMS ואימייל בכל שלב בדרך",
+    cta: "לאזור האישי",
+    href: "/profile",
+    emoji: "🏆",
+  },
+] as const;
+
+const CONFETTI_COLORS = ["#ffcc00", "#2ed06a", "#8ec8ff", "#ff6b7a", "#ffffff", "#ff9933", "#a85cd6"];
+
+function HeroConfetti() {
+  const pieces = Array.from({ length: 36 }, (_, i) => ({
+    id: i,
+    left: `${(i * 2.83 + 1.4) % 100}%`,
+    delay: `${(i * 0.31) % 4.2}s`,
+    dur: `${3.6 + (i % 5) * 0.55}s`,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    w: 5 + (i % 3) * 2,
+    h: 9 + (i % 4) * 3,
+    sway: i % 2 === 0 ? "hero-confetti-fall" : "hero-confetti-fall-sway",
+  }));
+
   return (
-    <section className="winner-hero" aria-label="מבצע ראשי">
+    <div className="hero-confetti" aria-hidden>
+      {pieces.map((p) => (
+        <span
+          key={p.id}
+          className="hero-confetti-piece"
+          style={{
+            left: p.left,
+            background: p.color,
+            width: p.w,
+            height: p.h,
+            animationName: p.sway,
+            animationDelay: p.delay,
+            animationDuration: p.dur,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function HomeHero() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setActive((i) => (i + 1) % SLIDES.length), 6000);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  const prev = () => setActive((i) => (i - 1 + SLIDES.length) % SLIDES.length);
+  const next = () => setActive((i) => (i + 1) % SLIDES.length);
+  const slide = SLIDES[active];
+
+  return (
+    <section className={`winner-hero winner-hero--${slide.theme}`} aria-label="מבצע ראשי">
       <div className="winner-hero-bg" aria-hidden />
       <div className="winner-hero-shine" aria-hidden />
+      <HeroConfetti />
       <div className="winner-hero-balls" aria-hidden>
         {BALLS.map((b) => (
           <span
@@ -35,22 +121,51 @@ export default function HomeHero() {
           </span>
         ))}
       </div>
+
       <div className="winner-hero-inner">
-        <div className="winner-hero-text">
-          <h1 className="winner-hero-title">
-            לוטו חכם עם 200 סטים
-          </h1>
-          <p className="winner-hero-sub">
-            מילוי מקצועי · הגשה אישית לפיס · מעקב עד הסריקה
-          </p>
-          <p className="winner-hero-note" style={{ marginTop: 8 }}>
-            *הסטים מחושבים לפי אלגוריתם מנדל — פיזור מקסימלי
-          </p>
+        <span className="winner-hero-emoji" aria-hidden key={`emoji-${slide.id}`}>
+          {slide.emoji}
+        </span>
+
+        <div className="winner-hero-text" key={slide.id}>
+          <span className="winner-hero-badge">{slide.badge}</span>
+          <h1 className="winner-hero-title">{slide.title}</h1>
+          <p className="winner-hero-sub">{slide.sub}</p>
+          <p className="winner-hero-note" style={{ marginTop: 8 }}>{slide.note}</p>
         </div>
-        <Link href="/lotto" className="winner-hero-cta">
-          בוא להרוויח
+
+        <Link href={slide.href} className="winner-hero-cta">
+          {slide.cta}
           <span className="winner-hero-cta-arrow" aria-hidden>→</span>
         </Link>
+      </div>
+
+      <div className="winner-hero-controls">
+        <button type="button" className="winner-hero-ctrl" aria-label="הקודם" onClick={prev}>
+          ‹
+        </button>
+        <button
+          type="button"
+          className="winner-hero-ctrl"
+          aria-label={paused ? "המשך" : "השהה"}
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? "▶" : "❚❚"}
+        </button>
+        <button type="button" className="winner-hero-ctrl" aria-label="הבא" onClick={next}>
+          ›
+        </button>
+        <span className="winner-hero-dots" aria-hidden>
+          {SLIDES.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`winner-hero-dot${i === active ? " active" : ""}`}
+              aria-label={`שקף ${i + 1}`}
+              onClick={() => setActive(i)}
+            />
+          ))}
+        </span>
       </div>
     </section>
   );
