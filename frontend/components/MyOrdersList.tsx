@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
+import type { PreviewForm } from "@/components/admin/LottoFormPreview";
 import {
   checkOrderWins,
   formatWinBadge,
   RANK_LABELS,
   type DrawResult,
 } from "@/lib/lotto-wins";
+import { formsFromOrderSets } from "@/lib/lotto/forms-from-sets";
 import {
   contentService,
   extractApiError,
@@ -48,6 +51,7 @@ export default function MyOrdersList({
 }: MyOrdersListProps) {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState<number | null>(null);
+  const [formPreviewOrder, setFormPreviewOrder] = useState<UiOrder | null>(null);
 
   const winByOrder = useMemo(() => {
     const map = new Map<number, ReturnType<typeof checkOrderWins>>();
@@ -58,6 +62,11 @@ export default function MyOrdersList({
   }, [orders, draw, prizes]);
 
   const reportError = (msg: string) => onError?.(msg);
+
+  const formPreviewForms: PreviewForm[] = useMemo(
+    () => (formPreviewOrder ? formsFromOrderSets(formPreviewOrder.sets) : []),
+    [formPreviewOrder],
+  );
 
   const openInvoice = async (order: UiOrder) => {
     if (isDemo) {
@@ -195,6 +204,18 @@ export default function MyOrdersList({
               >
                 {isOpen ? "סגור" : "📋 טפסים"}
               </button>
+              {o.sets.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: ".66rem", padding: "4px 8px" }}
+                  title="הצג סימולציית טופס"
+                  aria-label="הצג סימולציית טופס"
+                  onClick={() => setFormPreviewOrder(o)}
+                >
+                  👁 הצג
+                </button>
+              )}
               {o.hasScan && !isDemo && (
                 <button
                   type="button"
@@ -305,6 +326,20 @@ export default function MyOrdersList({
           </div>
         );
       })}
+
+      <OrderFormPreviewModal
+        open={formPreviewOrder != null}
+        onClose={() => setFormPreviewOrder(null)}
+        orderNumber={formPreviewOrder?.orderNumber}
+        drawDate={formPreviewOrder?.drawDate}
+        isDouble={formPreviewOrder?.isDouble}
+        forms={formPreviewForms}
+        error={
+          formPreviewOrder && formPreviewForms.length === 0
+            ? "אין נתוני טופס להצגה"
+            : undefined
+        }
+      />
     </div>
   );
 }
