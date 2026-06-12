@@ -8,7 +8,7 @@ import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
-import LottoFormPreview from "@/components/admin/LottoFormPreview";
+import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
 import PrintJobTimeline from "@/components/admin/PrintJobTimeline";
 import { adminService } from "@/lib/api/admin";
 import {
@@ -142,10 +142,7 @@ export function PrintQueuePageInner({
       setCounts(res.counts);
       setPrinterStatus(res.printerStatus);
       setCanStartPrinting(res.canStartPrinting);
-      setExpandedId((prev) => {
-        if (prev && res.jobs.some((j) => j.id === prev)) return prev;
-        return res.jobs[0]?.id ?? null;
-      });
+      setExpandedId((prev) => (prev && res.jobs.some((j) => j.id === prev) ? prev : null));
     } catch (e) {
       setError(extractApiError(e, "שגיאה בטעינת תור ההדפסה"));
     } finally {
@@ -428,6 +425,8 @@ function PrintJobCard({
   actionId: number | null;
   onRun: (jobId: number, fn: () => Promise<unknown>, ok: string) => Promise<void>;
 }) {
+  const [formModalOpen, setFormModalOpen] = useState(false);
+
   const viewScan = () => {
     if (!j.hasScan) return;
     void onRun(j.id, () => adminService.openOrderScan(j.orderId), "נפתחה סריקה");
@@ -502,8 +501,18 @@ function PrintJobCard({
           </button>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ fontSize: ".68rem" }}
+            title="הצג סימולציית טופס"
+            aria-label="הצג סימולציית טופס"
+            onClick={() => setFormModalOpen(true)}
+          >
+            👁 הצג
+          </button>
           <button type="button" className="btn btn-outline" style={{ fontSize: ".68rem" }} onClick={onToggle}>
-            {expanded ? "הסתר טופס ▲" : "הצג טופס ▼"}
+            {expanded ? "הסתר פרטים ▲" : "פרטים ▼"}
           </button>
           {j.status === "queued" && (
             <button
@@ -591,36 +600,36 @@ function PrintJobCard({
             marginTop: 14,
             paddingTop: 14,
             borderTop: "1px solid var(--navy-b)",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 16,
-            justifyContent: "flex-start",
+            fontSize: ".75rem",
+            color: "var(--muted)",
           }}
         >
-          <LottoFormPreview
-            forms={j.forms}
-            drawDate={j.drawDate}
-            isDouble={j.isDouble}
-            customerName={j.user?.name}
-          />
-          <div style={{ flex: "1 1 200px", minWidth: 180, fontSize: ".75rem", color: "var(--muted)" }}>
-            <div style={{ fontWeight: 700, color: "var(--cream)", marginBottom: 8 }}>פרטי הזמנה</div>
-            <div>אימייל: {j.user?.email || "—"}</div>
-            <div>סטטוס הזמנה: {j.orderStatus}</div>
-            {j.lotteryId != null && <div>מספר הגרלה: {j.lotteryId}</div>}
-            {j.hasScan && j.orderScannedAt && (
-              <p style={{ marginTop: 10, color: "#1db96a" }}>
-                נסרק {new Date(j.orderScannedAt).toLocaleString("he-IL")}
-              </p>
-            )}
-            {j.status === "printed" && !j.hasScan && (
-              <p style={{ marginTop: 10, color: "#8aaabe" }}>
-                ממתין לסריקה — הרץ scan_app ובחר הזמנה זו.
-              </p>
-            )}
-          </div>
+          <div style={{ fontWeight: 700, color: "var(--cream)", marginBottom: 8 }}>פרטי הזמנה</div>
+          <div>אימייל: {j.user?.email || "—"}</div>
+          <div>סטטוס הזמנה: {j.orderStatus}</div>
+          {j.lotteryId != null && <div>מספר הגרלה: {j.lotteryId}</div>}
+          {j.hasScan && j.orderScannedAt && (
+            <p style={{ marginTop: 10, color: "#1db96a" }}>
+              נסרק {new Date(j.orderScannedAt).toLocaleString("he-IL")}
+            </p>
+          )}
+          {j.status === "printed" && !j.hasScan && (
+            <p style={{ marginTop: 10, color: "#8aaabe" }}>
+              ממתין לסריקה — הרץ scan_app ובחר הזמנה זו.
+            </p>
+          )}
         </div>
       )}
+
+      <OrderFormPreviewModal
+        open={formModalOpen}
+        onClose={() => setFormModalOpen(false)}
+        orderNumber={j.orderNumber}
+        customerName={j.user?.name}
+        drawDate={j.drawDate}
+        isDouble={j.isDouble}
+        forms={j.forms}
+      />
     </div>
   );
 }
