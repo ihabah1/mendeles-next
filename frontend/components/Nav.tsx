@@ -51,12 +51,23 @@ export default function Nav() {
     ...(hideToto ? [] : [{ href: "/toto", label: "טוטו" }]),
     { href: "/about", label: "מידע" },
     { href: "/promotions", label: "מבצעים", badge: "3" },
+    ...(isAuthenticated ? [{ href: "/profile", label: "פרופיל" }] : []),
     { href: "/profile/orders", label: "תוצאות" },
     { href: "/terms", label: "משחקים באחריות" },
   ];
 
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? path === href : path === href || (path?.startsWith(href + "/") ?? false);
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) return path === href;
+    if (href === "/profile") {
+      return (
+        path === "/profile" ||
+        (path?.startsWith("/profile/") &&
+          !path.startsWith("/profile/orders") &&
+          !path.startsWith("/profile/forms"))
+      );
+    }
+    return path === href || (path?.startsWith(href + "/") ?? false);
+  };
 
   const hidePromo = path?.startsWith("/admin") || path?.startsWith("/auth");
 

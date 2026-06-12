@@ -264,8 +264,13 @@ function AdminPageInner() {
     setActionLoading(orderId);
     try {
       const res = await adminService.issueInvoice(orderId);
-      if (!res.doc_number?.trim()) {
-        alert(res.detail || "הנפקת חשבונית נכשלה — אין מספר מסמך מ-iCount");
+      const docNumber = res.doc_number?.trim() || "";
+      if (!docNumber) {
+        const detail = (res.detail || "").trim();
+        const looksLikeSuccess = /הונפקה/.test(detail);
+        if (!looksLikeSuccess) {
+          showToast(detail || "הנפקת חשבונית נכשלה — אין מספר מסמך מ-iCount", "err", 5000);
+        }
         const logRes = await adminService.integrationLogs({ source: "icount", limit: 20 });
         setIntegrationLogs(logRes.logs);
         if (logRes.integrations) setIntegrations(logRes.integrations);
@@ -278,7 +283,7 @@ function AdminPageInner() {
           if (o.id !== orderId) return o;
           return {
             ...o,
-            icountDocNumber: res.doc_number,
+            icountDocNumber: docNumber,
             icountPdfLink: pdfLink || o.icountPdfLink,
             invoiceIssuedAt: issuedAt,
           };
@@ -290,7 +295,7 @@ function AdminPageInner() {
         setTimeout(() => window.open(pdfLink, "_blank", "noopener,noreferrer"), 300);
       }
     } catch (e) {
-      alert(extractApiError(e, "הנפקת חשבונית נכשלה"));
+      showToast(extractApiError(e, "הנפקת חשבונית נכשלה"), "err", 5000);
       try {
         const logRes = await adminService.integrationLogs({ source: "icount", limit: 20 });
         setIntegrationLogs(logRes.logs);

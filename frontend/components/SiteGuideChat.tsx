@@ -181,10 +181,10 @@ export default function SiteGuideChat() {
   return (
     <div
       ref={rootRef}
-      className={`site-guide-root${panelBelow ? " site-guide-root--panel-below" : ""}`}
+      className={`site-guide-root${pos ? "" : " site-guide-root--centered"}${panelBelow ? " site-guide-root--panel-below" : ""}`}
       style={
         pos
-          ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", insetInlineStart: "auto", insetInlineEnd: "auto" }
+          ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", transform: "none" }
           : undefined
       }
     >
