@@ -46,6 +46,13 @@ class Command(BaseCommand):
                 'free': stats['free'],
                 'historyCount': stats['historyCount'],
             }
+            json_info = stats.get('json') or {}
+            details['combosJson'] = {
+                'objectCount': json_info.get('objectCount'),
+                'updatedAt': json_info.get('updatedAt'),
+                'addedRecently': json_info.get('addedRecently'),
+                'pendingImport': json_info.get('pendingImport'),
+            }
 
             csv_path = self._export_combo_stats(
                 stats['total'], stats['used'], stats['free'],

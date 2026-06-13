@@ -13,7 +13,7 @@ from admin_panel.accounts.models import User
 from admin_panel.portal.models import ApprovedCombo, AutomationLog, GuideChatInquiry, Order, SiteDailyMetric
 
 from api.services.automation_log import recent_automation_logs
-from api.services.combo_pool import pool_stats
+from api.services.combo_pool import approved_combos_json_stats, pool_stats
 from api.services.firebase_service import firebase_config_status
 from api.services.icount_service import icount_config_status
 from api.services.integration_log import recent_integration_logs
@@ -79,6 +79,7 @@ def _file_info(path: Path, label: str) -> dict:
 def _tracked_files() -> list[dict]:
     base = Path(settings.BASE_DIR)
     data_dir = base / 'data'
+    combos_json = approved_combos_json_stats()
     candidates = [
         ('draw_results.json', draw_results_path()),
         ('combo_pool_daily.csv', data_dir / 'combo_pool_daily.csv'),
@@ -92,7 +93,13 @@ def _tracked_files() -> list[dict]:
         if key in seen:
             continue
         seen.add(key)
-        rows.append(_file_info(path, label))
+        info = _file_info(path, label)
+        if 'approved_combos' in label and combos_json.get('exists'):
+            info['rowCount'] = combos_json.get('objectCount')
+            info['addedRecently'] = combos_json.get('addedRecently')
+            if combos_json.get('updatedAt'):
+                info['updatedAt'] = combos_json['updatedAt']
+        rows.append(info)
     return rows
 
 
@@ -217,6 +224,7 @@ def _automation_snapshot() -> dict:
         csv_path = Path(settings.BASE_DIR) / 'data' / 'combo_pool_daily.csv'
         csv_info = _file_info(csv_path, 'combo_pool_daily.csv')
         draw_file = _file_info(draw_results_path(), 'draw_results.json')
+        combos_json = approved_combos_json_stats()
 
         return {
             'schedule': {
@@ -232,6 +240,18 @@ def _automation_snapshot() -> dict:
                     'label': 'קובץ תוצאות הגרלה',
                     'role': 'מקור עדכון מפיס',
                     **draw_file,
+                },
+                {
+                    'key': 'approved_combos',
+                    'label': 'approved_combos.json',
+                    'role': 'מאגר צירופים מנצחים — מקור לייבוא',
+                    'path': combos_json.get('path') or 'approved_combos.json',
+                    'exists': combos_json.get('exists', False),
+                    'sizeMb': combos_json.get('sizeMb'),
+                    'updatedAt': combos_json.get('updatedAt'),
+                    'rowCount': combos_json.get('objectCount'),
+                    'addedRecently': combos_json.get('addedRecently'),
+                    'pendingImport': combos_json.get('pendingImport', False),
                 },
                 {
                     'key': 'combo_csv',
@@ -391,7 +411,22 @@ def build_monitoring_snapshot() -> dict:
             'traffic',
         ),
         'business': _safe(_business_block, {'totalRevenueIls': 0, 'totalOrders': 0}, 'business'),
-        'comboPool': _safe(pool_stats, {'total': 0, 'used': 0, 'free': 0, 'percentUsed': 0}, 'comboPool'),
+        'comboPool': _safe(
+            pool_stats,
+            {
+                'total': 0,
+                'used': 0,
+                'free': 0,
+                'percentUsed': 0,
+                'json': {
+                    'exists': False,
+                    'objectCount': None,
+                    'updatedAt': None,
+                    'addedRecently': None,
+                },
+            },
+            'comboPool',
+        ),
         'files': _tracked_files(),
         'services': _service_status(),
         'draw': _safe(lambda: _draw_snapshot(draw), _draw_snapshot(None), 'draw'),

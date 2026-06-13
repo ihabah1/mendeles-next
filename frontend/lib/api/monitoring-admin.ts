@@ -34,6 +34,21 @@ export interface AutomationSource {
   sizeMb: number | null;
   updatedAt?: string | null;
   rowCount?: number | null;
+  addedRecently?: number | null;
+  pendingImport?: boolean;
+}
+
+export interface ComboJsonStats {
+  exists: boolean;
+  path: string | null;
+  objectCount: number | null;
+  sizeMb: number | null;
+  updatedAt: string | null;
+  addedRecently: number | null;
+  pendingImport?: boolean;
+  lastImportedAt?: string | null;
+  lastImportedCount?: number | null;
+  addedSinceLastImport?: number | null;
 }
 
 export interface AutomationRun {
@@ -95,7 +110,13 @@ export interface MonitoringSnapshot {
     }>;
   };
   business: { totalRevenueIls: number; totalOrders: number };
-  comboPool: { total: number; used: number; free: number; percentUsed: number };
+  comboPool: {
+    total: number;
+    used: number;
+    free: number;
+    percentUsed: number;
+    json?: ComboJsonStats;
+  };
   files: Array<{
     name: string;
     path: string;
@@ -103,6 +124,7 @@ export interface MonitoringSnapshot {
     sizeMb: number | null;
     updatedAt?: string | null;
     rowCount?: number | null;
+    addedRecently?: number | null;
   }>;
   services: Array<{
     key: string;

@@ -25,8 +25,14 @@ import {
   type AutomationRun,
   type AutomationSource,
   type DrawSnapshot,
+  type ComboJsonStats,
   type MonitoringSnapshot,
 } from "@/lib/api/monitoring-admin";
+
+function formatCount(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return "—";
+  return n.toLocaleString("he-IL");
+}
 
 function formatDt(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -142,7 +148,7 @@ function MonitoringPageInner() {
 
             {draw && <DrawSection draw={draw} />}
 
-            {auto && <AutomationSection automation={snap.automation} onRunSync={runSync} syncing={syncing} />}
+            {auto && <AutomationSection automation={snap.automation} comboJson={snap.comboPool.json} onRunSync={runSync} syncing={syncing} />}
 
             <section id="admin-stats" aria-labelledby="stats-heading">
               <h2 id="stats-heading" className="sr-only">
@@ -153,7 +159,28 @@ function MonitoringPageInner() {
                 <AdminStatCard label="כניסות היום" value={String(snap.traffic.pageViewsToday)} sub={`${snap.traffic.uniqueVisitorsToday} מבקרים ייחודיים`} />
                 <AdminStatCard label="הזמנות היום" value={String(snap.traffic.ordersToday)} sub={`${snap.business.totalOrders} הזמנות סה״כ`} />
                 <AdminStatCard label="שיחות צ׳אט היום" value={String(snap.traffic.chatSessionsToday)} sub={`${snap.chatInquiriesOpen} ביקשו נציג`} />
-                <AdminStatCard label="צירופים פנויים" value={String(snap.comboPool.free)} sub={`${snap.comboPool.percentUsed}% כבר בשימוש`} />
+                <AdminStatCard label="צירופים פנויים (DB)" value={formatCount(snap.comboPool.free)} sub={`${snap.comboPool.percentUsed}% כבר בשימוש`} />
+                <AdminStatCard
+                  label="צירופים בקובץ JSON"
+                  value={formatCount(snap.comboPool.json?.objectCount)}
+                  sub={
+                    snap.comboPool.json?.exists
+                      ? `${snap.comboPool.json.sizeMb ?? "—"} MB · עודכן ${formatDt(snap.comboPool.json.updatedAt)}`
+                      : "קובץ לא נמצא"
+                  }
+                />
+                <AdminStatCard
+                  label="נוספו לאחרונה לקובץ"
+                  value={formatCount(snap.comboPool.json?.addedRecently)}
+                  sub={
+                    snap.comboPool.json?.pendingImport
+                      ? "קובץ עודכן — ממתין לייבוא"
+                      : snap.comboPool.json?.addedSinceLastImport != null
+                        ? `${formatCount(snap.comboPool.json.addedSinceLastImport)} בייבוא אחרון`
+                        : "מאז עדכון קובץ אחרון"
+                  }
+                  accent={snap.comboPool.json?.pendingImport ? "#ffb347" : undefined}
+                />
                 <AdminStatCard
                   label="ריצות אוטומציה"
                   value={String(auto?.stats.successCount ?? 0)}
@@ -180,7 +207,8 @@ function MonitoringPageInner() {
                   <div key={f.name} className="admin-file-row">
                     <strong>{f.name}</strong>
                     {f.exists ? ` — ${f.sizeMb} MB` : " — לא נמצא"}
-                    {f.rowCount != null ? ` · ${f.rowCount} שורות` : ""}
+                    {f.rowCount != null ? ` · ${formatCount(f.rowCount)} צירופים` : ""}
+                    {f.addedRecently != null && f.addedRecently > 0 ? ` · +${formatCount(f.addedRecently)} חדשים` : ""}
                     {f.updatedAt ? ` · עודכן ${formatDt(f.updatedAt)}` : ""}
                   </div>
                 ))}
@@ -297,10 +325,12 @@ function DrawSection({ draw }: { draw: DrawSnapshot }) {
 
 function AutomationSection({
   automation,
+  comboJson,
   onRunSync,
   syncing,
 }: {
   automation: MonitoringSnapshot["automation"];
+  comboJson?: ComboJsonStats;
   onRunSync: () => void;
   syncing: boolean;
 }) {
@@ -342,6 +372,19 @@ function AutomationSection({
                 : "—"
             }
           />
+          <Kv label="צירופים בקובץ JSON" value={formatCount(comboJson?.objectCount)} />
+          <Kv label="עדכון אחרון לקובץ" value={formatDt(comboJson?.updatedAt)} />
+          <Kv
+            label="נוספו לאחרונה לקובץ"
+            value={
+              comboJson?.addedRecently != null
+                ? `+${formatCount(comboJson.addedRecently)}`
+                : "—"
+            }
+          />
+          {comboJson?.pendingImport && (
+            <Kv label="סטטוס ייבוא" value="קובץ עודכן — ממתין לסנכרון/ייבוא" />
+          )}
           <Kv label="הגרלה שעודכנה" value={last.drawLotteryId ? String(last.drawLotteryId) : "—"} />
           <Kv
             label="סטטיסטיקת ריצות"
@@ -412,8 +455,12 @@ function SourceCard({ source }: { source: AutomationSource }) {
           {source.exists ? (
             <>
               {source.sizeMb != null ? `${source.sizeMb} MB` : "גודל לא זמין"}
-              {source.rowCount != null ? ` · ${source.rowCount.toLocaleString("he-IL")} רשומות` : ""}
+              {source.rowCount != null ? ` · ${formatCount(source.rowCount)} צירופים` : ""}
+              {source.addedRecently != null && source.addedRecently > 0
+                ? ` · +${formatCount(source.addedRecently)} חדשים`
+                : ""}
               {source.updatedAt ? ` · עודכן ${formatDt(source.updatedAt)}` : ""}
+              {source.pendingImport ? " · ממתין לייבוא" : ""}
             </>
           ) : (
             "קובץ לא קיים — ייווצר בריצה הראשונה"

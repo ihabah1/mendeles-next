@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 5000
 STATE_FILE = 'combo_pool_state.json'
+META_FILE = 'approved_combos_meta.json'
 
 
 def combo_key(n1: int, n2: int, n3: int, n4: int, n5: int, n6: int) -> tuple[int, ...]:
@@ -52,6 +54,115 @@ def read_pool_state() -> dict:
 def write_pool_state(state: dict) -> None:
     path = _state_path()
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _meta_path() -> Path:
+    path = Path(settings.BASE_DIR) / 'data' / META_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def read_json_meta() -> dict:
+    path = _meta_path()
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def write_json_meta(meta: dict) -> None:
+    path = _meta_path()
+    path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def count_json_objects(path: Path) -> int:
+    """Raw array length in approved_combos.json (not deduped)."""
+    raw = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(raw, list):
+        raise ValueError('approved_combos.json חייב להיות מערך')
+    return len(raw)
+
+
+def approved_combos_json_stats() -> dict:
+    """
+    File-level stats for monitoring — caches object count; recounts only when mtime changes.
+    """
+    path = find_approved_combos_json()
+    if not path:
+        return {
+            'exists': False,
+            'path': None,
+            'objectCount': None,
+            'sizeMb': None,
+            'updatedAt': None,
+            'addedRecently': None,
+            'pendingImport': False,
+            'lastImportedAt': read_pool_state().get('lastRefreshedAt'),
+            'lastImportedCount': read_pool_state().get('totalImported'),
+        }
+
+    try:
+        stat = path.stat()
+    except OSError:
+        return {
+            'exists': False,
+            'path': str(path),
+            'objectCount': None,
+            'sizeMb': None,
+            'updatedAt': None,
+            'addedRecently': None,
+            'pendingImport': False,
+            'lastImportedAt': read_pool_state().get('lastRefreshedAt'),
+            'lastImportedCount': read_pool_state().get('totalImported'),
+        }
+
+    mtime = stat.st_mtime
+    size_mb = round(stat.st_size / (1024 * 1024), 2)
+    updated_at = datetime.fromtimestamp(mtime, tz=timezone.get_current_timezone()).isoformat()
+    meta = read_json_meta()
+    state = read_pool_state()
+
+    if meta.get('mtime') != mtime or meta.get('objectCount') is None:
+        try:
+            count = count_json_objects(path)
+            prev = meta.get('objectCount')
+            if prev is None:
+                prev = state.get('jsonObjectCount') or 0
+            added = max(0, count - int(prev)) if prev else 0
+            meta = {
+                'path': str(path),
+                'mtime': mtime,
+                'objectCount': count,
+                'previousObjectCount': prev,
+                'addedRecently': added,
+                'countedAt': timezone.now().isoformat(),
+            }
+            write_json_meta(meta)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning('Failed counting approved_combos.json: %s', exc)
+            count = meta.get('objectCount')
+            added = meta.get('addedRecently')
+    else:
+        count = meta.get('objectCount')
+        added = meta.get('addedRecently', 0)
+
+    pool_mtime = state.get('jsonModifiedAt')
+    pending_import = bool(count and (pool_mtime is None or abs(float(pool_mtime) - float(mtime)) > 0.001))
+
+    return {
+        'exists': True,
+        'path': str(path),
+        'objectCount': count,
+        'sizeMb': size_mb,
+        'updatedAt': updated_at,
+        'addedRecently': added if added is not None else 0,
+        'pendingImport': pending_import,
+        'lastImportedAt': state.get('lastRefreshedAt'),
+        'lastImportedCount': state.get('totalImported'),
+        'addedSinceLastImport': state.get('addedSinceLastRefresh'),
+    }
 
 
 def historically_distributed_keys() -> set[tuple[int, ...]]:
@@ -110,6 +221,19 @@ def reload_combo_pool_from_json(
     """
     combos = load_combos_from_json(json_path)
     history = historically_distributed_keys()
+    prev_state = read_pool_state()
+    prev_imported = int(prev_state.get('totalImported') or prev_state.get('jsonObjectCount') or 0)
+
+    source_path = json_path or find_approved_combos_json()
+    json_mtime = None
+    json_raw_count = None
+    if source_path and source_path.is_file():
+        try:
+            stat = source_path.stat()
+            json_mtime = stat.st_mtime
+            json_raw_count = count_json_objects(source_path)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning('Could not read JSON file stats: %s', exc)
 
     ApprovedCombo.objects.all().delete()
 
@@ -134,15 +258,29 @@ def reload_combo_pool_from_json(
         imported += len(rows)
 
     free = imported - pre_used
+    added_since_refresh = max(0, (json_raw_count or imported) - prev_imported) if prev_imported else 0
     state = {
         'lastLotteryId': lottery_id,
         'lastRefreshedAt': timezone.now().isoformat(),
-        'sourceFile': str(json_path or find_approved_combos_json()),
+        'sourceFile': str(source_path or find_approved_combos_json()),
         'totalImported': imported,
         'preMarkedUsed': pre_used,
         'free': free,
+        'jsonObjectCount': json_raw_count or imported,
+        'jsonModifiedAt': json_mtime,
+        'previousJsonObjectCount': prev_imported,
+        'addedSinceLastRefresh': added_since_refresh,
     }
     write_pool_state(state)
+    if json_mtime is not None and json_raw_count is not None:
+        write_json_meta({
+            'path': str(source_path),
+            'mtime': json_mtime,
+            'objectCount': json_raw_count,
+            'previousObjectCount': prev_imported,
+            'addedRecently': added_since_refresh,
+            'countedAt': timezone.now().isoformat(),
+        })
     return state
 
 
@@ -248,14 +386,15 @@ def pool_stats() -> dict:
     used = ApprovedCombo.objects.filter(used=True).count()
     free = ApprovedCombo.objects.filter(used=False).count()
     state = read_pool_state()
-    json_path = find_approved_combos_json()
+    json_stats = approved_combos_json_stats()
     return {
         'total': total,
         'used': used,
         'free': free,
         'percentUsed': round(100 * used / total, 1) if total else 0,
-        'jsonPath': str(json_path) if json_path else None,
-        'jsonExists': bool(json_path),
+        'jsonPath': json_stats.get('path'),
+        'jsonExists': json_stats.get('exists', False),
         'state': state,
         'historyCount': len(historically_distributed_keys()),
+        'json': json_stats,
     }
