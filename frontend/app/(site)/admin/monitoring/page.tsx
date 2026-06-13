@@ -210,7 +210,10 @@ function MonitoringPageInner() {
             </AdminPanel>
           </>
         ) : (
-          <AdminEmpty title="לא ניתן לטעון נתונים" hint="נסה לרענן או לבדוק חיבור לשרת" />
+          <AdminEmpty
+            title={error ? "שגיאה בטעינת ניטור" : "לא ניתן לטעון נתונים"}
+            hint={error || "נסה לרענן או לבדוק חיבור לשרת Django"}
+          />
         )}
       </AdminShell>
     </>
@@ -308,6 +311,8 @@ function AutomationSection({
         <h2 id="auto-heading" className="sr-only">
           אוטומציה
         </h2>
+
+        {automation.warning && <AdminAlert type="info">{automation.warning}</AdminAlert>}
 
         <div className="admin-kv-grid">
           <Kv label="תזמון Cron" value={automation.schedule.cronLabel} />

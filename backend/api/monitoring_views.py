@@ -20,7 +20,15 @@ IsStaffUser = IsStaffPortalUser
 @api_view(['GET'])
 @permission_classes([IsStaffUser])
 def admin_monitoring(request):
-    return Response(build_monitoring_snapshot())
+    try:
+        return Response(build_monitoring_snapshot())
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).exception('admin_monitoring failed')
+        return Response(
+            {'detail': f'שגיאה בבניית ניטור: {exc}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(['POST'])

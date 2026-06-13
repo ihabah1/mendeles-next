@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Postgres driver (psycopg2) + git (AI agent PR/push)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc git \
+    libpq-dev gcc git tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps (paths relative to backend/ — Root Directory must be backend)

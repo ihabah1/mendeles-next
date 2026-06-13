@@ -49,6 +49,7 @@ export interface AutomationRun {
 }
 
 export interface AutomationSnapshot {
+  warning?: string;
   schedule: {
     cron: string;
     cronLabel: string;
