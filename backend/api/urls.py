@@ -61,6 +61,7 @@ wallet_patterns = [
 lotto_patterns = [
     path('draw/', lotto_views.lotto_draw, name='lotto-draw'),
     path('my-sets/', lotto_views.my_sets, name='lotto-my-sets'),
+    path('check-combo/', lotto_views.check_combo, name='lotto-check-combo'),
     path('submit/', lotto_views.submit_order, name='lotto-submit'),
     path('subscribe/', lotto_views.subscribe, name='lotto-subscribe'),
     path('print/', lotto_views.print_summary, name='lotto-print'),

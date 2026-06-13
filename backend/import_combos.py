@@ -1,16 +1,18 @@
 """
-import_combos.py — ייבוא approved_combos.json ל-PostgreSQL
-===========================================================
-הרץ פעמיים בשבוע לפני כל הגרלה:
+import_combos.py — ייבוא approved_combos.json ל-PostgreSQL (סקריפט עצמאי)
+============================================================================
+מומלץ להשתמש בפקודת Django:
+  python manage.py import_combo_pool
+
+או סקריפט ישיר:
   python import_combos.py approved_combos.json
 
 מה זה עושה:
-  1. מוחק את כל הצירופים הקודמים
-  2. מייבא את כל הצירופים החדשים
-  3. מסמן הכל כ-used=false (פנוי)
-  4. צירופים שכבר נמסרו למשתמשים — נשארים ב-lotto_sets
+  1. טוען את approved_combos.json
+  2. מחליף את מאגר הצירופים ב-DB
+  3. מסמן צירופים שכבר נמסרו ללקוחות (LottoSet) כ-used — לא יינתנו שוב
 
-זמן ריצה: ~2-5 דקות ל-1.5M צירופים
+האוטומציה היומית (daily_sync) מרעננת את המאגר אוטומטית בכל הגרלה חדשה.
 """
 
 import json, sys, os, time

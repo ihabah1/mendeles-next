@@ -17,6 +17,7 @@ from .lotto_service import (
     lotto_set_to_api,
     read_last_lottery_id,
 )
+from api.services.combo_pool import is_combo_available
 from api.staff import is_staff_portal_user
 
 from .services.pais_draw import read_draw_data
@@ -68,6 +69,25 @@ def my_sets(request):
     sets = [lotto_set_to_api(row) for row in qs]
     tier = 'premium' if _has_active_subscription(request.user) or sets else 'registered'
     return Response({'sets': sets, 'count': len(sets), 'tier': tier})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def check_combo(request):
+    """POST /api/lotto/check-combo/ { n1..n6 } — was this combo ever distributed?"""
+    nums = [
+        request.data.get('n1'), request.data.get('n2'), request.data.get('n3'),
+        request.data.get('n4'), request.data.get('n5'), request.data.get('n6'),
+    ]
+    if not all(isinstance(n, int) and 1 <= n <= 37 for n in nums):
+        return Response({'error': 'מספרים לא תקינים'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(set(nums)) != 6:
+        return Response({'error': 'מספרים כפולים'}, status=status.HTTP_400_BAD_REQUEST)
+    available = is_combo_available(nums)
+    return Response({
+        'available': available,
+        'message': 'צירוף פנוי — לא ניתן בעבר' if available else 'צירוף זה כבר ניתן ללקוח אחר',
+    })
 
 
 @api_view(['POST'])

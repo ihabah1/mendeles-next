@@ -13,6 +13,7 @@ from admin_panel.accounts.models import User
 from admin_panel.portal.models import ApprovedCombo, AutomationLog, GuideChatInquiry, Order, SiteDailyMetric
 
 from api.services.automation_log import recent_automation_logs
+from api.services.combo_pool import pool_stats
 from api.services.firebase_service import firebase_config_status
 from api.services.icount_service import icount_config_status
 from api.services.integration_log import recent_integration_logs
@@ -294,19 +295,6 @@ def _automation_snapshot() -> dict:
     return _safe(_build, _empty_automation(), 'automation')
 
 
-def _combo_pool() -> dict:
-    total = ApprovedCombo.objects.count()
-    used = ApprovedCombo.objects.filter(used=True).count()
-    free = ApprovedCombo.objects.filter(used=False).count()
-    pct_used = round(100 * used / total, 1) if total else 0
-    return {
-        'total': total,
-        'used': used,
-        'free': free,
-        'percentUsed': pct_used,
-    }
-
-
 def _service_status() -> list[dict]:
     gemini_key = bool((getattr(settings, 'GEMINI_API_KEY', '') or os.getenv('GEMINI_API_KEY', '')).strip())
     return [
@@ -403,7 +391,7 @@ def build_monitoring_snapshot() -> dict:
             'traffic',
         ),
         'business': _safe(_business_block, {'totalRevenueIls': 0, 'totalOrders': 0}, 'business'),
-        'comboPool': _safe(_combo_pool, {'total': 0, 'used': 0, 'free': 0, 'percentUsed': 0}, 'comboPool'),
+        'comboPool': _safe(pool_stats, {'total': 0, 'used': 0, 'free': 0, 'percentUsed': 0}, 'comboPool'),
         'files': _tracked_files(),
         'services': _service_status(),
         'draw': _safe(lambda: _draw_snapshot(draw), _draw_snapshot(None), 'draw'),

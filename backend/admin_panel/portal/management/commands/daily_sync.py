@@ -7,9 +7,10 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from admin_panel.portal.models import ApprovedCombo, AutomationLog
+from admin_panel.portal.models import AutomationLog
 
 from api.services.automation_log import log_automation
+from api.services.combo_pool import pool_stats, refresh_combo_pool_for_draw
 from api.services.pais_draw import draw_results_path, fetch_and_save_draw
 
 
@@ -22,18 +23,33 @@ class Command(BaseCommand):
         try:
             draw = fetch_and_save_draw()
             details['draw'] = draw.get('last_draw') if draw else None
+            lottery_id = (details.get('draw') or {}).get('lottery_id')
             log_automation(
                 AutomationLog.Job.DRAW_REFRESH,
-                f"הגרלה {details.get('draw', {}).get('lottery_id', '?')} עודכנה מפיס",
+                f"הגרלה {lottery_id or '?'} עודכנה מפיס",
                 details=details.get('draw') or {},
             )
 
-            total = ApprovedCombo.objects.count()
-            used = ApprovedCombo.objects.filter(used=True).count()
-            free = ApprovedCombo.objects.filter(used=False).count()
-            details['combos'] = {'total': total, 'used': used, 'free': free}
+            pool_refresh = refresh_combo_pool_for_draw(lottery_id)
+            details['poolRefresh'] = pool_refresh
+            if pool_refresh and not pool_refresh.get('skipped'):
+                log_automation(
+                    AutomationLog.Job.COMBO_EXPORT,
+                    f"מאגר צירופים רוענן — {pool_refresh.get('free', 0)} פנויים",
+                    details=pool_refresh,
+                )
 
-            csv_path = self._export_combo_stats(total, used, free)
+            stats = pool_stats()
+            details['combos'] = {
+                'total': stats['total'],
+                'used': stats['used'],
+                'free': stats['free'],
+                'historyCount': stats['historyCount'],
+            }
+
+            csv_path = self._export_combo_stats(
+                stats['total'], stats['used'], stats['free'],
+            )
             details['csvPath'] = str(csv_path) if csv_path else None
 
             duration_ms = int((time.monotonic() - started) * 1000)
