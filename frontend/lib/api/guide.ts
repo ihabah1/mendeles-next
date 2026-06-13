@@ -21,6 +21,7 @@ export const guideService = {
       pagePath?: string;
       guestName?: string;
       alreadyEscalated?: boolean;
+      sessionId?: string;
     },
   ): Promise<GuideReply> {
     try {
@@ -30,6 +31,7 @@ export const guideService = {
         page_path: opts?.pagePath ?? "",
         guest_name: opts?.guestName ?? "",
         already_escalated: opts?.alreadyEscalated ?? false,
+        session_id: opts?.sessionId ?? "",
       });
       return data;
     } catch {

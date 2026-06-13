@@ -9,6 +9,8 @@ from . import (
     guide_views,
     messages_admin_views,
     lotto_views,
+    metrics_views,
+    monitoring_views,
     permissions_views,
     print_queue_views,
     print_views,
@@ -101,6 +103,9 @@ admin_patterns = [
     ),
     path('ai/text-fix/', ai_compose_views.ai_text_fix, name='admin-ai-text-fix'),
     path('support-requests/', support_admin_views.support_requests_list, name='admin-support-requests'),
+    path('chat-inquiries/', monitoring_views.admin_chat_inquiries, name='admin-chat-inquiries'),
+    path('monitoring/', monitoring_views.admin_monitoring, name='admin-monitoring'),
+    path('monitoring/run-daily-sync/', monitoring_views.admin_run_daily_sync, name='admin-run-daily-sync'),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
     path(
         'orders/<int:order_id>/form-preview/',
@@ -126,6 +131,7 @@ admin_patterns = [
 
 urlpatterns = [
     path('guide/chat/', guide_views.guide_chat, name='guide-chat'),
+    path('metrics/ping/', metrics_views.metrics_ping, name='metrics-ping'),
     path('auth/', include(auth_patterns)),
     path('wallet/', include(wallet_patterns)),
     path('lotto/', include(lotto_patterns)),

@@ -3,13 +3,14 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import PromoLayout from "@/components/promo/PromoLayout";
 import SiteGuideChat from "@/components/SiteGuideChat";
+import SiteMetricsPing from "@/components/SiteMetricsPing";
 import CookieNotice from "@/components/CookieNotice";
 import AccessibilityWidget from "@/components/AccessibilityWidget";
 
 export const metadata: Metadata = {
-  title: { template: "%s — Mandeles.co.il", default: "Mandeles.co.il — לוטו חכם" },
-  description: "שירות מילוי טפסי לוטו מקצועי — 200 סטים, מילוי קל, הגשה אישית",
-  keywords: ["לוטו", "מפעל הפיס", "טפסים", "200 סטים", "mandeles"],
+  title: { template: "%s — Mandeles.co.il", default: "Mandeles.co.il — ניתוח סטטיסטי ולוטו" },
+  description: "שירות ניתוח סטטיסטי והגשת טפסי לוטו בשם הלקוח — ללא קשר למפעל הפיס",
+  keywords: ["לוטו", "מפעל הפיס", "טפסים", "ניתוח סטטיסטי", "mandeles"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <PromoLayout>{children}</PromoLayout>
           <SiteGuideChat />
+          <SiteMetricsPing />
           <AccessibilityWidget />
           <CookieNotice />
         </AuthProvider>
@@ -34,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/terms" style={{ color: "var(--muted)", textDecoration: "none" }}>תנאי שימוש</a>
             <a href="/accessibility" style={{ color: "var(--muted)", textDecoration: "none" }}>נגישות</a>
           </div>
-          © 2026 Mandeles.co.il | גיל מינימלי 18 | בעיות הימורים: <a href="tel:1800232425" style={{ color: "var(--gold)" }}>1-800-23-24-25</a>
+          © 2026 Mandeles.co.il — איננו קשורים למפעל הפיס | גיל מינימלי 18 | בעיות הימורים: <a href="tel:1800232425" style={{ color: "var(--gold)" }}>1-800-23-24-25</a>
         </footer>
       </body>
     </html>

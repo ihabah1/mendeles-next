@@ -8,11 +8,11 @@ const RAIL_CARDS = {
   start: [
     {
       icon: "🎱",
-      title: "לוטו מקצועי",
-      lines: ["200 סטים חכמים", "מילוי והגשה לפיס"],
+      title: "לוטו — שירות שליחות",
+      lines: ["200 צירופים סטטיסטיים", "מילוי והגשה בשמך"],
       href: "/lotto",
       variant: "gold",
-      badge: "חדש!",
+      badge: "שירות",
     },
     {
       icon: "⚡",
@@ -58,11 +58,11 @@ const RAIL_CARDS = {
 
 const RAIL_TICKERS = {
   start: [
-    "🎯 200 סטים ייחודיים",
-    "📋 מילוי מקצועי",
-    "🚗 הגשה לפיס",
-    "✨ אלגוריתם מנדל",
-    "🔥 פרימיום זמין",
+    "📋 ניתוח סטטיסטי",
+    "🚗 הגשה בשם הלקוח",
+    "📸 צילום טופס לאחר רכישה",
+    "⚖️ איננו קשורים למפעל הפיס",
+    "🔒 תשלום מאובטח",
   ],
   end: [
     "📲 עדכון SMS",
@@ -253,7 +253,7 @@ export function PromoRailColumn({ side }: { side: "start" | "end" }) {
         <span className="promo-side-rail-crown-glow" aria-hidden />
         <MandelesLogoMark size="sm" showText={false} />
         <span className="promo-side-rail-crown-title">Mandeles</span>
-        <span className="promo-side-rail-crown-tag">לוטו חכם</span>
+        <span className="promo-side-rail-crown-tag">ניתוח ושליחות</span>
       </div>
 
       {cards.map((c, i) => (
@@ -267,7 +267,7 @@ export function PromoRailColumn({ side }: { side: "start" | "end" }) {
 
       <div className="promo-side-rail-footer">
         <Link href={side === "start" ? "/lotto" : "/profile"} className="promo-side-rail-cta">
-          {side === "start" ? "התחל לשחק" : "לאזור האישי"}
+          {side === "start" ? "למילוי טפסים" : "לאזור האישי"}
           <span className="promo-side-rail-cta-arrow" aria-hidden>←</span>
         </Link>
         <div className="promo-side-rail-badge">

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const PLANS = [
-  { title: "כיסוי מקסימלי", desc: "200 צירופים מאושרים", icon: "🎯" },
-  { title: "סטטיסטיקה חזקה", desc: "Hot Numbers היסטוריים", icon: "📊" },
-  { title: "גיוון עשרוניות", desc: "פיזור מקסימלי", icon: "🔢" },
+  { title: "פיזור סטטיסטי", desc: "200 צירופים מאושרים", icon: "🎯" },
+  { title: "נתוני עבר", desc: "ניתוח תוצאות היסטוריות", icon: "📊" },
+  { title: "גיוון צירופים", desc: "פיזור על בסיס מודל פנימי", icon: "🔢" },
 ];
 
 export default function PremiumSection() {
@@ -15,7 +15,7 @@ export default function PremiumSection() {
     <section className="home-section">
       <h2 className="home-section-title">
         <span aria-hidden>⭐</span>
-        <span>אסטרטגיות מתקדמות – Premium</span>
+        <span>אסטרטגיות פרימיום — ללא הבטחת זכייה</span>
       </h2>
 
       <div className="home-grid-3">

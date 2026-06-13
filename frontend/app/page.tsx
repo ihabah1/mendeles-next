@@ -5,14 +5,15 @@ import HomeHero from "@/components/HomeHero";
 import WinnerTabBar from "@/components/WinnerTabBar";
 import FreeComboCheck from "@/components/FreeComboCheck";
 import PremiumSection from "@/components/PremiumSection";
+import LegalDisclaimer from "@/components/LegalDisclaimer";
 
-export const metadata = { title: "Mandeles.co.il — לוטו חכם" };
+export const metadata = { title: "Mandeles.co.il — ניתוח סטטיסטי ולוטו" };
 
 const FEATURES = [
-  { icon: "🧮", title: "200 סטים חכמים", desc: "אלגוריתם מנדל מייצר 200 סטים בפיזור מקסימלי" },
+  { icon: "🧮", title: "200 צירופים", desc: "פיזור סטטיסטי של מספרים — ללא הבטחת זכייה" },
   { icon: "📋", title: "מילוי טפסים", desc: "ידני, אוטומטי, או עם המספרים שלך" },
-  { icon: "🚗", title: "הגשה אישית", desc: "מגישים את הטפסים לדוכן מפעל הפיס" },
-  { icon: "💬", title: "עדכונים SMS", desc: "SMS ואימייל על כל שלב" },
+  { icon: "🚗", title: "הגשה בשמך", desc: "רכישת הטופס על שמך והגשה לדוכן מפעל הפיס" },
+  { icon: "💬", title: "עדכונים", desc: "SMS ואימייל · צילום טופס לאחר רכישה" },
 ];
 
 const GAME_ROWS = [
@@ -37,7 +38,7 @@ const GAME_ROWS = [
     ],
   },
   {
-    time: "ניתוח חכם",
+    time: "ניתוח סטטיסטי",
     title: "טוטו — ניתוח סטטיסטי",
     href: "/toto",
     odds: [
@@ -62,6 +63,9 @@ export default function HomePage() {
       <Nav />
       <main className="home-main">
         <HomeHero />
+        <div style={{ padding: "0 16px", maxWidth: 900, margin: "0 auto 12px" }}>
+          <LegalDisclaimer compact />
+        </div>
         <WinnerTabBar />
 
         <div className="home-date-bar">
@@ -165,10 +169,10 @@ export default function HomePage() {
           <div style={{ fontSize: "1.8rem", flexShrink: 0 }}>⚽</div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", fontWeight: 900, color: "var(--gold)", marginBottom: 4 }}>
-              ניתוח טוטו חכם
+              ניתוח טוטו סטטיסטי
             </h3>
             <p style={{ fontSize: "0.76rem", color: "var(--muted)", lineHeight: 1.55 }}>
-              ניתוח סטטיסטי מתקדם — הסתברויות, ניקוד קבוצות, תחזית מזג אוויר
+              ניתוח נתוני עבר — ללא הבטחה לתוצאות עתידיות
             </p>
           </div>
           <Link href="/toto" className="btn btn-outline" style={{ fontSize: "0.78rem", flexShrink: 0 }}>

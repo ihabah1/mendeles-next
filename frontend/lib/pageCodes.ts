@@ -28,6 +28,8 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "PQ55", labelHe: "תור הדפסה", paths: ["/admin/print-queue"] },
   { code: "PM41", labelHe: "מתן הרשאות", paths: ["/admin/permissions"] },
   { code: "AS88", labelHe: "שירותים (staff)", paths: ["/admin/services"] },
+  { code: "MN90", labelHe: "ניטור תשתית", paths: ["/admin/monitoring"] },
+  { code: "SP77", labelHe: "פניות צ׳אט", paths: ["/admin/support"] },
 ];
 
 export function getPageCodeForPath(pathname: string | null): PageCodeEntry | null {

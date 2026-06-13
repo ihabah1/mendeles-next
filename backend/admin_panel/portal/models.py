@@ -391,3 +391,72 @@ class ServiceFlag(models.Model):
     def __str__(self):
         state = 'פעיל' if self.enabled else 'כבוי'
         return f'{self.label} ({state})'
+
+
+class AutomationLog(models.Model):
+    """Scheduled jobs — daily PAIS sync, combo export, etc."""
+
+    class Job(models.TextChoices):
+        DAILY_SYNC = 'daily_sync', 'סנכרון יומי'
+        DRAW_REFRESH = 'draw_refresh', 'עדכון הגרלה'
+        COMBO_EXPORT = 'combo_export', 'ייצוא צירופים'
+
+    class Level(models.TextChoices):
+        INFO = 'info', 'מידע'
+        WARNING = 'warning', 'אזהרה'
+        ERROR = 'error', 'שגיאה'
+
+    job = models.CharField(max_length=32, choices=Job.choices)
+    level = models.CharField(max_length=16, choices=Level.choices, default=Level.INFO)
+    message = models.CharField(max_length=500)
+    details = models.JSONField(default=dict, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'לוג אוטומציה'
+        verbose_name_plural = 'לוגי אוטומציה'
+
+
+class GuideChatInquiry(models.Model):
+    """Persisted site guide chat sessions for staff review."""
+
+    session_id = models.CharField(max_length=64, db_index=True)
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='guide_chats',
+    )
+    guest_name = models.CharField(max_length=120, blank=True)
+    page_path = models.CharField(max_length=200, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    messages = models.JSONField(default=list, blank=True)
+    ai_summary = models.TextField(blank=True)
+    escalated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'פניית צ׳אט'
+        verbose_name_plural = 'פניות צ׳אט'
+
+
+class SiteDailyMetric(models.Model):
+    """Daily rollup for dashboard monitoring (visits, signups)."""
+
+    date = models.DateField(unique=True)
+    page_views = models.PositiveIntegerField(default=0)
+    unique_visitors = models.PositiveIntegerField(default=0)
+    orders_count = models.PositiveIntegerField(default=0)
+    new_users = models.PositiveIntegerField(default=0)
+    chat_sessions = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = 'מדד יומי'
+        verbose_name_plural = 'מדדים יומיים'

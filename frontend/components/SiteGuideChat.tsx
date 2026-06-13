@@ -16,6 +16,21 @@ type ChatMsg = {
 };
 
 const HIDE_ON = ["/admin", "/auth"];
+
+const SESSION_KEY = "mandeles-guide-session";
+
+function getSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = `gs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      sessionStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return `gs-${Date.now()}`;
+  }
+}
 const BALLOON_DISMISS_KEY = "mandeles-guide-balloon-dismissed";
 const BALLOON_POS_KEY = "mandeles-guide-balloon-pos";
 const DRAG_THRESHOLD = 6;
@@ -156,6 +171,7 @@ export default function SiteGuideChat() {
         pagePath: path,
         guestName: user?.display_name || user?.full_name || "",
         alreadyEscalated: escalated,
+        sessionId: getSessionId(),
       });
       if (res.escalated) setEscalated(true);
       setMessages((m) => [

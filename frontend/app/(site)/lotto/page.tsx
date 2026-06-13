@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
 import { lottoService } from "@/lib/api/lotto";
@@ -358,6 +359,10 @@ function LottoPageInner() {
         </div>
       )}
 
+      <div style={{ marginBottom: 12 }}>
+        <LegalDisclaimer compact />
+      </div>
+
       <div className="lotto-panel lotto-meta">
         <span>הזמנה: <strong>{data.order_number}</strong></span>
         <span>הגרלה: <strong>{data.draw_date}</strong></span>
@@ -436,7 +441,7 @@ function LottoPageInner() {
       <div className="lotto-panel" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
           <div className="lotto-panel-title">🎯 דאבל לוטו</div>
-          <div className="lotto-panel-sub">הכפל את הסיכוי — מחיר כפול לכל טבלה</div>
+          <div className="lotto-panel-sub">אפשרות דאבל לוטו של מפעל הפיס — מחיר כפול לכל טבלה (לא משנה את הסתברות הזכייה)</div>
         </div>
         <div
           role="switch"

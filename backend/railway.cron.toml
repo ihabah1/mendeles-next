@@ -1,0 +1,7 @@
+# Railway Cron service — create a separate Cron service pointing at backend/
+# Schedule: 0 5 * * *  (05:00 UTC daily, after typical Lotto draw)
+# Start command: bash scripts/cron_daily.sh
+
+[cron]
+schedule = "0 5 * * *"
+command = "bash scripts/cron_daily.sh"

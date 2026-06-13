@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from api.services.guide_chat_store import append_guide_message
 from api.services.support_chat import notify_staff_chat_request, wants_human_agent
 
 SITE_MAP = """
@@ -162,6 +163,18 @@ def guide_chat(request):
                 f"{payload.get('text', '').strip()}\n\n"
                 "✅ העברנו את הבקשה לצוות האתר. נציג יחזור אליך בהקדם האפשרי."
             ).strip()
+
+    session_id = (request.data.get("session_id") or "").strip()[:64]
+    append_guide_message(
+        session_id=session_id,
+        user=request.user,
+        guest_name=(request.data.get("guest_name") or "").strip()[:80],
+        page_path=page_path,
+        ip_address=_client_ip(request),
+        user_message=message,
+        assistant_message=payload.get("text", ""),
+        escalated=escalated,
+    )
 
     payload["escalated"] = escalated
     return Response(payload)

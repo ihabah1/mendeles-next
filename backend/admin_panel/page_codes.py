@@ -35,6 +35,8 @@ _PUBLIC: list[PageCodeEntry] = [
     PageCodeEntry('PQ55', 'תור הדפסה', ('frontend/app/(site)/admin/print-queue/page.tsx',), frontend_paths=('/admin/print-queue',)),
     PageCodeEntry('PM41', 'מתן הרשאות', ('frontend/app/(site)/admin/permissions/page.tsx',), frontend_paths=('/admin/permissions',)),
     PageCodeEntry('AS88', 'שירותים (staff)', ('frontend/app/(site)/admin/services/page.tsx',), frontend_paths=('/admin/services',)),
+    PageCodeEntry('MN90', 'ניטור תשתית', ('frontend/app/(site)/admin/monitoring/page.tsx',), frontend_paths=('/admin/monitoring',)),
+    PageCodeEntry('SP77', 'פניות צ׳אט', ('frontend/app/(site)/admin/support/page.tsx',), frontend_paths=('/admin/support',)),
     PageCodeEntry('NV52', 'סרגל עליון', ('frontend/components/Nav.tsx',), frontend_paths=()),
 ]
 
