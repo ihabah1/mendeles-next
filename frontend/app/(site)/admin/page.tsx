@@ -3,6 +3,11 @@ import { useEffect, useState, useCallback } from "react";
 import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminQuickNav from "@/components/admin/AdminQuickNav";
+import {
+  AdminStatCard,
+  AdminStatGrid,
+} from "@/components/admin/AdminUI";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
 import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
 import type { PreviewForm } from "@/components/admin/LottoFormPreview";
@@ -436,30 +441,28 @@ function AdminPageInner() {
           {toast.msg}
         </div>
       )}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 14px 60px" }}>
+      <div className="admin-page-wrap">
         <AdminNavTabs active="dashboard" />
-        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.35rem", fontWeight: 900, color: "var(--cream)", margin: "0 0 20px" }}>
-          🎯 דשבורד אדמין
+        <main id="admin-main" className="admin-main">
+        <AdminQuickNav current="dashboard" />
+        <h1 className="admin-page-title" style={{ marginBottom: 20 }}>
+          דשבורד אדמין
         </h1>
 
         {/* Stats */}
         {stats && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 20 }}>
+          <AdminStatGrid>
             {[
-              { label: "משתמשים", value: stats.total_users, sub: `+${stats.new_today} היום` },
-              { label: "מנויים פעילים", value: stats.active_subs },
-              { label: "ממתינות להגשה", value: stats.pending_orders, color: "#ffb347" },
+              { label: "משתמשים", value: String(stats.total_users), sub: `+${stats.new_today} היום` },
+              { label: "מנויים פעילים", value: String(stats.active_subs) },
+              { label: "ממתינות להגשה", value: String(stats.pending_orders), accent: "#ffb347" },
               { label: "הכנסות", value: `₪${stats.total_revenue?.toFixed(0)}` },
-              { label: "זכיות", value: stats.total_wins },
+              { label: "זכיות", value: String(stats.total_wins) },
               { label: "פרסים", value: `₪${stats.total_prize?.toFixed(0)}` },
-            ].map(s => (
-              <div key={s.label} style={{ background: "rgba(26,45,66,.85)", border: "1px solid var(--navy-b)", borderRadius: 10, padding: "14px 12px" }}>
-                <div style={{ fontSize: "1.4rem", fontWeight: 900, color: s.color || "var(--gold)" }}>{s.value}</div>
-                <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 3 }}>{s.label}</div>
-                {s.sub && <div style={{ fontSize: ".62rem", color: "var(--green)", marginTop: 2 }}>{s.sub}</div>}
-              </div>
+            ].map((s) => (
+              <AdminStatCard key={s.label} label={s.label} value={s.value} sub={s.sub} accent={s.accent} />
             ))}
-          </div>
+          </AdminStatGrid>
         )}
 
         {canManageOrders && integrations && (
@@ -767,6 +770,7 @@ function AdminPageInner() {
             </div>
           </div>
         )}
+        </main>
       </div>
 
       <OrderFormPreviewModal

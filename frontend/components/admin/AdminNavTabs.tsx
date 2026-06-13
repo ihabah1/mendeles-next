@@ -15,16 +15,16 @@ export type AdminTabId =
   | "monitoring"
   | "services";
 
-const TABS: { id: AdminTabId; href: string; label: string }[] = [
-  { id: "dashboard", href: "/admin", label: "דשבורד" },
-  { id: "scan", href: "/admin/scan", label: "מסך סריקה" },
-  { id: "print-queue", href: "/admin/print-queue", label: "תור הדפסה" },
-  { id: "permissions", href: "/admin/permissions", label: "הרשאות" },
-  { id: "balance", href: "/admin/balance", label: "יתרות" },
-  { id: "messages", href: "/admin/messages", label: "מכתבים" },
-  { id: "support", href: "/admin/support", label: "פניות צ׳אט" },
-  { id: "monitoring", href: "/admin/monitoring", label: "ניטור" },
-  { id: "services", href: "/admin/services", label: "שירותים" },
+const TABS: { id: AdminTabId; href: string; label: string; title: string }[] = [
+  { id: "dashboard", href: "/admin", label: "דשבורד", title: "הזמנות, זכיות ותוצאות הגרלה" },
+  { id: "scan", href: "/admin/scan", label: "מסך סריקה", title: "העלאת וצפייה בסריקות טפסים" },
+  { id: "print-queue", href: "/admin/print-queue", label: "תור הדפסה", title: "ניהול הדפסה והגשה" },
+  { id: "permissions", href: "/admin/permissions", label: "הרשאות", title: "משתמשים ותפקידים" },
+  { id: "balance", href: "/admin/balance", label: "יתרות", title: "עדכון ארנק לקוחות" },
+  { id: "messages", href: "/admin/messages", label: "מכתבים", title: "הודעות ללקוחות" },
+  { id: "support", href: "/admin/support", label: "פניות צ׳אט", title: "שיחות בוט וסיכומי AI" },
+  { id: "monitoring", href: "/admin/monitoring", label: "ניטור", title: "אוטומציה, תנועה ותשתית" },
+  { id: "services", href: "/admin/services", label: "שירותים", title: "הפעלה וכיבוי תכונות" },
 ];
 
 function activeTabFromPath(pathname: string): AdminTabId {
@@ -54,6 +54,7 @@ export default function AdminNavTabs({ active }: { active?: AdminTabId }) {
             href={tab.href}
             className={`admin-tab${current === tab.id ? " admin-tab--active" : " admin-tab--inactive"}`}
             aria-current={current === tab.id ? "page" : undefined}
+            title={tab.title}
           >
             {tab.label}
           </Link>

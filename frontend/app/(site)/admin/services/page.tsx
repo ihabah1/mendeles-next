@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import {
+  AdminAlert,
+  AdminLoading,
+  AdminPageHeader,
+  AdminRefreshButton,
+  AdminShell,
+} from "@/components/admin/AdminUI";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import { serviceFlagsApi, type ServiceFlag } from "@/lib/api/serviceFlags";
@@ -64,28 +71,19 @@ function AdminServicesInner() {
   return (
     <>
       <Nav />
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 14px 60px" }}>
+      <AdminShell maxWidth={720}>
         <AdminNavTabs active="services" />
-        <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.35rem", color: "var(--cream)", margin: "0 0 8px" }}>
-          ⚙️ ניהול שירותים
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: ".78rem", marginBottom: 20 }}>
-          הפעלה וכיבוי של מודולים במערכת. שינויים נשמרים מיד; חלק מהדגלים דורשים הפעלה מחדש של השרת.
-        </p>
+        <AdminPageHeader
+          title="ניהול שירותים"
+          description="הפעלה וכיבוי של מודולים במערכת. שינויים נשמרים מיד; חלק מהדגלים דורשים הפעלה מחדש של השרת."
+          actions={<AdminRefreshButton onClick={load} loading={loading} />}
+        />
 
-        {error && (
-          <div style={{ background: "rgba(255,80,80,.12)", border: "1px solid rgba(255,80,80,.35)", color: "#ff8a8a", borderRadius: 8, padding: "10px 12px", marginBottom: 14, fontSize: ".78rem" }}>
-            {error}
-          </div>
-        )}
-        {message && (
-          <div style={{ background: "rgba(29,185,106,.12)", border: "1px solid rgba(29,185,106,.35)", color: "#6ee7a0", borderRadius: 8, padding: "10px 12px", marginBottom: 14, fontSize: ".78rem" }}>
-            {message}
-          </div>
-        )}
+        {error && <AdminAlert type="error">{error}</AdminAlert>}
+        {message && <AdminAlert type="success">{message}</AdminAlert>}
 
         {loading ? (
-          <p style={{ color: "var(--muted)" }}>טוען...</p>
+          <AdminLoading />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {flags.map((flag) => (
@@ -113,6 +111,8 @@ function AdminServicesInner() {
                   type="button"
                   disabled={saving === flag.key}
                   onClick={() => toggle(flag)}
+                  aria-pressed={flag.enabled}
+                  aria-label={`${flag.label} — ${flag.enabled ? "פעיל, לחץ לכיבוי" : "כבוי, לחץ להפעלה"}`}
                   style={{
                     flexShrink: 0,
                     minWidth: 72,
@@ -144,7 +144,7 @@ function AdminServicesInner() {
             </a>
           </div>
         </div>
-      </div>
+      </AdminShell>
     </>
   );
 }

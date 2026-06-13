@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminQuickNav from "@/components/admin/AdminQuickNav";
+import {
+  AdminAlert,
+  AdminPageHeader,
+  AdminRefreshButton,
+  AdminShell,
+} from "@/components/admin/AdminUI";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import {
@@ -94,28 +101,34 @@ function BalancePageInner() {
   return (
     <>
       <Nav />
-      <div className="page-wrap" style={{ maxWidth: 960 }}>
+      <AdminShell maxWidth={960}>
         <AdminNavTabs active="balance" />
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--cream)" }}>
-          💳 ניהול יתרות
-        </h1>
+        <AdminPageHeader
+          title="ניהול יתרות"
+          description="הזנת או שינוי יתרת ארנק לכל הלקוחות. כל שינוי נרשם ביומן הפעולות."
+          actions={<AdminRefreshButton onClick={load} loading={loading} />}
+        />
 
-        <p style={{ color: "var(--text2)", fontSize: ".82rem", marginBottom: 16, lineHeight: 1.6 }}>
-          הזנת או שינוי יתרת ארנק לכל הלקוחות. כל שינוי נרשם ביומן הפעולות.
-        </p>
+        {error && <AdminAlert type="error">{error}</AdminAlert>}
+        {message && <AdminAlert type="success">{message}</AdminAlert>}
 
-        {error && <div className="result-fail" style={{ marginBottom: 12 }}>{error}</div>}
-        {message && <div className="result-pass" style={{ marginBottom: 12 }}>{message}</div>}
-
-        <div className="lotto-panel" style={{ marginBottom: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="lotto-panel admin-toolbar" style={{ marginBottom: 14 }}>
+          <label className="sr-only" htmlFor="balance-search">
+            חיפוש משתמש
+          </label>
           <input
+            id="balance-search"
             className="input"
             placeholder="חיפוש לפי אימייל, שם, טלפון…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             style={{ flex: "1 1 200px" }}
           />
+          <label className="sr-only" htmlFor="balance-role">
+            סינון תפקיד
+          </label>
           <select
+            id="balance-role"
             className="input"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -125,14 +138,10 @@ function BalancePageInner() {
             <option value="customer">לקוח</option>
             <option value="team">צוות</option>
           </select>
-          <button type="button" className="btn btn-outline btn-sm" onClick={load} disabled={loading}>
-            🔄 רענן
-          </button>
         </div>
 
         <div
-          className="perm-grid"
-          style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", gap: 14 }}
+          className="perm-grid admin-two-col"
         >
           <div className="card" style={{ padding: 0, overflow: "hidden", maxHeight: 520, overflowY: "auto" }}>
             {loading && !users.length ? (
@@ -145,6 +154,8 @@ function BalancePageInner() {
                   key={u.id}
                   type="button"
                   onClick={() => setSelected(u)}
+                  aria-pressed={selected?.id === u.id}
+                  aria-label={`${u.displayName || u.email}, יתרה ₪${u.balanceIls.toFixed(2)}`}
                   style={{
                     display: "block",
                     width: "100%",
@@ -260,7 +271,7 @@ function BalancePageInner() {
             )}
           </div>
         </div>
-      </div>
+      </AdminShell>
     </>
   );
 }
