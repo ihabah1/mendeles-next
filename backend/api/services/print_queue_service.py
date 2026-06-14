@@ -9,8 +9,6 @@ from django.utils import timezone
 
 from admin_panel.portal.models import Order, PrintAgentHeartbeat, PrintJob
 
-from api.services.print_service import build_forms_print_payload
-
 logger = logging.getLogger(__name__)
 
 ACTIVE_STATUSES = {
@@ -137,8 +135,9 @@ def printer_status_summary() -> dict:
     }
 
 
-def build_job_payload(order: Order) -> dict:
-    return build_forms_print_payload(order)
+def build_job_payload(order: Order, *, print_mode: str | None = None) -> dict:
+    from api.services.print_service import build_print_payload
+    return build_print_payload(order, mode=print_mode)
 
 
 def enqueue_order(order: Order, *, refresh_payload: bool = True) -> PrintJob:
@@ -430,6 +429,85 @@ def skip_job_to_scan(job: PrintJob, *, user=None) -> PrintJob:
     return skip_job_to_step(job, 'print', user=user)
 
 
+def set_job_priority(job: PrintJob, priority: int) -> PrintJob:
+    job.priority = max(0, min(int(priority), 9999))
+    job.save(update_fields=['priority', 'updated_at'])
+    return job
+
+
+def promote_job(job: PrintJob) -> PrintJob:
+    """Move job to front of queue (higher priority)."""
+    from django.db.models import Max
+
+    top = (
+        PrintJob.objects.filter(status__in=ACTIVE_STATUSES | {PrintJob.Status.FAILED})
+        .aggregate(m=Max('priority'))['m']
+        or 0
+    )
+    job.priority = int(top) + 10
+    job.save(update_fields=['priority', 'updated_at'])
+    return job
+
+
+def send_job_to_print(
+    job: PrintJob,
+    user=None,
+    *,
+    print_mode: str | None = None,
+) -> PrintJob:
+    """Refresh payload, approve, and release claim so the agent can pull."""
+    if job.status == PrintJob.Status.CANCELLED:
+        raise ValueError('לא ניתן לשלוח משימה שבוטלה')
+    if job.status == PrintJob.Status.PRINTED:
+        raise ValueError('המשימה כבר הודפסה')
+
+    order = job.order
+    try:
+        job.payload_json = build_job_payload(order, print_mode=print_mode)
+    except Exception as exc:
+        raise ValueError(str(exc)) from exc
+
+    if job.status in (PrintJob.Status.CLAIMED, PrintJob.Status.PRINTING):
+        job.status = PrintJob.Status.APPROVED
+        job.claimed_at = None
+        job.claimed_by_agent = ''
+        job.last_error = ''
+    elif job.status == PrintJob.Status.FAILED:
+        job.status = PrintJob.Status.QUEUED
+        job.attempts = 0
+        job.claimed_at = None
+        job.claimed_by_agent = ''
+        job.last_error = ''
+        approve_job(job, user)
+    elif job.status == PrintJob.Status.QUEUED:
+        approve_job(job, user)
+    else:
+        job.status = PrintJob.Status.APPROVED
+        if not job.approved_at:
+            job.approved_at = timezone.now()
+        if user and not job.approved_by_id:
+            job.approved_by = user
+
+    job.save()
+    return job
+
+
+def register_agent_manual(
+    *,
+    agent_id: str = 'default',
+    hostname: str = '',
+    printer_ready: bool = True,
+    printer_message: str = 'רשום ידנית מדשבורד',
+) -> PrintAgentHeartbeat:
+    return record_agent_heartbeat(
+        agent_id=agent_id,
+        hostname=hostname or 'manual-dashboard',
+        version='manual',
+        printer_ready=printer_ready,
+        printer_message=printer_message,
+    )
+
+
 def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:
     order = job.order
     customer = order.customer
@@ -441,6 +519,11 @@ def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:
         'orderNumber': order.order_number,
         'status': job.status,
         'priority': job.priority,
+        'printMode': (
+            'pdf_url'
+            if isinstance(job.payload_json, dict) and job.payload_json.get('pdf_url')
+            else 'forms'
+        ),
         'attempts': job.attempts,
         'maxAttempts': job.max_attempts,
         'lastError': job.last_error or None,

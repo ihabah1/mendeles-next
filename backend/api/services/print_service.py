@@ -102,6 +102,68 @@ def print_configured() -> bool:
         return False
 
 
+def print_api_key_configured() -> bool:
+    key = (
+        getattr(settings, 'PRINT_API_KEY', '')
+        or os.getenv('PRINT_API_KEY', '')
+    ).strip()
+    return bool(key)
+
+
+def print_api_key_hint() -> str | None:
+    key = (
+        getattr(settings, 'PRINT_API_KEY', '')
+        or os.getenv('PRINT_API_KEY', '')
+    ).strip()
+    if not key:
+        return None
+    if len(key) <= 4:
+        return '****'
+    return f'{"*" * (len(key) - 4)}{key[-4:]}'
+
+
+def verify_print_api_key(candidate: str) -> bool:
+    expected = (
+        getattr(settings, 'PRINT_API_KEY', '')
+        or os.getenv('PRINT_API_KEY', '')
+    ).strip()
+    if not expected:
+        return False
+    return (candidate or '').strip() == expected
+
+
+def print_control_config(*, site_base_url: str = '') -> dict:
+    """Staff dashboard — agent endpoints and print settings (no secret key)."""
+    base = (site_base_url or '').rstrip('/')
+    api_prefix = f'{base}/api' if base else '/api'
+    mode = _print_payload_mode()
+    return {
+        'apiKeyConfigured': print_api_key_configured(),
+        'apiKeyHint': print_api_key_hint(),
+        'apiKeyHeader': _print_api_key_header(),
+        'payloadMode': mode,
+        'payloadModes': [
+            {'value': 'forms', 'label': 'טפסים (forms) — מספרים + חזק'},
+            {'value': 'pdf_url', 'label': 'PDF (pdf_url) — קישור חשבונית'},
+        ],
+        'printServerConfigured': print_configured(),
+        'autoEnqueue': bool(getattr(settings, 'PRINT_QUEUE_AUTO_ENQUEUE', True)),
+        'agentEndpoints': {
+            'heartbeat': f'{api_prefix}/print/agent/heartbeat',
+            'pull': f'{api_prefix}/print/jobs/pull',
+            'confirm': f'{api_prefix}/print/confirm',
+            'fail': f'{api_prefix}/print/jobs/{{jobId}}/fail',
+        },
+        'configFileExample': {
+            'api_url': base or 'https://mendeles-next-production.up.railway.app',
+            'api_key': '<PRINT_API_KEY מ-Railway>',
+            'local_print_url': 'http://127.0.0.1:5000/print',
+            'agent_id': 'default',
+            'poll_seconds': 15,
+        },
+    }
+
+
 def build_print_forms(sets_json: list) -> list[dict]:
     """Group tables into PAIS forms (up to 14 tables per form)."""
     if not sets_json:
@@ -168,8 +230,8 @@ def build_forms_print_payload(order) -> dict:
     }
 
 
-def build_print_payload(order) -> dict:
-    mode = _print_payload_mode()
+def build_print_payload(order, *, mode: str | None = None) -> dict:
+    mode = (mode or _print_payload_mode()).strip().lower() or 'forms'
     if mode in ('pdf', 'pdf_url'):
         pdf_url = (getattr(order, 'icount_pdf_link', None) or '').strip()
         if not pdf_url:

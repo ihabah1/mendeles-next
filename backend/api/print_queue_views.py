@@ -1,4 +1,5 @@
 """Print queue API — staff dashboard + local print agent (x-api-key)."""
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -19,10 +20,19 @@ from api.services.print_queue_service import (
     fail_job,
     job_to_dict,
     printer_status_summary,
+    promote_job,
     queue_counts,
     record_agent_heartbeat,
+    register_agent_manual,
     retry_job,
+    send_job_to_print,
+    set_job_priority,
     skip_job_to_step,
+)
+from api.services.print_service import (
+    print_api_key_configured,
+    print_control_config,
+    verify_print_api_key,
 )
 from admin_panel.portal.models import IntegrationLog, Order
 
@@ -62,6 +72,11 @@ def admin_print_queue(request):
         )
     jobs = [job_to_dict(j) for j in qs[:300]]
     printer_status = printer_status_summary()
+    site_base = (getattr(settings, 'FRONTEND_URL', '') or '').strip().rstrip('/')
+    if not site_base:
+        site_base = request.build_absolute_uri('/').rstrip('/')
+        if site_base.endswith('/api'):
+            site_base = site_base[:-4]
     return Response({
         'jobs': jobs,
         'count': len(jobs),
@@ -70,6 +85,7 @@ def admin_print_queue(request):
         'agents': printer_status['agents'],
         'anyAgentOnline': printer_status['agentOnline'],
         'canStartPrinting': printer_status['canStartPrinting'],
+        'printConfig': print_control_config(site_base_url=site_base),
     })
 
 
@@ -197,6 +213,144 @@ def admin_print_queue_enqueue(request, order_id: int):
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
     job = enqueue_order(order)
     return Response({'status': 'ok', 'job': job_to_dict(job)})
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_enqueue_by_number(request):
+    """POST { orderNumber } — הכנסה ידנית לתור לפי מספר הזמנה."""
+    order_number = (
+        request.data.get('orderNumber')
+        or request.data.get('order_number')
+        or ''
+    ).strip()
+    if not order_number:
+        return Response({'error': 'חסר מספר הזמנה'}, status=status.HTTP_400_BAD_REQUEST)
+    order = Order.objects.filter(order_number__iexact=order_number).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    job = enqueue_order(order)
+    return Response({'status': 'ok', 'detail': f'{order_number} נוסף לתור', 'job': job_to_dict(job)})
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_promote(request, job_id: int):
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    promote_job(job)
+    return Response({
+        'status': 'ok',
+        'detail': f'קודם בתור (עדיפות {job.priority})',
+        'job': job_to_dict(job),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_priority(request, job_id: int):
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    raw = request.data.get('priority')
+    try:
+        priority = int(raw)
+    except (TypeError, ValueError):
+        return Response({'error': 'עדיפות לא תקינה'}, status=status.HTTP_400_BAD_REQUEST)
+    set_job_priority(job, priority)
+    return Response({'status': 'ok', 'job': job_to_dict(job)})
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_queue_send(request, job_id: int):
+    """שליחה להדפסה — רענון payload, אישור ושחרור תפיסה."""
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+    print_mode = (
+        request.data.get('printMode')
+        or request.data.get('print_mode')
+        or None
+    )
+    if print_mode:
+        print_mode = str(print_mode).strip().lower()
+    try:
+        send_job_to_print(job, request.user, print_mode=print_mode)
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'נשלח להדפסה: {job.order.order_number}',
+        order=job.order,
+        details={'printMode': print_mode or 'default'},
+    )
+    return Response({
+        'status': 'ok',
+        'detail': f'נשלח להדפסה — {job.order.order_number}',
+        'job': job_to_dict(job),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_verify_api_key(request):
+    """בדיקת מפתח API שהוזן ידנית (ללא חשיפת המפתח בשרת)."""
+    candidate = (
+        request.data.get('apiKey')
+        or request.data.get('api_key')
+        or ''
+    ).strip()
+    if not candidate:
+        return Response({'error': 'הזן מפתח API'}, status=status.HTTP_400_BAD_REQUEST)
+    if not print_api_key_configured():
+        return Response(
+            {'error': 'PRINT_API_KEY לא מוגדר בשרת'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    ok = verify_print_api_key(candidate)
+    return Response({
+        'valid': ok,
+        'detail': 'מפתח תקין — תואם לשרת' if ok else 'מפתח שגוי — לא תואם ל-PRINT_API_KEY ב-Railway',
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def admin_print_register_agent(request):
+    """רישום ידני של סוכן — לתיקון כשה-heartbeat לא מגיע."""
+    agent_id = (
+        request.data.get('agentId')
+        or request.data.get('agent_id')
+        or 'default'
+    ).strip()[:64]
+    hostname = (request.data.get('hostname') or 'manual-dashboard')[:120]
+    printer_ready = bool(
+        request.data.get('printerReady', request.data.get('printer_ready', True))
+    )
+    printer_message = (
+        request.data.get('printerMessage')
+        or request.data.get('printer_message')
+        or 'רשום ידנית מדשבורד'
+    )[:200]
+    hb = register_agent_manual(
+        agent_id=agent_id,
+        hostname=hostname,
+        printer_ready=printer_ready,
+        printer_message=printer_message,
+    )
+    return Response({
+        'status': 'ok',
+        'detail': f'סוכן {agent_id} נרשם',
+        'agent': {
+            'agentId': hb.agent_id,
+            'hostname': hb.hostname,
+            'printerReady': hb.printer_ready,
+            'lastSeenAt': hb.last_seen_at.isoformat() if hb.last_seen_at else None,
+        },
+    })
 
 
 # ── Local print agent (x-api-key) ─────────────────────────────────────────────

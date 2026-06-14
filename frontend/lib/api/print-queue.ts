@@ -19,6 +19,7 @@ export interface PrintQueueJob {
   orderNumber: string;
   status: string;
   priority: number;
+  printMode?: string;
   attempts: number;
   maxAttempts: number;
   lastError: string | null;
@@ -65,6 +66,23 @@ export interface PrinterStatus {
   agents: PrintAgentInfo[];
 }
 
+export interface PrintControlConfig {
+  apiKeyConfigured: boolean;
+  apiKeyHint: string | null;
+  apiKeyHeader: string;
+  payloadMode: string;
+  payloadModes: Array<{ value: string; label: string }>;
+  printServerConfigured: boolean;
+  autoEnqueue: boolean;
+  agentEndpoints: {
+    heartbeat: string;
+    pull: string;
+    confirm: string;
+    fail: string;
+  };
+  configFileExample: Record<string, string | number>;
+}
+
 export interface PrintQueueResponse {
   jobs: PrintQueueJob[];
   count: number;
@@ -73,6 +91,7 @@ export interface PrintQueueResponse {
   anyAgentOnline: boolean;
   canStartPrinting: boolean;
   printerStatus: PrinterStatus;
+  printConfig?: PrintControlConfig;
 }
 
 export const printQueueService = {
@@ -144,5 +163,60 @@ export const printQueueService = {
 
   async skipToScan(jobId: number): Promise<{ detail: string; job: PrintQueueJob }> {
     return this.skipStep(jobId, "print");
+  },
+
+  async promote(jobId: number): Promise<{ detail: string; job: PrintQueueJob }> {
+    const { data } = await api.post<{ detail: string; job: PrintQueueJob }>(
+      `/admin/print-queue/${jobId}/promote/`,
+    );
+    return data;
+  },
+
+  async setPriority(jobId: number, priority: number): Promise<PrintQueueJob> {
+    const { data } = await api.post<{ job: PrintQueueJob }>(
+      `/admin/print-queue/${jobId}/priority/`,
+      { priority },
+    );
+    return data.job;
+  },
+
+  async send(
+    jobId: number,
+    printMode?: string,
+  ): Promise<{ detail: string; job: PrintQueueJob }> {
+    const { data } = await api.post<{ detail: string; job: PrintQueueJob }>(
+      `/admin/print-queue/${jobId}/send/`,
+      printMode ? { printMode } : {},
+    );
+    return data;
+  },
+
+  async enqueueByOrderNumber(orderNumber: string): Promise<{ detail: string; job: PrintQueueJob }> {
+    const { data } = await api.post<{ detail: string; job: PrintQueueJob }>(
+      "/admin/print-queue/enqueue-by-number/",
+      { orderNumber },
+    );
+    return data;
+  },
+
+  async verifyApiKey(apiKey: string): Promise<{ valid: boolean; detail: string }> {
+    const { data } = await api.post<{ valid: boolean; detail: string }>(
+      "/admin/print-queue/verify-api-key/",
+      { apiKey },
+    );
+    return data;
+  },
+
+  async registerAgent(params: {
+    agentId?: string;
+    hostname?: string;
+    printerReady?: boolean;
+    printerMessage?: string;
+  }): Promise<{ detail: string }> {
+    const { data } = await api.post<{ detail: string }>(
+      "/admin/print-queue/register-agent/",
+      params,
+    );
+    return data;
   },
 };

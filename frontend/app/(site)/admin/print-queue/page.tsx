@@ -10,9 +10,11 @@ import { extractApiError } from "@/lib/api/client";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
 import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
 import PrintJobTimeline from "@/components/admin/PrintJobTimeline";
+import PrintControlPanel from "@/components/admin/PrintControlPanel";
 import { adminService } from "@/lib/api/admin";
 import {
   printQueueService,
+  type PrintControlConfig,
   type PrinterStatus,
   type PrintQueueJob,
 } from "@/lib/api/print-queue";
@@ -104,6 +106,7 @@ export function PrintQueuePageInner({
   const [jobs, setJobs] = useState<PrintQueueJob[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [printerStatus, setPrinterStatus] = useState<PrinterStatus | null>(null);
+  const [printConfig, setPrintConfig] = useState<PrintControlConfig | null>(null);
   const [canStartPrinting, setCanStartPrinting] = useState(false);
   const [filter, setFilter] = useState(defaultFilter);
   const [hasScanFilter, setHasScanFilter] = useState<TriFilter>(null);
@@ -141,6 +144,7 @@ export function PrintQueuePageInner({
       setJobs(res.jobs);
       setCounts(res.counts);
       setPrinterStatus(res.printerStatus);
+      setPrintConfig(res.printConfig ?? null);
       setCanStartPrinting(res.canStartPrinting);
       setExpandedId((prev) => (prev && res.jobs.some((j) => j.id === prev) ? prev : null));
     } catch (e) {
@@ -266,7 +270,10 @@ export function PrintQueuePageInner({
         )}
 
         {!isScanScreen && (
-          <PrinterStatusBanner status={printerStatus} counts={counts} loading={loading} />
+          <>
+            <PrinterStatusBanner status={printerStatus} counts={counts} loading={loading} />
+            <PrintControlPanel config={printConfig} onUpdated={load} />
+          </>
         )}
 
         <div style={{ marginBottom: 12 }}>
@@ -364,6 +371,7 @@ export function PrintQueuePageInner({
                 selected={selected.has(j.id)}
                 onSelectToggle={() => toggleSelect(j.id)}
                 canStartPrinting={canStartPrinting}
+                printConfig={printConfig}
                 actionId={actionId}
                 onRun={run}
               />
@@ -413,6 +421,7 @@ function PrintJobCard({
   selected,
   onSelectToggle,
   canStartPrinting,
+  printConfig,
   actionId,
   onRun,
 }: {
@@ -422,10 +431,14 @@ function PrintJobCard({
   selected: boolean;
   onSelectToggle: () => void;
   canStartPrinting: boolean;
+  printConfig: PrintControlConfig | null;
   actionId: number | null;
   onRun: (jobId: number, fn: () => Promise<unknown>, ok: string) => Promise<void>;
 }) {
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [sendMode, setSendMode] = useState(
+    () => printConfig?.payloadMode || j.printMode || "forms",
+  );
 
   const viewScan = () => {
     if (!j.hasScan) return;
@@ -494,6 +507,8 @@ function PrintJobCard({
               {j.formsCount} טופס{j.formsCount !== 1 ? "ים" : ""} · {j.tablesCount} טבלאות · הגרלה{" "}
               {j.drawDate || "—"}
               {j.isDouble ? " · דאבל" : ""} · ₪{j.totalIls.toFixed(2)}
+              {j.priority > 0 ? ` · עדיפות ${j.priority}` : ""}
+              {j.printMode ? ` · ${j.printMode === "pdf_url" ? "PDF" : "טפסים"}` : ""}
             </div>
             {j.user?.phone && (
               <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>📱 {j.user.phone}</div>
@@ -514,6 +529,57 @@ function PrintJobCard({
           <button type="button" className="btn btn-outline" style={{ fontSize: ".68rem" }} onClick={onToggle}>
             {expanded ? "הסתר פרטים ▲" : "פרטים ▼"}
           </button>
+          {["queued", "approved", "claimed", "failed", "printing"].includes(j.status) && (
+            <>
+              <select
+                className="input"
+                value={sendMode}
+                onChange={(e) => setSendMode(e.target.value)}
+                style={{ fontSize: ".65rem", padding: "4px 8px", maxWidth: 130 }}
+                title="סוג הדפסה"
+                aria-label="סוג הדפסה"
+              >
+                {(printConfig?.payloadModes || [
+                  { value: "forms", label: "טפסים" },
+                  { value: "pdf_url", label: "PDF" },
+                ]).map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.value === "forms" ? "טפסים" : "PDF"}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-gold"
+                style={{ fontSize: ".68rem" }}
+                disabled={actionId === j.id}
+                title="שלח להדפסה — רענון payload ואישור"
+                onClick={() =>
+                  onRun(
+                    j.id,
+                    () => printQueueService.send(j.id, sendMode),
+                    "נשלח להדפסה",
+                  )
+                }
+              >
+                📤 שלח
+              </button>
+            </>
+          )}
+          {["queued", "approved", "failed"].includes(j.status) && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: ".68rem" }}
+              disabled={actionId === j.id}
+              title="קדם בתור"
+              onClick={() =>
+                onRun(j.id, () => printQueueService.promote(j.id), "קודם בתור")
+              }
+            >
+              ⬆ קדם
+            </button>
+          )}
           {j.status === "queued" && (
             <button
               type="button"
