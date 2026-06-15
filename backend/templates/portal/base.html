@@ -14,7 +14,7 @@
       <a class="brand" href="{% url 'portal:dashboard' %}">🎯 Mandeles נהל</a>
       <nav>
         <a href="{% url 'portal:customers' %}" {% if request.resolver_match.url_name == 'customers' or request.resolver_match.url_name == 'customer_detail' or request.resolver_match.url_name == 'user_create' %}class="active"{% endif %}>👥 לקוחות</a>
-        <a href="{% url 'portal:orders' %}" {% if request.resolver_match.url_name == 'orders' %}class="active"{% endif %}>📋 הזמנות</a>
+        <a href="{% url 'portal:orders' %}" {% if request.resolver_match.url_name == 'orders' %}class="active"{% endif %}>📋 טפסים והזמנות</a>
         <a href="{% url 'portal:logs' %}" {% if request.resolver_match.url_name == 'logs' %}class="active"{% endif %}>📜 לוגים</a>
         {% if AI_AGENT_ENABLED %}
         <a href="{% url 'portal:ai_requests' %}" {% if 'ai_request' in request.resolver_match.url_name or request.resolver_match.url_name == 'ai_requests' %}class="active"{% endif %}>🤖 נהל AI</a>
