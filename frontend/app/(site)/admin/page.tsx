@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminQuickNav from "@/components/admin/AdminQuickNav";
+import AdminOrderFlowGuide from "@/components/admin/AdminOrderFlowGuide";
 import {
   AdminStatCard,
   AdminStatGrid,
@@ -448,6 +449,8 @@ function AdminPageInner() {
         <h1 className="admin-page-title" style={{ marginBottom: 20 }}>
           דשבורד אדמין
         </h1>
+
+        {canManageOrders && <AdminOrderFlowGuide />}
 
         {/* Stats */}
         {stats && (
