@@ -86,7 +86,7 @@ const RAIL_STATS = {
   ],
 } as const;
 
-const CONFETTI_COLORS = ["#ffcc00", "#2ed06a", "#ff6b7a", "#8ec8ff", "#ffffff", "#ff9933"];
+const CONFETTI_COLORS = ["#f2cc54", "#38d878", "#ff7888", "#8ec8ff", "#ffffff", "#ffaa44"];
 
 function RailConfetti({ count = 12, tall = false }: { count?: number; tall?: boolean }) {
   const pieces = Array.from({ length: count }, (_, i) => ({

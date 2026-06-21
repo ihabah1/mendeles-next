@@ -48,7 +48,7 @@ const SLIDES = [
   },
 ] as const;
 
-const CONFETTI_COLORS = ["#ffcc00", "#2ed06a", "#8ec8ff", "#ff6b7a", "#ffffff", "#ff9933", "#a85cd6"];
+const CONFETTI_COLORS = ["#f2cc54", "#38d878", "#8ec8ff", "#ff7888", "#ffffff", "#ffaa44", "#b888e8"];
 
 function BannerConfetti() {
   const pieces = Array.from({ length: 28 }, (_, i) => ({

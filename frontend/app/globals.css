@@ -4,43 +4,50 @@
   Mandeles.co.il — Design System
   ═══════════════════════════════════════════════ */
 
-/* ── Tokens (Winner-style: red header, yellow accents, dark content) ── */
+/* ── Brand tokens (warm red header, amber accents, lighter charcoal content) ── */
 :root {
-  --bg:        #2a2a2a;
-  --bg2:       #333333;
-  --bg3:       #3a3a3a;
-  --bg4:       #424242;
+  --bg:        #3e3e44;
+  --bg2:       #48484f;
+  --bg3:       #52525a;
+  --bg4:       #5c5c65;
 
-  --border:    #4a4a4a;
-  --border2:   #555555;
+  --border:    #66666f;
+  --border2:   #74747e;
 
-  --text:      #f2f2f2;
-  --text2:     #e0e0e0;
-  --muted:     #aaaaaa;
+  --text:      #f4f4f6;
+  --text2:     #e8e8ec;
+  --muted:     #b0b0b8;
 
-  /* Winner red header */
-  --navy:      #e30613;
-  --navy-dark: #b00510;
+  /* Header / accent red — slightly brighter crimson */
+  --navy:      #e84450;
+  --navy-dark: #c93642;
 
-  /* Winner yellow */
-  --gold:      #ffcc00;
+  /* Amber gold — softer than pure lottery yellow */
+  --gold:      #f2cc54;
+  --gold-bright: #ffe878;
   --gold-dark: #1a1a1a;
-  --gold-bg:   #3d3520;
-  --gold-border: #ffcc00;
-  --accent:    #e30613;
+  --gold-bg:   #4e4834;
+  --gold-border: #f2cc54;
+  --accent:    #e84450;
 
-  --green:     #1c8040;
+  --green:     #28a858;
   --green-bg:  #f0faf4;
-  --red:       #c01820;
+  --red:       #d43040;
   --red-bg:    #fdf0f0;
 
-  --heat-balanced: #2a7a48;
-  --heat-warm:     #b06020;
-  --heat-hot:      #c04040;
-  --heat-cold:     #6090a8;
+  --heat-balanced: #329868;
+  --heat-warm:     #c07030;
+  --heat-hot:      #d05050;
+  --heat-cold:     #68a0b8;
 
   --suit-black: #1c1208;
-  --suit-red:   #cc1020;
+  --suit-red:   #d83040;
+
+  /* Shared gradients */
+  --grad-red: linear-gradient(135deg, #e84450 0%, #cc3848 45%, #a83040 100%);
+  --grad-red-deep: linear-gradient(135deg, #e84450 0%, #c83848 55%, #903038 100%);
+  --grad-green: linear-gradient(135deg, #22b060 0%, #189850 45%, #108040 100%);
+  --grad-purple: linear-gradient(135deg, #9470f0 0%, #7058c8 45%, #5040a0 100%);
 
   --gap-xs: 4px;
   --gap-sm: 8px;
@@ -61,8 +68,8 @@
   --navy-c: var(--bg2);
   --navy-b: var(--border);
   --navy-m: var(--navy);
-  --gold-l: #e8c060;
-  --cream: #f5f5f5;
+  --gold-l: #f0d070;
+  --cream: #f8f8fa;
   --text-on-dark: #ffffff;
 }
 
@@ -98,7 +105,7 @@ p  { line-height: 1.7; }
 h1, .page-head-title { color: var(--gold); }
 h2, .home-section-title { color: var(--text); }
 
-/* ── Navigation (Winner-style) ── */
+/* ── Navigation ── */
 .nav-inner {
   max-width: 1280px;
   width: 100%;
@@ -409,7 +416,7 @@ h2, .home-section-title { color: var(--text); }
 .btn:disabled { opacity: .55; cursor: wait; transform: none; }
 
 .btn-gold    { background: var(--gold);  color: #1a1a1a; }
-.btn-gold { background: linear-gradient(180deg, var(--gold) 0%, #e6b800 100%); box-shadow: 0 4px 12px rgba(0,0,0,.25); border: 1px solid #e6b800; }
+.btn-gold { background: linear-gradient(180deg, var(--gold) 0%, var(--gold-l) 100%); box-shadow: 0 4px 12px rgba(0,0,0,.22); border: 1px solid var(--gold-l); }
 .btn-dark    { background: var(--navy);  color: #fff; }
 .btn-green   { background: var(--green); color: #fff; }
 .btn-red     { background: var(--red);   color: #fff; }
@@ -608,7 +615,7 @@ h2, .home-section-title { color: var(--text); }
 }
 .strong-btn.sel { background: #800010; color: #fff; border-color: #800010; }
 
-/* ── Winner hero banner ── */
+/* ── Hero banner carousel ── */
 .winner-hero {
   position: relative;
   overflow: hidden;
@@ -619,13 +626,13 @@ h2, .home-section-title { color: var(--text); }
   transition: background 0.7s ease;
 }
 .winner-hero--red {
-  background-image: linear-gradient(135deg, #e30613 0%, #b80f1a 45%, #8a0a12 100%);
+  background-image: var(--grad-red);
 }
 .winner-hero--green {
-  background-image: linear-gradient(135deg, #1a9e48 0%, #117a36 45%, #0a5a26 100%);
+  background-image: var(--grad-green);
 }
 .winner-hero--purple {
-  background-image: linear-gradient(135deg, #7b2ff7 0%, #5a1fc0 45%, #3d1485 100%);
+  background-image: var(--grad-purple);
 }
 @keyframes hero-gradient-shift {
   0%, 100% { background-position: 0% 50%; }
@@ -806,7 +813,7 @@ h2, .home-section-title { color: var(--text); }
     0 4px 12px rgba(0,0,0,.45);
 }
 .winner-hero-title-accent {
-  color: #ffea00;
+  color: var(--gold-bright);
   text-shadow:
     -2px -2px 0 #1a1a1a,
     2px -2px 0 #1a1a1a,
@@ -881,7 +888,7 @@ h2, .home-section-title { color: var(--text); }
   .hero-confetti-piece { opacity: 0; }
 }
 
-/* ── Winner tab bar ── */
+/* ── Game tab bar ── */
 .winner-tabs {
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
@@ -913,7 +920,7 @@ h2, .home-section-title { color: var(--text); }
   font-weight: 800;
 }
 
-/* ── Winner odds-style row ── */
+/* ── Game odds row ── */
 .winner-row {
   display: flex;
   align-items: center;
@@ -1765,7 +1772,7 @@ h2, .home-section-title { color: var(--text); }
   line-height: 1.55;
 }
 
-/* ── Promotions page (Winner-style) ── */
+/* ── Promotions page ── */
 .promos-main {
   max-width: 1100px;
   margin: 0 auto;
@@ -2844,7 +2851,7 @@ h2, .home-section-title { color: var(--text); }
 .mandeles-logo-name { color: var(--gold); font-weight: 900; font-style: italic; text-shadow: 1px 1px 0 #1a1a1a; }
 .mandeles-logo-tld { color: #fff; font-weight: 700; font-size: 0.85em; opacity: 0.95; }
 
-/* Top banner — Winner-style carousel (non-home pages) */
+/* Top banner carousel (non-home pages) */
 .promo-top-banner {
   position: relative;
   overflow: hidden;
@@ -2855,13 +2862,13 @@ h2, .home-section-title { color: var(--text); }
   transition: background 0.6s ease;
 }
 .promo-top-banner--red {
-  background-image: linear-gradient(135deg, #e30613 0%, #b80f1a 45%, #8a0a12 100%);
+  background-image: var(--grad-red);
 }
 .promo-top-banner--green {
-  background-image: linear-gradient(135deg, #1a9e48 0%, #117a36 45%, #0a5a26 100%);
+  background-image: var(--grad-green);
 }
 .promo-top-banner--purple {
-  background-image: linear-gradient(135deg, #7b2ff7 0%, #5a1fc0 45%, #3d1485 100%);
+  background-image: var(--grad-purple);
 }
 .promo-top-banner-bg {
   position: absolute;
@@ -2996,7 +3003,7 @@ h2, .home-section-title { color: var(--text); }
     0 3px 10px rgba(0,0,0,.45);
 }
 .promo-top-headline-accent {
-  color: #ffea00;
+  color: var(--gold-bright);
   text-shadow:
     -2px -2px 0 #1a1a1a,
     2px -2px 0 #1a1a1a,
@@ -3058,7 +3065,7 @@ h2, .home-section-title { color: var(--text); }
   padding: 0;
 }
 .promo-top-dot { width: 8px; height: 8px; }
-.promo-top-dot.active { background: #ffea00; border-color: #ffea00; }
+.promo-top-dot.active { background: var(--gold-bright); border-color: var(--gold-bright); }
 
 /* Layout + side rails */
 .promo-layout {
@@ -3121,12 +3128,12 @@ h2, .home-section-title { color: var(--text); }
   min-height: 106px;
   margin: 0 -10px 4px;
   padding: 12px 8px;
-  background: linear-gradient(135deg, #e30613 0%, #c00a14 45%, #8a0a12 100%);
+  background: var(--grad-red-deep);
   background-size: 200% 200%;
   animation: hero-gradient-shift 8s ease-in-out infinite;
-  border-bottom: 3px solid #ffcc00;
+  border-bottom: 3px solid var(--gold);
   overflow: hidden;
-  box-shadow: 0 4px 18px rgba(227,6,19,.35);
+  box-shadow: 0 4px 18px rgba(232,68,80,.32);
 }
 .promo-rail-confetti {
   position: absolute;
@@ -3187,7 +3194,7 @@ h2, .home-section-title { color: var(--text); }
   position: absolute;
   top: 6px;
   inset-inline-start: 6px;
-  background: #ffcc00;
+  background: var(--gold);
   color: #7a0009;
   font-size: .52rem;
   font-weight: 900;
@@ -3202,7 +3209,7 @@ h2, .home-section-title { color: var(--text); }
   z-index: 1;
   font-size: 0.82rem;
   font-weight: 900;
-  color: #ffcc00;
+  color: var(--gold);
   letter-spacing: 1px;
   text-shadow:
     -1px -1px 0 #5a0008,
@@ -3242,10 +3249,10 @@ h2, .home-section-title { color: var(--text); }
   position: relative;
   min-height: 52px;
   padding: 10px 8px;
-  background: linear-gradient(135deg, #b81820, #8a0e14);
+  background: linear-gradient(135deg, #c84050, #984038);
   background-size: 200% 200%;
   animation: hero-gradient-shift 6s ease-in-out infinite;
-  border: 2px solid #ffcc00;
+  border: 2px solid var(--gold);
   border-radius: 8px;
   overflow: hidden;
   text-align: center;
@@ -3431,13 +3438,13 @@ h2, .home-section-title { color: var(--text); }
   pointer-events: none;
 }
 .promo-rail-card--gold {
-  background: linear-gradient(135deg, #e30613 0%, #b80f1a 55%, #7a0810 100%);
-  border-color: #ffcc00;
+  background: var(--grad-red-deep);
+  border-color: var(--gold);
   color: #fff;
-  box-shadow: 0 4px 18px rgba(227,6,19,.4);
+  box-shadow: 0 4px 18px rgba(232,68,80,.35);
 }
 .promo-rail-card--green {
-  background: linear-gradient(135deg, #1db96a 0%, #128a4a 55%, #0a5a30 100%);
+  background: linear-gradient(135deg, #28c878 0%, #18a058 55%, #108848 100%);
   border-color: #7effa8;
   color: #fff;
   box-shadow: 0 4px 18px rgba(29,185,106,.35);
@@ -3449,13 +3456,13 @@ h2, .home-section-title { color: var(--text); }
   box-shadow: 0 4px 18px rgba(42,90,158,.35);
 }
 .promo-rail-card--red {
-  background: linear-gradient(135deg, #ff4455 0%, #d02030 55%, #9a1020 100%);
-  border-color: #ffcc00;
+  background: linear-gradient(135deg, #f05868 0%, #d84050 55%, #a83040 100%);
+  border-color: var(--gold);
   color: #fff;
   box-shadow: 0 4px 18px rgba(255,68,85,.35);
 }
 .promo-rail-card--purple {
-  background: linear-gradient(135deg, #9b30ff 0%, #6a18c8 55%, #401090 100%);
+  background: linear-gradient(135deg, #a878ff 0%, #7858d8 55%, #5040b0 100%);
   border-color: #e0a0ff;
   color: #fff;
   box-shadow: 0 4px 18px rgba(155,48,255,.35);
@@ -3477,7 +3484,7 @@ h2, .home-section-title { color: var(--text); }
   font-family: var(--font-display);
   font-size: 0.88rem;
   font-weight: 900;
-  color: #ffcc00;
+  color: var(--gold);
   text-shadow:
     -1px -1px 0 rgba(40,10,0,.85),
     1px 1px 0 rgba(40,10,0,.85),
