@@ -382,12 +382,12 @@ function LottoPageInner() {
       </div>
 
       <div className="lotto-form-wrap" style={{display:'flex',direction:'rtl',marginBottom:14}}>
-        <div style={{background:'#e8001e',width:36,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',borderLeft:'2px solid #b50017'}}>
+        <div style={{background:'#d94868',width:36,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',borderLeft:'2px solid #a83050'}}>
           <div style={{writingMode:'vertical-rl',transform:'rotate(180deg)',color:'#fff',fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1rem',fontWeight:900,letterSpacing:3,flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>לוטו</div>
-          <div style={{writingMode:'vertical-rl',transform:'rotate(180deg)',fontSize:'.42rem',color:'rgba(255,255,255,.6)',padding:'5px 0',borderTop:'1px solid #b50017'}}>מפעל הפיס</div>
+          <div style={{writingMode:'vertical-rl',transform:'rotate(180deg)',fontSize:'.42rem',color:'rgba(255,255,255,.6)',padding:'5px 0',borderTop:'1px solid #a83050'}}>מפעל הפיס</div>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{background:'#e8001e',padding:'7px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'2px solid #b50017'}}>
+          <div style={{background:'#d94868',padding:'7px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'2px solid #a83050'}}>
             <span style={{color:'#fff',fontFamily:"'Frank Ruhl Libre',serif",fontSize:'1rem',fontWeight:900}}>לוטו מפעל הפיס</span>
             <span style={{color:'rgba(255,255,255,.8)',fontSize:'.6rem'}}>{data.draw_date}</span>
           </div>
@@ -398,7 +398,7 @@ function LottoPageInner() {
             const isFilled=d.nums.size===6&&d.strong;
             return(
               <div key={tIdx} style={{display:'flex',borderBottom:ti<13?'1px solid #e8e8e8':'none',background:isFilled?'#f5fff8':undefined,alignItems:'stretch'}}>
-                <div style={{background:'#e8001e',color:'#fff',width:28,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',borderLeft:'1px solid #b50017',padding:'2px 0'}}>
+                <div style={{background:'#d94868',color:'#fff',width:28,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',borderLeft:'1px solid #a83050',padding:'2px 0'}}>
                   <div style={{fontSize:'.44rem',opacity:.7}}>טבלה</div>
                   <div style={{fontSize:'.82rem',fontWeight:900}}>{tIdx}</div>
                 </div>
@@ -408,13 +408,13 @@ function LottoPageInner() {
                       {row.map(n=>{
                         const isSel=d.nums.has(n),locked=full&&!isSel;
                         return <button key={n} onClick={()=>!locked&&toggleNum(tIdx,n)}
-                          style={{width:23,height:23,borderRadius:'50%',border:`1.5px solid ${isSel?'#e8001e':'#d5d5d5'}`,background:isSel?'#e8001e':'#fff',color:isSel?'#fff':'#333',fontSize:'.6rem',fontWeight:700,cursor:locked?'default':'pointer',opacity:locked?.22:1,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transform:isSel?'scale(1.08)':undefined,transition:'all .1s'}}>{n}</button>;
+                          style={{width:23,height:23,borderRadius:'50%',border:`1.5px solid ${isSel?'#d94868':'#d5d5d5'}`,background:isSel?'#d94868':'#fff',color:isSel?'#fff':'#333',fontSize:'.6rem',fontWeight:700,cursor:locked?'default':'pointer',opacity:locked?.22:1,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transform:isSel?'scale(1.08)':undefined,transition:'all .1s'}}>{n}</button>;
                       })}
                     </div>
                   ))}
                 </div>
                 <div style={{background:'#fff5f5',borderRight:'1px solid #ffd0d0',width:27,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',padding:'2px 2px',gap:1,justifyContent:'space-evenly'}}>
-                  <div style={{fontSize:'.42rem',fontWeight:900,color:'#e8001e',textAlign:'center'}}>חזק</div>
+                  <div style={{fontSize:'.42rem',fontWeight:900,color:'#d94868',textAlign:'center'}}>חזק</div>
                   {STRONG_NUMS.map(n=>(
                     <button key={n} onClick={()=>toggleStrong(tIdx,n)}
                       style={{width:23,height:23,borderRadius:'50%',border:`1.5px solid ${d.strong===n?'#8b0000':'#d5d5d5'}`,background:d.strong===n?'#8b0000':'#fff',color:d.strong===n?'#fff':'#333',fontSize:'.6rem',fontWeight:700,cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{n}</button>

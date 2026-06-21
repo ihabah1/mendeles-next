@@ -4,50 +4,54 @@
   Mandeles.co.il — Design System
   ═══════════════════════════════════════════════ */
 
-/* ── Brand tokens (warm red header, amber accents, lighter charcoal content) ── */
+/* ── Brand tokens — Mandeles rose + cool slate (לא אדום Winner / זהב לוטו) ── */
 :root {
-  --bg:        #3e3e44;
-  --bg2:       #48484f;
-  --bg3:       #52525a;
-  --bg4:       #5c5c65;
+  --bg:        #4c5464;
+  --bg2:       #565f70;
+  --bg3:       #606a7c;
+  --bg4:       #6a7588;
 
-  --border:    #66666f;
-  --border2:   #74747e;
+  --border:    #78849a;
+  --border2:   #8894a8;
 
-  --text:      #f4f4f6;
-  --text2:     #e8e8ec;
-  --muted:     #b0b0b8;
+  --text:      #fafbfe;
+  --text2:     #eef0f6;
+  --muted:     #bcc2d0;
 
-  /* Header / accent red — slightly brighter crimson */
-  --navy:      #e84450;
-  --navy-dark: #c93642;
+  /* ורוד-אלמוגי — שונה מאדום #e8001e של Winner */
+  --navy:      #e4567a;
+  --navy-dark: #c73d62;
 
-  /* Amber gold — softer than pure lottery yellow */
-  --gold:      #f2cc54;
-  --gold-bright: #ffe878;
+  /* ענבר דבש — לא צהוב לוטו */
+  --gold:      #f0b048;
+  --gold-bright: #ffe082;
   --gold-dark: #1a1a1a;
-  --gold-bg:   #4e4834;
-  --gold-border: #f2cc54;
-  --accent:    #e84450;
+  --gold-bg:   #5c5040;
+  --gold-border: #f0b048;
+  --accent:    #e4567a;
 
-  --green:     #28a858;
-  --green-bg:  #f0faf4;
-  --red:       #d43040;
-  --red-bg:    #fdf0f0;
+  --green:     #30c49a;
+  --green-bg:  #e8faf4;
+  --red:       #e4567a;
+  --red-bg:    #fdf0f4;
 
-  --heat-balanced: #329868;
-  --heat-warm:     #c07030;
-  --heat-hot:      #d05050;
-  --heat-cold:     #68a0b8;
+  --heat-balanced: #38b878;
+  --heat-warm:     #d08038;
+  --heat-hot:      #e06070;
+  --heat-cold:     #70a8c8;
 
   --suit-black: #1c1208;
-  --suit-red:   #d83040;
+  --suit-red:   #d94868;
+
+  /* טופס פיס — גוון מותג (לא אדום Winner) */
+  --pais-red: #d94868;
+  --pais-red-dark: #a83050;
 
   /* Shared gradients */
-  --grad-red: linear-gradient(135deg, #e84450 0%, #cc3848 45%, #a83040 100%);
-  --grad-red-deep: linear-gradient(135deg, #e84450 0%, #c83848 55%, #903038 100%);
-  --grad-green: linear-gradient(135deg, #22b060 0%, #189850 45%, #108040 100%);
-  --grad-purple: linear-gradient(135deg, #9470f0 0%, #7058c8 45%, #5040a0 100%);
+  --grad-red: linear-gradient(135deg, #e4567a 0%, #c73d62 45%, #9a3558 100%);
+  --grad-red-deep: linear-gradient(135deg, #e4567a 0%, #b83658 55%, #7a2d48 100%);
+  --grad-green: linear-gradient(135deg, #30c49a 0%, #22a880 45%, #188868 100%);
+  --grad-purple: linear-gradient(135deg, #a078f0 0%, #8060d0 45%, #6048a8 100%);
 
   --gap-xs: 4px;
   --gap-sm: 8px;
@@ -68,8 +72,8 @@
   --navy-c: var(--bg2);
   --navy-b: var(--border);
   --navy-m: var(--navy);
-  --gold-l: #f0d070;
-  --cream: #f8f8fa;
+  --gold-l: #f5c060;
+  --cream: #fafbfe;
   --text-on-dark: #ffffff;
 }
 
@@ -591,7 +595,7 @@ h2, .home-section-title { color: var(--text); }
 
 /* ── Lotto form ── */
 .lotto-form-wrap { background: #fff; border-radius: var(--r-md); overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
-.lotto-form-head { background: #cc0010; padding: 8px 12px; }
+.lotto-form-head { background: var(--pais-red); padding: 8px 12px; }
 .lotto-form-foot { background: #f8f8f8; padding: 5px 12px; border-top: 1px solid #eee; display: flex; justify-content: space-between; font-size: 10px; color: #aaa; }
 .num-btn {
   width: 28px; height: 26px;
@@ -602,7 +606,7 @@ h2, .home-section-title { color: var(--text); }
   cursor: pointer;
   transition: all .1s;
 }
-.num-btn.sel   { background: #cc0010; color: #fff; border-color: #cc0010; transform: scale(1.08); }
+.num-btn.sel   { background: var(--pais-red); color: #fff; border-color: var(--pais-red); transform: scale(1.08); }
 .num-btn.locked { opacity: .22; cursor: default; }
 .strong-btn {
   width: 26px; height: 26px;
@@ -613,7 +617,7 @@ h2, .home-section-title { color: var(--text); }
   cursor: pointer;
   transition: all .1s;
 }
-.strong-btn.sel { background: #800010; color: #fff; border-color: #800010; }
+.strong-btn.sel { background: var(--pais-red-dark); color: #fff; border-color: var(--pais-red-dark); }
 
 /* ── Hero banner carousel ── */
 .winner-hero {
@@ -643,7 +647,7 @@ h2, .home-section-title { color: var(--text); }
   inset: 0;
   background:
     radial-gradient(ellipse 80% 120% at 70% 50%, rgba(255,255,255,.14) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(255,204,0,.18) 0%, transparent 50%);
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(240, 176, 72, 0.2) 0%, transparent 50%);
   pointer-events: none;
   animation: hero-glow-breathe 5s ease-in-out infinite;
 }
@@ -703,7 +707,7 @@ h2, .home-section-title { color: var(--text); }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #fff8e0 0%, var(--gold) 45%, #c89a00 100%);
+  background: radial-gradient(circle at 32% 28%, #fff8e8 0%, var(--gold) 45%, #c88828 100%);
   color: #1a1a1a;
   font-weight: 900;
   box-shadow: 0 3px 10px rgba(0,0,0,.4), inset 0 -3px 6px rgba(0,0,0,.18);
@@ -1061,7 +1065,7 @@ h2, .home-section-title { color: var(--text); }
 }
 
 .draw-countdown-inner {
-  background: linear-gradient(135deg, rgba(232, 0, 30, 0.12), rgba(242, 204, 84, 0.1));
+  background: linear-gradient(135deg, rgba(228, 86, 122, 0.16), rgba(240, 176, 72, 0.12));
   border: 1px solid var(--navy-b);
   border-radius: 14px;
   padding: 14px 16px;
@@ -2949,7 +2953,7 @@ h2, .home-section-title { color: var(--text); }
   inset: 0;
   background:
     radial-gradient(ellipse 80% 120% at 70% 50%, rgba(255,255,255,.14) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(255,204,0,.18) 0%, transparent 50%);
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(240, 176, 72, 0.2) 0%, transparent 50%);
   pointer-events: none;
 }
 .promo-top-banner-shine {
@@ -2994,7 +2998,7 @@ h2, .home-section-title { color: var(--text); }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #fff8e0 0%, var(--gold) 45%, #c89a00 100%);
+  background: radial-gradient(circle at 32% 28%, #fff8e8 0%, var(--gold) 45%, #c88828 100%);
   color: #1a1a1a;
   font-weight: 900;
   box-shadow: 0 2px 8px rgba(0,0,0,.35);
@@ -3242,7 +3246,7 @@ h2, .home-section-title { color: var(--text); }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #fff8e0 0%, var(--gold) 45%, #c89a00 100%);
+  background: radial-gradient(circle at 32% 28%, #fff8e8 0%, var(--gold) 45%, #c88828 100%);
   color: #1a1a1a;
   font-weight: 900;
   box-shadow: 0 2px 8px rgba(0,0,0,.3);

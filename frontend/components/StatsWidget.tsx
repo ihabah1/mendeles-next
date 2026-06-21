@@ -100,7 +100,7 @@ export default function StatsWidget() {
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: "#e8001e",
+                  background: "var(--navy)",
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
