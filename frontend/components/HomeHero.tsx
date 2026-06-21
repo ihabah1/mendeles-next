@@ -18,7 +18,8 @@ const SLIDES = [
     id: "lotto",
     theme: "red",
     badge: "שירות שליחות",
-    title: "ניתוח סטטיסטי והגשת טפסים",
+    titleMain: "ניתוח סטטיסטי",
+    titleAccent: "והגשת טפסים",
     sub: "200 צירופים בפיזור סטטיסטי · מילוי · הגשה בשמך לדוכן",
     note: "*אין הבטחה לזכייה · איננו קשורים למפעל הפיס",
     cta: "למילוי טפסים",
@@ -29,7 +30,8 @@ const SLIDES = [
     id: "premium",
     theme: "green",
     badge: "פרימיום",
-    title: "אלגוריתם מנדל — פיזור סטטיסטי",
+    titleMain: "אלגוריתם מנדל",
+    titleAccent: "— פיזור סטטיסטי",
     sub: "צירופים ייחודיים לכל מנוי · כיסוי מלא של 1–37",
     note: "*הפיזור אינו מגדיל את הסתברות הזכייה המתמטית",
     cta: "למנוי פרימיום",
@@ -40,7 +42,8 @@ const SLIDES = [
     id: "track",
     theme: "purple",
     badge: "מעקב",
-    title: "מעקב מלא — עד הסריקה",
+    titleMain: "מעקב מלא",
+    titleAccent: "— עד הסריקה",
     sub: "הדפסה · הגשה לדוכן · עדכון זכיות לארנק",
     note: "*הכרטיס נרכש על שמך · תקבל צילום הטופס",
     cta: "לאזור האישי",
@@ -129,7 +132,10 @@ export default function HomeHero() {
 
         <div className="winner-hero-text" key={slide.id}>
           <span className="winner-hero-badge">{slide.badge}</span>
-          <h1 className="winner-hero-title">{slide.title}</h1>
+          <h1 className="winner-hero-title">
+            <span className="winner-hero-title-main">{slide.titleMain}</span>
+            <span className="winner-hero-title-accent"> {slide.titleAccent}</span>
+          </h1>
           <p className="winner-hero-sub">{slide.sub}</p>
           <p className="winner-hero-note" style={{ marginTop: 8 }}>{slide.note}</p>
         </div>
