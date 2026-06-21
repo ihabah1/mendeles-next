@@ -13,7 +13,8 @@ export type AdminTabId =
   | "messages"
   | "support"
   | "monitoring"
-  | "services";
+  | "services"
+  | "kiosks";
 
 const TABS: { id: AdminTabId; href: string; label: string; title: string }[] = [
   { id: "dashboard", href: "/admin", label: "דשבורד", title: "הזמנות, זכיות ותוצאות הגרלה" },
@@ -25,6 +26,7 @@ const TABS: { id: AdminTabId; href: string; label: string; title: string }[] = [
   { id: "support", href: "/admin/support", label: "פניות צ׳אט", title: "שיחות בוט וסיכומי AI" },
   { id: "monitoring", href: "/admin/monitoring", label: "ניטור", title: "אוטומציה, תנועה ותשתית" },
   { id: "services", href: "/admin/services", label: "שירותים", title: "הפעלה וכיבוי תכונות" },
+  { id: "kiosks", href: "/admin/kiosks", label: "דוכנים", title: "יצירה וניהול דוכני קiosk" },
 ];
 
 function activeTabFromPath(pathname: string): AdminTabId {
@@ -36,6 +38,7 @@ function activeTabFromPath(pathname: string): AdminTabId {
   if (pathname.startsWith("/admin/support")) return "support";
   if (pathname.startsWith("/admin/monitoring")) return "monitoring";
   if (pathname.startsWith("/admin/services")) return "services";
+  if (pathname.startsWith("/admin/kiosks")) return "kiosks";
   return "dashboard";
 }
 

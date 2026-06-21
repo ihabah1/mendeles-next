@@ -20,7 +20,8 @@ from .lotto_service import (
 from api.services.combo_pool import is_combo_available
 from api.staff import is_staff_portal_user
 
-from .services.pais_draw import read_draw_data
+from .services.pais_draw import next_draw_payload, read_draw_data
+from .services.lotto_stats import compute_draw_win_stats
 from .services.user_setup import ensure_customer_records
 
 
@@ -50,11 +51,19 @@ def _has_active_subscription(user) -> bool:
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def lotto_draw(request):
-    """GET /api/lotto/draw/ — last published draw + prize table."""
+    """GET /api/lotto/draw/ — last published draw + prizes + countdown + stats."""
     data = read_draw_data()
+    next_draw = next_draw_payload()
     if not data:
-        return Response({'last_draw': None, 'prizes': None, 'updated_at': None})
-    return Response(data)
+        return Response({
+            'last_draw': None,
+            'prizes': None,
+            'updated_at': None,
+            'next_draw': next_draw,
+            'stats': compute_draw_win_stats(None),
+        })
+    stats = compute_draw_win_stats(data)
+    return Response({**data, 'next_draw': next_draw, 'stats': stats})
 
 
 @api_view(['GET'])

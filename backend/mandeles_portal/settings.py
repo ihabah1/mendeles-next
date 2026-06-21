@@ -332,7 +332,8 @@ ICOUNT_PASSWORD = _env_clean('ICOUNT_PASSWORD', '')
 
 # ── Print server (ngrok) ──────────────────────────────────────────────────────
 PRINT_SERVER_URL = _env_clean('PRINT_SERVER_URL', '')
-PRINT_API_KEY = _env_clean('PRINT_API_KEY', '')
+PRINT_API_KEY = _env_clean('PRINT_API_KEY', '') or _env_clean('PRINTER_KEY', '')
+PRINTER_KEY = PRINT_API_KEY  # alias — same secret for booth software
 PRINT_API_KEY_HEADER = _env_clean('PRINT_API_KEY_HEADER', 'x-api-key')
 PRINT_PATH = _env_clean('PRINT_PATH', '/print')
 PRINT_PAYLOAD_MODE = _env_clean('PRINT_PAYLOAD_MODE', 'forms')

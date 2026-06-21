@@ -77,7 +77,7 @@ def check_and_credit_wins(draw_data: dict, *, dry_run: bool = False) -> dict:
         raise ValueError('נתוני הגרלה לא שלמים')
 
     orders = (
-        Order.objects.filter(status__in=ACTIVE_STATUSES)
+        Order.objects.filter(status__in=ACTIVE_STATUSES, lottery_id=lottery_id)
         .exclude(sets_json=[])
         .select_related('customer')
         .order_by('id')

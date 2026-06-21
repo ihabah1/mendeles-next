@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { canAccessDevGames } from "@/lib/lotto-only";
 import MandelesLogoMark from "./MandelesLogoMark";
 
 const RAIL_CARDS = {
@@ -241,7 +243,9 @@ function RailDeco({ side }: { side: "start" | "end" }) {
 }
 
 export function PromoRailColumn({ side }: { side: "start" | "end" }) {
-  const cards = RAIL_CARDS[side];
+  const { isStaff } = useAuth();
+  const showDev = canAccessDevGames(isStaff);
+  const cards = RAIL_CARDS[side].filter((c) => showDev || !c.href.startsWith("/seven77"));
   return (
     <aside className={`promo-side-rail promo-side-rail--${side}`} aria-label="מבצעים בצד">
       <RailConfetti count={20} tall />

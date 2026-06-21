@@ -508,6 +508,67 @@ def register_agent_manual(
     )
 
 
+def push_order_to_print_server(order: Order, *, user=None) -> dict:
+    """
+    Enqueue + approve, then POST payload to local PRINT_SERVER_URL (booth software).
+    Returns summary for admin UI / POST /api/print/push.
+    """
+    from api.services.print_service import (
+        PrintError,
+        build_kiosk_push_payload,
+        print_configured,
+        send_print_payload,
+    )
+
+    job = enqueue_order(order)
+    approve_job(job, user)
+
+    payload = build_kiosk_push_payload(order)
+    job.payload_json = payload
+    job.save(update_fields=['payload_json', 'updated_at'])
+
+    if order.status in (Order.Status.PENDING, Order.Status.PAID):
+        order.status = Order.Status.PRINTING
+        order.save(update_fields=['status'])
+
+    pushed = False
+    printer_response: dict | None = None
+    push_error: str | None = None
+
+    if print_configured():
+        try:
+            printer_response = send_print_payload(payload)
+            pushed = True
+            job.status = PrintJob.Status.CLAIMED
+            job.claimed_at = timezone.now()
+            job.claimed_by_agent = 'push'
+            job.last_error = ''
+            job.save(
+                update_fields=[
+                    'status',
+                    'claimed_at',
+                    'claimed_by_agent',
+                    'last_error',
+                    'updated_at',
+                ],
+            )
+        except PrintError as exc:
+            push_error = str(exc)
+            job.last_error = push_error[:500]
+            job.save(update_fields=['last_error', 'updated_at'])
+    else:
+        push_error = 'PRINT_SERVER_URL / PRINT_API_KEY לא מוגדר — ההזמנה בתור בלבד'
+
+    return {
+        'job': job,
+        'payload': payload,
+        'pushed': pushed,
+        'pushError': push_error,
+        'printerResponse': printer_response,
+        'tablesCount': len(order.sets_json or []),
+    }
+
+
 def job_to_dict(job: PrintJob, *, include_payload: bool = False) -> dict:
     order = job.order
     customer = order.customer

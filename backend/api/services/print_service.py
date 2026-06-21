@@ -62,10 +62,12 @@ def _print_url() -> str:
 def _print_api_key() -> str:
     key = (
         getattr(settings, 'PRINT_API_KEY', '')
+        or getattr(settings, 'PRINTER_KEY', '')
         or os.getenv('PRINT_API_KEY', '')
+        or os.getenv('PRINTER_KEY', '')
     ).strip()
     if not key:
-        raise PrintError('PRINT_API_KEY לא מוגדר ב-Backend')
+        raise PrintError('PRINT_API_KEY / PRINTER_KEY לא מוגדר ב-Backend')
     return key
 
 
@@ -105,7 +107,9 @@ def print_configured() -> bool:
 def print_api_key_configured() -> bool:
     key = (
         getattr(settings, 'PRINT_API_KEY', '')
+        or getattr(settings, 'PRINTER_KEY', '')
         or os.getenv('PRINT_API_KEY', '')
+        or os.getenv('PRINTER_KEY', '')
     ).strip()
     return bool(key)
 
@@ -113,7 +117,9 @@ def print_api_key_configured() -> bool:
 def print_api_key_hint() -> str | None:
     key = (
         getattr(settings, 'PRINT_API_KEY', '')
+        or getattr(settings, 'PRINTER_KEY', '')
         or os.getenv('PRINT_API_KEY', '')
+        or os.getenv('PRINTER_KEY', '')
     ).strip()
     if not key:
         return None
@@ -125,7 +131,9 @@ def print_api_key_hint() -> str | None:
 def verify_print_api_key(candidate: str) -> bool:
     expected = (
         getattr(settings, 'PRINT_API_KEY', '')
+        or getattr(settings, 'PRINTER_KEY', '')
         or os.getenv('PRINT_API_KEY', '')
+        or os.getenv('PRINTER_KEY', '')
     ).strip()
     if not expected:
         return False
@@ -149,14 +157,20 @@ def print_control_config(*, site_base_url: str = '') -> dict:
         'printServerConfigured': print_configured(),
         'autoEnqueue': bool(getattr(settings, 'PRINT_QUEUE_AUTO_ENQUEUE', True)),
         'agentEndpoints': {
+            'push': f'{api_prefix}/print/push',
+            'complete': f'{api_prefix}/print/complete',
+            'orders': f'{api_prefix}/print/orders',
+            'confirm': f'{api_prefix}/print/confirm',
+            'scan': f'{api_prefix}/print/scan',
             'heartbeat': f'{api_prefix}/print/agent/heartbeat',
             'pull': f'{api_prefix}/print/jobs/pull',
-            'confirm': f'{api_prefix}/print/confirm',
             'fail': f'{api_prefix}/print/jobs/{{jobId}}/fail',
         },
         'configFileExample': {
             'api_url': base or 'https://mendeles-next-production.up.railway.app',
-            'api_key': '<PRINT_API_KEY מ-Railway>',
+            'api_key': '<PRINT_API_KEY / PRINTER_KEY מ-Railway>',
+            'printer_key': '<אותו ערך — PRINTER_KEY בתוכנת הדוכן>',
+            'print_server_url': 'http://192.168.1.10:5000',
             'local_print_url': 'http://127.0.0.1:5000/print',
             'agent_id': 'default',
             'poll_seconds': 15,
@@ -281,8 +295,24 @@ def send_print_payload(payload: dict) -> dict:
         return {'ok': True, 'raw': res.text[:200]}
 
 
+def build_kiosk_push_payload(order) -> dict:
+    """Payload pushed to local PRINT_SERVER_URL — consumed by booth software."""
+    customer = order.customer
+    payload = build_forms_print_payload(order)
+    payload['orderNumber'] = order.order_number
+    payload['orderId'] = order.id
+    payload['tablesCount'] = order.forms_count
+    payload['totalIls'] = float(order.amount_ils)
+    payload['drawName'] = order.draw_name or ''
+    payload['status'] = order.status
+    payload['customerName'] = (
+        customer.display_name if hasattr(customer, 'display_name') else customer.email
+    )
+    return payload
+
+
 def send_order_to_printer(order) -> dict:
-    return send_print_payload(build_print_payload(order))
+    return send_print_payload(build_kiosk_push_payload(order))
 
 
 def print_success_detail(

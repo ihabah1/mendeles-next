@@ -19,7 +19,6 @@ from api.services.lotto_wins import check_and_credit_wins
 from api.services.order_search import apply_order_doc_filters, apply_order_search
 from api.services.print_queue_service import _forms_from_sets
 from api.services.pais_draw import fetch_and_save_draw, read_draw_data
-from api.services.print_queue_service import approve_job, enqueue_order, job_to_dict
 from api.services.print_service import print_configured
 from api.staff_permissions import IsStaffPortalUser
 
@@ -167,30 +166,60 @@ def admin_integration_logs(request):
 @api_view(['POST'])
 @permission_classes([IsStaffUser])
 def admin_order_print(request, order_id):
-    """Approve order for print queue — local agent pulls when online."""
+    """Push order to booth software — POST /api/print/push equivalent."""
+    from api.services.print_queue_service import job_to_dict, push_order_to_print_server
+    from api.services.print_service import PrintError, print_success_detail
+
     order = Order.objects.select_related('customer').filter(pk=order_id).first()
     if not order:
         return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
 
-    job = enqueue_order(order)
-    approve_job(job, request.user)
+    if order.status == Order.Status.COMPLETED:
+        return Response({'error': 'ההזמנה כבר הושלמה'}, status=status.HTTP_400_BAD_REQUEST)
+    if order.status == Order.Status.CANCELLED:
+        return Response({'error': 'ההזמנה בוטלה'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = push_order_to_print_server(order, user=request.user)
+    except PrintError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    pushed = result['pushed']
+    tables_count = result['tablesCount']
+    detail = print_success_detail(
+        tables_count=tables_count,
+        order_number=order.order_number,
+        result=result.get('printerResponse'),
+    )
+    if not pushed:
+        detail = (
+            f'ההזמנה {order.order_number} בתור הדפסה — '
+            f'{result.get("pushError") or "שרת הדוכן לא זמין"}'
+        )
+
     log_integration(
         IntegrationLog.Source.PRINT,
-        IntegrationLog.Level.INFO,
-        f'אושר לתור הדפסה: {order.order_number}',
+        IntegrationLog.Level.INFO if pushed else IntegrationLog.Level.WARNING,
+        f'הדפסה מהאדמין: {order.order_number}' + (' ✓' if pushed else ''),
         order=order,
+        details={'pushed': pushed},
     )
-    tables_count = len(order.sets_json or [])
     return Response({
-        'detail': (
-            f'ההזמנה {order.order_number} אושרה לתור הדפסה — '
-            f'סוכן המדפסת ימשוך כשמחובר'
-        ),
+        'detail': detail,
         'order_number': order.order_number,
         'tables_count': tables_count,
-        'printer_confirmed': False,
+        'printer_confirmed': bool(
+            isinstance(result.get('printerResponse'), dict)
+            and (
+                result['printerResponse'].get('printed')
+                or result['printerResponse'].get('success')
+                or result['printerResponse'].get('ok')
+            )
+        ),
+        'pushed': pushed,
+        'push_error': result.get('pushError'),
         'queued': True,
-        'job': job_to_dict(job),
+        'job': job_to_dict(result['job']),
     })
 
 
@@ -282,10 +311,21 @@ def admin_refresh_draw(request):
         return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as exc:
         return Response({'error': f'שגיאה בטעינה מפיס: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
-    return Response({
+
+    win_result = None
+    if request.data.get('credit_wins', True):
+        try:
+            win_result = check_and_credit_wins(result, dry_run=bool(request.data.get('dry_run', False)))
+        except ValueError:
+            win_result = None
+
+    payload = {
         'detail': f'הגרלה {result["last_draw"]["lottery_id"]} עודכנה מפיס',
         **result,
-    })
+    }
+    if win_result:
+        payload['win_credit'] = win_result
+    return Response(payload)
 
 
 @api_view(['POST'])

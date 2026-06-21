@@ -105,6 +105,8 @@ export const adminService = {
     tables_count?: number;
     order_number?: string;
     printer_confirmed?: boolean;
+    pushed?: boolean;
+    push_error?: string | null;
     queued?: boolean;
   }> {
     const { data } = await api.post<{
@@ -112,6 +114,8 @@ export const adminService = {
       tables_count?: number;
       order_number?: string;
       printer_confirmed?: boolean;
+      pushed?: boolean;
+      push_error?: string | null;
       queued?: boolean;
     }>(`/admin/orders/${orderId}/print/`);
     return data;

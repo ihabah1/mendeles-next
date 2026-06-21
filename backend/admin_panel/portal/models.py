@@ -1,6 +1,8 @@
+import secrets
+
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
-from django.utils import timezone
 
 
 class CustomerProfile(models.Model):
@@ -443,6 +445,43 @@ class GuideChatInquiry(models.Model):
         ordering = ['-updated_at']
         verbose_name = 'פניית צ׳אט'
         verbose_name_plural = 'פניות צ׳אט'
+
+
+class Kiosk(models.Model):
+    """Physical booth agent — logs in via email+password, receives API key."""
+
+    name = models.CharField('שם דוכן', max_length=120)
+    email = models.EmailField('אימייל', unique=True)
+    password_hash = models.CharField(max_length=128)
+    location = models.CharField('מיקום', max_length=200, blank=True)
+    api_key = models.CharField(max_length=64, unique=True, blank=True)
+    is_active = models.BooleanField('פעיל', default=True)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'דוכן'
+        verbose_name_plural = 'דוכנים'
+
+    def __str__(self):
+        return self.name
+
+    def set_password(self, raw_password: str) -> None:
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password: str) -> bool:
+        return check_password(raw_password, self.password_hash)
+
+    def ensure_api_key(self) -> str:
+        if not self.api_key:
+            self.api_key = secrets.token_urlsafe(32)
+        return self.api_key
+
+    def rotate_api_key(self) -> str:
+        self.api_key = secrets.token_urlsafe(32)
+        return self.api_key
 
 
 class SiteDailyMetric(models.Model):

@@ -6,6 +6,9 @@ import WinnerTabBar from "@/components/WinnerTabBar";
 import FreeComboCheck from "@/components/FreeComboCheck";
 import PremiumSection from "@/components/PremiumSection";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
+import DrawCountdown from "@/components/DrawCountdown";
+import HomeGameRows from "@/components/HomeGameRows";
+import HomeTotoPromo from "@/components/HomeTotoPromo";
 
 export const metadata = { title: "Mandeles.co.il — ניתוח סטטיסטי ולוטו" };
 
@@ -14,39 +17,6 @@ const FEATURES = [
   { icon: "📋", title: "מילוי טפסים", desc: "ידני, אוטומטי, או עם המספרים שלך" },
   { icon: "🚗", title: "הגשה בשמך", desc: "רכישת הטופס על שמך והגשה לדוכן מפעל הפיס" },
   { icon: "💬", title: "עדכונים", desc: "SMS ואימייל · צילום טופס לאחר רכישה" },
-];
-
-const GAME_ROWS = [
-  {
-    time: "הגרלה הבאה",
-    title: "לוטו — 14 טבלאות, מספר חזק",
-    href: "/lotto",
-    odds: [
-      { label: "מילוי ידני", val: "₪2.5+" },
-      { label: "200 סטים", val: "₪25" },
-      { label: "פרימיום", val: "₪50" },
-    ],
-  },
-  {
-    time: "זמין עכשיו",
-    title: "777 — משחק מזל מהיר",
-    href: "/seven77",
-    odds: [
-      { label: "טבלה אחת", val: "₪5" },
-      { label: "3 טבלאות", val: "₪12" },
-      { label: "מקסימום", val: "₪40" },
-    ],
-  },
-  {
-    time: "ניתוח סטטיסטי",
-    title: "טוטו — ניתוח סטטיסטי",
-    href: "/toto",
-    odds: [
-      { label: "16 משחקים", val: "₪8" },
-      { label: "ניתוח AI", val: "חינם" },
-      { label: "הגשה", val: "₪15" },
-    ],
-  },
 ];
 
 function formatToday(): string {
@@ -66,6 +36,7 @@ export default function HomePage() {
         <div style={{ padding: "0 16px", maxWidth: 900, margin: "0 auto 12px" }}>
           <LegalDisclaimer compact />
         </div>
+        <DrawCountdown />
         <WinnerTabBar />
 
         <div className="home-date-bar">
@@ -74,22 +45,7 @@ export default function HomePage() {
         </div>
 
         <section className="home-section--flush">
-          {GAME_ROWS.map((row) => (
-            <div key={row.title} className="winner-row">
-              <div className="winner-row-info">
-                <span className="winner-row-time">{row.time}</span>
-                <div>{row.title}</div>
-              </div>
-              <div className="winner-odds">
-                {row.odds.map((o) => (
-                  <Link key={o.label} href={row.href} className="winner-odd-btn">
-                    <span className="winner-odd-label">{o.label}</span>
-                    <span className="winner-odd-val">{o.val}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
+          <HomeGameRows />
         </section>
 
         <div className="home-grid-2 home-section">
@@ -165,20 +121,7 @@ export default function HomePage() {
           </Link>
         </section>
 
-        <section className="home-card home-section" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "18px 20px" }}>
-          <div style={{ fontSize: "1.8rem", flexShrink: 0 }}>⚽</div>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", fontWeight: 900, color: "var(--gold)", marginBottom: 4 }}>
-              ניתוח טוטו סטטיסטי
-            </h3>
-            <p style={{ fontSize: "0.76rem", color: "var(--muted)", lineHeight: 1.55 }}>
-              ניתוח נתוני עבר — ללא הבטחה לתוצאות עתידיות
-            </p>
-          </div>
-          <Link href="/toto" className="btn btn-outline" style={{ fontSize: "0.78rem", flexShrink: 0 }}>
-            צפה בניתוח →
-          </Link>
-        </section>
+        <HomeTotoPromo />
       </main>
     </>
   );

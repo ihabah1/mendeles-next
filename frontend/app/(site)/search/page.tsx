@@ -3,17 +3,18 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
-import { SEARCH_TARGETS, type SearchTarget } from "@/lib/search-targets";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { filterSearchTargets, SEARCH_TARGETS, type SearchTarget } from "@/lib/search-targets";
 
 const MAX_SUGGESTIONS = 8;
 
-function filterTargets(query: string): SearchTarget[] {
+function filterTargets(query: string, pool: SearchTarget[]): SearchTarget[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
   const starts: SearchTarget[] = [];
   const contains: SearchTarget[] = [];
-  for (const target of SEARCH_TARGETS) {
+  for (const target of pool) {
     const label = target.label.toLowerCase();
     const normalized = `${target.label} ${target.subtitle} ${target.code} ${target.href}`.toLowerCase();
     if (label.startsWith(q)) starts.push(target);
@@ -24,13 +25,15 @@ function filterTargets(query: string): SearchTarget[] {
 
 export default function SearchPage() {
   const router = useRouter();
+  const { isStaff } = useAuth();
+  const targets = useMemo(() => filterSearchTargets(SEARCH_TARGETS, isStaff), [isStaff]);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  const results = useMemo(() => filterTargets(query), [query]);
+  const results = useMemo(() => filterTargets(query, targets), [query, targets]);
 
   const completionHint = useMemo(() => {
     const q = query.trim();

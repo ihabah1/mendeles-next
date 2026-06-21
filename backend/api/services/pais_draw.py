@@ -2,14 +2,21 @@
 import json
 import re
 import ssl
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 
 RANK_KEYS = ['6+strong', '6', '5+strong', '5', '4+strong', '4', '3+strong', '3']
 RANK_NAMES = ['6 + חזק', '6', '5 + חזק', '5', '4 + חזק', '4', '3 + חזק', '3']
+
+# מפעל הפיס — שלישי ושבת, ~22:45 שעון ישראל
+DRAW_WEEKDAYS = (1, 5)  # Tuesday, Saturday
+DRAW_HOUR = 22
+DRAW_MINUTE = 45
+IL_TZ = ZoneInfo('Asia/Jerusalem')
 
 _SSL_CTX = ssl.create_default_context()
 _SSL_CTX.check_hostname = False
@@ -121,3 +128,29 @@ def read_draw_data() -> dict | None:
         return json.loads(path.read_text(encoding='utf-8'))
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def next_draw_datetime(*, after: datetime | None = None) -> datetime:
+    """Next PAIS Lotto draw (Tue/Sat 22:45 Israel)."""
+    now = (after or datetime.now(IL_TZ)).astimezone(IL_TZ)
+    probe = now.replace(hour=DRAW_HOUR, minute=DRAW_MINUTE, second=0, microsecond=0)
+    if probe <= now:
+        probe += timedelta(days=1)
+        probe = probe.replace(hour=DRAW_HOUR, minute=DRAW_MINUTE, second=0, microsecond=0)
+    for _ in range(14):
+        if probe.weekday() in DRAW_WEEKDAYS:
+            return probe
+        probe += timedelta(days=1)
+        probe = probe.replace(hour=DRAW_HOUR, minute=DRAW_MINUTE, second=0, microsecond=0)
+    return probe
+
+
+def next_draw_payload() -> dict:
+    target = next_draw_datetime()
+    return {
+        'at': target.isoformat(),
+        'label': 'שלישי ושבת · 22:45',
+        'weekdayHe': {0: 'שני', 1: 'שלישי', 2: 'רביעי', 3: 'חמישי', 4: 'שישי', 5: 'שבת', 6: 'ראשון'}.get(
+            target.weekday(), '',
+        ),
+    }

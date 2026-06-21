@@ -1,13 +1,11 @@
 """
-Print + scan workflow API (x-api-key).
+Print + scan workflow API (x-api-key / kiosk apiKey).
 
-Flow:
-  1. Admin/lotto sends order to print server → status ``printing``
-  2. Print server (or scan app) POST /print/confirm/ → ``printed``
-  3. Scan app POST /print/scan/ with PDF → ``completed`` + scan stored
-  4. Customer GET /orders/<id>/scan/ (JWT) or /print/scan/<id>/ (API key)
+Flow (booth software):
+  1. Admin POST /api/print/push → local PRINT_SERVER_URL → booth main screen
+  2. Booth prints locally, scans, POST /api/print/complete → completed + PDF
+  Legacy: confirm + scan as separate steps.
 """
-from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
@@ -18,36 +16,47 @@ from rest_framework.response import Response
 from admin_panel.portal.models import IntegrationLog, Order, PrintJob
 
 from api.services.integration_log import log_integration
+from api.services.print_auth import authenticate_print_client, print_api_key_header
+from api.services.print_service import build_print_forms
 from api.staff import is_staff_portal_user
+from api.staff_permissions import IsStaffPortalUser
 
-
-def _print_api_key_header() -> str:
-    return getattr(settings, 'PRINT_API_KEY_HEADER', 'x-api-key') or 'x-api-key'
+IsStaffUser = IsStaffPortalUser
 
 
 def _check_print_api_key(request) -> bool:
-    expected = (getattr(settings, 'PRINT_API_KEY', '') or '').strip()
-    if not expected:
-        return False
-    received = (request.headers.get(_print_api_key_header()) or '').strip()
-    return received == expected
+    ok, _kiosk = authenticate_print_client(request)
+    return ok
 
 
 def _require_print_key(request):
-    if not _check_print_api_key(request):
-        return Response({'error': 'אין הרשאה'}, status=status.HTTP_401_UNAUTHORIZED)
+    ok, _kiosk = authenticate_print_client(request)
+    if not ok:
+        return Response(
+            {
+                'error': 'אין הרשאה',
+                'detail': f'נדרש {print_api_key_header()} תקין (PRINT_API_KEY / PRINTER_KEY / apiKey דוכן)',
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
     return None
 
 
 def _order_payload(o: Order) -> dict:
+    customer = o.customer
     return {
         'id': o.id,
+        'orderId': o.id,
         'orderNumber': o.order_number,
         'userId': o.customer_id,
-        'userName': o.customer.display_name,
+        'userName': customer.display_name if hasattr(customer, 'display_name') else customer.email,
+        'name': customer.display_name if hasattr(customer, 'display_name') else customer.email,
+        'phone': getattr(customer, 'phone', None) or '',
         'tablesCount': o.forms_count,
         'totalIls': float(o.amount_ils),
+        'drawName': o.draw_name or '',
         'status': o.status,
+        'forms': build_print_forms(o.sets_json or []),
         'printedAt': o.printed_at.isoformat() if o.printed_at else None,
         'scannedAt': o.scanned_at.isoformat() if o.scanned_at else None,
         'hasScan': bool(o.scan_pdf),
@@ -94,6 +103,131 @@ def print_orders_list(request):
         return Response({'error': 'סטטוס לא תקין'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response([_order_payload(o) for o in qs])
+
+
+@api_view(['POST'])
+@permission_classes([IsStaffUser])
+def print_push(request):
+    """
+    POST /api/print/push — staff pushes order to booth software (PRINT_SERVER_URL).
+    Body: { orderId } or { order_id } or { orderNumber }.
+    """
+    from api.services.print_queue_service import job_to_dict, push_order_to_print_server
+    from api.services.print_service import PrintError, print_success_detail
+
+    order_id = request.data.get('orderId') or request.data.get('order_id')
+    order_number = (request.data.get('orderNumber') or request.data.get('order_number') or '').strip()
+
+    order = None
+    if order_id:
+        order = Order.objects.select_related('customer').filter(pk=order_id).first()
+    elif order_number:
+        order = Order.objects.select_related('customer').filter(order_number__iexact=order_number).first()
+
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+
+    if order.status == Order.Status.COMPLETED:
+        return Response({'error': 'ההזמנה כבר הושלמה'}, status=status.HTTP_400_BAD_REQUEST)
+    if order.status == Order.Status.CANCELLED:
+        return Response({'error': 'ההזמנה בוטלה'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = push_order_to_print_server(order, user=request.user)
+    except PrintError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    job = result['job']
+    pushed = result['pushed']
+    detail = print_success_detail(
+        tables_count=result['tablesCount'],
+        order_number=order.order_number,
+        result=result.get('printerResponse'),
+    )
+    if not pushed and result.get('pushError'):
+        detail = f'{order.order_number} בתור — {result["pushError"]}'
+
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO if pushed else IntegrationLog.Level.WARNING,
+        f'push לדוכן: {order.order_number}' + (' ✓' if pushed else f' — {result.get("pushError", "")}'),
+        order=order,
+        details={'pushed': pushed},
+    )
+
+    return Response({
+        'status': 'ok',
+        'detail': detail,
+        'pushed': pushed,
+        'pushError': result.get('pushError'),
+        'orderId': order.id,
+        'orderNumber': order.order_number,
+        'tablesCount': result['tablesCount'],
+        'printerConfirmed': bool(
+            isinstance(result.get('printerResponse'), dict)
+            and (
+                result['printerResponse'].get('printed')
+                or result['printerResponse'].get('success')
+                or result['printerResponse'].get('ok')
+            )
+        ),
+        'job': job_to_dict(job),
+        'payload': result.get('payload'),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def print_complete(request):
+    """
+    POST /api/print/complete — booth software after scan + confirm.
+    Multipart: orderId + file (PDF). Sets status completed and stores scan.
+    """
+    denied = _require_print_key(request)
+    if denied:
+        return denied
+
+    order_id = request.data.get('orderId') or request.data.get('order_id')
+    upload = request.FILES.get('file') or request.FILES.get('scan')
+    if not order_id:
+        return Response({'error': 'orderId חסר'}, status=status.HTTP_400_BAD_REQUEST)
+    if not upload:
+        return Response({'error': 'file חסר (PDF סריקה)'}, status=status.HTTP_400_BAD_REQUEST)
+
+    order = Order.objects.filter(pk=order_id).first()
+    if not order:
+        return Response({'error': 'הזמנה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+
+    pdf_bytes = upload.read()
+    if not pdf_bytes:
+        return Response({'error': 'קובץ ריק'}, status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    if not order.printed_at:
+        order.printed_at = now
+    order.scan_pdf = pdf_bytes
+    order.scanned_at = now
+    order.status = Order.Status.COMPLETED
+    order.save(update_fields=['scan_pdf', 'scanned_at', 'printed_at', 'status'])
+
+    from api.services.print_queue_service import complete_job_for_order
+
+    complete_job_for_order(order)
+
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'הושלם מהדוכן: {order.order_number}',
+        order=order,
+        details={'bytes': len(pdf_bytes)},
+    )
+    return Response({
+        'status': 'ok',
+        'orderId': order.id,
+        'orderNumber': order.order_number,
+        'completed': True,
+        'url': f'/api/print/scan/{order.id}/',
+    })
 
 
 @api_view(['POST'])

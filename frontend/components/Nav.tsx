@@ -8,6 +8,7 @@ import PageCodeBadge from "@/components/PageCodeBadge";
 import BalancePill from "@/components/BalancePill";
 import PromoTopBanner from "@/components/promo/PromoTopBanner";
 import MandelesLogoMark from "@/components/promo/MandelesLogoMark";
+import { canAccessDevGames } from "@/lib/lotto-only";
 
 type NavLink = {
   href: string;
@@ -43,12 +44,16 @@ export default function Nav() {
     router.push("/");
   };
 
-  const hideToto = process.env.NEXT_PUBLIC_LOTTO_ONLY !== "false";
+  const showDevGames = canAccessDevGames(isStaff);
   const navLinks: NavLink[] = [
     { href: "/", label: "ראשי", exact: true },
     { href: "/lotto", label: "לוטו" },
-    { href: "/seven77", label: "777" },
-    ...(hideToto ? [] : [{ href: "/toto", label: "טוטו" }]),
+    ...(showDevGames
+      ? [
+          { href: "/seven77", label: "777" },
+          { href: "/toto", label: "טוטו" },
+        ]
+      : []),
     { href: "/about", label: "מידע" },
     { href: "/promotions", label: "מבצעים", badge: "3" },
     ...(isAuthenticated ? [{ href: "/profile", label: "פרופיל" }] : []),

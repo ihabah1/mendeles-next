@@ -2,6 +2,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import Nav from "@/components/Nav";
+import RestrictedGamesGate from "@/components/RestrictedGamesGate";
 
 interface Fixture {
   id: number; home: string; away: string; league: string; date: string;
@@ -44,6 +45,7 @@ export default function TotoPage() {
   return (
     <>
       <Nav />
+      <RestrictedGamesGate gameName="טוטו">
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 14px 60px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
           <h1 style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: "1.4rem", fontWeight: 900, color: "var(--cream)" }}>
@@ -125,6 +127,7 @@ export default function TotoPage() {
           </div>
         )}
       </div>
+      </RestrictedGamesGate>
     </>
   );
 }

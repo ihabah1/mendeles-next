@@ -30,6 +30,24 @@ class Command(BaseCommand):
                 details=details.get('draw') or {},
             )
 
+            if draw:
+                from api.services.lotto_wins import check_and_credit_wins
+
+                try:
+                    win_result = check_and_credit_wins(draw, dry_run=False)
+                    details['winCredit'] = {
+                        'credited': win_result.get('credited'),
+                        'total_prize_ils': win_result.get('total_prize_ils'),
+                        'wins': win_result.get('wins'),
+                    }
+                    log_automation(
+                        AutomationLog.Job.DAILY_SYNC,
+                        f"זכיות: {win_result.get('credited', 0)} טבלאות · ₪{win_result.get('total_prize_ils', 0)}",
+                        details=details['winCredit'],
+                    )
+                except ValueError as exc:
+                    details['winCredit'] = {'error': str(exc)}
+
             pool_refresh = refresh_combo_pool_for_draw(lottery_id)
             details['poolRefresh'] = pool_refresh
             if pool_refresh and not pool_refresh.get('skipped'):

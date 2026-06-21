@@ -21,6 +21,7 @@ const ITEMS: QuickItem[] = [
   { id: "support", href: "/admin/support", icon: "💬", title: "פניות צ׳אט", desc: "שיחות בוט, סיכום AI ובקשות נציג" },
   { id: "monitoring", href: "/admin/monitoring", icon: "📡", title: "ניטור תשתית", desc: "אוטומציה, תנועה, קבצים ושירותים" },
   { id: "services", href: "/admin/services", icon: "⚙️", title: "שירותים", desc: "הפעלה/כיבוי תכונות באתר" },
+  { id: "kiosks", href: "/admin/kiosks", icon: "🏪", title: "דוכנים", desc: "יצירת דוכנים והתחברות לתוכנה" },
 ];
 
 export default function AdminQuickNav({ current }: { current?: AdminTabId }) {

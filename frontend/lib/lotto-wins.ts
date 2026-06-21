@@ -67,11 +67,13 @@ export interface SetWinResult {
   rank: string | null;
   hits: number;
   strongHit: boolean;
+  prizeIls?: number;
 }
 
 export interface OrderWinSummary {
   bestRank: string | null;
   winningSets: number;
+  totalPrizeIls: number;
   checked: boolean;
   drawDate: string | null;
   sets: SetWinResult[];
@@ -85,6 +87,7 @@ export function checkOrderWins(
   const result: OrderWinSummary = {
     bestRank: null,
     winningSets: 0,
+    totalPrizeIls: 0,
     checked: Boolean(draw),
     drawDate: draw?.date ?? null,
     sets: [],
@@ -101,6 +104,7 @@ export function checkOrderWins(
     const rank = calcRank(nums, strong, draw.numbers, draw.strong);
     const hits = nums.filter((n) => draw.numbers.includes(n)).length;
     const strongHit = strong === draw.strong;
+    const prizeIls = rank && prizes?.[rank]?.ils ? Number(prizes[rank].ils) : 0;
     const display =
       set.display ||
       `${nums.join(" ")} | ${strong}`;
@@ -111,24 +115,29 @@ export function checkOrderWins(
       rank,
       hits,
       strongHit,
+      prizeIls: prizeIls || undefined,
     });
 
     if (rank) {
       result.winningSets += 1;
+      result.totalPrizeIls += prizeIls;
       if (!result.bestRank || rankOrder.indexOf(rank) < rankOrder.indexOf(result.bestRank)) {
         result.bestRank = rank;
       }
     }
   });
 
-  void prizes;
   return result;
 }
 
 export function formatWinBadge(summary: OrderWinSummary): string {
   if (!summary.checked) return "בדיקת זכייה — אין נתוני הגרלה";
   if (summary.bestRank) {
-    return RANK_LABELS[summary.bestRank] || summary.bestRank;
+    const label = RANK_LABELS[summary.bestRank] || summary.bestRank;
+    if (summary.totalPrizeIls > 0) {
+      return `${label} · ₪${summary.totalPrizeIls.toLocaleString()}`;
+    }
+    return label;
   }
   return "לא זכית בהגרלה האחרונה";
 }

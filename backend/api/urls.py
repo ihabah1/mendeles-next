@@ -7,6 +7,7 @@ from . import (
     admin_views,
     ai_compose_views,
     guide_views,
+    kiosk_views,
     messages_admin_views,
     lotto_views,
     metrics_views,
@@ -68,6 +69,8 @@ lotto_patterns = [
 ]
 
 print_patterns = [
+    path('push/', print_views.print_push, name='print-push'),
+    path('complete/', print_views.print_complete, name='print-complete'),
     path('orders/', print_views.print_orders_list, name='print-orders'),
     path('confirm/', print_views.print_confirm, name='print-confirm'),
     path('scan/', print_views.print_scan_upload, name='print-scan-upload'),
@@ -131,6 +134,8 @@ admin_patterns = [
     path('print-queue/<int:job_id>/promote/', print_queue_views.admin_print_queue_promote, name='admin-print-queue-promote'),
     path('print-queue/<int:job_id>/priority/', print_queue_views.admin_print_queue_priority, name='admin-print-queue-priority'),
     path('print-queue/<int:job_id>/send/', print_queue_views.admin_print_queue_send, name='admin-print-queue-send'),
+    path('kiosks/', kiosk_views.admin_kiosks, name='admin-kiosks'),
+    path('kiosks/<int:kiosk_id>/toggle/', kiosk_views.admin_kiosk_toggle, name='admin-kiosk-toggle'),
     path('draw/', admin_views.admin_draw_status, name='admin-draw-status'),
     path('draw/refresh/', admin_views.admin_refresh_draw, name='admin-draw-refresh'),
     path('lotto/check-wins/', admin_views.admin_check_wins, name='admin-lotto-check-wins'),
@@ -139,6 +144,7 @@ admin_patterns = [
 urlpatterns = [
     path('guide/chat/', guide_views.guide_chat, name='guide-chat'),
     path('metrics/ping/', metrics_views.metrics_ping, name='metrics-ping'),
+    path('kiosk/login/', kiosk_views.kiosk_login, name='kiosk-login'),
     path('auth/', include(auth_patterns)),
     path('wallet/', include(wallet_patterns)),
     path('lotto/', include(lotto_patterns)),
