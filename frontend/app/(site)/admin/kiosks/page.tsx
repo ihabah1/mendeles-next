@@ -32,6 +32,7 @@ function KiosksPageInner() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -125,6 +126,21 @@ function KiosksPageInner() {
     }
   };
 
+  const copyApiKey = async (kiosk: KioskRecord) => {
+    if (!kiosk.apiKey) {
+      setError("מפתח לא זמין — רענן את הדף או התחבר שוב מתוכנת הדוכן.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(kiosk.apiKey);
+      setCopiedId(kiosk.id);
+      setMessage(`מפתח API של ${kiosk.name} הועתק.`);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setError("לא ניתן להעתיק — העתק ידנית מהשדה.");
+    }
+  };
+
   return (
     <>
       <Nav />
@@ -164,7 +180,7 @@ function KiosksPageInner() {
         <section style={{ ...panelStyle, marginBottom: 20 }}>
           <h2 style={sectionTitle}>משתמשי קיוסק ({kiosks.length})</h2>
           <p style={{ color: "var(--muted)", fontSize: ".72rem", margin: "0 0 12px" }}>
-            חשבונות להתחברות מתוכנת ההדפסה · API: GET/POST /api/admin/kiosks · PATCH /api/admin/kiosks/{"{id}"}
+            חשבונות להתחברות מתוכנת ההדפסה · התחברות: POST /django-api/kiosk/login/ (אימייל+סיסמה → apiKey)
           </p>
 
           {loading ? (
@@ -194,7 +210,20 @@ function KiosksPageInner() {
                       <td style={tdStyle}>{kiosk.phone || "—"}</td>
                       <td style={tdStyle}>{kiosk.location || "—"}</td>
                       <td style={tdStyle}>₪{kiosk.pricePerTable.toFixed(2)}</td>
-                      <td style={tdStyle}>{kiosk.apiKeyHint ?? "—"}</td>
+                      <td style={tdStyle}>
+                        {kiosk.apiKey ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 140 }}>
+                            <code style={keyStyle} title={kiosk.apiKey}>
+                              {kiosk.apiKey}
+                            </code>
+                            <button type="button" onClick={() => copyApiKey(kiosk)} style={copyBtnStyle}>
+                              {copiedId === kiosk.id ? "הועתק ✓" : "העתק מפתח"}
+                            </button>
+                          </div>
+                        ) : (
+                          kiosk.apiKeyHint ?? "—"
+                        )}
+                      </td>
                       <td style={tdStyle}>{formatDate(kiosk.lastLoginAt)}</td>
                       <td style={tdStyle}>
                         <span style={{ color: kiosk.isActive ? "var(--green)" : "#e87070" }}>
@@ -337,6 +366,27 @@ const inputStyle: React.CSSProperties = {
   background: "rgba(0,0,0,.25)",
   color: "var(--cream)",
   fontSize: ".82rem",
+};
+
+const keyStyle: React.CSSProperties = {
+  fontSize: ".65rem",
+  wordBreak: "break-all",
+  color: "var(--gold)",
+  background: "rgba(0,0,0,.3)",
+  padding: "4px 6px",
+  borderRadius: 4,
+  lineHeight: 1.35,
+};
+
+const copyBtnStyle: React.CSSProperties = {
+  padding: "4px 8px",
+  borderRadius: 6,
+  border: "1px solid var(--navy-b)",
+  background: "rgba(255,255,255,.06)",
+  color: "var(--cream)",
+  fontSize: ".68rem",
+  cursor: "pointer",
+  alignSelf: "flex-start",
 };
 
 const primaryBtnStyle: React.CSSProperties = {

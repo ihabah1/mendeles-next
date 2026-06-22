@@ -1,5 +1,21 @@
 # כלי הדפסה וסריקה — Mandeles
 
+## kiosk_app.py
+
+התחברות דוכן — אימייל+סיסמה (מאדמין → דוכנים) → `apiKey` ל-header `x-api-key`.
+
+```bash
+pip install requests
+python tools/kiosk_app.py
+```
+
+קובץ הגדרות: `kiosk_config.json` — `api_url`, `email`, `password`.  
+אחרי התחברות מוצלחת נשמר `api_key` בקובץ.
+
+> **אזהרת InsecureRequestWarning** — מופיעה אם בקוד יש `verify=False`. הסר את זה; השתמש ב-HTTPS רגיל.
+
+---
+
 ## print_agent.py
 
 סוכן הדפסה מקומי — מושך משימות **מאושרות** מהענן (24/7) ושולח לשרת המדפסת על המחשב.

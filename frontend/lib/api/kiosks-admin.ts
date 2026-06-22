@@ -12,6 +12,7 @@ export interface KioskRecord {
   active: boolean;
   pricePerTable: number;
   apiKeyHint: string | null;
+  apiKey?: string;
   lastLoginAt: string | null;
   createdAt: string;
 }

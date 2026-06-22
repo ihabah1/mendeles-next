@@ -14,11 +14,11 @@ from api.staff_permissions import IsStaffPortalUser
 IsStaffUser = IsStaffPortalUser
 
 
-def _kiosk_to_dict(kiosk: Kiosk) -> dict:
+def _kiosk_to_dict(kiosk: Kiosk, *, include_api_key: bool = False) -> dict:
     hint = None
     if kiosk.api_key and len(kiosk.api_key) >= 4:
         hint = f"…{kiosk.api_key[-4:]}"
-    return {
+    data = {
         'id': kiosk.id,
         'name': kiosk.name,
         'ownerName': kiosk.owner_name,
@@ -32,6 +32,9 @@ def _kiosk_to_dict(kiosk: Kiosk) -> dict:
         'lastLoginAt': kiosk.last_login_at.isoformat() if kiosk.last_login_at else None,
         'createdAt': kiosk.created_at.isoformat(),
     }
+    if include_api_key and kiosk.api_key:
+        data['apiKey'] = kiosk.api_key
+    return data
 
 
 def _parse_price(raw) -> Decimal | None:
@@ -49,7 +52,7 @@ def admin_kiosks(request):
     if request.method == 'GET':
         kiosks = Kiosk.objects.all()
         return Response({
-            'kiosks': [_kiosk_to_dict(k) for k in kiosks],
+            'kiosks': [_kiosk_to_dict(k, include_api_key=True) for k in kiosks],
             'count': kiosks.count(),
         })
 
@@ -83,7 +86,10 @@ def admin_kiosks(request):
     kiosk.ensure_api_key()
     kiosk.save()
 
-    return Response({'kiosk': _kiosk_to_dict(kiosk), 'detail': 'דוכן נוצר בהצלחה.'}, status=status.HTTP_201_CREATED)
+    return Response({
+        'kiosk': _kiosk_to_dict(kiosk, include_api_key=True),
+        'detail': 'דוכן נוצר בהצלחה.',
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PATCH'])
@@ -95,7 +101,7 @@ def admin_kiosk_detail(request, kiosk_id: int):
         return Response({'detail': 'דוכן לא נמצא.'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        return Response({'kiosk': _kiosk_to_dict(kiosk)})
+        return Response({'kiosk': _kiosk_to_dict(kiosk, include_api_key=True)})
 
     updates: list[str] = []
 
@@ -153,7 +159,7 @@ def admin_kiosk_detail(request, kiosk_id: int):
     kiosk.save(update_fields=updates)
 
     return Response({
-        'kiosk': _kiosk_to_dict(kiosk),
+        'kiosk': _kiosk_to_dict(kiosk, include_api_key=True),
         'detail': 'הדוכן עודכן.',
     })
 
@@ -175,7 +181,7 @@ def admin_kiosk_toggle(request, kiosk_id: int):
 
     state = 'הופעל' if kiosk.is_active else 'הושבת'
     return Response({
-        'kiosk': _kiosk_to_dict(kiosk),
+        'kiosk': _kiosk_to_dict(kiosk, include_api_key=True),
         'detail': f'הדוכן {state}.',
     })
 
