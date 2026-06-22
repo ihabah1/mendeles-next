@@ -49,12 +49,8 @@ export default function Nav() {
   const navLinks: NavLink[] = [
     { href: "/", label: "ראשי", exact: true },
     { href: "/lotto", label: "לוטו" },
-    ...(showDevGames
-      ? [
-          { href: "/seven77", label: "777" },
-          { href: "/toto", label: "טוטו" },
-        ]
-      : []),
+    { href: "/toto", label: "טוטו" },
+    ...(showDevGames ? [{ href: "/seven77", label: "777" }] : []),
     { href: "/about", label: "מידע" },
     { href: "/promotions", label: "מבצעים", badge: "3" },
     { href: "/terms", label: "משחקים באחריות" },

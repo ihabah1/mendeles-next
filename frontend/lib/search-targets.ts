@@ -11,7 +11,7 @@ export const SEARCH_TARGETS: SearchTarget[] = [
   { href: "/", label: "דף ראשי", subtitle: "HO47", code: "HO47" },
   { href: "/lotto", label: "לוטו", subtitle: "בסיס המשחק המרכזי", code: "LT83" },
   { href: "/seven77", label: "777", subtitle: "משחק מזל מהיר", code: "S777" },
-  { href: "/toto", label: "טוטו", subtitle: "ניתוח סטטיסטי", code: "TT29" },
+  { href: "/toto", label: "טוטו", subtitle: "בפיתוח — יהיה זמין בקרוב", code: "TT29" },
   { href: "/promotions", label: "מבצעים", subtitle: "הטבות ומתנות", code: "PM33" },
   { href: "/about", label: "אודות", subtitle: "למה אנחנו", code: "AB16" },
   { href: "/terms", label: "תנאי שימוש", subtitle: "מידע משפטי", code: "TE52" },

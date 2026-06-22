@@ -9,7 +9,7 @@ const ALL_TABS = [
   { id: "main", href: "/", label: "מרכזיים", exact: true, devOnly: false },
   { id: "lotto", href: "/lotto", label: "לוטו", devOnly: false },
   { id: "seven", href: "/seven77", label: "777", devOnly: true },
-  { id: "toto", href: "/toto", label: "טוטו", devOnly: true },
+  { id: "toto", href: "/toto", label: "טוטו", devOnly: false },
   { id: "premium", href: "/#premium", label: "פרימיום", devOnly: false },
   { id: "pricing", href: "/#pricing", label: "מחירים", devOnly: false },
 ] as const;

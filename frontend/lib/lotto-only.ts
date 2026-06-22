@@ -17,5 +17,5 @@ export function filterSearchTargets<T extends { href: string }>(
   isStaff: boolean,
 ): T[] {
   if (canAccessDevGames(isStaff)) return items;
-  return items.filter((i) => !i.href.startsWith("/toto") && !i.href.startsWith("/seven77"));
+  return items.filter((i) => !i.href.startsWith("/seven77"));
 }

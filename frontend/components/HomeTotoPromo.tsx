@@ -1,13 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthContext";
-import { canAccessDevGames } from "@/lib/lotto-only";
 
 export default function HomeTotoPromo() {
-  const { isStaff } = useAuth();
-  if (!canAccessDevGames(isStaff)) return null;
-
   return (
     <section
       className="home-card home-section"
@@ -24,14 +17,14 @@ export default function HomeTotoPromo() {
             marginBottom: 4,
           }}
         >
-          ניתוח טוטו סטטיסטי
+          טוטו
         </h3>
         <p style={{ fontSize: "0.76rem", color: "var(--muted)", lineHeight: 1.55 }}>
-          ניתוח נתוני עבר — ללא הבטחה לתוצאות עתידיות
+          בפיתוח — יהיה זמין בקרוב
         </p>
       </div>
       <Link href="/toto" className="btn btn-outline" style={{ fontSize: "0.78rem", flexShrink: 0 }}>
-        צפה בניתוח →
+        מידע נוסף →
       </Link>
     </section>
   );

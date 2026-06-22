@@ -28,15 +28,15 @@ const ALL_ROWS = [
     devOnly: true,
   },
   {
-    time: "בקרוב",
-    title: "טוטו — ניתוח סטטיסטי",
+    time: "בפיתוח",
+    title: "טוטו — יהיה זמין בקרוב",
     href: "/toto",
     odds: [
-      { label: "16 משחקים", val: "₪8" },
-      { label: "ניתוח AI", val: "חינם" },
-      { label: "הגשה", val: "₪15" },
+      { label: "סטטוס", val: "בפיתוח" },
+      { label: "זמינות", val: "בקרוב" },
+      { label: "עכשיו", val: "לוטו" },
     ],
-    devOnly: true,
+    devOnly: false,
   },
 ] as const;
 
