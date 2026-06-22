@@ -391,17 +391,22 @@ def admin_nav_alerts(request):
 
     kiosks_new = Kiosk.objects.filter(is_active=True, last_login_at__isnull=True).count()
 
+    orders_total = pending_orders + print_queue + awaiting_scan
+    users_total = new_users_today + unread_messages + support_new
+
     return Response({
         'sections': {
-            'dashboard': {'count': pending_orders},
+            'dashboard': {'count': 0},
+            'orders': {'count': orders_total},
+            'users': {'count': users_total},
+            'monitoring': {'count': monitoring},
+            'services': {'count': 0},
+            'kiosks': {'count': kiosks_new},
             'scan': {'count': awaiting_scan},
             'print-queue': {'count': print_queue},
             'permissions': {'count': new_users_today},
             'balance': {'count': 0},
             'messages': {'count': unread_messages},
             'support': {'count': support_new},
-            'monitoring': {'count': monitoring},
-            'services': {'count': 0},
-            'kiosks': {'count': kiosks_new},
         },
     })

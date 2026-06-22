@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
-import AdminQuickNav from "@/components/admin/AdminQuickNav";
+import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import {
   AdminAlert,
   AdminPageHeader,
@@ -102,7 +102,8 @@ function BalancePageInner() {
     <>
       <Nav />
       <AdminShell maxWidth={960}>
-        <AdminNavTabs active="balance" />
+        <AdminNavTabs active="users" />
+        <AdminHubSubNav hub="users" />
         <AdminPageHeader
           title="ניהול יתרות"
           description="הזנת או שינוי יתרת ארנק לכל הלקוחות. כל שינוי נרשם ביומן הפעולות."

@@ -119,4 +119,12 @@ export const permissionsAdminService = {
     }>("/admin/permissions/users/bulk-delete/", { user_ids: userIds });
     return data;
   },
+
+  async resetPassword(userId: number, newPassword: string): Promise<ManagedUser> {
+    const { data } = await api.post<{ user: ManagedUser; detail: string }>(
+      `/admin/permissions/users/${userId}/`,
+      { action: "reset_password", new_password: newPassword },
+    );
+    return data.user;
+  },
 };

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import {
@@ -196,7 +197,8 @@ function MessagesPageInner() {
     <>
       <Nav />
       <div className="page-wrap" style={{ maxWidth: 1100 }}>
-        <AdminNavTabs active="messages" />
+        <AdminNavTabs active="users" />
+        <AdminHubSubNav hub="users" />
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--text)" }}>
           📬 ניהול מכתבים ללקוחות
         </h1>

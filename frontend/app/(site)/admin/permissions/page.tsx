@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
@@ -33,6 +34,7 @@ function PermissionsPageInner() {
   const [message, setMessage] = useState("");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceNote, setBalanceNote] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
 
   const load = useCallback(async () => {
@@ -67,6 +69,7 @@ function PermissionsPageInner() {
   useEffect(() => {
     setBalanceAmount("");
     setBalanceNote("");
+    setNewPassword("");
   }, [selected?.id]);
 
   const toggleChecked = (userId: number, on: boolean) => {
@@ -122,7 +125,8 @@ function PermissionsPageInner() {
     <>
       <Nav />
       <div className="page-wrap" style={{ maxWidth: 960 }}>
-        <AdminNavTabs active="permissions" />
+        <AdminNavTabs active="users" />
+        <AdminHubSubNav hub="users" />
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--cream)" }}>
           🔐 מתן הרשאות
         </h1>
@@ -365,6 +369,39 @@ function PermissionsPageInner() {
                     הוסף יתרה
                   </button>
                 </div>
+
+                {isAdmin && (
+                  <div className="lotto-panel" style={{ marginBottom: 14, padding: 12 }}>
+                    <div className="lotto-panel-title" style={{ marginBottom: 8 }}>
+                      🔑 איפוס סיסמה
+                    </div>
+                    <p style={{ fontSize: ".68rem", color: "var(--muted)", marginBottom: 8, lineHeight: 1.5 }}>
+                      הגדר סיסמה חדשה למשתמש (לפחות 6 תווים). המשתמש יוכל להתחבר עם הסיסמה החדשה מיד.
+                    </p>
+                    <input
+                      className="input"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="סיסמה חדשה"
+                      autoComplete="new-password"
+                      style={{ marginBottom: 10 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      disabled={saving || newPassword.length < 6}
+                      onClick={() =>
+                        run(
+                          () => permissionsAdminService.resetPassword(selected.id, newPassword),
+                          "סיסמה עודכנה בהצלחה",
+                        ).then(() => setNewPassword(""))
+                      }
+                    >
+                      אפס סיסמה
+                    </button>
+                  </div>
+                )}
 
                 {isAdmin && (
                   <div className="lotto-panel" style={{ marginBottom: 14 }}>

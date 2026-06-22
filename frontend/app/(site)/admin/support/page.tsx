@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import {
   AdminAlert,
   AdminEmpty,
@@ -95,7 +96,8 @@ function SupportPageInner() {
     <>
       <Nav />
       <AdminShell maxWidth={960}>
-        <AdminNavTabs active="support" />
+        <AdminNavTabs active="users" />
+        <AdminHubSubNav hub="users" />
         <AdminPageHeader
           title="פניות צ׳אט"
           description="כל שיחות בלון העזרה נשמרות עם פרטי משתמש, זמן, מלל מלא וסיכום AI. בקשות לנציג אנושי מסומנות בנפרד."

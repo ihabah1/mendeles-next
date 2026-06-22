@@ -57,7 +57,7 @@ export default function Nav() {
     { href: "/about", label: "מידע" },
     { href: "/promotions", label: "מבצעים", badge: "3" },
     ...(isAuthenticated ? [{ href: "/profile", label: "פרופיל" }] : []),
-    { href: "/profile/orders", label: "תוצאות" },
+    { href: "/profile/orders", label: "הזמנות" },
     { href: "/terms", label: "משחקים באחריות" },
   ];
 

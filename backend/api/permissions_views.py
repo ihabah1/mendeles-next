@@ -233,6 +233,24 @@ def permissions_user_detail(request, user_id: int):
         if action == 'revoke_premium':
             _revoke_premium_with_request(request, user)
             return Response({'detail': 'Premium בוטל', 'user': _user_summary(user)})
+        if action == 'reset_password':
+            if not getattr(request.user, 'is_admin', False):
+                return Response(
+                    {'error': 'רק מנהל ראשי יכול לאפס סיסמה'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            new_password = (
+                request.data.get('new_password') or request.data.get('password') or ''
+            ).strip()
+            if len(new_password) < 6:
+                return Response(
+                    {'error': 'סיסמה חייבת להכיל לפחות 6 תווים'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.set_password(new_password)
+            user.save(update_fields=['password'])
+            _log(request, 'user.password_reset', user)
+            return Response({'detail': 'סיסמה עודכנה בהצלחה', 'user': _user_summary(user)})
         return Response({'error': 'פעולה לא תקינה'}, status=status.HTTP_400_BAD_REQUEST)
 
     # PATCH

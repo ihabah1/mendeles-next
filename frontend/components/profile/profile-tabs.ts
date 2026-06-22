@@ -9,7 +9,7 @@ export const PROFILE_TABS: {
   { id: "details", href: "/profile/details", label: "פרטים אישיים", icon: "👤" },
   { id: "password", href: "/profile/password", label: "סיסמה", icon: "🔐" },
   { id: "topup", href: "/profile/topup", label: "טעינת כסף", icon: "💳" },
-  { id: "orders", href: "/profile/orders", label: "היסטוריית רכישות", icon: "📋" },
+  { id: "orders", href: "/profile/orders", label: "הזמנות", icon: "📋" },
   { id: "inbox", href: "/profile/inbox", label: "תיבת דואר", icon: "📬" },
 ];
 

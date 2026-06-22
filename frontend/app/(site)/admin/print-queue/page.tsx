@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Nav from "@/components/Nav";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
+import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
@@ -213,7 +214,8 @@ export function PrintQueuePageInner({
     <>
       <Nav />
       <main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px" }}>
-        <AdminNavTabs active={isScanScreen ? "scan" : "print-queue"} />
+        <AdminNavTabs active="orders" />
+        <AdminHubSubNav hub="orders" />
         <div
           style={{
             fontFamily: "'Frank Ruhl Libre',serif",

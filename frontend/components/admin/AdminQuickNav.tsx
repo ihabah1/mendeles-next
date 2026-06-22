@@ -14,16 +14,48 @@ type QuickItem = {
 };
 
 const ITEMS: QuickItem[] = [
-  { id: "dashboard", href: "/admin", icon: "📊", title: "דשבורד", desc: "הזמנות, זכיות, תוצאות הגרלה ולוגים" },
-  { id: "scan", href: "/admin/scan", icon: "📄", title: "מסך סריקה", desc: "העלאת וצפייה בסריקות טפסים" },
-  { id: "print-queue", href: "/admin/print-queue", icon: "🖨️", title: "תור הדפסה", desc: "ניהול הדפסה והגשה לדוכן" },
-  { id: "permissions", href: "/admin/permissions", icon: "🔐", title: "הרשאות", desc: "משתמשים, תפקידים ומחיקה" },
-  { id: "balance", href: "/admin/balance", icon: "💳", title: "יתרות", desc: "עדכון ארנק לקוחות" },
-  { id: "messages", href: "/admin/messages", icon: "✉️", title: "מכתבים", desc: "הודעות ומכתבים ללקוחות" },
-  { id: "support", href: "/admin/support", icon: "💬", title: "פניות צ׳אט", desc: "שיחות בוט, סיכום AI ובקשות נציג" },
-  { id: "monitoring", href: "/admin/monitoring", icon: "📡", title: "ניטור תשתית", desc: "אוטומציה, תנועה, קבצים ושירותים" },
-  { id: "services", href: "/admin/services", icon: "⚙️", title: "שירותים", desc: "הפעלה/כיבוי תכונות באתר" },
-  { id: "kiosks", href: "/admin/kiosks", icon: "🏪", title: "דוכנים", desc: "יצירת דוכנים והתחברות לתוכנה" },
+  {
+    id: "dashboard",
+    href: "/admin",
+    icon: "📊",
+    title: "דשבורד",
+    desc: "סטטיסטיקות, זכיות ותוצאות הגרלה",
+  },
+  {
+    id: "orders",
+    href: "/admin/orders",
+    icon: "📋",
+    title: "הזמנות",
+    desc: "רשימה, הדפסה, חשבוניות וסריקה",
+  },
+  {
+    id: "users",
+    href: "/admin/users",
+    icon: "👥",
+    title: "משתמשים",
+    desc: "הרשאות, יתרות, מכתבים ותמיכה",
+  },
+  {
+    id: "monitoring",
+    href: "/admin/monitoring",
+    icon: "📡",
+    title: "ניטור תשתית",
+    desc: "אוטומציה, תנועה, קבצים ושירותים",
+  },
+  {
+    id: "services",
+    href: "/admin/services",
+    icon: "⚙️",
+    title: "שירותים",
+    desc: "הפעלה/כיבוי תכונות באתר",
+  },
+  {
+    id: "kiosks",
+    href: "/admin/kiosks",
+    icon: "🏪",
+    title: "דוכנים",
+    desc: "יצירת דוכנים והתחברות לתוכנה",
+  },
 ];
 
 export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
@@ -36,20 +68,20 @@ export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
         {ITEMS.map((item) => {
           const badge = badgeFor(item.id);
           return (
-          <li key={item.id}>
-            <Link
-              href={item.href}
-              className={`admin-quick-card${current === item.id ? " admin-quick-card--active" : ""}`}
-              aria-current={current === item.id ? "page" : undefined}
-            >
-              <AdminNavBadge count={badge} />
-              <span className="admin-quick-icon" aria-hidden>
-                {item.icon}
-              </span>
-              <span className="admin-quick-title">{item.title}</span>
-              <span className="admin-quick-desc">{item.desc}</span>
-            </Link>
-          </li>
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                className={`admin-quick-card${current === item.id ? " admin-quick-card--active" : ""}`}
+                aria-current={current === item.id ? "page" : undefined}
+              >
+                <AdminNavBadge count={badge} />
+                <span className="admin-quick-icon" aria-hidden>
+                  {item.icon}
+                </span>
+                <span className="admin-quick-title">{item.title}</span>
+                <span className="admin-quick-desc">{item.desc}</span>
+              </Link>
+            </li>
           );
         })}
       </ul>

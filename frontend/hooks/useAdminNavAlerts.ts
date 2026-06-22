@@ -7,37 +7,40 @@ import api from "@/lib/api/client";
 const ACK_KEY = "mandeles-admin-nav-ack";
 const POLL_MS = 45_000;
 
-type SectionCounts = Record<AdminTabId, number>;
+export type AdminAlertSectionId =
+  | AdminTabId
+  | "permissions"
+  | "balance"
+  | "messages"
+  | "support"
+  | "scan"
+  | "print-queue";
+
+type SectionCounts = Partial<Record<AdminAlertSectionId, number>>;
 
 const TAB_IDS: AdminTabId[] = [
   "dashboard",
-  "scan",
-  "print-queue",
-  "permissions",
-  "balance",
-  "messages",
-  "support",
+  "orders",
+  "users",
   "monitoring",
   "services",
   "kiosks",
 ];
 
 function emptyCounts(): SectionCounts {
-  return Object.fromEntries(TAB_IDS.map((id) => [id, 0])) as SectionCounts;
+  return {};
 }
 
-function readAck(): Partial<Record<AdminTabId, number>> {
+function readAck(): SectionCounts {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(localStorage.getItem(ACK_KEY) || "{}") as Partial<
-      Record<AdminTabId, number>
-    >;
+    return JSON.parse(localStorage.getItem(ACK_KEY) || "{}") as SectionCounts;
   } catch {
     return {};
   }
 }
 
-export function markAdminSectionSeen(id: AdminTabId, count: number) {
+export function markAdminSectionSeen(id: AdminAlertSectionId, count: number) {
   if (typeof window === "undefined") return;
   const ack = readAck();
   if (ack[id] === count) return;
@@ -62,9 +65,9 @@ async function fetchAlerts() {
     const { data } = await api.get<{ sections: Record<string, { count: number }> }>(
       "/admin/nav-alerts/",
     );
-    const next = emptyCounts();
-    for (const id of TAB_IDS) {
-      next[id] = data.sections?.[id]?.count ?? 0;
+    const next: SectionCounts = {};
+    for (const [key, val] of Object.entries(data.sections || {})) {
+      next[key as AdminAlertSectionId] = val.count ?? 0;
     }
     sharedCounts = next;
     notifySubscribers();
@@ -101,13 +104,13 @@ export function useAdminNavAlerts(current?: AdminTabId) {
 
   useEffect(() => {
     if (!current) return;
-    markAdminSectionSeen(current, counts[current]);
+    markAdminSectionSeen(current, counts[current] ?? 0);
   }, [current, counts]);
 
   const ack = useMemo(() => readAck(), [tick, counts]);
 
   const badgeFor = useCallback(
-    (id: AdminTabId): number => {
+    (id: AdminAlertSectionId): number => {
       const total = counts[id] ?? 0;
       const seen = ack[id] ?? 0;
       return Math.max(0, total - seen);
