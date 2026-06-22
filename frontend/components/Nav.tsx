@@ -74,7 +74,7 @@ export default function Nav() {
     return path === href || (path?.startsWith(href + "/") ?? false);
   };
 
-  const hidePromo = path?.startsWith("/admin") || path?.startsWith("/auth");
+  const hidePromo = path?.startsWith("/auth");
 
   return (
     <>
@@ -82,7 +82,7 @@ export default function Nav() {
       <nav className="nav">
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
-            <MandelesLogoMark size="sm" />
+            <MandelesLogoMark size="sm" variant="club" />
             <PageCodeBadge />
           </Link>
 

@@ -256,8 +256,8 @@ export function PromoRailColumn({ side }: { side: "start" | "end" }) {
         <span className="promo-side-rail-crown-shine" aria-hidden />
         <span className="promo-side-rail-crown-glow" aria-hidden />
         <MandelesLogoMark size="sm" showText={false} />
-        <span className="promo-side-rail-crown-title">Mandeles</span>
-        <span className="promo-side-rail-crown-tag">ניתוח ושליחות</span>
+        <span className="promo-side-rail-crown-title">MANDELES</span>
+        <span className="promo-side-rail-crown-tag">PREMIUM CLUB</span>
       </div>
 
       {cards.map((c, i) => (

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { PromoRailColumn } from "./PromoSideRails";
 
-const HIDE_PREFIXES = ["/admin", "/auth"];
+const HIDE_PREFIXES = ["/auth"];
 
 export default function PromoLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname() ?? "";

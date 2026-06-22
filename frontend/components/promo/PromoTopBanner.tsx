@@ -3,106 +3,34 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MandelesLogoMark from "./MandelesLogoMark";
-
-const BALLS = [
-  { n: 7, left: "6%", delay: "0s", dur: "6.5s", size: 26 },
-  { n: 21, left: "28%", delay: "0.6s", dur: "7s", size: 22 },
-  { n: 13, left: "52%", delay: "1.4s", dur: "6.8s", size: 24 },
-  { n: 29, left: "74%", delay: "0.2s", dur: "7.4s", size: 20 },
-  { n: 6, left: "90%", delay: "1s", dur: "6.2s", size: 22 },
-] as const;
+import { PremiumCrown, PremiumDiamond, PremiumSparkles } from "./PremiumBannerDecor";
 
 const SLIDES = [
   {
-    id: "lotto",
-    theme: "red",
-    badge: "שירות שליחות",
-    titleMain: "ניתוח סטטיסטי",
-    titleAccent: "ו-200 צירופים",
-    sub: "מילוי טפסים · הגשה בשמך לדוכן מפעל הפיס",
-    cta: "למילוי טפסים",
+    id: "premium",
+    badge: "מועדון פרימיום",
+    title: "מבצעים בלעדיים לחברי מועדון פרימיום",
+    sub: "אלגוריתם מנדל · 200 צירופים · הגשה בשמך לדוכן",
+    cta: "הצטרף למועדון",
     href: "/lotto",
-    emoji: "📋",
   },
   {
-    id: "premium",
-    theme: "green",
-    badge: "פרימיום",
-    titleMain: "אלגוריתם מנדל",
-    titleAccent: "— פיזור סטטיסטי",
-    sub: "צירופים ייחודיים לכל מנוי · ללא הבטחת זכייה",
-    cta: "למנוי פרימיום",
+    id: "lotto",
+    badge: "שירות שליחות",
+    title: "ניתוח סטטיסטי והגשת טפסי לוטו",
+    sub: "מילוי טפסים · הדפסה · הגשה לדוכן מפעל הפיס",
+    cta: "למילוי טפסים",
     href: "/lotto",
-    emoji: "💎",
   },
   {
     id: "track",
-    theme: "purple",
-    badge: "מעקב",
-    titleMain: "מעקב מלא",
-    titleAccent: "— עד הסריקה",
-    sub: "הדפסה · הגשה לדוכן · עדכון זכיות לארנק",
+    badge: "מעקב מלא",
+    title: "מעקב מהזמנה ועד הסריקה",
+    sub: "הדפסה · הגשה · עדכון זכיות לארנק",
     cta: "לאזור האישי",
     href: "/profile",
-    emoji: "🏆",
   },
 ] as const;
-
-const CONFETTI_COLORS = ["#f0b048", "#30c49a", "#8ec8ff", "#e4567a", "#ffffff", "#ffb060", "#b888e8"];
-
-function BannerConfetti() {
-  const pieces = Array.from({ length: 28 }, (_, i) => ({
-    id: i,
-    left: `${(i * 3.6 + 1.2) % 100}%`,
-    delay: `${(i * 0.28) % 3.5}s`,
-    dur: `${3.2 + (i % 4) * 0.5}s`,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    w: 4 + (i % 3) * 2,
-    h: 8 + (i % 4) * 2,
-  }));
-
-  return (
-    <div className="promo-top-confetti" aria-hidden>
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          className="promo-top-confetti-piece"
-          style={{
-            left: p.left,
-            background: p.color,
-            width: p.w,
-            height: p.h,
-            animationDelay: p.delay,
-            animationDuration: p.dur,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function BannerBalls() {
-  return (
-    <div className="promo-top-balls" aria-hidden>
-      {BALLS.map((b) => (
-        <span
-          key={b.n}
-          className="promo-top-ball"
-          style={{
-            left: b.left,
-            width: b.size,
-            height: b.size,
-            fontSize: b.size * 0.42,
-            animationDelay: b.delay,
-            animationDuration: b.dur,
-          }}
-        >
-          {b.n}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 export default function PromoTopBanner() {
   const [active, setActive] = useState(0);
@@ -117,82 +45,77 @@ export default function PromoTopBanner() {
   const slide = SLIDES[active];
 
   return (
-    <section
-      className={`promo-top-banner promo-top-banner--${slide.theme}`}
-      aria-label="מבצעים"
-    >
-      <div className="promo-top-banner-bg" aria-hidden />
-      <div className="promo-top-banner-shine" aria-hidden />
-      <BannerConfetti />
-      <BannerBalls />
+    <section className="premium-banner premium-banner--compact" aria-label="מבצעים">
+      <div className="premium-banner-bg" aria-hidden />
+      <div className="premium-banner-pattern" aria-hidden />
+      <PremiumSparkles count={20} />
 
-      <div className="promo-top-banner-inner">
-        <div className="promo-top-banner-brand">
-          <MandelesLogoMark size="sm" />
+      <div className="premium-banner-inner">
+        <PremiumCrown className="premium-banner-crown premium-banner-crown--sm" />
+
+        <div className="premium-banner-center">
+          <div className="premium-banner-brand-row">
+            <MandelesLogoMark size="sm" variant="club" />
+          </div>
+
+          <div className="premium-banner-stage">
+            {SLIDES.map((s, i) => (
+              <div
+                key={s.id}
+                className={`premium-banner-slide${i === active ? " active" : ""}`}
+                aria-hidden={i !== active}
+              >
+                <span className="premium-banner-badge">{s.badge}</span>
+                <p className="premium-banner-title">{s.title}</p>
+                <p className="premium-banner-sub">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <Link href={slide.href} className="premium-banner-cta">
+            {slide.cta}
+            <span className="premium-banner-cta-arrow" aria-hidden>←</span>
+          </Link>
         </div>
 
-        <span className="promo-top-emoji" aria-hidden key={`emoji-${slide.id}`}>
-          {slide.emoji}
-        </span>
+        <PremiumDiamond className="premium-banner-diamond premium-banner-diamond--sm" />
+      </div>
 
-        <div className="promo-top-banner-stage">
-          {SLIDES.map((s, i) => (
-            <div
-              key={s.id}
-              className={`promo-top-slide${i === active ? " active" : ""}`}
-              aria-hidden={i !== active}
-            >
-              <span className="promo-top-badge">{s.badge}</span>
-              <p className="promo-top-headline">
-                <span className="promo-top-headline-main">{s.titleMain}</span>
-                <span className="promo-top-headline-accent"> {s.titleAccent}</span>
-              </p>
-              <p className="promo-top-sub">{s.sub}</p>
-            </div>
-          ))}
-        </div>
-
-        <Link href={slide.href} className="promo-top-cta">
-          {slide.cta}
-          <span className="promo-top-cta-arrow" aria-hidden>→</span>
-        </Link>
-
-        <div className="promo-top-controls">
+      <div className="premium-banner-controls">
+        <button
+          type="button"
+          className="premium-banner-ctrl"
+          aria-label="שקף קודם"
+          onClick={() => setActive((i) => (i - 1 + SLIDES.length) % SLIDES.length)}
+        >
+          ›
+        </button>
+        {SLIDES.map((_, i) => (
           <button
+            key={i}
             type="button"
-            className="promo-top-ctrl"
-            aria-label="שקף קודם"
-            onClick={() => setActive((i) => (i - 1 + SLIDES.length) % SLIDES.length)}
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            className="promo-top-ctrl"
-            aria-label={paused ? "המשך" : "השהה"}
-            onClick={() => setPaused((p) => !p)}
-          >
-            {paused ? "▶" : "⏸"}
-          </button>
-          <button
-            type="button"
-            className="promo-top-ctrl"
-            aria-label="שקף הבא"
-            onClick={() => setActive((i) => (i + 1) % SLIDES.length)}
-          >
-            ›
-          </button>
-          {SLIDES.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`promo-top-dot${i === active ? " active" : ""}`}
-              aria-label={`שקף ${i + 1}`}
-              aria-current={i === active ? "true" : undefined}
-              onClick={() => setActive(i)}
-            />
-          ))}
-        </div>
+            className={`premium-banner-dot${i === active ? " active" : ""}`}
+            aria-label={`שקף ${i + 1}`}
+            aria-current={i === active ? "true" : undefined}
+            onClick={() => setActive(i)}
+          />
+        ))}
+        <button
+          type="button"
+          className="premium-banner-ctrl"
+          aria-label={paused ? "המשך" : "השהה"}
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? "▶" : "⏸"}
+        </button>
+        <button
+          type="button"
+          className="premium-banner-ctrl"
+          aria-label="שקף הבא"
+          onClick={() => setActive((i) => (i + 1) % SLIDES.length)}
+        >
+          ‹
+        </button>
       </div>
     </section>
   );
