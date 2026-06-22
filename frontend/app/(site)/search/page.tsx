@@ -4,7 +4,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { filterSearchTargets, SEARCH_TARGETS, type SearchTarget } from "@/lib/search-targets";
+import { filterSearchTargets } from "@/lib/lotto-only";
+import { SEARCH_TARGETS, type SearchTarget } from "@/lib/search-targets";
 
 const MAX_SUGGESTIONS = 8;
 
