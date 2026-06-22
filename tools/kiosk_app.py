@@ -23,6 +23,8 @@ from pathlib import Path
 
 import requests
 
+from kiosk_api_client import django_api_base, kiosk_login
+
 BASE_DIR = Path(__file__).parent
 CONFIG_FILE = BASE_DIR / "kiosk_config.json"
 VERSION = "1.0"
@@ -63,34 +65,16 @@ def login(cfg: dict) -> str:
         print("שגיאה: חסר email או password ב-kiosk_config.json")
         sys.exit(1)
 
-    url = f"{base}/django-api/kiosk/login/"
+    url = f"{django_api_base(base)}/kiosk/login/"
     print(f"מתחבר ל-{url} …")
 
-    # אל תשתמש ב-verify=False — זה גורם ל-InsecureRequestWarning ופגיע באבטחה.
-    res = requests.post(
-        url,
-        json={"email": email, "password": password},
-        headers={"Content-Type": "application/json"},
-        timeout=30,
-    )
-
-    if res.status_code == 401:
-        print("שגיאה: אימייל או סיסמה שגויים.")
-        sys.exit(1)
-    if res.status_code == 403:
-        print("שגיאה: הדוכן מושבת — פנה למנהל.")
-        sys.exit(1)
-    if not res.ok:
-        detail = res.json().get("detail") if res.headers.get("content-type", "").startswith("application/json") else res.text
-        print(f"שגיאה {res.status_code}: {detail}")
+    try:
+        data = kiosk_login(base, email, password)
+    except RuntimeError as exc:
+        print(f"שגיאה: {exc}")
         sys.exit(1)
 
-    data = res.json()
     api_key = data.get("apiKey") or data.get("api_key") or ""
-    if not api_key:
-        print("שגיאה: השרת לא החזיר apiKey.")
-        sys.exit(1)
-
     kiosk = data.get("kiosk") or {}
     print(f"התחברות הצליחה — דוכן: {kiosk.get('name', '?')}")
     print(f"apiKey: {api_key}")

@@ -1,6 +1,9 @@
 """Kiosk booth auth and staff admin CRUD."""
+import base64
+import json
 from decimal import Decimal, InvalidOperation
 
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -8,7 +11,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from admin_panel.accounts.models import User
-from admin_panel.portal.models import Kiosk
+from admin_panel.portal.models import IntegrationLog, Kiosk, Order, PrintJob
+from api.services.integration_log import log_integration
+from api.services.print_auth import authenticate_print_client, print_api_key_header
+from api.services.print_queue_service import complete_job_for_order, queue_counts
 from api.staff_permissions import IsStaffPortalUser
 
 IsStaffUser = IsStaffPortalUser
@@ -255,3 +261,173 @@ def admin_kiosk_site_users(request):
             'dateJoined': u.date_joined.isoformat() if u.date_joined else None,
         })
     return Response({'users': users, 'count': len(users)})
+
+
+def _require_kiosk_client(request):
+    ok, kiosk = authenticate_print_client(request)
+    if not ok:
+        return None, Response(
+            {
+                'error': 'אין הרשאה',
+                'detail': f'נדרש {print_api_key_header()} תקין (apiKey מהתחברות דוכן)',
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    return kiosk, None
+
+
+def _sets_json_for_kiosk(sets_json: list) -> str:
+    sets = []
+    for s in sorted(sets_json or [], key=lambda x: x.get('set_index', 0)):
+        nums = s.get('nums') or s.get('numbers') or []
+        if not nums:
+            nums = [s.get(f'n{i}') for i in range(1, 7) if s.get(f'n{i}') is not None]
+        sets.append({
+            'nums': nums,
+            'numbers': nums,
+            'strong': s.get('strong'),
+            'set_index': s.get('set_index'),
+        })
+    return json.dumps(sets, ensure_ascii=False)
+
+
+def _job_for_kiosk(job: PrintJob) -> dict:
+    order = job.order
+    customer = order.customer
+    return {
+        'id': job.id,
+        'jobId': job.id,
+        'orderId': order.id,
+        'orderNumber': order.order_number,
+        'userName': customer.display_name if customer else '',
+        'userPhone': getattr(customer, 'phone', '') or '',
+        'status': job.status,
+        'setsJson': _sets_json_for_kiosk(order.sets_json),
+        'tablesCount': order.forms_count,
+        'totalIls': float(order.amount_ils),
+        'drawName': order.draw_name or '',
+        'createdAt': job.created_at.isoformat(),
+    }
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def kiosk_jobs(request):
+    """GET /api/kiosk/jobs/?status=pending|printed — booth software job list."""
+    _kiosk, denied = _require_kiosk_client(request)
+    if denied:
+        return denied
+
+    status_filter = (request.query_params.get('status') or 'pending').strip().lower()
+    qs = (
+        PrintJob.objects.select_related('order', 'order__customer')
+        .exclude(order__status=Order.Status.COMPLETED)
+        .exclude(order__status=Order.Status.CANCELLED)
+    )
+
+    if status_filter == 'pending':
+        qs = qs.filter(
+            status__in=[
+                PrintJob.Status.QUEUED,
+                PrintJob.Status.APPROVED,
+                PrintJob.Status.CLAIMED,
+                PrintJob.Status.PRINTING,
+            ],
+        )
+    elif status_filter in ('printed', 'awaiting_scan'):
+        qs = qs.filter(status=PrintJob.Status.PRINTED).filter(
+            Q(order__scan_pdf__isnull=True) | Q(order__scan_pdf=b''),
+        )
+    else:
+        return Response({'error': 'סטטוס לא תקין', 'detail': 'סטטוס לא תקין'}, status=status.HTTP_400_BAD_REQUEST)
+
+    jobs = [_job_for_kiosk(j) for j in qs.order_by('-priority', 'created_at')[:50]]
+    return Response({'jobs': jobs, 'count': len(jobs)})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def kiosk_dashboard(request):
+    """GET /api/kiosk/dashboard/ — booth stats."""
+    kiosk, denied = _require_kiosk_client(request)
+    if denied:
+        return denied
+
+    counts = queue_counts()
+    pending = (
+        counts.get(PrintJob.Status.QUEUED, 0)
+        + counts.get(PrintJob.Status.APPROVED, 0)
+        + counts.get(PrintJob.Status.CLAIMED, 0)
+        + counts.get(PrintJob.Status.PRINTING, 0)
+    )
+    today = timezone.localdate()
+    completed_today = Order.objects.filter(
+        status=Order.Status.COMPLETED,
+        scanned_at__date=today,
+    ).count()
+
+    return Response({
+        'name': kiosk.name if kiosk else '',
+        'pending': pending,
+        'awaitingScan': counts.get('awaiting_scan', 0),
+        'failed': counts.get(PrintJob.Status.FAILED, 0),
+        'completedToday': completed_today,
+        'pricePerTable': float(kiosk.price_per_table) if kiosk else None,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def kiosk_complete(request):
+    """POST /api/kiosk/complete/ — booth after print+scan (base64 PDF)."""
+    _kiosk, denied = _require_kiosk_client(request)
+    if denied:
+        return denied
+
+    job_id = request.data.get('jobId') or request.data.get('job_id')
+    scan_b64 = request.data.get('scanPdf') or request.data.get('scan_pdf') or request.data.get('file')
+    if not job_id:
+        return Response({'error': 'jobId חסר', 'detail': 'jobId חסר'}, status=status.HTTP_400_BAD_REQUEST)
+    if not scan_b64:
+        return Response({'error': 'scanPdf חסר', 'detail': 'scanPdf חסר'}, status=status.HTTP_400_BAD_REQUEST)
+
+    job = PrintJob.objects.select_related('order').filter(pk=job_id).first()
+    if not job:
+        return Response({'error': 'משימה לא נמצאה', 'detail': 'משימה לא נמצאה'}, status=status.HTTP_404_NOT_FOUND)
+
+    order = job.order
+    try:
+        pdf_bytes = base64.b64decode(scan_b64)
+    except (TypeError, ValueError):
+        return Response({'error': 'קובץ לא תקין', 'detail': 'קובץ לא תקין'}, status=status.HTTP_400_BAD_REQUEST)
+    if not pdf_bytes:
+        return Response({'error': 'קובץ ריק', 'detail': 'קובץ ריק'}, status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    if not order.printed_at:
+        order.printed_at = now
+    order.scan_pdf = pdf_bytes
+    order.scanned_at = now
+    order.status = Order.Status.COMPLETED
+    order.save(update_fields=['scan_pdf', 'scanned_at', 'printed_at', 'status'])
+
+    job.status = PrintJob.Status.PRINTED
+    job.completed_at = now
+    job.last_error = ''
+    job.save(update_fields=['status', 'completed_at', 'last_error', 'updated_at'])
+    complete_job_for_order(order)
+
+    log_integration(
+        IntegrationLog.Source.PRINT,
+        IntegrationLog.Level.INFO,
+        f'הושלם מדוכן: {order.order_number}',
+        order=order,
+        details={'bytes': len(pdf_bytes), 'kiosk': _kiosk.name if _kiosk else None},
+    )
+    return Response({
+        'status': 'ok',
+        'jobId': job.id,
+        'orderId': order.id,
+        'orderNumber': order.order_number,
+        'completed': True,
+    })

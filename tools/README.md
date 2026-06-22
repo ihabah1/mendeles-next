@@ -1,18 +1,29 @@
 # כלי הדפסה וסריקה — Mandeles
 
-## kiosk_app.py
+## kiosk_app.py + kiosk_api_client.py
 
-התחברות דוכן — אימייל+סיסמה (מאדמין → דוכנים) → `apiKey` ל-header `x-api-key`.
+תוכנת דוכן — התחברות, משיכת הזמנות, סריקה.
+
+**תיקון ל-GUI הקיים:** העתק `kiosk_api_client.py` לתיקיית `servers/` והחלף את `class KioskAPI` + `_login`:
+
+```python
+from kiosk_api_client import KioskAPI, kiosk_login
+
+# _login:
+data = kiosk_login(site, email, pwd)
+api = KioskAPI(site, data["apiKey"])
+info = data.get("kiosk") or data
+```
+
+- URL: `/django-api/kiosk/login/` (לא `/api/kiosk/login`)
+- Header: `x-api-key` (לא רק `x-kiosk-key`)
+- הסר `verify=False` — גורם ל-InsecureRequestWarning
+- שגיאות: השדה `detail` (לא `error`)
 
 ```bash
 pip install requests
 python tools/kiosk_app.py
 ```
-
-קובץ הגדרות: `kiosk_config.json` — `api_url`, `email`, `password`.  
-אחרי התחברות מוצלחת נשמר `api_key` בקובץ.
-
-> **אזהרת InsecureRequestWarning** — מופיעה אם בקוד יש `verify=False`. הסר את זה; השתמש ב-HTTPS רגיל.
 
 ---
 
