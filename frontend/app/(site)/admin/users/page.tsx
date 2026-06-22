@@ -1,9 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Nav from "@/components/Nav";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import AdminNavBadge from "@/components/admin/AdminNavBadge";
 import { useAdminNavAlerts } from "@/hooks/useAdminNavAlerts";
@@ -40,57 +37,45 @@ const USER_SECTIONS = [
 ];
 
 export default function AdminUsersPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <UsersHubInner />
-    </ProtectedRoute>
-  );
-}
-
-function UsersHubInner() {
   const { badgeFor } = useAdminNavAlerts("users");
 
   return (
-    <>
-      <Nav />
-      <div className="admin-page-wrap">
-        <AdminNavTabs active="users" />
-        <main id="admin-main" className="admin-main">
-          <AdminHubSubNav hub="users" />
-          <h1 className="admin-page-title" style={{ marginBottom: 8 }}>
-            ניהול משתמשים
-          </h1>
-          <p
-            style={{
-              color: "var(--text2)",
-              fontSize: ".82rem",
-              marginBottom: 20,
-              lineHeight: 1.6,
-            }}
-          >
-            הרשאות, יתרות ארנק, הודעות ללקוחות ופניות תמיכה — הכל במקום אחד.
-          </p>
-          <nav className="admin-quick-nav" aria-label="אזורי ניהול משתמשים">
-            <ul className="admin-quick-nav-grid">
-              {USER_SECTIONS.map((item) => {
-                const badge = badgeFor(item.alertKey);
-                return (
-                  <li key={item.href}>
-                    <Link href={item.href} className="admin-quick-card">
-                      <AdminNavBadge count={badge} />
-                      <span className="admin-quick-icon" aria-hidden>
-                        {item.icon}
-                      </span>
-                      <span className="admin-quick-title">{item.title}</span>
-                      <span className="admin-quick-desc">{item.desc}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </main>
-      </div>
-    </>
+    <div className="admin-page-wrap">
+      <main id="admin-main" className="admin-main">
+        <AdminHubSubNav hub="users" />
+        <h1 className="admin-page-title" style={{ marginBottom: 8 }}>
+          ניהול משתמשים
+        </h1>
+        <p
+          style={{
+            color: "var(--text2)",
+            fontSize: ".82rem",
+            marginBottom: 20,
+            lineHeight: 1.6,
+          }}
+        >
+          הרשאות, יתרות ארנק, הודעות ללקוחות ופניות תמיכה — הכל במקום אחד.
+        </p>
+        <nav className="admin-quick-nav" aria-label="אזורי ניהול משתמשים">
+          <ul className="admin-quick-nav-grid">
+            {USER_SECTIONS.map((item) => {
+              const badge = badgeFor(item.alertKey);
+              return (
+                <li key={item.href}>
+                  <Link href={item.href} className="admin-quick-card">
+                    <AdminNavBadge count={badge} />
+                    <span className="admin-quick-icon" aria-hidden>
+                      {item.icon}
+                    </span>
+                    <span className="admin-quick-title">{item.title}</span>
+                    <span className="admin-quick-desc">{item.desc}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </main>
+    </div>
   );
 }

@@ -3,10 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import DocFilterChips, { type TriFilter } from "@/components/admin/DocFilterChips";
 import OrderFormPreviewModal from "@/components/admin/OrderFormPreviewModal";
@@ -212,9 +209,7 @@ export function PrintQueuePageInner({
 
   return (
     <>
-      <Nav />
       <main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px" }}>
-        <AdminNavTabs active="orders" />
         <AdminHubSubNav hub="orders" />
         <div
           style={{
@@ -408,11 +403,9 @@ export function PrintQueuePageInner({
 
 export default function AdminPrintQueuePage() {
   return (
-    <ProtectedRoute adminOnly>
-      <Suspense fallback={<p style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>טוען תור הדפסה...</p>}>
-        <PrintQueuePageInner variant="queue" />
-      </Suspense>
-    </ProtectedRoute>
+    <Suspense fallback={<p style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>טוען תור הדפסה...</p>}>
+      <PrintQueuePageInner variant="queue" />
+    </Suspense>
   );
 }
 

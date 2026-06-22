@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { extractApiError } from "@/lib/api/client";
 import { balanceAdminService } from "@/lib/api/balance-admin";
@@ -15,11 +12,7 @@ import {
 } from "@/lib/api/permissions-admin";
 
 export default function AdminPermissionsPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <PermissionsPageInner />
-    </ProtectedRoute>
-  );
+  return <PermissionsPageInner />;
 }
 
 function PermissionsPageInner() {
@@ -123,9 +116,7 @@ function PermissionsPageInner() {
 
   return (
     <>
-      <Nav />
       <div className="page-wrap" style={{ maxWidth: 960 }}>
-        <AdminNavTabs active="users" />
         <AdminHubSubNav hub="users" />
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem", margin: "0 0 16px", color: "var(--cream)" }}>
           🔐 מתן הרשאות

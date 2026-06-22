@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import {
   AdminAlert,
@@ -10,7 +8,6 @@ import {
   AdminRefreshButton,
   AdminShell,
 } from "@/components/admin/AdminUI";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import {
   balanceAdminService,
@@ -18,11 +15,7 @@ import {
 } from "@/lib/api/balance-admin";
 
 export default function AdminBalancePage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <BalancePageInner />
-    </ProtectedRoute>
-  );
+  return <BalancePageInner />;
 }
 
 function BalancePageInner() {
@@ -100,9 +93,7 @@ function BalancePageInner() {
 
   return (
     <>
-      <Nav />
       <AdminShell maxWidth={960}>
-        <AdminNavTabs active="users" />
         <AdminHubSubNav hub="users" />
         <AdminPageHeader
           title="ניהול יתרות"

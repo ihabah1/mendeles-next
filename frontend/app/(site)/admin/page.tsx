@@ -2,10 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import Nav from "@/components/Nav";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
-import AdminQuickNav from "@/components/admin/AdminQuickNav";
 import { AdminStatCard, AdminStatGrid } from "@/components/admin/AdminUI";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService } from "@/lib/api/admin";
@@ -22,11 +18,7 @@ interface Stats {
 }
 
 export default function AdminPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <AdminPageInner />
-    </ProtectedRoute>
-  );
+  return <AdminPageInner />;
 }
 
 function AdminPageInner() {
@@ -207,7 +199,6 @@ function AdminPageInner() {
 
   return (
     <>
-      <Nav />
       {toast && (
         <div
           role="status"
@@ -218,9 +209,7 @@ function AdminPageInner() {
         </div>
       )}
       <div className="admin-page-wrap">
-        <AdminNavTabs active="dashboard" />
         <main id="admin-main" className="admin-main">
-          <AdminQuickNav current="dashboard" />
           <h1 className="admin-page-title" style={{ marginBottom: 20 }}>
             דשבורד אדמין
           </h1>

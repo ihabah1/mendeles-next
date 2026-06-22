@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import {
   AdminAlert,
   AdminDataTable,
@@ -17,7 +15,6 @@ import {
   AdminToolbar,
   AdminTwoCol,
 } from "@/components/admin/AdminUI";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import {
   monitoringAdminService,
@@ -59,11 +56,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label?: string }) {
 }
 
 export default function AdminMonitoringPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <MonitoringPageInner />
-    </ProtectedRoute>
-  );
+  return <MonitoringPageInner />;
 }
 
 function MonitoringPageInner() {
@@ -109,9 +102,7 @@ function MonitoringPageInner() {
 
   return (
     <>
-      <Nav />
       <AdminShell>
-        <AdminNavTabs active="monitoring" />
         <AdminPageHeader
           title="ניטור תשתית"
           description="אוטומציה יומית, קבצי מקור, הגרלות וזכייה, תנועה באתר ושירותים."

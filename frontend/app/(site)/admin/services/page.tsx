@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import {
   AdminAlert,
   AdminLoading,
@@ -10,17 +8,12 @@ import {
   AdminRefreshButton,
   AdminShell,
 } from "@/components/admin/AdminUI";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import { serviceFlagsApi, type ServiceFlag } from "@/lib/api/serviceFlags";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 
 export default function AdminServicesPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <AdminServicesInner />
-    </ProtectedRoute>
-  );
+  return <AdminServicesInner />;
 }
 
 function AdminServicesInner() {
@@ -70,9 +63,7 @@ function AdminServicesInner() {
 
   return (
     <>
-      <Nav />
       <AdminShell maxWidth={720}>
-        <AdminNavTabs active="services" />
         <AdminPageHeader
           title="ניהול שירותים"
           description="הפעלה וכיבוי של מודולים במערכת. שינויים נשמרים מיד; חלק מהדגלים דורשים הפעלה מחדש של השרת."

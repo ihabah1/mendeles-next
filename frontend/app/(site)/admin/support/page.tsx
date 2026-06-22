@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdminHubSubNav from "@/components/admin/AdminHubSubNav";
 import {
   AdminAlert,
@@ -14,7 +12,6 @@ import {
   AdminTabBar,
   AdminTabPanel,
 } from "@/components/admin/AdminUI";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import { monitoringAdminService, type ChatInquiry } from "@/lib/api/monitoring-admin";
 import { supportAdminService, type SupportRequest } from "@/lib/api/support-admin";
@@ -28,11 +25,7 @@ function formatDate(iso: string): string {
 }
 
 export default function AdminSupportPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <SupportPageInner />
-    </ProtectedRoute>
-  );
+  return <SupportPageInner />;
 }
 
 function SupportPageInner() {
@@ -94,9 +87,7 @@ function SupportPageInner() {
 
   return (
     <>
-      <Nav />
       <AdminShell maxWidth={960}>
-        <AdminNavTabs active="users" />
         <AdminHubSubNav hub="users" />
         <AdminPageHeader
           title="פניות צ׳אט"

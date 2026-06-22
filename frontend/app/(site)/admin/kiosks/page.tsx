@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Nav from "@/components/Nav";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import {
   AdminAlert,
   AdminLoading,
@@ -10,7 +8,6 @@ import {
   AdminRefreshButton,
   AdminShell,
 } from "@/components/admin/AdminUI";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
 import {
   kiosksAdminService,
@@ -19,11 +16,7 @@ import {
 } from "@/lib/api/kiosks-admin";
 
 export default function AdminKiosksPage() {
-  return (
-    <ProtectedRoute adminOnly>
-      <KiosksPageInner />
-    </ProtectedRoute>
-  );
+  return <KiosksPageInner />;
 }
 
 function KiosksPageInner() {
@@ -143,9 +136,7 @@ function KiosksPageInner() {
 
   return (
     <>
-      <Nav />
       <AdminShell maxWidth={980}>
-        <AdminNavTabs active="kiosks" />
         <AdminPageHeader
           title="דוכנים (קיוסק)"
           description="יצירת משתמשי תוכנת הדפסה. בעל הדוכן מתחבר ב-POST /api/kiosk/login עם אימייל+סיסמה ומקבל apiKey."

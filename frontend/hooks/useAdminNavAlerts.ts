@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AdminTabId } from "@/components/admin/AdminNavTabs";
+import type { AdminTabId } from "@/lib/admin-nav";
 import api from "@/lib/api/client";
 
 const ACK_KEY = "mandeles-admin-nav-ack";

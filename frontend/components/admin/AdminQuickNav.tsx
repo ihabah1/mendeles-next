@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import type { AdminTabId } from "@/components/admin/AdminNavTabs";
+import { usePathname } from "next/navigation";
+import type { AdminTabId } from "@/lib/admin-nav";
+import { adminTabFromPath } from "@/lib/admin-nav";
 import AdminNavBadge from "@/components/admin/AdminNavBadge";
+import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 import { useAdminNavAlerts } from "@/hooks/useAdminNavAlerts";
 
 type QuickItem = {
@@ -59,11 +62,25 @@ const ITEMS: QuickItem[] = [
 ];
 
 export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
-  const { badgeFor } = useAdminNavAlerts(current);
+  const pathname = usePathname() ?? "";
+  const active = current ?? adminTabFromPath(pathname);
+  const backendOrigin = useBackendOrigin();
+  const djangoAdminUrl = `${backendOrigin}/admin/`;
+  const { badgeFor } = useAdminNavAlerts(active);
 
   return (
-    <nav className="admin-quick-nav" aria-label="קיצורי דרך לניהול">
-      <h2 className="admin-quick-nav-heading">כל אזורי הניהול</h2>
+    <nav className="admin-quick-nav admin-quick-nav--toolbar" aria-label="קיצורי דרך לניהול">
+      <div className="admin-quick-nav-head">
+        <h2 className="admin-quick-nav-heading">כל אזורי הניהול</h2>
+        <a
+          href={djangoAdminUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="admin-quick-nav-django"
+        >
+          Django ↗
+        </a>
+      </div>
       <ul className="admin-quick-nav-grid">
         {ITEMS.map((item) => {
           const badge = badgeFor(item.id);
@@ -71,8 +88,8 @@ export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
             <li key={item.id}>
               <Link
                 href={item.href}
-                className={`admin-quick-card${current === item.id ? " admin-quick-card--active" : ""}`}
-                aria-current={current === item.id ? "page" : undefined}
+                className={`admin-quick-card${active === item.id ? " admin-quick-card--active" : ""}`}
+                aria-current={active === item.id ? "page" : undefined}
               >
                 <AdminNavBadge count={badge} />
                 <span className="admin-quick-icon" aria-hidden>
