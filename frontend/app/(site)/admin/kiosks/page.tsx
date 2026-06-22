@@ -12,7 +12,11 @@ import {
 } from "@/components/admin/AdminUI";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { extractApiError } from "@/lib/api/client";
-import { kiosksAdminService, type KioskRecord } from "@/lib/api/kiosks-admin";
+import {
+  kiosksAdminService,
+  type KioskRecord,
+  type KioskSiteUser,
+} from "@/lib/api/kiosks-admin";
 
 export default function AdminKiosksPage() {
   return (
@@ -24,6 +28,7 @@ export default function AdminKiosksPage() {
 
 function KiosksPageInner() {
   const [kiosks, setKiosks] = useState<KioskRecord[]>([]);
+  const [siteUsers, setSiteUsers] = useState<KioskSiteUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -31,18 +36,25 @@ function KiosksPageInner() {
   const [message, setMessage] = useState("");
 
   const [name, setName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
+  const [pricePerTable, setPricePerTable] = useState("3");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await kiosksAdminService.list();
-      setKiosks(res.kiosks);
+      const [kioskRes, usersRes] = await Promise.all([
+        kiosksAdminService.list(),
+        kiosksAdminService.listSiteUsers(),
+      ]);
+      setKiosks(kioskRes.kiosks);
+      setSiteUsers(usersRes.users);
     } catch (e) {
-      setError(extractApiError(e, "שגיאה בטעינת דוכנים"));
+      setError(extractApiError(e, "שגיאה בטעינה"));
     } finally {
       setLoading(false);
     }
@@ -57,18 +69,30 @@ function KiosksPageInner() {
     setSaving(true);
     setError("");
     setMessage("");
+    const price = parseFloat(pricePerTable.replace(",", "."));
+    if (Number.isNaN(price) || price < 0) {
+      setError("מחיר לטבלה לא תקין");
+      setSaving(false);
+      return;
+    }
     try {
       const res = await kiosksAdminService.create({
         name: name.trim(),
+        ownerName: ownerName.trim(),
         email: email.trim(),
         password,
         location: location.trim(),
+        phone: phone.trim(),
+        pricePerTable: price,
       });
       setKiosks((prev) => [...prev, res.kiosk].sort((a, b) => a.name.localeCompare(b.name, "he")));
       setName("");
+      setOwnerName("");
       setEmail("");
+      setPhone("");
       setPassword("");
       setLocation("");
+      setPricePerTable("3");
       setMessage(res.detail);
     } catch (err) {
       setError(extractApiError(err, "שגיאה ביצירת דוכן"));
@@ -82,7 +106,7 @@ function KiosksPageInner() {
     setError("");
     setMessage("");
     try {
-      const res = await kiosksAdminService.toggle(kiosk.id, !kiosk.isActive);
+      const res = await kiosksAdminService.update(kiosk.id, { isActive: !kiosk.isActive });
       setKiosks((prev) => prev.map((k) => (k.id === res.kiosk.id ? res.kiosk : k)));
       setMessage(res.detail);
     } catch (err) {
@@ -104,76 +128,30 @@ function KiosksPageInner() {
   return (
     <>
       <Nav />
-      <AdminShell maxWidth={900}>
+      <AdminShell maxWidth={980}>
         <AdminNavTabs active="kiosks" />
         <AdminPageHeader
-          title="דוכנים"
-          description="יצירת דוכנים לתוכנת הקiosk. בעל הדוכן מתחבר בתוכנה עם אימייל וסיסמה — ומקבל מפתח API."
+          title="דוכנים (קיוסק)"
+          description="יצירת משתמשי תוכנת הדפסה. בעל הדוכן מתחבר ב-POST /api/kiosk/login עם אימייל+סיסמה ומקבל apiKey."
           actions={<AdminRefreshButton onClick={load} loading={loading} />}
         />
 
         {error && <AdminAlert type="error">{error}</AdminAlert>}
         {message && <AdminAlert type="success">{message}</AdminAlert>}
 
-        <section
-          style={{
-            background: "rgba(26,45,66,.85)",
-            border: "1px solid var(--navy-b)",
-            borderRadius: 10,
-            padding: "16px 18px",
-            marginBottom: 20,
-          }}
-        >
-          <h2 style={{ margin: "0 0 12px", fontSize: ".95rem", color: "var(--cream)" }}>
-            דוכן חדש
-          </h2>
+        <section style={panelStyle}>
+          <h2 style={sectionTitle}>דוכן חדש</h2>
           <form onSubmit={createKiosk} style={{ display: "grid", gap: 10 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".75rem" }}>
-                <span style={{ color: "var(--muted)" }}>שם דוכן</span>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={inputStyle}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".75rem" }}>
-                <span style={{ color: "var(--muted)" }}>מיקום</span>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="עיר / כתובת"
-                  style={inputStyle}
-                />
-              </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <Field label="שם דוכן" value={name} onChange={setName} required />
+              <Field label="שם בעלים" value={ownerName} onChange={setOwnerName} />
+              <Field label="מיקום" value={location} onChange={setLocation} placeholder="עיר / כתובת" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".75rem" }}>
-                <span style={{ color: "var(--muted)" }}>אימייל (התחברות בתוכנה)</span>
-                <input
-                  type="email"
-                  required
-                  autoComplete="off"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyle}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".75rem" }}>
-                <span style={{ color: "var(--muted)" }}>סיסמה (לפחות 6 תווים)</span>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={inputStyle}
-                />
-              </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
+              <Field label="אימייל (התחברות)" value={email} onChange={setEmail} type="email" required />
+              <Field label="טלפון" value={phone} onChange={setPhone} />
+              <Field label="סיסמה" value={password} onChange={setPassword} type="password" required minLength={6} />
+              <Field label="מחיר לטבלה ₪" value={pricePerTable} onChange={setPricePerTable} />
             </div>
             <div>
               <button type="submit" disabled={saving} style={primaryBtnStyle}>
@@ -183,72 +161,174 @@ function KiosksPageInner() {
           </form>
         </section>
 
-        {loading ? (
-          <AdminLoading />
-        ) : kiosks.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: ".85rem" }}>אין דוכנים עדיין.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {kiosks.map((kiosk) => (
-              <div
-                key={kiosk.id}
-                style={{
-                  background: "rgba(26,45,66,.85)",
-                  border: "1px solid var(--navy-b)",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  opacity: kiosk.isActive ? 1 : 0.65,
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: "var(--cream)", fontSize: ".88rem" }}>
-                    {kiosk.name}
-                    {!kiosk.isActive && (
-                      <span style={{ color: "#e87070", fontWeight: 500, marginInlineStart: 8 }}>
-                        (מושבת)
-                      </span>
+        <section style={{ ...panelStyle, marginBottom: 20 }}>
+          <h2 style={sectionTitle}>משתמשי קיוסק ({kiosks.length})</h2>
+          <p style={{ color: "var(--muted)", fontSize: ".72rem", margin: "0 0 12px" }}>
+            חשבונות להתחברות מתוכנת ההדפסה · API: GET/POST /api/admin/kiosks · PATCH /api/admin/kiosks/{"{id}"}
+          </p>
+
+          {loading ? (
+            <AdminLoading />
+          ) : kiosks.length === 0 ? (
+            <p style={{ color: "var(--muted)", fontSize: ".85rem" }}>אין דוכנים עדיין.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    {["דוכן", "בעלים", "אימייל", "טלפון", "מיקום", "₪/טבלה", "מפתח", "התחברות", "סטטוס", ""].map(
+                      (h) => (
+                        <th key={h} style={thStyle}>
+                          {h}
+                        </th>
+                      ),
                     )}
-                  </div>
-                  <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>
-                    {kiosk.email}
-                    {kiosk.location ? ` · ${kiosk.location}` : ""}
-                  </div>
-                  <div style={{ color: "var(--muted)", fontSize: ".68rem", marginTop: 4 }}>
-                    מפתח API: {kiosk.apiKeyHint ?? "—"} · התחברות אחרונה: {formatDate(kiosk.lastLoginAt)}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={togglingId === kiosk.id}
-                  onClick={() => toggleKiosk(kiosk)}
-                  aria-pressed={kiosk.isActive}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: 88,
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    border: "none",
-                    cursor: togglingId === kiosk.id ? "wait" : "pointer",
-                    fontWeight: 700,
-                    fontSize: ".75rem",
-                    background: kiosk.isActive ? "rgba(232,112,112,.2)" : "rgba(112,232,160,.2)",
-                    color: kiosk.isActive ? "#e87070" : "#70e8a0",
-                  }}
-                >
-                  {togglingId === kiosk.id ? "…" : kiosk.isActive ? "השבת" : "הפעל"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {kiosks.map((kiosk) => (
+                    <tr key={kiosk.id} style={{ opacity: kiosk.isActive ? 1 : 0.6 }}>
+                      <td style={tdStyle}>{kiosk.name}</td>
+                      <td style={tdStyle}>{kiosk.ownerName || "—"}</td>
+                      <td style={tdStyle}>{kiosk.email}</td>
+                      <td style={tdStyle}>{kiosk.phone || "—"}</td>
+                      <td style={tdStyle}>{kiosk.location || "—"}</td>
+                      <td style={tdStyle}>₪{kiosk.pricePerTable.toFixed(2)}</td>
+                      <td style={tdStyle}>{kiosk.apiKeyHint ?? "—"}</td>
+                      <td style={tdStyle}>{formatDate(kiosk.lastLoginAt)}</td>
+                      <td style={tdStyle}>
+                        <span style={{ color: kiosk.isActive ? "var(--green)" : "#e87070" }}>
+                          {kiosk.isActive ? "פעיל" : "מושבת"}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        <button
+                          type="button"
+                          disabled={togglingId === kiosk.id}
+                          onClick={() => toggleKiosk(kiosk)}
+                          style={toggleBtn(kiosk.isActive)}
+                        >
+                          {togglingId === kiosk.id ? "…" : kiosk.isActive ? "השבת" : "הפעל"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section style={panelStyle}>
+          <h2 style={sectionTitle}>לקוחות האתר ({siteUsers.length})</h2>
+          <p style={{ color: "var(--muted)", fontSize: ".72rem", margin: "0 0 12px" }}>
+            משתמשים רשומים באתר — לידיעה בלבד (לא חשבונות קיוסק)
+          </p>
+          {loading ? (
+            <AdminLoading />
+          ) : siteUsers.length === 0 ? (
+            <p style={{ color: "var(--muted)", fontSize: ".85rem" }}>אין לקוחות.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    {["שם", "אימייל", "טלפון", "תפקיד", "הצטרף"].map((h) => (
+                      <th key={h} style={thStyle}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {siteUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td style={tdStyle}>{u.displayName || "—"}</td>
+                      <td style={tdStyle}>{u.email}</td>
+                      <td style={tdStyle}>{u.phone || "—"}</td>
+                      <td style={tdStyle}>{u.role}</td>
+                      <td style={tdStyle}>{formatDate(u.dateJoined)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </AdminShell>
     </>
   );
 }
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required,
+  minLength,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  minLength?: number;
+  placeholder?: string;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".75rem" }}>
+      <span style={{ color: "var(--muted)" }}>{label}</span>
+      <input
+        type={type}
+        required={required}
+        minLength={minLength}
+        placeholder={placeholder}
+        autoComplete={type === "password" ? "new-password" : "off"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={inputStyle}
+      />
+    </label>
+  );
+}
+
+const panelStyle: React.CSSProperties = {
+  background: "rgba(26,45,66,.85)",
+  border: "1px solid var(--navy-b)",
+  borderRadius: 10,
+  padding: "16px 18px",
+  marginBottom: 16,
+};
+
+const sectionTitle: React.CSSProperties = {
+  margin: "0 0 12px",
+  fontSize: ".95rem",
+  color: "var(--cream)",
+};
+
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: ".75rem",
+};
+
+const thStyle: React.CSSProperties = {
+  textAlign: "right",
+  padding: "8px 10px",
+  borderBottom: "1px solid var(--navy-b)",
+  color: "var(--muted)",
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "10px",
+  borderBottom: "1px solid rgba(255,255,255,.06)",
+  color: "var(--cream)",
+  verticalAlign: "middle",
+};
 
 const inputStyle: React.CSSProperties = {
   padding: "8px 10px",
@@ -269,3 +349,16 @@ const primaryBtnStyle: React.CSSProperties = {
   fontSize: ".82rem",
   cursor: "pointer",
 };
+
+function toggleBtn(active: boolean): React.CSSProperties {
+  return {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: ".72rem",
+    background: active ? "rgba(232,112,112,.2)" : "rgba(112,232,160,.2)",
+    color: active ? "#e87070" : "#70e8a0",
+  };
+}

@@ -38,7 +38,7 @@ class PrintAgentHeartbeatAdmin(admin.ModelAdmin):
 
 @admin.register(Kiosk)
 class KioskAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'location', 'is_active', 'last_login_at', 'created_at')
+    list_display = ('name', 'owner_name', 'email', 'phone', 'location', 'price_per_table', 'is_active', 'last_login_at', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('name', 'email', 'location')
     readonly_fields = ('api_key', 'password_hash', 'last_login_at', 'created_at', 'updated_at')

@@ -451,11 +451,14 @@ class Kiosk(models.Model):
     """Physical booth agent — logs in via email+password, receives API key."""
 
     name = models.CharField('שם דוכן', max_length=120)
+    owner_name = models.CharField('שם בעלים', max_length=120, blank=True)
+    location = models.CharField('מיקום', max_length=200, blank=True)
+    phone = models.CharField('טלפון', max_length=32, blank=True)
     email = models.EmailField('אימייל', unique=True)
     password_hash = models.CharField(max_length=128)
-    location = models.CharField('מיקום', max_length=200, blank=True)
     api_key = models.CharField(max_length=64, unique=True, blank=True)
     is_active = models.BooleanField('פעיל', default=True)
+    price_per_table = models.DecimalField('מחיר לטבלה ₪', max_digits=8, decimal_places=2, default=3)
     last_login_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
