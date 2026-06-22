@@ -1,29 +1,22 @@
 # כלי הדפסה וסריקה — Mandeles
 
-## kiosk_app.py + kiosk_api_client.py
+## kiosk_booth_app.py (GUI מלא — מומלץ)
 
-תוכנת דוכן — התחברות, משיכת הזמנות, סריקה.
-
-**תיקון ל-GUI הקיים:** העתק `kiosk_api_client.py` לתיקיית `servers/` והחלף את `class KioskAPI` + `_login`:
-
-```python
-from kiosk_api_client import KioskAPI, kiosk_login
-
-# _login:
-data = kiosk_login(site, email, pwd)
-api = KioskAPI(site, data["apiKey"])
-info = data.get("kiosk") or data
-```
-
-- URL: `/django-api/kiosk/login/` (לא `/api/kiosk/login`)
-- Header: `x-api-key` (לא רק `x-kiosk-key`)
-- הסר `verify=False` — גורם ל-InsecureRequestWarning
-- שגיאות: השדה `detail` (לא `error`)
+תוכנת דוכן Windows עם ממשק גרפי: כניסה, תור הזמנות, הדפסה, סריקה.
 
 ```bash
-pip install requests
-python tools/kiosk_app.py
+pip install requests pillow pywin32
 ```
+
+העתק לתיקיית `servers/`:
+- `tools/kiosk_booth_app.py` → `kiosk_booth_app.py` (או `kiosk_app.py`)
+- `tools/pais-form-cells.json` → `pais-form-cells.json`
+
+```bash
+python kiosk_booth_app.py
+```
+
+במסך הכניסה: **אימייל + סיסמה** מהאדמין (דוכנים). לא צריך להזין מפתח ידנית.
 
 ---
 
