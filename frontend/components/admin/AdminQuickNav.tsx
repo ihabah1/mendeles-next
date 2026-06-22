@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import type { AdminTabId } from "@/components/admin/AdminNavTabs";
+import AdminNavBadge from "@/components/admin/AdminNavBadge";
+import { useAdminNavAlerts } from "@/hooks/useAdminNavAlerts";
 
 type QuickItem = {
   id: AdminTabId;
@@ -25,17 +27,22 @@ const ITEMS: QuickItem[] = [
 ];
 
 export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
+  const { badgeFor } = useAdminNavAlerts(current);
+
   return (
     <nav className="admin-quick-nav" aria-label="קיצורי דרך לניהול">
       <h2 className="admin-quick-nav-heading">כל אזורי הניהול</h2>
       <ul className="admin-quick-nav-grid">
-        {ITEMS.map((item) => (
+        {ITEMS.map((item) => {
+          const badge = badgeFor(item.id);
+          return (
           <li key={item.id}>
             <Link
               href={item.href}
               className={`admin-quick-card${current === item.id ? " admin-quick-card--active" : ""}`}
               aria-current={current === item.id ? "page" : undefined}
             >
+              <AdminNavBadge count={badge} />
               <span className="admin-quick-icon" aria-hidden>
                 {item.icon}
               </span>
@@ -43,7 +50,8 @@ export default function AdminQuickNav({ current }: { current?: AdminTabId }) {
               <span className="admin-quick-desc">{item.desc}</span>
             </Link>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </nav>
   );

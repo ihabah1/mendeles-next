@@ -248,7 +248,7 @@ def submit_order(request):
         'order_number': order_number,
         'tables_count': len(sets),
         'total_ils': float(total),
-        'message': f'ההזמנה {order_number} התקבלה ונכנסה לתור הדפסה!',
+        'message': f'ההזמנה {order_number} התקבלה ונשלחה לספול ההדפסה!',
     })
 
 

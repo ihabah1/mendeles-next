@@ -344,3 +344,64 @@ def admin_check_wins(request):
     except ValueError as exc:
         return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([IsStaffUser])
+def admin_nav_alerts(request):
+    """GET /api/admin/nav-alerts/ — badge counts for admin quick-nav tiles."""
+    from datetime import timedelta
+
+    from admin_panel.portal.models import ActionLog, CustomerMessage, Kiosk
+
+    from api.services.combo_pool import approved_combos_json_stats
+    from api.services.print_queue_service import queue_counts
+
+    since = timezone.now() - timedelta(hours=48)
+    qcounts = queue_counts()
+    today = timezone.localdate()
+
+    pending_orders = Order.objects.filter(
+        status__in=[Order.Status.PENDING, Order.Status.PAID],
+    ).count()
+    print_queue = (
+        qcounts.get('queued', 0)
+        + qcounts.get('approved', 0)
+        + qcounts.get('failed', 0)
+    )
+    awaiting_scan = qcounts.get('awaiting_scan', 0)
+    unread_messages = CustomerMessage.objects.filter(is_read=False).count()
+    support_new = ActionLog.objects.filter(
+        event='support.chat_request',
+        created_at__gte=since,
+    ).count()
+    new_users_today = _managed_users().filter(date_joined__date=today).count()
+
+    monitoring = 0
+    try:
+        if approved_combos_json_stats().get('pendingImport'):
+            monitoring += 1
+    except OSError:
+        pass
+    integration_errors = IntegrationLog.objects.filter(
+        level=IntegrationLog.Level.ERROR,
+        created_at__gte=since,
+    ).count()
+    monitoring += min(integration_errors, 9)
+
+    kiosks_new = Kiosk.objects.filter(is_active=True, last_login_at__isnull=True).count()
+
+    return Response({
+        'sections': {
+            'dashboard': {'count': pending_orders},
+            'scan': {'count': awaiting_scan},
+            'print-queue': {'count': print_queue},
+            'permissions': {'count': new_users_today},
+            'balance': {'count': 0},
+            'messages': {'count': unread_messages},
+            'support': {'count': support_new},
+            'monitoring': {'count': monitoring},
+            'services': {'count': 0},
+            'kiosks': {'count': kiosks_new},
+        },
+    })

@@ -98,6 +98,10 @@ export default function PrintControlPanel({ config, onUpdated }: Props) {
           <div className="admin-kv-label">כניסה אוטומטית לתור</div>
           <div className="admin-kv-value">{config.autoEnqueue ? "פעיל" : "כבוי"}</div>
         </div>
+        <div className="admin-kv">
+          <div className="admin-kv-label">אישור אוטומטי לספול</div>
+          <div className="admin-kv-value">{config.autoApprove !== false ? "פעיל" : "כבוי — נדרש אישור צוות"}</div>
+        </div>
       </div>
 
       <div style={{ marginBottom: 14 }}>

@@ -74,6 +74,7 @@ export interface PrintControlConfig {
   payloadModes: Array<{ value: string; label: string }>;
   printServerConfigured: boolean;
   autoEnqueue: boolean;
+  autoApprove: boolean;
   agentEndpoints: {
     heartbeat: string;
     pull: string;

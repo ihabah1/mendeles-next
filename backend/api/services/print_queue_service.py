@@ -33,6 +33,20 @@ def auto_enqueue_enabled() -> bool:
     return bool(raw)
 
 
+def auto_approve_enabled() -> bool:
+    """When true, new queue jobs skip manual staff approval and go straight to the print spool."""
+    raw = getattr(settings, 'PRINT_QUEUE_AUTO_APPROVE', True)
+    if isinstance(raw, str):
+        return raw.strip().lower() not in ('0', 'false', 'no', 'off')
+    return bool(raw)
+
+
+def _maybe_auto_approve(job: PrintJob, user=None) -> PrintJob:
+    if auto_approve_enabled() and job.status == PrintJob.Status.QUEUED:
+        return approve_job(job, user)
+    return job
+
+
 def agent_is_online(agent_id: str = 'default') -> bool:
     hb = PrintAgentHeartbeat.objects.filter(agent_id=agent_id).first()
     if not hb or not hb.last_seen_at:
@@ -160,6 +174,7 @@ def enqueue_order(order: Order, *, refresh_payload: bool = True) -> PrintJob:
                 job.status = PrintJob.Status.QUEUED
                 job.last_error = ''
             job.save()
+    job = _maybe_auto_approve(job)
     logger.info('Print job enqueued order=%s status=%s', order.order_number, job.status)
     return job
 
@@ -201,7 +216,7 @@ def retry_job(job: PrintJob) -> PrintJob:
     job.claimed_by_agent = ''
     job.attempts = 0
     job.save()
-    return job
+    return _maybe_auto_approve(job)
 
 
 def claim_next_job(agent_id: str = 'default') -> PrintJob | None:

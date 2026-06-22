@@ -156,6 +156,7 @@ def print_control_config(*, site_base_url: str = '') -> dict:
         ],
         'printServerConfigured': print_configured(),
         'autoEnqueue': bool(getattr(settings, 'PRINT_QUEUE_AUTO_ENQUEUE', True)),
+        'autoApprove': bool(getattr(settings, 'PRINT_QUEUE_AUTO_APPROVE', True)),
         'agentEndpoints': {
             'push': f'{api_prefix}/print/push',
             'complete': f'{api_prefix}/print/complete',

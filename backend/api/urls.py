@@ -111,6 +111,7 @@ admin_patterns = [
     path('monitoring/', monitoring_views.admin_monitoring, name='admin-monitoring'),
     path('monitoring/run-daily-sync/', monitoring_views.admin_run_daily_sync, name='admin-run-daily-sync'),
     path('orders/', admin_views.admin_orders, name='admin-orders'),
+    path('nav-alerts/', admin_views.admin_nav_alerts, name='admin-nav-alerts'),
     path(
         'orders/<int:order_id>/form-preview/',
         admin_views.admin_order_form_preview,

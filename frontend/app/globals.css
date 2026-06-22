@@ -1271,6 +1271,7 @@ h2, .home-section-title { color: var(--text); }
   scrollbar-width: thin;
 }
 .admin-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1643,6 +1644,7 @@ h2, .home-section-title { color: var(--text); }
   gap: 10px;
 }
 .admin-quick-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1677,6 +1679,41 @@ h2, .home-section-title { color: var(--text); }
   font-size: .66rem;
   color: var(--muted);
   line-height: 1.45;
+}
+.admin-nav-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--rose, #e4567a);
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgba(26,45,66,.9);
+  pointer-events: none;
+}
+.admin-tab-label {
+  display: inline;
+}
+.admin-tabs-bar .admin-nav-badge {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  margin-inline-start: 6px;
+  padding: 0 4px;
+  font-size: .55rem;
+  line-height: 1;
+  vertical-align: middle;
+  box-shadow: none;
 }
 .admin-chat-card {
   padding: 0;

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AdminNavBadge from "@/components/admin/AdminNavBadge";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
+import { useAdminNavAlerts } from "@/hooks/useAdminNavAlerts";
 
 export type AdminTabId =
   | "dashboard"
@@ -47,6 +49,7 @@ export default function AdminNavTabs({ active }: { active?: AdminTabId }) {
   const backendOrigin = useBackendOrigin();
   const current = active ?? activeTabFromPath(pathname ?? "");
   const djangoAdminUrl = `${backendOrigin}/admin/`;
+  const { badgeFor } = useAdminNavAlerts(current);
 
   return (
     <div className="admin-tabs-shell">
@@ -59,7 +62,8 @@ export default function AdminNavTabs({ active }: { active?: AdminTabId }) {
             aria-current={current === tab.id ? "page" : undefined}
             title={tab.title}
           >
-            {tab.label}
+            <span className="admin-tab-label">{tab.label}</span>
+            <AdminNavBadge count={badgeFor(tab.id)} />
           </Link>
         ))}
         <a
