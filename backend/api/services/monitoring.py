@@ -17,7 +17,7 @@ from api.services.combo_pool import approved_combos_json_stats, pool_stats
 from api.services.firebase_service import firebase_config_status
 from api.services.icount_service import icount_config_status
 from api.services.integration_log import recent_integration_logs
-from api.services.pais_draw import draw_results_path, read_draw_data
+from api.services.pais_draw import PAIS_FETCH_VERSION, draw_results_path, read_draw_data
 from api.services.print_service import print_configured
 from api.services.resend_email import resend_config_status
 from api.services.sms import sms_config_status
@@ -162,6 +162,7 @@ def _empty_automation() -> dict:
     next_run_utc = _next_cron_run_utc()
     next_run_il = next_run_utc.astimezone(_israel_tz())
     return {
+        'paisFetchVersion': PAIS_FETCH_VERSION,
         'schedule': {
             'cron': CRON_SCHEDULE,
             'cronLabel': 'כל יום 05:00 UTC (07:00 שעון ישראל בקיץ / 08:00 בחורף)',
@@ -227,6 +228,7 @@ def _automation_snapshot() -> dict:
         combos_json = approved_combos_json_stats()
 
         return {
+            'paisFetchVersion': PAIS_FETCH_VERSION,
             'schedule': {
                 'cron': CRON_SCHEDULE,
                 'cronLabel': 'כל יום 05:00 UTC (07:00 שעון ישראל בקיץ / 08:00 בחורף)',

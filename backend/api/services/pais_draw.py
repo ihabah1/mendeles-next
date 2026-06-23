@@ -16,6 +16,9 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
+# Bump when fetch strategy changes — visible in admin monitoring.
+PAIS_FETCH_VERSION = 4
+
 RANK_KEYS = ['6+strong', '6', '5+strong', '5', '4+strong', '4', '3+strong', '3']
 RANK_NAMES = ['6 + חזק', '6', '5 + חזק', '5', '4 + חזק', '4', '3 + חזק', '3']
 
@@ -34,12 +37,12 @@ PAIS_HEADERS = {
     'Accept': 'text/html,application/xhtml+xml',
     'Referer': 'https://www.pais.co.il/lotto/',
 }
-PAIS_CONNECT_TIMEOUT = int(os.getenv('PAIS_CONNECT_TIMEOUT', '12'))
-PAIS_READ_TIMEOUT = int(os.getenv('PAIS_READ_TIMEOUT', '45'))
+PAIS_CONNECT_TIMEOUT = int(os.getenv('PAIS_CONNECT_TIMEOUT', '8'))
+PAIS_READ_TIMEOUT = int(os.getenv('PAIS_READ_TIMEOUT', '18'))
 PAIS_TIMEOUT = (PAIS_CONNECT_TIMEOUT, PAIS_READ_TIMEOUT)
 PAIS_PROXY_TIMEOUT = (
-    int(os.getenv('PAIS_PROXY_CONNECT_TIMEOUT', '10')),
-    int(os.getenv('PAIS_PROXY_READ_TIMEOUT', '90')),
+    int(os.getenv('PAIS_PROXY_CONNECT_TIMEOUT', '5')),
+    int(os.getenv('PAIS_PROXY_READ_TIMEOUT', '20')),
 )
 
 _SSL_CTX = ssl.create_default_context()
@@ -52,13 +55,13 @@ _pais_http: requests.Session | None = None
 
 
 def draw_results_path() -> Path:
-    for candidate in (
+    candidates = (
         Path(settings.BASE_DIR) / 'draw_results.json',
         Path(settings.BASE_DIR).parent / 'draw_results.json',
         Path(settings.BASE_DIR).parent / 'frontend' / 'draw_results.json',
-    ):
-        parent = candidate.parent
-        if parent.exists():
+    )
+    for candidate in candidates:
+        if candidate.is_file():
             return candidate
     return Path(settings.BASE_DIR) / 'draw_results.json'
 
@@ -70,10 +73,10 @@ def _get_pais_session() -> requests.Session:
         session.verify = False
         session.headers.update(PAIS_HEADERS)
         retry = Retry(
-            total=2,
-            connect=2,
-            read=2,
-            backoff_factor=0.8,
+            total=1,
+            connect=1,
+            read=1,
+            backoff_factor=0.5,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=('GET',),
         )
@@ -237,7 +240,15 @@ def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
 
     resolved_id = lottery_id or _cached_lottery_id()
 
-    if _frontend_url():
+    try:
+        result = _scrape_pais_direct(resolved_id)
+        source = 'ישיר'
+        logger.info('PAIS draw fetched via direct scrape')
+    except Exception as exc:
+        errors.append(f'ישיר: {exc}')
+        logger.warning('Direct PAIS scrape failed: %s', exc)
+
+    if result is None and _frontend_url():
         try:
             result = _fetch_via_frontend_api(resolved_id)
             source = 'פרוקסי'
@@ -245,15 +256,6 @@ def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
         except Exception as exc:
             errors.append(f'פרוקסי: {exc}')
             logger.warning('Frontend PAIS proxy failed: %s', exc)
-
-    if result is None:
-        try:
-            result = _scrape_pais_direct(resolved_id)
-            source = 'ישיר'
-            logger.info('PAIS draw fetched via direct scrape')
-        except Exception as exc:
-            errors.append(f'ישיר: {exc}')
-            logger.warning('Direct PAIS scrape failed: %s', exc)
 
     if result is None:
         cached = read_draw_data()
@@ -273,6 +275,17 @@ def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
         out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
 
     return result
+
+
+def load_draw_for_sync() -> tuple[dict, str | None]:
+    """Load draw for daily_sync — never fails when bundled/cached draw exists."""
+    try:
+        return fetch_and_save_draw(), None
+    except Exception as exc:
+        cached = read_draw_data()
+        if cached and _cached_draw_is_usable(cached):
+            return cached, f'שימוש במטמון אחרי כשל משיכה: {exc}'
+        raise
 
 
 def read_draw_data() -> dict | None:

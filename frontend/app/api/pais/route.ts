@@ -4,7 +4,7 @@ import { join } from "path";
 import axios from "axios";
 import https from "https";
 
-const PAIS_TIMEOUT_MS = Number(process.env.PAIS_FETCH_TIMEOUT_MS || "45000");
+const PAIS_TIMEOUT_MS = Number(process.env.PAIS_FETCH_TIMEOUT_MS || "20000");
 
 const client = axios.create({
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),

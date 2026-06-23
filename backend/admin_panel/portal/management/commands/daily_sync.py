@@ -11,7 +11,7 @@ from admin_panel.portal.models import AutomationLog
 
 from api.services.automation_log import log_automation
 from api.services.combo_pool import pool_stats, refresh_combo_pool_for_draw
-from api.services.pais_draw import draw_results_path, fetch_and_save_draw
+from api.services.pais_draw import draw_results_path, load_draw_for_sync
 
 
 class Command(BaseCommand):
@@ -21,12 +21,19 @@ class Command(BaseCommand):
         started = time.monotonic()
         details: dict = {}
         try:
-            draw = fetch_and_save_draw()
+            draw, draw_warning = load_draw_for_sync()
             details['draw'] = draw.get('last_draw') if draw else None
+            if draw_warning:
+                details['drawFetchWarning'] = draw_warning
             lottery_id = (details.get('draw') or {}).get('lottery_id')
+            draw_msg = f"הגרלה {lottery_id or '?'}"
+            if draw_warning:
+                draw_msg += ' (מטמון)'
+            else:
+                draw_msg += ' עודכנה מפיס'
             log_automation(
                 AutomationLog.Job.DRAW_REFRESH,
-                f"הגרלה {lottery_id or '?'} עודכנה מפיס",
+                draw_msg,
                 details=details.get('draw') or {},
             )
 
@@ -78,9 +85,12 @@ class Command(BaseCommand):
             details['csvPath'] = str(csv_path) if csv_path else None
 
             duration_ms = int((time.monotonic() - started) * 1000)
+            success_msg = 'סנכרון יומי הושלם בהצלחה'
+            if details.get('drawFetchWarning'):
+                success_msg += ' (מטמון הגרלה)'
             log_automation(
                 AutomationLog.Job.DAILY_SYNC,
-                'סנכרון יומי הושלם בהצלחה',
+                success_msg,
                 details=details,
                 duration_ms=duration_ms,
             )

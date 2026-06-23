@@ -44,16 +44,24 @@ class PaisDrawFetchTests(SimpleTestCase):
     @patch('api.services.pais_draw._scrape_pais_direct')
     @patch('api.services.pais_draw._fetch_via_frontend_api')
     @patch('api.services.pais_draw.read_draw_data', return_value=CACHED)
-    def test_prefers_frontend_proxy(self, _mock_read, mock_proxy, mock_direct):
-        mock_proxy.return_value = {**CACHED, 'updated_at': '2026-06-01T00:00:00'}
+    def test_prefers_direct_before_proxy(self, _mock_read, mock_proxy, mock_direct):
+        mock_direct.return_value = {**CACHED, 'updated_at': '2026-06-01T00:00:00'}
         with patch.object(pais_draw, 'draw_results_path') as mock_path:
             mock_file = MagicMock()
             mock_path.return_value = mock_file
             result = pais_draw.fetch_and_save_draw()
-        mock_proxy.assert_called_once()
-        mock_direct.assert_not_called()
+        mock_direct.assert_called_once()
+        mock_proxy.assert_not_called()
         mock_file.write_text.assert_called_once()
         self.assertEqual(result['last_draw']['lottery_id'], 3930)
+
+    @override_settings(FRONTEND_URL='')
+    @patch('api.services.pais_draw.fetch_and_save_draw', side_effect=RuntimeError('timeout'))
+    @patch('api.services.pais_draw.read_draw_data', return_value=CACHED)
+    def test_load_draw_for_sync_uses_cache(self, _mock_read, _mock_fetch):
+        draw, warning = pais_draw.load_draw_for_sync()
+        self.assertEqual(draw['last_draw']['lottery_id'], 3930)
+        self.assertIn('מטמון', warning or '')
 
     @override_settings(FRONTEND_URL='')
     @patch('api.services.pais_draw.read_draw_data', return_value=CACHED)
