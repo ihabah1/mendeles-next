@@ -51,7 +51,7 @@ export default function PromoTopBanner() {
       <PremiumSparkles count={20} />
 
       <div className="premium-banner-inner">
-        <PremiumCrown className="premium-banner-crown premium-banner-crown--sm" />
+        <PremiumCrown className="premium-banner-crown--sm" />
 
         <div className="premium-banner-center">
           <div className="premium-banner-brand-row">
@@ -78,7 +78,7 @@ export default function PromoTopBanner() {
           </Link>
         </div>
 
-        <PremiumDiamond className="premium-banner-diamond premium-banner-diamond--sm" />
+        <PremiumDiamond className="premium-banner-diamond--sm" />
       </div>
 
       <div className="premium-banner-controls">

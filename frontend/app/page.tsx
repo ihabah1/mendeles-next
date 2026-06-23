@@ -33,7 +33,7 @@ export default function HomePage() {
       <Nav />
       <main className="home-main">
         <HomeHero />
-        <div style={{ padding: "0 16px", maxWidth: 900, margin: "0 auto 12px" }}>
+        <div className="home-legal-top" style={{ padding: "0 16px", maxWidth: 900, margin: "0 auto 12px" }}>
           <LegalDisclaimer compact />
         </div>
         <DrawCountdown />

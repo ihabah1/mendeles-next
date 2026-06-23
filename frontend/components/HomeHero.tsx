@@ -54,7 +54,7 @@ export default function HomeHero() {
       <PremiumSparkles count={36} />
 
       <div className="premium-banner-inner premium-banner-inner--hero">
-        <PremiumCrown className="premium-banner-crown" />
+        <PremiumCrown />
 
         <div className="premium-banner-center">
           <div className="premium-banner-brand-row premium-banner-brand-row--hero">
@@ -82,7 +82,7 @@ export default function HomeHero() {
           </Link>
         </div>
 
-        <PremiumDiamond className="premium-banner-diamond" />
+        <PremiumDiamond />
       </div>
 
       <div className="premium-banner-controls premium-banner-controls--hero">

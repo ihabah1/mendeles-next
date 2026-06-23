@@ -16,6 +16,8 @@ type NavLink = {
   label: string;
   exact?: boolean;
   badge?: string;
+  /** Shown in the compact mobile header (ראשי / לוטו). */
+  mobilePrimary?: boolean;
 };
 
 export default function Nav() {
@@ -47,8 +49,8 @@ export default function Nav() {
 
   const showDevGames = canAccessDevGames(isStaff);
   const navLinks: NavLink[] = [
-    { href: "/", label: "ראשי", exact: true },
-    { href: "/lotto", label: "לוטו" },
+    { href: "/", label: "ראשי", exact: true, mobilePrimary: true },
+    { href: "/lotto", label: "לוטו", mobilePrimary: true },
     { href: "/toto", label: "טוטו" },
     ...(showDevGames ? [{ href: "/seven77", label: "777" }] : []),
     { href: "/about", label: "מידע" },
@@ -66,7 +68,7 @@ export default function Nav() {
   return (
     <>
       {!hidePromo && !isHome && <PromoTopBanner />}
-      <nav className="nav">
+      <nav className={`nav${isHome ? " nav--home" : ""}`}>
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
             <MandelesLogoMark size="sm" variant="club" />
@@ -79,7 +81,7 @@ export default function Nav() {
                 <Link
                   key={`${l.href}-${l.label}`}
                   href={l.href}
-                  className={`nav-link${isActive(l.href, l.exact) ? " active" : ""}`}
+                  className={`nav-link${l.mobilePrimary ? " nav-link--primary" : " nav-link--extra"}${isActive(l.href, l.exact) ? " active" : ""}`}
                 >
                   {l.label}
                   {l.badge ? <span className="nav-link-badge">{l.badge}</span> : null}

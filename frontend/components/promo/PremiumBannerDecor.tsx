@@ -34,8 +34,8 @@ export function PremiumSparkles({ count = 24 }: { count?: number }) {
 
 export function PremiumCrown({ className = "" }: { className?: string }) {
   return (
-    <div className={`premium-crown-wrap ${className}`.trim()} aria-hidden>
-      <svg className="premium-crown" viewBox="0 0 120 100" fill="none">
+    <div className={`premium-banner-crown-wrap ${className}`.trim()} aria-hidden>
+      <svg className="premium-banner-crown" viewBox="0 0 120 100" fill="none">
         <defs>
           <linearGradient id="crownGold" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fff4c8" />
@@ -65,8 +65,8 @@ export function PremiumCrown({ className = "" }: { className?: string }) {
 
 export function PremiumDiamond({ className = "" }: { className?: string }) {
   return (
-    <div className={`premium-diamond-wrap ${className}`.trim()} aria-hidden>
-      <svg className="premium-diamond" viewBox="0 0 90 100" fill="none">
+    <div className={`premium-banner-diamond-wrap ${className}`.trim()} aria-hidden>
+      <svg className="premium-banner-diamond" viewBox="0 0 90 100" fill="none">
         <defs>
           <linearGradient id="diamondGold" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#f0d060" />
