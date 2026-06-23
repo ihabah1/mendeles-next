@@ -74,16 +74,18 @@ export default function Nav() {
           </Link>
 
           <div className="nav-links">
-            {navLinks.map((l) => (
-              <Link
-                key={`${l.href}-${l.label}`}
-                href={l.href}
-                className={`nav-link${isActive(l.href, l.exact) ? " active" : ""}`}
-              >
-                {l.label}
-                {l.badge ? <span className="nav-link-badge">{l.badge}</span> : null}
-              </Link>
-            ))}
+            <div className="nav-links-scroll">
+              {navLinks.map((l) => (
+                <Link
+                  key={`${l.href}-${l.label}`}
+                  href={l.href}
+                  className={`nav-link${isActive(l.href, l.exact) ? " active" : ""}`}
+                >
+                  {l.label}
+                  {l.badge ? <span className="nav-link-badge">{l.badge}</span> : null}
+                </Link>
+              ))}
+            </div>
             {isAuthenticated && <ProfileNavDropdown />}
             {isStaff && (
               <Link

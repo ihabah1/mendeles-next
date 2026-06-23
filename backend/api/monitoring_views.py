@@ -1,8 +1,8 @@
 """Staff API — infrastructure monitoring dashboard."""
-import subprocess
-import sys
+import logging
+from io import StringIO
 
-from django.conf import settings
+from django.core.management import call_command
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -15,6 +15,7 @@ from api.services.monitoring import build_monitoring_snapshot
 from api.staff_permissions import IsStaffPortalUser
 
 IsStaffUser = IsStaffPortalUser
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -23,8 +24,7 @@ def admin_monitoring(request):
     try:
         return Response(build_monitoring_snapshot())
     except Exception as exc:
-        import logging
-        logging.getLogger(__name__).exception('admin_monitoring failed')
+        logger.exception('admin_monitoring failed')
         return Response(
             {'detail': f'שגיאה בבניית ניטור: {exc}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -36,36 +36,31 @@ def admin_monitoring(request):
 def admin_run_daily_sync(request):
     """Trigger daily_sync manually from dashboard."""
     started = timezone.now()
+    stdout = StringIO()
+    stderr = StringIO()
     try:
-        result = subprocess.run(
-            [sys.executable, 'manage.py', 'daily_sync'],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(settings.BASE_DIR),
-        )
-        ok = result.returncode == 0
-        if not ok:
-            log_automation(
-                AutomationLog.Job.DAILY_SYNC,
-                'הרצה ידנית נכשלה',
-                level=AutomationLog.Level.ERROR,
-                details={'stderr': (result.stderr or '')[:500]},
-            )
-            return Response(
-                {'detail': result.stderr or 'נכשל', 'stdout': result.stdout},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        call_command('daily_sync', stdout=stdout, stderr=stderr)
         return Response({
             'detail': 'סנכרון יומי הושלם',
-            'stdout': result.stdout,
+            'stdout': stdout.getvalue(),
             'startedAt': started.isoformat(),
             'snapshot': build_monitoring_snapshot(),
         })
-    except subprocess.TimeoutExpired:
-        return Response({'detail': 'הסנכרון חרג מזמן (120s)'}, status=status.HTTP_504_GATEWAY_TIMEOUT)
     except Exception as exc:
-        return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        err_text = str(exc) or stderr.getvalue() or stdout.getvalue() or 'נכשל'
+        log_automation(
+            AutomationLog.Job.DAILY_SYNC,
+            f'הרצה ידנית נכשלה: {err_text}',
+            level=AutomationLog.Level.ERROR,
+            details={
+                'stderr': stderr.getvalue()[:500],
+                'stdout': stdout.getvalue()[:500],
+            },
+        )
+        return Response(
+            {'detail': err_text, 'stdout': stdout.getvalue(), 'stderr': stderr.getvalue()},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(['GET'])
