@@ -6,7 +6,6 @@ import re
 import ssl
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 import requests
@@ -35,9 +34,13 @@ PAIS_HEADERS = {
     'Accept': 'text/html,application/xhtml+xml',
     'Referer': 'https://www.pais.co.il/lotto/',
 }
-PAIS_CONNECT_TIMEOUT = int(os.getenv('PAIS_CONNECT_TIMEOUT', '15'))
-PAIS_READ_TIMEOUT = int(os.getenv('PAIS_READ_TIMEOUT', '60'))
+PAIS_CONNECT_TIMEOUT = int(os.getenv('PAIS_CONNECT_TIMEOUT', '12'))
+PAIS_READ_TIMEOUT = int(os.getenv('PAIS_READ_TIMEOUT', '45'))
 PAIS_TIMEOUT = (PAIS_CONNECT_TIMEOUT, PAIS_READ_TIMEOUT)
+PAIS_PROXY_TIMEOUT = (
+    int(os.getenv('PAIS_PROXY_CONNECT_TIMEOUT', '10')),
+    int(os.getenv('PAIS_PROXY_READ_TIMEOUT', '90')),
+)
 
 _SSL_CTX = ssl.create_default_context()
 _SSL_CTX.check_hostname = False
@@ -67,10 +70,10 @@ def _get_pais_session() -> requests.Session:
         session.verify = False
         session.headers.update(PAIS_HEADERS)
         retry = Retry(
-            total=3,
-            connect=3,
-            read=3,
-            backoff_factor=1.5,
+            total=2,
+            connect=2,
+            read=2,
+            backoff_factor=0.8,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=('GET',),
         )
@@ -81,38 +84,43 @@ def _get_pais_session() -> requests.Session:
 
 
 def _fetch(url: str) -> str:
-    """Fetch PAIS HTML — requests with retries, urllib fallback."""
-    try:
-        resp = _get_pais_session().get(url, timeout=PAIS_TIMEOUT)
-        resp.raise_for_status()
-        return resp.text
-    except requests.RequestException as req_exc:
-        logger.warning('PAIS requests fetch failed for %s: %s', url, req_exc)
-        try:
-            req = Request(url, headers=PAIS_HEADERS)
-            total_timeout = PAIS_CONNECT_TIMEOUT + PAIS_READ_TIMEOUT
-            return urlopen(req, context=_SSL_CTX, timeout=total_timeout).read().decode(
-                'utf-8', errors='replace',
-            )
-        except Exception as urllib_exc:
-            raise req_exc from urllib_exc
+    """Fetch PAIS HTML via requests (no urllib — avoids opaque urlopen timeouts)."""
+    resp = _get_pais_session().get(url, timeout=PAIS_TIMEOUT)
+    resp.raise_for_status()
+    return resp.text
 
 
 def _frontend_url() -> str:
     return getattr(settings, 'FRONTEND_URL', '').strip().rstrip('/')
 
 
+def _cached_lottery_id() -> int | str | None:
+    cached = read_draw_data() or {}
+    return (cached.get('last_draw') or {}).get('lottery_id')
+
+
+def _cached_draw_is_usable(cached: dict) -> bool:
+    last_draw = cached.get('last_draw') or {}
+    numbers = last_draw.get('numbers') or []
+    return len(numbers) == 6 and bool(last_draw.get('lottery_id'))
+
+
 def _fetch_via_frontend_api(lottery_id: int | str | None = None) -> dict:
-    """Fallback: scrape via Next.js /api/pais when direct PAIS fetch times out."""
+    """Scrape via Next.js /api/pais when direct PAIS fetch is blocked on the host."""
     base = _frontend_url()
     if not base:
         raise ValueError('FRONTEND_URL לא מוגדר — לא ניתן להשתמש בפרוקסי')
 
+    resolved_id = lottery_id or _cached_lottery_id()
     url = f'{base}/api/pais'
-    if lottery_id:
-        url = f'{url}?id={lottery_id}'
+    if resolved_id:
+        url = f'{url}?id={resolved_id}'
 
-    resp = requests.get(url, timeout=PAIS_TIMEOUT, headers={'Accept': 'application/json'})
+    resp = requests.get(
+        url,
+        timeout=PAIS_PROXY_TIMEOUT,
+        headers={'Accept': 'application/json'},
+    )
     resp.raise_for_status()
     data = resp.json()
     if data.get('error'):
@@ -128,7 +136,7 @@ def _fetch_via_frontend_api(lottery_id: int | str | None = None) -> dict:
             'date': data.get('date') or datetime.now().strftime('%Y-%m-%d'),
             'numbers': numbers,
             'strong': int(data.get('strong') or 0),
-            'lottery_id': int(data.get('lottery_id') or lottery_id or 0),
+            'lottery_id': int(data.get('lottery_id') or resolved_id or 0),
         },
         'prizes': {
             key: {
@@ -145,16 +153,17 @@ def _fetch_via_frontend_api(lottery_id: int | str | None = None) -> dict:
 def _resolve_lottery_id(lottery_id: int | str | None) -> str:
     if lottery_id:
         return str(lottery_id)
+
+    cached_id = _cached_lottery_id()
+    if cached_id:
+        logger.info('Using cached lottery_id=%s (skip archive fetch)', cached_id)
+        return str(cached_id)
+
     archive = _fetch('https://www.pais.co.il/lotto/archive.aspx')
     ids = re.findall(r'(?i)lotteryId=(\d+)', archive)
     if not ids:
         ids = re.findall(r'(?i)CurrentLotto\.aspx\?[^"\']*?(\d{3,6})', archive)
     if not ids:
-        cached = read_draw_data() or {}
-        cached_id = ((cached.get('last_draw') or {}).get('lottery_id'))
-        if cached_id:
-            logger.warning('PAIS archive parsing failed; using cached lottery_id=%s', cached_id)
-            return str(cached_id)
         raise ValueError('לא נמצאו הגרלות בארכיון פיס')
     return str(max(int(x) for x in ids))
 
@@ -224,29 +233,45 @@ def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
     """Scrape PAIS and write draw_results.json. Returns the saved payload."""
     errors: list[str] = []
     result: dict | None = None
+    source = ''
 
-    try:
-        result = _scrape_pais_direct(lottery_id)
-    except Exception as exc:
-        errors.append(f'ישיר: {exc}')
-        logger.warning('Direct PAIS scrape failed: %s', exc)
+    resolved_id = lottery_id or _cached_lottery_id()
 
-    if result is None:
+    if _frontend_url():
         try:
-            result = _fetch_via_frontend_api(lottery_id)
+            result = _fetch_via_frontend_api(resolved_id)
+            source = 'פרוקסי'
             logger.info('PAIS draw fetched via frontend proxy')
         except Exception as exc:
             errors.append(f'פרוקסי: {exc}')
-            cached = read_draw_data()
-            if cached:
-                logger.warning('Using cached draw_results after failures: %s', ' · '.join(errors))
-                result = cached
-            else:
-                raise RuntimeError(' · '.join(errors)) from exc
+            logger.warning('Frontend PAIS proxy failed: %s', exc)
 
-    out = draw_results_path()
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+    if result is None:
+        try:
+            result = _scrape_pais_direct(resolved_id)
+            source = 'ישיר'
+            logger.info('PAIS draw fetched via direct scrape')
+        except Exception as exc:
+            errors.append(f'ישיר: {exc}')
+            logger.warning('Direct PAIS scrape failed: %s', exc)
+
+    if result is None:
+        cached = read_draw_data()
+        if cached and _cached_draw_is_usable(cached):
+            result = cached
+            source = 'מטמון'
+            logger.warning(
+                'PAIS fetch failed; continuing with cached draw_results.json: %s',
+                ' · '.join(errors),
+            )
+        else:
+            raise RuntimeError(' · '.join(errors) or 'PAIS fetch failed')
+
+    if source != 'מטמון':
+        out = draw_results_path()
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+
     return result
 
 

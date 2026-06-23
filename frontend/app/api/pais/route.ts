@@ -4,9 +4,11 @@ import { join } from "path";
 import axios from "axios";
 import https from "https";
 
+const PAIS_TIMEOUT_MS = Number(process.env.PAIS_FETCH_TIMEOUT_MS || "45000");
+
 const client = axios.create({
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-  timeout: 15000,
+  timeout: PAIS_TIMEOUT_MS,
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
     "Accept-Language": "he-IL,he;q=0.9",
@@ -15,15 +17,30 @@ const client = axios.create({
   },
 });
 
+async function fetchPaisHtml(url: string): Promise<string> {
+  const attempts = 2;
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const { data } = await client.get<string>(url);
+      return data;
+    } catch (err) {
+      lastErr = err;
+      if (i + 1 < attempts) await new Promise((r) => setTimeout(r, 1200));
+    }
+  }
+  throw lastErr;
+}
+
 async function scrapePais(lotteryId?: number) {
-  // מצא הגרלה אחרונה
+  // מצא הגרלה אחרונה (דלג אם קיבלנו id מה-backend)
   if (!lotteryId) {
-    const { data: archiveHtml } = await client.get("https://www.pais.co.il/lotto/archive.aspx");
+    const archiveHtml = await fetchPaisHtml("https://www.pais.co.il/lotto/archive.aspx");
     const ids = [...archiveHtml.matchAll(/lotteryId=(\d+)/g)].map((m: RegExpMatchArray) => parseInt(m[1]));
     lotteryId = ids.length > 0 ? Math.max(...ids) : 3930;
   }
 
-  const { data: html } = await client.get(
+  const html = await fetchPaisHtml(
     `https://www.pais.co.il/Lotto/CurrentLotto.aspx?lotteryId=${lotteryId}`
   );
 
