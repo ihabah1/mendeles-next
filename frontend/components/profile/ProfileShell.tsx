@@ -62,7 +62,7 @@ export default function ProfileShell({ children }: { children: React.ReactNode }
         <div className="profile-header card">
           <div className="profile-header-main">
             <div>
-              <h1 className="profile-title">👤 האזור האישי</h1>
+              <h1 className="profile-title">אזור אישי</h1>
               <div className="profile-sub">{displayName}</div>
               <div className="profile-email">{user?.email || user?.phone}</div>
             </div>

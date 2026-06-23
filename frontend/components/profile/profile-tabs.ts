@@ -9,11 +9,11 @@ export const PROFILE_TABS: {
   { id: "details", href: "/profile/details", label: "פרטים אישיים", icon: "👤" },
   { id: "password", href: "/profile/password", label: "סיסמה", icon: "🔐" },
   { id: "topup", href: "/profile/topup", label: "טעינת כסף", icon: "💳" },
-  { id: "orders", href: "/profile/orders", label: "הזמנות", icon: "📋" },
+  { id: "orders", href: "/profile/orders", label: "אזור אישי", icon: "📋" },
   { id: "inbox", href: "/profile/inbox", label: "תיבת דואר", icon: "📬" },
 ];
 
 export function tabFromPath(pathname: string | null): ProfileTabId {
   const hit = PROFILE_TABS.find((t) => pathname === t.href || pathname?.startsWith(t.href + "/"));
-  return hit?.id ?? "details";
+  return hit?.id ?? "orders";
 }

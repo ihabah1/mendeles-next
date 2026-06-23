@@ -1562,6 +1562,12 @@ h2, .home-section-title { color: var(--text); }
   .home-pricing-grid { grid-template-columns: 1fr 1fr; max-width: 520px; }
 }
 
+.pricing-page-sub {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: -6px 0 14px;
+}
+
 .home-stat-pill {
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -3093,6 +3099,118 @@ h2, .home-section-title { color: var(--text); }
 }
 .profile-tab-icon { font-size: .9rem; }
 .profile-tab-panel { padding: 20px 18px; }
+
+/* ── Personal area (orders hub) ── */
+.personal-area-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+.personal-area-tab {
+  flex: 1 1 auto;
+  min-width: max-content;
+  padding: 10px 14px;
+  border: none;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+  background: #4a4f57;
+  color: #f2f2f2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.personal-area-tab:last-child { border-inline-end: none; }
+.personal-area-tab:hover { background: #5a6069; }
+.personal-area-tab.active {
+  background: #2f6fed;
+  color: #fff;
+}
+.personal-area-table-wrap {
+  background: #fff;
+  border: 1px solid #d8dce2;
+  border-top: none;
+  min-height: 220px;
+}
+.personal-area-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  color: #1a1a1a;
+}
+.personal-area-table thead th {
+  background: #eef0f3;
+  color: #333;
+  font-weight: 700;
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid #d8dce2;
+}
+.personal-area-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eceff3;
+  vertical-align: middle;
+}
+.personal-area-table tbody tr:hover { background: #f8f9fb; }
+.personal-area-empty {
+  padding: 36px 20px 44px;
+  text-align: center;
+}
+.personal-area-greeting {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #222;
+  margin-bottom: 8px;
+}
+.personal-area-empty-msg {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 18px;
+}
+.personal-area-cta {
+  background: #3cb878;
+  color: #fff;
+  font-weight: 800;
+  padding: 12px 28px;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-flex;
+}
+.personal-area-cta:hover { filter: brightness(1.05); }
+.personal-area-link-btn {
+  background: none;
+  border: none;
+  color: #2f6fed;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+.personal-area-loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+@media (max-width: 720px) {
+  .personal-area-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .personal-area-tab {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    padding: 9px 11px;
+  }
+  .personal-area-table-wrap { overflow-x: auto; }
+  .personal-area-table { min-width: 520px; }
+}
+
 .profile-panel-title {
   font-family: var(--font-display);
   font-size: 1.05rem;

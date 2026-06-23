@@ -13,6 +13,7 @@ export const SEARCH_TARGETS: SearchTarget[] = [
   { href: "/seven77", label: "777", subtitle: "משחק מזל מהיר", code: "S777" },
   { href: "/toto", label: "טוטו", subtitle: "בפיתוח — יהיה זמין בקרוב", code: "TT29" },
   { href: "/promotions", label: "מבצעים", subtitle: "הטבות ומתנות", code: "PM33" },
+  { href: "/pricing", label: "מחירים", subtitle: "לוטו · 777 · טוטו · חבילות", code: "PR39" },
   { href: "/about", label: "אודות", subtitle: "למה אנחנו", code: "AB16" },
   { href: "/terms", label: "תנאי שימוש", subtitle: "מידע משפטי", code: "TE52" },
   { href: "/auth", label: "כניסה / הרשמה", subtitle: "התחברות לאתר", code: "AU91" },
