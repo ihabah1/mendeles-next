@@ -197,6 +197,44 @@ h2, .home-section-title { color: var(--text); }
   flex-shrink: 0;
   margin-inline-start: auto;
 }
+.nav-notifications {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none;
+  opacity: .9;
+  transition: opacity .15s, background .15s;
+}
+.nav-notifications:hover,
+.nav-notifications.active {
+  opacity: 1;
+  background: rgba(255, 255, 255, .08);
+}
+.nav-notifications-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.nav-notifications-badge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1rem;
+  text-align: center;
+  pointer-events: none;
+}
 .nav-search {
   color: #fff;
   font-size: 12px;
@@ -3100,115 +3138,157 @@ h2, .home-section-title { color: var(--text); }
 .profile-tab-icon { font-size: .9rem; }
 .profile-tab-panel { padding: 20px 18px; }
 
-/* ── Personal area (orders hub) ── */
+/* ── Personal area (orders hub) — premium dark + gold ── */
+.profile-tab-panel:has(.personal-area) {
+  padding: 0;
+  overflow: hidden;
+}
+.personal-area {
+  direction: rtl;
+}
 .personal-area-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0;
-  margin-bottom: 0;
+  gap: 6px;
+  padding: 14px 14px 10px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  direction: rtl;
 }
 .personal-area-tab {
-  flex: 1 1 auto;
-  min-width: max-content;
-  padding: 10px 14px;
-  border: none;
-  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
-  background: #4a4f57;
-  color: #f2f2f2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
   white-space: nowrap;
+  font-family: inherit;
 }
-.personal-area-tab:last-child { border-inline-end: none; }
-.personal-area-tab:hover { background: #5a6069; }
+.personal-area-tab:hover {
+  border-color: var(--gold-border);
+  color: var(--text);
+}
 .personal-area-tab.active {
-  background: #2f6fed;
-  color: #fff;
+  background: var(--gold-bg);
+  border-color: var(--gold-border);
+  color: var(--gold);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+}
+.personal-area-tab-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.9;
 }
 .personal-area-table-wrap {
-  background: #fff;
-  border: 1px solid #d8dce2;
-  border-top: none;
+  margin: 0;
+  padding: 14px;
   min-height: 220px;
+  background: var(--bg2);
 }
 .personal-area-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
-  color: #1a1a1a;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 .personal-area-table thead th {
-  background: #eef0f3;
-  color: #333;
-  font-weight: 700;
-  padding: 10px 12px;
+  background: var(--bg3);
+  color: var(--gold);
+  font-weight: 800;
+  padding: 11px 12px;
   text-align: right;
-  border-bottom: 1px solid #d8dce2;
+  border-bottom: 1px solid var(--gold-border);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
 }
 .personal-area-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #eceff3;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: var(--text);
 }
-.personal-area-table tbody tr:hover { background: #f8f9fb; }
+.personal-area-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.personal-area-table tbody tr:hover {
+  background: rgba(212, 175, 55, 0.06);
+}
 .personal-area-empty {
-  padding: 36px 20px 44px;
+  padding: 48px 20px 52px;
   text-align: center;
 }
 .personal-area-greeting {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #222;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--gold);
   margin-bottom: 8px;
 }
 .personal-area-empty-msg {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 18px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 20px;
+  line-height: 1.5;
+  max-width: 36ch;
+  margin-inline: auto;
 }
 .personal-area-cta {
-  background: #3cb878;
-  color: #fff;
-  font-weight: 800;
-  padding: 12px 28px;
-  border-radius: 6px;
-  text-decoration: none;
-  display: inline-flex;
+  padding: 11px 26px;
+  font-size: 0.88rem;
 }
-.personal-area-cta:hover { filter: brightness(1.05); }
 .personal-area-link-btn {
   background: none;
   border: none;
-  color: #2f6fed;
+  color: var(--gold-bright);
   font-weight: 700;
   cursor: pointer;
   font-size: inherit;
   padding: 0;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.personal-area-link-btn:hover {
+  color: var(--gold);
 }
 .personal-area-loading {
-  padding: 32px;
+  padding: 40px 20px;
   text-align: center;
   color: var(--muted);
   font-size: 0.82rem;
+}
+.personal-area-page .profile-alert {
+  margin: 14px 14px 0;
 }
 @media (max-width: 720px) {
   .personal-area-tabs {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: thin;
+    padding-bottom: 8px;
   }
   .personal-area-tab {
     flex: 0 0 auto;
     font-size: 0.68rem;
-    padding: 9px 11px;
+    padding: 7px 10px;
   }
-  .personal-area-table-wrap { overflow-x: auto; }
-  .personal-area-table { min-width: 520px; }
+  .personal-area-table-wrap {
+    padding: 10px;
+    overflow-x: auto;
+  }
+  .personal-area-table {
+    min-width: 520px;
+  }
 }
 
 .profile-panel-title {
@@ -3243,6 +3323,21 @@ h2, .home-section-title { color: var(--text); }
 .profile-alert.success { background: var(--green-bg); border: 1px solid #b0dfc0; color: var(--green); }
 .profile-alert.warn { background: var(--gold-bg); border: 1px solid var(--gold-border); color: var(--gold-dark); }
 .profile-hint { font-size: .68rem; color: var(--muted); text-align: center; margin-top: 10px; }
+.profile-section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 28px 0 24px;
+}
+.profile-section-title {
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--cream);
+  margin: 0 0 8px;
+}
+.profile-password-section {
+  scroll-margin-top: 100px;
+}
 .profile-tab-badge {
   display: inline-flex;
   align-items: center;

@@ -41,7 +41,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
     links: [
       { href: "/profile", label: "👤 פרופיל" },
       { href: "/profile/details", label: "📝 פרטים אישיים" },
-      { href: "/profile/password", label: "🔒 שינוי סיסמה" },
+      { href: "/profile/details#password", label: "🔒 שינוי סיסמה" },
     ],
   },
   {

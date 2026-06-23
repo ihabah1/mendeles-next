@@ -104,8 +104,8 @@ export default function ProfileInboxPage() {
     <div className="inbox-page">
       <div className="inbox-header">
         <div>
-          <h2 className="profile-panel-title">📬 תיבת דואר</h2>
-          <p className="profile-panel-desc">מכתבי מערכת, עדכונים והודעות מהשירות</p>
+          <h2 className="profile-panel-title">🔔 הודעות</h2>
+          <p className="profile-panel-desc">מכתבי מערכת, עדכונים והתראות מהשירות</p>
         </div>
         {unreadCount > 0 && (
           <button

@@ -19,7 +19,7 @@ const ENTRIES: PageCodeEntry[] = [
   { code: "AO38", labelHe: "OAuth", paths: ["/auth/oauth"] },
   { code: "PR64", labelHe: "פרופיל", paths: ["/profile"] },
   { code: "PD81", labelHe: "פרטים אישיים", paths: ["/profile/details"] },
-  { code: "PW62", labelHe: "שינוי סיסמה", paths: ["/profile/password"] },
+  { code: "PW62", labelHe: "שינוי סיסמה", paths: ["/profile/details", "/profile/password"] },
   { code: "TU77", labelHe: "טעינת ארנק", paths: ["/profile/topup", "/topup"] },
   { code: "OR71", labelHe: "היסטוריית רכישות", paths: ["/profile/orders", "/profile/forms"] },
   { code: "RP45", labelHe: "איפוס סיסמה", paths: ["/reset-password"] },

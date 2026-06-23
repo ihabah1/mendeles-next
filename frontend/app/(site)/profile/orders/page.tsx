@@ -79,7 +79,7 @@ export default function ProfileOrdersPage() {
   );
 
   return (
-    <div>
+    <div className="personal-area-page">
       {isDemo && (
         <div className="profile-alert warn" style={{ marginBottom: 12 }}>
           מצב דמו — נתונים לדוגמה

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { authService } from "@/lib/api/auth";
 import { extractApiError } from "@/lib/api/client";
+import ProfilePasswordSection from "@/components/profile/ProfilePasswordSection";
 
 export default function ProfileDetailsPage() {
   const { user, refreshUser } = useAuth();
@@ -20,6 +21,12 @@ export default function ProfileDetailsPage() {
     setLastName(user.last_name || "");
     setPhone(user.phone || "");
   }, [user]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#password") return;
+    const el = document.getElementById("password");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const save = async () => {
     setLoading(true);
@@ -80,6 +87,10 @@ export default function ProfileDetailsPage() {
       >
         {loading ? "שומר..." : "שמור שינויים"}
       </button>
+
+      <hr className="profile-section-divider" />
+
+      <ProfilePasswordSection />
     </div>
   );
 }

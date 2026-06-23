@@ -9,6 +9,7 @@ import BalancePill from "@/components/BalancePill";
 import PromoTopBanner from "@/components/promo/PromoTopBanner";
 import MandelesLogoMark from "@/components/promo/MandelesLogoMark";
 import ProfileNavDropdown from "@/components/profile/ProfileNavDropdown";
+import NavNotificationsBell from "@/components/NavNotificationsBell";
 import { canAccessDevGames } from "@/lib/lotto-only";
 
 type NavLink = {
@@ -100,6 +101,7 @@ export default function Nav() {
           </div>
 
           <div className="nav-actions">
+            {isAuthenticated && <NavNotificationsBell />}
             {isAuthenticated && (
               <Link href="/search" className="nav-search">
                 🔍 חיפוש

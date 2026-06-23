@@ -33,15 +33,15 @@ export type PersonalAreaTab =
   | "card"
   | "refund";
 
-const TABS: { id: PersonalAreaTab; label: string; premiumOnly?: boolean }[] = [
-  { id: "active", label: "טפסים פעילים" },
-  { id: "history", label: "היסטוריה" },
-  { id: "scanned", label: "טפסים סרוקים" },
-  { id: "sets", label: "הסטים שלי", premiumOnly: true },
-  { id: "wins", label: "זכויות" },
-  { id: "withdrawals", label: "משיכות" },
-  { id: "card", label: "חיובים בכרטיס אשראי" },
-  { id: "refund", label: "החזר כספי" },
+const TABS: { id: PersonalAreaTab; label: string; icon: string; premiumOnly?: boolean }[] = [
+  { id: "active", label: "טפסים פעילים", icon: "📋" },
+  { id: "history", label: "היסטוריה", icon: "🕘" },
+  { id: "scanned", label: "טפסים סרוקים", icon: "📄" },
+  { id: "sets", label: "הסטים שלי", icon: "⭐", premiumOnly: true },
+  { id: "wins", label: "זכויות", icon: "🏆" },
+  { id: "withdrawals", label: "משיכות", icon: "💸" },
+  { id: "card", label: "חיובים בכרטיס", icon: "💳" },
+  { id: "refund", label: "החזר כספי", icon: "↩" },
 ];
 
 type PersonalAreaPanelProps = {
@@ -72,7 +72,7 @@ function EmptyState({
       <p className="personal-area-greeting">{greeting}</p>
       <p className="personal-area-empty-msg">{message}</p>
       {showCta && (
-        <Link href="/lotto" className="btn personal-area-cta">
+        <Link href="/lotto" className="btn btn-gold personal-area-cta">
           שלח טופס
         </Link>
       )}
@@ -152,14 +152,38 @@ export default function PersonalAreaPanel({
             className={`personal-area-tab${tab === t.id ? " active" : ""}`}
             onClick={() => setTab(t.id)}
           >
+            <span className="personal-area-tab-icon" aria-hidden>
+              {t.icon}
+            </span>
             {t.label}
           </button>
         ))}
       </nav>
 
       <div className="personal-area-table-wrap">
-        {(tab === "active" || tab === "history" || tab === "scanned") && (
-          <>
+        {(tab === "active" || tab === "history" || tab === "scanned") && (() => {
+          const rows =
+            tab === "active"
+              ? activeOrders
+              : tab === "history"
+                ? historyOrders
+                : scannedOrders;
+          if (rows.length === 0) {
+            const msg =
+              tab === "active"
+                ? "אין ברשותך טפסים פעילים"
+                : tab === "history"
+                  ? "אין היסטוריית טפסים"
+                  : "טרם נסרקו טפסים עבורך — הסריקה תופיע כאן לאחר הגשה לדוכן";
+            return (
+              <EmptyState
+                greeting={greeting}
+                message={msg}
+                showCta={tab === "active"}
+              />
+            );
+          }
+          return (
             <table className="personal-area-table">
               <thead>
                 <tr>
@@ -171,12 +195,7 @@ export default function PersonalAreaPanel({
                 </tr>
               </thead>
               <tbody>
-                {(tab === "active"
-                  ? activeOrders
-                  : tab === "history"
-                    ? historyOrders
-                    : scannedOrders
-                ).map((o) => (
+                {rows.map((o) => (
                   <tr key={o.id}>
                     <td>{gameAndDrawLabel(o)}</td>
                     <td>{formatOrderDate(o.createdAt)}</td>
@@ -197,25 +216,8 @@ export default function PersonalAreaPanel({
                 ))}
               </tbody>
             </table>
-
-            {tab === "active" && activeOrders.length === 0 && (
-              <EmptyState
-                greeting={greeting}
-                message="אין ברשותך טפסים פעילים"
-                showCta
-              />
-            )}
-            {tab === "history" && historyOrders.length === 0 && (
-              <EmptyState greeting={greeting} message="אין היסטוריית טפסים" />
-            )}
-            {tab === "scanned" && scannedOrders.length === 0 && (
-              <EmptyState
-                greeting={greeting}
-                message="טרם נסרקו טפסים עבורך — הסריקה תופיע כאן לאחר הגשה לדוכן"
-              />
-            )}
-          </>
-        )}
+          );
+        })()}
 
         {tab === "sets" && (
           <>

@@ -19,7 +19,7 @@ export const SEARCH_TARGETS: SearchTarget[] = [
   { href: "/auth", label: "כניסה / הרשמה", subtitle: "התחברות לאתר", code: "AU91" },
   { href: "/profile", label: "פרופיל", subtitle: "ניהול חשבון", code: "PR64" },
   { href: "/profile/details", label: "פרטים אישיים", subtitle: "עדכון פרטי משתמש", code: "PD81" },
-  { href: "/profile/password", label: "שינוי סיסמה", subtitle: "ניהול אבטחה", code: "PW62" },
+  { href: "/profile/details#password", label: "שינוי סיסמה", subtitle: "ניהול אבטחה", code: "PW62" },
   { href: "/topup", label: "טעינת ארנק", subtitle: "הוסף קרדיט לחשבון", code: "TU77" },
   { href: "/profile/orders", label: "תוצאות", subtitle: "היסטוריית הזמנות", code: "OR71" },
   { href: "/profile/forms", label: "היסטוריית רכישות", subtitle: "טפסים וקבלות", code: "OR71" },
