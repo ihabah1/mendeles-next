@@ -41,6 +41,8 @@ RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 
 ```
 API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api
+# מומלץ — חיבור פנימי יציב יותר בין Frontend ל-Backend (אותו פרויקט Railway):
+BACKEND_PRIVATE_URL=http://${{eloquent-perfection.RAILWAY_PRIVATE_DOMAIN}}
 RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM_EMAIL=Mandeles <noreply@mandeles.co.il>
 EMAIL_PROXY_DERIVE_FROM=${{eloquent-perfection.DJANGO_SECRET_KEY}}

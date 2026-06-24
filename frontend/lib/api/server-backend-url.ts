@@ -14,6 +14,18 @@ export function resolveServerApiBaseUrl(): string {
   return "http://localhost:8000/api";
 }
 
+/** Proxy target — prefer Railway private networking when configured. */
+export function resolveProxyApiBaseUrl(): string {
+  const privateUrl =
+    process.env.BACKEND_PRIVATE_URL?.trim() ||
+    process.env.RAILWAY_BACKEND_PRIVATE_URL?.trim();
+  if (privateUrl) {
+    const root = privateUrl.replace(/\/$/, "");
+    return root.endsWith("/api") ? root : `${root}/api`;
+  }
+  return resolveServerApiBaseUrl();
+}
+
 export function isLocalApiBase(url: string): boolean {
   return url.includes("localhost") || url.includes("127.0.0.1");
 }

@@ -177,7 +177,10 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
     }
     const status = error.response.status;
     if (status === 502 || status === 503) {
-      const data = error.response.data as { detail?: string } | undefined;
+      const data = error.response.data as { detail?: string; hint?: string } | undefined;
+      if (data?.detail && data?.hint) {
+        return `${data.detail} (${data.hint})`;
+      }
       if (data?.detail) return String(data.detail);
       return "ה-Frontend לא מצליח להגיע ל-Backend. בדוק API_BASE_URL בשירות Frontend.";
     }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   apiConfigErrorHebrew,
   isLocalApiBase,
+  resolveProxyApiBaseUrl,
   resolveServerApiBaseUrl,
 } from "@/lib/api/server-backend-url";
 
@@ -23,15 +24,52 @@ const HOP_BY_HOP = new Set([
   "content-encoding",
 ]);
 
+function fetchErrorHint(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.name === "TimeoutError" || /timeout/i.test(err.message)) {
+      return "timeout — השרת לא הגיב בזמן (ייתכן שה-backend בתהליך עלייה מחדש)";
+    }
+    if (/ECONNREFUSED|fetch failed|ENOTFOUND|ECONNRESET/i.test(err.message)) {
+      return "connection refused — ה-backend כנראה לא רץ או שה-URL שגוי";
+    }
+    return err.message;
+  }
+  return "unknown error";
+}
+
+async function fetchBackend(
+  target: string,
+  init: RequestInit,
+  timeoutMs: number,
+  attempts = 3,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await fetch(target, {
+        ...init,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      lastErr = err;
+      if (i + 1 < attempts) {
+        await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function proxy(
   req: NextRequest,
   ctx: { params: Promise<{ path?: string[] }> },
 ) {
-  const base = resolveServerApiBaseUrl();
-  if (isLocalApiBase(base)) {
+  const publicBase = resolveServerApiBaseUrl();
+  if (isLocalApiBase(publicBase)) {
     return NextResponse.json({ detail: apiConfigErrorHebrew() }, { status: 502 });
   }
 
+  const base = resolveProxyApiBaseUrl();
   const { path = [] } = await ctx.params;
   const suffix = path.length ? `/${path.join("/")}/` : "/";
   const target = `${base}${suffix}${req.nextUrl.search}`;
@@ -56,11 +94,10 @@ async function proxy(
     req.method === "GET" &&
     (suffix.includes("/scan") || suffix.includes("/invoice"));
 
+  const timeoutMs = isHeavyDownload ? 120_000 : 60_000;
+
   try {
-    const res = await fetch(target, {
-      ...init,
-      signal: AbortSignal.timeout(isHeavyDownload ? 120_000 : 45_000),
-    });
+    const res = await fetchBackend(target, init, timeoutMs);
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       if (HOP_BY_HOP.has(key.toLowerCase())) return;
@@ -90,9 +127,14 @@ async function proxy(
       statusText: res.statusText,
       headers: responseHeaders,
     });
-  } catch {
+  } catch (err) {
+    const hint = fetchErrorHint(err);
     return NextResponse.json(
-      { detail: `לא ניתן להגיע ל-backend: ${base}` },
+      {
+        detail: `לא ניתן להגיע ל-backend: ${publicBase}`,
+        hint,
+        proxyTarget: base !== publicBase ? base : undefined,
+      },
       { status: 502 },
     );
   }
