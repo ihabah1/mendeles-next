@@ -65,6 +65,7 @@ export interface AutomationRun {
 
 export interface AutomationSnapshot {
   warning?: string;
+  paisFetchVersion?: number;
   schedule: {
     cron: string;
     cronLabel: string;
@@ -170,17 +171,45 @@ export interface ChatInquiry {
   escalated: boolean;
 }
 
+export interface DailySyncResult {
+  detail: string;
+  stdout?: string;
+  stderr?: string;
+  logs?: string[];
+  durationMs?: number;
+  startedAt?: string;
+  snapshot: MonitoringSnapshot;
+}
+
+export function linesFromSyncPayload(data: {
+  logs?: string[];
+  stdout?: string;
+  stderr?: string;
+  detail?: string;
+}): string[] {
+  if (data.logs?.length) return data.logs;
+  const lines: string[] = [];
+  if (data.stdout?.trim()) lines.push(...data.stdout.trim().split(/\r?\n/));
+  if (data.stderr?.trim()) lines.push(...data.stderr.trim().split(/\r?\n/));
+  return lines;
+}
+
 export const monitoringAdminService = {
   async snapshot(): Promise<MonitoringSnapshot> {
     const { data } = await api.get<MonitoringSnapshot>("/admin/monitoring/");
     return data;
   },
 
-  async runDailySync(): Promise<{ detail: string; snapshot: MonitoringSnapshot }> {
-    const { data } = await api.post<{ detail: string; snapshot: MonitoringSnapshot }>(
+  async runDailySync(): Promise<DailySyncResult> {
+    const { data } = await api.post<DailySyncResult>(
       "/admin/monitoring/run-daily-sync/",
+      {},
+      { timeout: 120_000 },
     );
-    return data;
+    return {
+      ...data,
+      logs: linesFromSyncPayload(data),
+    };
   },
 
   async chatInquiries(limit = 40): Promise<ChatInquiry[]> {

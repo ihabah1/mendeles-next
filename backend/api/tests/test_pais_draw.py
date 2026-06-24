@@ -64,16 +64,25 @@ class PaisDrawFetchTests(SimpleTestCase):
         self.assertIn('מטמון', warning or '')
 
     @override_settings(FRONTEND_URL='')
+    @patch('api.services.pais_draw._skip_live_fetch', return_value=True)
+    @patch('api.services.pais_draw.read_draw_data', return_value=CACHED)
+    @patch('api.services.pais_draw._scrape_pais_direct')
+    def test_skip_live_fetch_uses_cache(self, mock_direct, _mock_read, _mock_skip):
+        result = pais_draw.fetch_and_save_draw()
+        mock_direct.assert_not_called()
+        self.assertEqual(result['last_draw']['lottery_id'], 3930)
+
+    @override_settings(FRONTEND_URL='')
     @patch('api.services.pais_draw.read_draw_data', return_value=CACHED)
     @patch('api.services.pais_draw._scrape_pais_direct', side_effect=TimeoutError('network'))
     def test_falls_back_to_cache_when_all_fail(self, _mock_direct, _mock_read):
         result = pais_draw.fetch_and_save_draw()
         self.assertEqual(result['last_draw']['lottery_id'], 3930)
 
-    @override_settings(FRONTEND_URL='')
     @patch('api.services.pais_draw.read_draw_data', return_value=None)
+    @patch('api.services.pais_draw.ensure_draw_results_file')
     @patch('api.services.pais_draw._scrape_pais_direct', side_effect=TimeoutError('network'))
-    def test_raises_when_no_cache(self, _mock_direct, _mock_read):
+    def test_raises_when_no_cache(self, _mock_direct, _mock_ensure, _mock_read):
         with self.assertRaises(RuntimeError):
             pais_draw.fetch_and_save_draw()
 

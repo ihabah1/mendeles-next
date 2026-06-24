@@ -17,7 +17,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger(__name__)
 
 # Bump when fetch strategy changes — visible in admin monitoring.
-PAIS_FETCH_VERSION = 4
+PAIS_FETCH_VERSION = 5
 
 RANK_KEYS = ['6+strong', '6', '5+strong', '5', '4+strong', '4', '3+strong', '3']
 RANK_NAMES = ['6 + חזק', '6', '5 + חזק', '5', '4 + חזק', '4', '3 + חזק', '3']
@@ -55,15 +55,34 @@ _pais_http: requests.Session | None = None
 
 
 def draw_results_path() -> Path:
-    candidates = (
-        Path(settings.BASE_DIR) / 'draw_results.json',
+    """Writable target path for draw_results.json."""
+    return Path(settings.BASE_DIR) / 'draw_results.json'
+
+
+def _draw_file_candidates() -> tuple[Path, ...]:
+    return (
+        draw_results_path(),
         Path(settings.BASE_DIR).parent / 'draw_results.json',
         Path(settings.BASE_DIR).parent / 'frontend' / 'draw_results.json',
     )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return Path(settings.BASE_DIR) / 'draw_results.json'
+
+
+def _skip_live_fetch() -> bool:
+    return os.getenv('PAIS_SKIP_LIVE_FETCH', '').strip().lower() in ('1', 'true', 'yes')
+
+
+def ensure_draw_results_file() -> Path:
+    """Copy bundled draw_results.json into place on cold deploy."""
+    target = draw_results_path()
+    if target.is_file():
+        return target
+    for candidate in _draw_file_candidates():
+        if candidate.is_file() and candidate != target:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(candidate.read_text(encoding='utf-8'), encoding='utf-8')
+            logger.info('Seeded draw_results.json from %s', candidate)
+            return target
+    return target
 
 
 def _get_pais_session() -> requests.Session:
@@ -234,6 +253,14 @@ def _scrape_pais_direct(lottery_id: int | str | None = None) -> dict:
 
 def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
     """Scrape PAIS and write draw_results.json. Returns the saved payload."""
+    ensure_draw_results_file()
+
+    if _skip_live_fetch():
+        cached = read_draw_data()
+        if cached and _cached_draw_is_usable(cached):
+            logger.info('PAIS live fetch skipped (PAIS_SKIP_LIVE_FETCH)')
+            return cached
+
     errors: list[str] = []
     result: dict | None = None
     source = ''
@@ -279,23 +306,27 @@ def fetch_and_save_draw(lottery_id: int | str | None = None) -> dict:
 
 def load_draw_for_sync() -> tuple[dict, str | None]:
     """Load draw for daily_sync — never fails when bundled/cached draw exists."""
+    ensure_draw_results_file()
+    cached = read_draw_data()
+
     try:
         return fetch_and_save_draw(), None
     except Exception as exc:
-        cached = read_draw_data()
         if cached and _cached_draw_is_usable(cached):
             return cached, f'שימוש במטמון אחרי כשל משיכה: {exc}'
         raise
 
 
 def read_draw_data() -> dict | None:
-    path = draw_results_path()
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except (json.JSONDecodeError, OSError):
-        return None
+    ensure_draw_results_file()
+    for path in _draw_file_candidates():
+        if not path.is_file():
+            continue
+        try:
+            return json.loads(path.read_text(encoding='utf-8'))
+        except (json.JSONDecodeError, OSError):
+            continue
+    return None
 
 
 def next_draw_datetime(*, after: datetime | None = None) -> datetime:

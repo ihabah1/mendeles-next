@@ -33,6 +33,7 @@ function getSessionId(): string {
 }
 const BALLOON_DISMISS_KEY = "mandeles-guide-balloon-dismissed";
 const BALLOON_POS_KEY = "mandeles-guide-balloon-pos";
+const COOKIE_CONSENT_KEY = "mandeles-cookie-consent";
 const DRAG_THRESHOLD = 6;
 
 type Pos = { x: number; y: number };
@@ -43,6 +44,7 @@ export default function SiteGuideChat() {
   const hidden = HIDE_ON.some((p) => path === p || path.startsWith(`${p}/`));
   const [open, setOpen] = useState(false);
   const [balloonDismissed, setBalloonDismissed] = useState(false);
+  const [cookieBarVisible, setCookieBarVisible] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [escalated, setEscalated] = useState(false);
@@ -67,14 +69,24 @@ export default function SiteGuideChat() {
   useEffect(() => {
     try {
       setBalloonDismissed(sessionStorage.getItem(BALLOON_DISMISS_KEY) === "1");
+      setCookieBarVisible(localStorage.getItem(COOKIE_CONSENT_KEY) !== "1");
       const saved = localStorage.getItem(BALLOON_POS_KEY);
       if (saved) {
         const p = JSON.parse(saved) as Pos;
-        if (typeof p.x === "number" && typeof p.y === "number") setPos(p);
+        if (typeof p.x === "number" && typeof p.y === "number") {
+          setPos(p);
+        }
       }
     } catch {
       /* ignore */
     }
+    const onCookie = () => setCookieBarVisible(false);
+    window.addEventListener("mandeles-cookie-accepted", onCookie);
+    window.addEventListener("storage", onCookie);
+    return () => {
+      window.removeEventListener("mandeles-cookie-accepted", onCookie);
+      window.removeEventListener("storage", onCookie);
+    };
   }, []);
 
   const clampPos = useCallback((p: Pos): Pos => {
@@ -139,6 +151,29 @@ export default function SiteGuideChat() {
     return () => window.removeEventListener("resize", onResize);
   }, [clampPos]);
 
+  useEffect(() => {
+    if (!pos) return;
+    const id = window.requestAnimationFrame(() => {
+      const el = rootRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const offScreen =
+        rect.bottom < 8 ||
+        rect.top > window.innerHeight - 8 ||
+        rect.right < 8 ||
+        rect.left > window.innerWidth - 8;
+      if (offScreen) {
+        setPos(null);
+        try {
+          localStorage.removeItem(BALLOON_POS_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [pos]);
+
   const dismissBalloon = (e: React.MouseEvent) => {
     e.stopPropagation();
     setBalloonDismissed(true);
@@ -197,7 +232,9 @@ export default function SiteGuideChat() {
   return (
     <div
       ref={rootRef}
-      className={`site-guide-root${pos ? "" : " site-guide-root--centered"}${panelBelow ? " site-guide-root--panel-below" : ""}`}
+      className={`site-guide-root${
+        pos ? "" : " site-guide-root--anchored"
+      }${cookieBarVisible ? " site-guide-root--cookie-lift" : ""}${panelBelow ? " site-guide-root--panel-below" : ""}`}
       style={
         pos
           ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", transform: "none" }
@@ -315,8 +352,12 @@ export default function SiteGuideChat() {
             setOpen(true);
           }}
           aria-label="פתח צ'אט עזרה"
+          title="צ'אט עזרה"
         >
-          <SiteIcon size={28} />
+          <span className="site-guide-fab-glyph" aria-hidden>
+            💬
+          </span>
+          <span className="site-guide-fab-label">צ׳אט עזרה</span>
         </button>
       )}
     </div>

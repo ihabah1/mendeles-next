@@ -40,6 +40,16 @@ print('[startup] Print server:', 'OK' if print_configured() else 'MISSING PRINT_
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 python manage.py ensure_superuser || true
+python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mandeles_portal.settings')
+import django
+django.setup()
+from api.services.pais_draw import PAIS_FETCH_VERSION, ensure_draw_results_file
+path = ensure_draw_results_file()
+print('[startup] PAIS fetch version:', PAIS_FETCH_VERSION)
+print('[startup] draw_results.json:', path, 'exists=' + str(path.is_file()))
+" || true
 
 exec gunicorn mandeles_portal.wsgi:application \
   --bind "0.0.0.0:${PORT:-8000}" \

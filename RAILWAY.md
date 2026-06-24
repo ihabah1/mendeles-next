@@ -28,6 +28,7 @@ BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
 BOOTSTRAP_ADMIN_PASSWORD=admin
 CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
 FRONTEND_URL=https://mendeles-next-production.up.railway.app
+PAIS_SKIP_LIVE_FETCH=true
 RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 ```

@@ -12,10 +12,48 @@ from admin_panel.portal.models import AutomationLog, GuideChatInquiry
 
 from api.services.automation_log import log_automation
 from api.services.monitoring import build_monitoring_snapshot
+from api.services.pais_draw import PAIS_FETCH_VERSION
 from api.staff_permissions import IsStaffPortalUser
 
 IsStaffUser = IsStaffPortalUser
 logger = logging.getLogger(__name__)
+
+
+def _sync_log_lines(stdout: str, stderr: str) -> list[str]:
+    lines: list[str] = []
+    for chunk in (stdout, stderr):
+        if not chunk:
+            continue
+        for line in chunk.splitlines():
+            text = line.rstrip()
+            if text:
+                lines.append(text)
+    return lines
+
+
+def _sync_response_payload(
+    *,
+    detail: str,
+    stdout: str,
+    stderr: str,
+    started,
+    ok: bool,
+    snapshot=None,
+) -> dict:
+    finished = timezone.now()
+    duration_ms = int((finished - started).total_seconds() * 1000)
+    return {
+        'detail': detail,
+        'stdout': stdout,
+        'stderr': stderr,
+        'logs': _sync_log_lines(stdout, stderr),
+        'durationMs': duration_ms,
+        'startedAt': started.isoformat(),
+        'finishedAt': finished.isoformat(),
+        'paisFetchVersion': PAIS_FETCH_VERSION,
+        'ok': ok,
+        'snapshot': snapshot,
+    }
 
 
 @api_view(['GET'])
@@ -40,27 +78,38 @@ def admin_run_daily_sync(request):
     stderr = StringIO()
     try:
         call_command('daily_sync', stdout=stdout, stderr=stderr)
-        return Response({
-            'detail': 'סנכרון יומי הושלם',
-            'stdout': stdout.getvalue(),
-            'startedAt': started.isoformat(),
-            'snapshot': build_monitoring_snapshot(),
-        })
+        out = stdout.getvalue()
+        err = stderr.getvalue()
+        return Response(_sync_response_payload(
+            detail='סנכרון יומי הושלם בהצלחה',
+            stdout=out,
+            stderr=err,
+            started=started,
+            ok=True,
+            snapshot=build_monitoring_snapshot(),
+        ))
     except Exception as exc:
         err_text = str(exc) or stderr.getvalue() or stdout.getvalue() or 'נכשל'
+        out = stdout.getvalue()
+        err = stderr.getvalue()
         log_automation(
             AutomationLog.Job.DAILY_SYNC,
             f'הרצה ידנית נכשלה: {err_text}',
             level=AutomationLog.Level.ERROR,
             details={
-                'stderr': stderr.getvalue()[:500],
-                'stdout': stdout.getvalue()[:500],
+                'stderr': err[:2000],
+                'stdout': out[:2000],
             },
         )
-        return Response(
-            {'detail': err_text, 'stdout': stdout.getvalue(), 'stderr': stderr.getvalue()},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        payload = _sync_response_payload(
+            detail=err_text,
+            stdout=out,
+            stderr=err or str(exc),
+            started=started,
+            ok=False,
+            snapshot=build_monitoring_snapshot(),
         )
+        return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

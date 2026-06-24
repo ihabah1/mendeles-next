@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import axios from "axios";
+import DailySyncLogModal, { type SyncLogStatus } from "@/components/admin/DailySyncLogModal";
 import {
   AdminAlert,
   AdminDataTable,
@@ -18,11 +20,13 @@ import {
 import { extractApiError } from "@/lib/api/client";
 import {
   monitoringAdminService,
+  linesFromSyncPayload,
   type AutomationLogRow,
   type AutomationRun,
   type AutomationSource,
   type DrawSnapshot,
   type ComboJsonStats,
+  type DailySyncResult,
   type MonitoringSnapshot,
 } from "@/lib/api/monitoring-admin";
 
@@ -65,6 +69,12 @@ function MonitoringPageInner() {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [logOpen, setLogOpen] = useState(false);
+  const [logStatus, setLogStatus] = useState<SyncLogStatus>("running");
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [logDetail, setLogDetail] = useState("");
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const syncStartedRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,17 +92,69 @@ function MonitoringPageInner() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!logOpen || logStatus !== "running") return;
+    const id = window.setInterval(() => {
+      if (syncStartedRef.current) {
+        setElapsedSec(Math.floor((Date.now() - syncStartedRef.current) / 1000));
+      }
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [logOpen, logStatus]);
+
+  const appendLog = (line: string) => {
+    setLogLines((prev) => (prev[prev.length - 1] === line ? prev : [...prev, line]));
+  };
+
   const runSync = async () => {
+    setLogOpen(true);
+    setLogStatus("running");
+    setLogLines(["▶ מתחיל סנכרון יומי…", "▶ שולח בקשה לשרת (יכול לקחת עד 2 דקות)…"]);
+    setLogDetail("");
+    setElapsedSec(0);
+    syncStartedRef.current = Date.now();
     setSyncing(true);
     setError("");
     setMessage("");
+
+    const hints = [
+      { at: 4, line: "▶ מוריד נתוני הגרלה מפיס / מטמון…" },
+      { at: 12, line: "▶ בודק זכיות ומרענן מאגר צירופים…" },
+      { at: 25, line: "▶ עדיין ממתין לתשובת השרת…" },
+      { at: 45, line: "▶ הסנכרון עדיין רץ — אל תסגור את החלון" },
+    ];
+    const hintTimers = hints.map(({ at, line }) =>
+      window.setTimeout(() => appendLog(line), at * 1000),
+    );
+
     try {
       const res = await monitoringAdminService.runDailySync();
       setSnap(res.snapshot);
+      const serverLines = linesFromSyncPayload(res);
+      setLogLines(serverLines.length ? serverLines : [`✓ ${res.detail}`]);
+      setLogStatus("success");
+      setLogDetail(res.detail);
       setMessage(res.detail);
     } catch (e) {
-      setError(extractApiError(e, "סנכרון נכשל"));
+      if (axios.isAxiosError(e) && e.response?.data && typeof e.response.data === "object") {
+        const body = e.response.data as DailySyncResult;
+        if (body.snapshot) setSnap(body.snapshot);
+        const serverLines = linesFromSyncPayload(body);
+        const detail = body.detail || extractApiError(e, "סנכרון נכשל");
+        setLogLines(serverLines.length ? [...serverLines, `✗ ${detail}`] : [`✗ ${detail}`]);
+        setLogDetail(detail);
+        setLogStatus("error");
+        setError(detail);
+      } else {
+        const detail = extractApiError(e, "סנכרון נכשל");
+        setLogLines((prev) => [...prev, `✗ ${detail}`]);
+        setLogDetail(detail);
+        setLogStatus("error");
+        setError(detail);
+      }
     } finally {
+      hintTimers.forEach((t) => window.clearTimeout(t));
+      syncStartedRef.current = null;
       setSyncing(false);
     }
   };
@@ -102,6 +164,14 @@ function MonitoringPageInner() {
 
   return (
     <>
+      <DailySyncLogModal
+        open={logOpen}
+        status={logStatus}
+        lines={logLines}
+        elapsedSec={elapsedSec}
+        detail={logDetail}
+        onClose={() => setLogOpen(false)}
+      />
       <AdminShell>
         <AdminPageHeader
           title="ניטור תשתית"
@@ -337,6 +407,10 @@ function AutomationSection({
 
         <div className="admin-kv-grid">
           <Kv label="תזמון Cron" value={automation.schedule.cronLabel} />
+          <Kv
+            label="גרסת משיכת פיס (שרת)"
+            value={automation.paisFetchVersion != null ? String(automation.paisFetchVersion) : "—"}
+          />
           <Kv label="ריצה הבאה" value={formatDt(automation.schedule.nextRunAtLocal)} />
           <Kv label="פקודה" value={automation.schedule.command} />
           <Kv

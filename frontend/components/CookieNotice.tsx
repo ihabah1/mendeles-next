@@ -24,6 +24,7 @@ export default function CookieNotice() {
     } catch {
       /* ignore */
     }
+    window.dispatchEvent(new Event("mandeles-cookie-accepted"));
   };
 
   if (!visible) return null;
