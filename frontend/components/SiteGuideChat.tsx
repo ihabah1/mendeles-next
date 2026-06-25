@@ -104,7 +104,7 @@ export default function SiteGuideChat() {
     const el = rootRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    dragState.current = {
+    const st = {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
@@ -112,37 +112,49 @@ export default function SiteGuideChat() {
       originY: rect.top,
       dragging: false,
     };
+    dragState.current = st;
     wasDragged.current = false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
 
-  const onDragPointerMove = (e: React.PointerEvent) => {
-    const st = dragState.current;
-    if (!st || st.pointerId !== e.pointerId) return;
-    const dx = e.clientX - st.startX;
-    const dy = e.clientY - st.startY;
-    if (!st.dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-    st.dragging = true;
-    wasDragged.current = true;
-    setPos(clampPos({ x: st.originX + dx, y: st.originY + dy }));
-  };
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== st.pointerId) return;
+      const dx = ev.clientX - st.startX;
+      const dy = ev.clientY - st.startY;
+      if (!st.dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      st.dragging = true;
+      wasDragged.current = true;
+      ev.preventDefault();
+      setPos(clampPos({ x: st.originX + dx, y: st.originY + dy }));
+    };
 
-  const onDragPointerUp = (e: React.PointerEvent) => {
-    const st = dragState.current;
-    if (!st || st.pointerId !== e.pointerId) return;
-    dragState.current = null;
-    if (st.dragging) {
-      setPos((p) => {
-        if (p) {
-          try {
-            localStorage.setItem(BALLOON_POS_KEY, JSON.stringify(p));
-          } catch {
-            /* ignore */
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== st.pointerId) return;
+      dragState.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (st.dragging) {
+        setPos((p) => {
+          if (p) {
+            try {
+              localStorage.setItem(BALLOON_POS_KEY, JSON.stringify(p));
+            } catch {
+              /* ignore */
+            }
           }
-        }
-        return p;
-      });
-    }
+          return p;
+        });
+        queueMicrotask(() => {
+          wasDragged.current = false;
+        });
+      }
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const openChat = () => {
+    if (wasDragged.current) return;
+    setOpen(true);
   };
 
   useEffect(() => {
@@ -303,19 +315,16 @@ export default function SiteGuideChat() {
       )}
 
       {!open && !balloonDismissed && (
-        <div
-          className="site-guide-balloon-wrap site-guide-draggable"
-          onPointerDown={onDragPointerDown}
-          onPointerMove={onDragPointerMove}
-          onPointerUp={onDragPointerUp}
-          onPointerCancel={onDragPointerUp}
-        >
-          <div className="site-guide-balloon">
+        <div className="site-guide-balloon-wrap">
+          <div
+            className="site-guide-balloon site-guide-draggable"
+            onPointerDown={onDragPointerDown}
+          >
             <button
               type="button"
               className="site-guide-balloon-close"
               onClick={(e) => {
-                if (wasDragged.current) return;
+                e.stopPropagation();
                 dismissBalloon(e);
               }}
               aria-label="סגור בלון"
@@ -325,10 +334,7 @@ export default function SiteGuideChat() {
             <button
               type="button"
               className="site-guide-balloon-body"
-              onClick={() => {
-                if (wasDragged.current) return;
-                setOpen(true);
-              }}
+              onClick={openChat}
               aria-label="פתח צ'אט עזרה"
             >
               <SiteIcon size={34} />
@@ -344,13 +350,7 @@ export default function SiteGuideChat() {
           type="button"
           className="site-guide-fab site-guide-fab--mini site-guide-draggable"
           onPointerDown={onDragPointerDown}
-          onPointerMove={onDragPointerMove}
-          onPointerUp={onDragPointerUp}
-          onPointerCancel={onDragPointerUp}
-          onClick={() => {
-            if (wasDragged.current) return;
-            setOpen(true);
-          }}
+          onClick={openChat}
           aria-label="פתח צ'אט עזרה"
           title="צ'אט עזרה"
         >
