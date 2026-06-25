@@ -77,7 +77,7 @@ def admin_run_daily_sync(request):
     stdout = StringIO()
     stderr = StringIO()
     try:
-        call_command('daily_sync', stdout=stdout, stderr=stderr)
+        call_command('daily_sync', stdout=stdout, stderr=stderr, light=True)
         out = stdout.getvalue()
         err = stderr.getvalue()
         return Response(_sync_response_payload(
@@ -86,7 +86,7 @@ def admin_run_daily_sync(request):
             stderr=err,
             started=started,
             ok=True,
-            snapshot=build_monitoring_snapshot(),
+            snapshot=None,
         ))
     except Exception as exc:
         err_text = str(exc) or stderr.getvalue() or stdout.getvalue() or 'נכשל'
@@ -107,7 +107,7 @@ def admin_run_daily_sync(request):
             stderr=err or str(exc),
             started=started,
             ok=False,
-            snapshot=build_monitoring_snapshot(),
+            snapshot=None,
         )
         return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

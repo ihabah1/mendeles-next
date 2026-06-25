@@ -17,12 +17,20 @@ from api.services.pais_draw import draw_results_path, load_draw_for_sync
 class Command(BaseCommand):
     help = 'Daily sync: fetch PAIS draw, export combo stats CSV, log results'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--light',
+            action='store_true',
+            help='Skip slow pool reload and heavy stats (manual admin runs)',
+        )
+
     def _step(self, message: str) -> None:
         self.stdout.write(message)
 
     def handle(self, *args, **options):
         started = time.monotonic()
         details: dict = {}
+        light = bool(options.get('light'))
         try:
             self._step('▶ מתחיל סנכרון יומי…')
             self._step('▶ מוריד / מעדכן נתוני הגרלה מפיס…')
@@ -70,20 +78,24 @@ class Command(BaseCommand):
                     self._step(f'! זכיות: {exc}')
 
             self._step('▶ מרענן מאגר צירופים…')
-            pool_refresh = refresh_combo_pool_for_draw(lottery_id)
+            if light:
+                pool_refresh = {'skipped': True, 'reason': 'light_mode'}
+                self._step('▶ מאגר: דולג (מצב מהיר)')
+            else:
+                pool_refresh = refresh_combo_pool_for_draw(lottery_id)
             details['poolRefresh'] = pool_refresh
-            if pool_refresh and not pool_refresh.get('skipped'):
+            if not light and pool_refresh and not pool_refresh.get('skipped'):
                 self._step(f'▶ מאגר: {pool_refresh.get("free", 0)} צירופים פנויים')
                 log_automation(
                     AutomationLog.Job.COMBO_EXPORT,
                     f"מאגר צירופים רוענן — {pool_refresh.get('free', 0)} פנויים",
                     details=pool_refresh,
                 )
-            elif pool_refresh and pool_refresh.get('skipped'):
+            elif not light and pool_refresh and pool_refresh.get('skipped'):
                 self._step('▶ מאגר: דולג (אין הגרלה חדשה)')
 
             self._step('▶ אוסף סטטיסטיקות מאגר…')
-            stats = pool_stats()
+            stats = pool_stats(light=light)
             details['combos'] = {
                 'total': stats['total'],
                 'used': stats['used'],

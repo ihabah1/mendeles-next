@@ -381,12 +381,21 @@ def is_combo_available(nums: list[int]) -> bool:
     ).exists()
 
 
-def pool_stats() -> dict:
+def pool_stats(*, light: bool = False) -> dict:
     total = ApprovedCombo.objects.count()
     used = ApprovedCombo.objects.filter(used=True).count()
     free = ApprovedCombo.objects.filter(used=False).count()
     state = read_pool_state()
-    json_stats = approved_combos_json_stats()
+    json_stats = approved_combos_json_stats() if not light else {
+        'exists': bool(find_approved_combos_json()),
+        'path': str(find_approved_combos_json() or ''),
+        'objectCount': state.get('jsonObjectCount'),
+        'sizeMb': None,
+        'updatedAt': state.get('lastRefreshedAt'),
+        'addedRecently': state.get('addedSinceLastRefresh'),
+        'pendingImport': False,
+    }
+    history_count = 0 if light else len(historically_distributed_keys())
     return {
         'total': total,
         'used': used,
@@ -395,6 +404,6 @@ def pool_stats() -> dict:
         'jsonPath': json_stats.get('path'),
         'jsonExists': json_stats.get('exists', False),
         'state': state,
-        'historyCount': len(historically_distributed_keys()),
+        'historyCount': history_count,
         'json': json_stats,
     }

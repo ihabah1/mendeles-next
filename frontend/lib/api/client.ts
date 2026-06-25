@@ -158,7 +158,7 @@ export function extractApiError(error: unknown, fallback = "אירעה שגיא�
   }
   if (axios.isAxiosError(error)) {
     if (error.code === "ECONNABORTED") {
-      return "השרת לא מגיב בזמן. ודא שה-backend (Django) רץ.";
+      return "השרת לא מגיב בזמן — הסנכרון עדיין עשוי לרוץ ברקע. רענן את דף הניטור בעוד דקה.";
     }
     if (!error.response) {
       resetApiBaseCache();

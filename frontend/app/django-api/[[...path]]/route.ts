@@ -9,6 +9,11 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 300;
+
+const LONG_RUNNING_TIMEOUT_MS = 300_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
+const HEAVY_DOWNLOAD_TIMEOUT_MS = 120_000;
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -41,7 +46,7 @@ async function fetchBackend(
   target: string,
   init: RequestInit,
   timeoutMs: number,
-  attempts = 3,
+  attempts = 1,
 ): Promise<Response> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i += 1) {
@@ -58,6 +63,11 @@ async function fetchBackend(
     }
   }
   throw lastErr;
+}
+
+function isLongRunningProxyRequest(req: NextRequest, suffix: string): boolean {
+  if (suffix.includes("/admin/monitoring/run-daily-sync")) return true;
+  return req.method === "POST" && suffix.includes("/admin/monitoring/");
 }
 
 async function proxy(
@@ -94,10 +104,16 @@ async function proxy(
     req.method === "GET" &&
     (suffix.includes("/scan") || suffix.includes("/invoice"));
 
-  const timeoutMs = isHeavyDownload ? 120_000 : 60_000;
+  const isLongRunning = isLongRunningProxyRequest(req, suffix);
+  const timeoutMs = isLongRunning
+    ? LONG_RUNNING_TIMEOUT_MS
+    : isHeavyDownload
+      ? HEAVY_DOWNLOAD_TIMEOUT_MS
+      : DEFAULT_TIMEOUT_MS;
+  const attempts = isLongRunning || isHeavyDownload ? 1 : 3;
 
   try {
-    const res = await fetchBackend(target, init, timeoutMs);
+    const res = await fetchBackend(target, init, timeoutMs, attempts);
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       if (HOP_BY_HOP.has(key.toLowerCase())) return;

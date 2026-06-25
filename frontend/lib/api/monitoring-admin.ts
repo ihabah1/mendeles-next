@@ -178,7 +178,7 @@ export interface DailySyncResult {
   logs?: string[];
   durationMs?: number;
   startedAt?: string;
-  snapshot: MonitoringSnapshot;
+  snapshot?: MonitoringSnapshot | null;
 }
 
 export function linesFromSyncPayload(data: {
@@ -204,7 +204,7 @@ export const monitoringAdminService = {
     const { data } = await api.post<DailySyncResult>(
       "/admin/monitoring/run-daily-sync/",
       {},
-      { timeout: 120_000 },
+      { timeout: 300_000 },
     );
     return {
       ...data,

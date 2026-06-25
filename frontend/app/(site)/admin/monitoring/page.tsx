@@ -109,7 +109,7 @@ function MonitoringPageInner() {
   const runSync = async () => {
     setLogOpen(true);
     setLogStatus("running");
-    setLogLines(["▶ מתחיל סנכרון יומי…", "▶ שולח בקשה לשרת (יכול לקחת עד 2 דקות)…"]);
+    setLogLines(["▶ מתחיל סנכרון יומי…", "▶ שולח בקשה לשרת (עד 5 דקות)…"]);
     setLogDetail("");
     setElapsedSec(0);
     syncStartedRef.current = Date.now();
@@ -129,22 +129,23 @@ function MonitoringPageInner() {
 
     try {
       const res = await monitoringAdminService.runDailySync();
-      setSnap(res.snapshot);
       const serverLines = linesFromSyncPayload(res);
       setLogLines(serverLines.length ? serverLines : [`✓ ${res.detail}`]);
       setLogStatus("success");
       setLogDetail(res.detail);
       setMessage(res.detail);
+      await load();
     } catch (e) {
       if (axios.isAxiosError(e) && e.response?.data && typeof e.response.data === "object") {
         const body = e.response.data as DailySyncResult;
-        if (body.snapshot) setSnap(body.snapshot);
         const serverLines = linesFromSyncPayload(body);
         const detail = body.detail || extractApiError(e, "סנכרון נכשל");
         setLogLines(serverLines.length ? [...serverLines, `✗ ${detail}`] : [`✗ ${detail}`]);
         setLogDetail(detail);
         setLogStatus("error");
         setError(detail);
+        if (body.snapshot) setSnap(body.snapshot);
+        else await load().catch(() => {});
       } else {
         const detail = extractApiError(e, "סנכרון נכשל");
         setLogLines((prev) => [...prev, `✗ ${detail}`]);
