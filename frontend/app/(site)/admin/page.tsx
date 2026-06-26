@@ -226,7 +226,7 @@ function AdminPageInner() {
                 {
                   label: "ממתינות להגשה",
                   value: String(stats.pending_orders),
-                  accent: "#ffb347",
+                  accent: "#94a3b8",
                 },
                 { label: "הכנסות", value: `₪${stats.total_revenue?.toFixed(0)}` },
                 { label: "זכיות", value: String(stats.total_wins) },

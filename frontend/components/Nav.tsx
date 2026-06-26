@@ -51,12 +51,16 @@ export default function Nav() {
   const showDevGames = canAccessDevGames(isStaff);
   const navLinks: NavLink[] = [
     { href: "/", label: "ראשי", exact: true, mobilePrimary: true },
-    { href: "/lotto", label: "לוטו", mobilePrimary: true },
-    { href: "/toto", label: "טוטו" },
-    ...(showDevGames ? [{ href: "/seven77", label: "777" }] : []),
+    { href: "/dashboard", label: "מסמכים", mobilePrimary: true },
     { href: "/about", label: "מידע" },
-    { href: "/promotions", label: "מבצעים", badge: "3" },
-    { href: "/terms", label: "משחקים באחריות" },
+    ...(showDevGames
+      ? [
+          { href: "/lotto", label: "לוטו" },
+          { href: "/toto", label: "טוטו" },
+          { href: "/seven77", label: "777" },
+        ]
+      : []),
+    { href: "/terms", label: "תנאים" },
   ];
 
   const isActive = (href: string, exact?: boolean) => {

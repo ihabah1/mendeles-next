@@ -28,7 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  queued: "#ffb347",
+  queued: "#94a3b8",
   approved: "#c9a84c",
   claimed: "#8aaabe",
   printing: "#8aaabe",
@@ -50,9 +50,9 @@ const PRINTER_LEVEL_STYLES: Record<
   },
   agent_only: {
     bg: "rgba(255,179,71,.12)",
-    border: "#ffb347",
-    color: "#ffb347",
-    dot: "#ffb347",
+    border: "#94a3b8",
+    color: "#94a3b8",
+    dot: "#94a3b8",
     title: "סוכן מחובר — מדפסת לא מוכנה",
   },
   offline: {

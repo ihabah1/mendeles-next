@@ -10,12 +10,12 @@ interface BalancePillProps {
 }
 
 const GOLD = {
-  bg: "#2a1e0a",
-  border: "#4a3418",
-  amt: "#c9a030",
-  lbl: "#7a6030",
-  cur: "#7a6030",
-  ico: "#5a4020",
+  bg: "#1e293b",
+  border: "#475569",
+  amt: "#e2e8f0",
+  lbl: "#94a3b8",
+  cur: "#94a3b8",
+  ico: "#64748b",
 };
 const PURPLE = {
   bg: "#2a1050",
@@ -134,8 +134,8 @@ export default function BalancePill({ balance: initialBalance, name, compact }: 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 12 }}>
       {name && !compact && (
-        <div style={{ fontSize: 12, color: "#7a6030" }}>
-          שלום, <strong style={{ color: "#c9a030", fontSize: 13 }}>{name}</strong>
+        <div style={{ fontSize: 12, color: "#94a3b8" }}>
+          שלום, <strong style={{ color: "#e2e8f0", fontSize: 13 }}>{name}</strong>
         </div>
       )}
 
@@ -242,8 +242,8 @@ export default function BalancePill({ balance: initialBalance, name, compact }: 
           type="button"
           onClick={() => router.push("/profile/topup")}
           style={{
-            background: "#c9a030",
-            color: "#1c1208",
+            background: "#475569",
+            color: "#f8fafc",
             border: "none",
             borderRadius: 3,
             fontSize: 11,

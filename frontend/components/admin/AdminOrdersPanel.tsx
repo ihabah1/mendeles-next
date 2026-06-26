@@ -41,8 +41,8 @@ const STATUS_LABELS: Record<string, string> = {
   scanned: "נסרק 📄",
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#ffb347",
-  paid: "#ffb347",
+  pending: "#94a3b8",
+  paid: "#94a3b8",
   printing: "#8aaabe",
   printed: "#8aaabe",
   shipped: "#c9a84c",
@@ -352,7 +352,7 @@ export default function AdminOrdersPanel() {
               background: integrations.print.configured
                 ? "rgba(29,185,106,.12)"
                 : "rgba(255,179,71,.12)",
-              color: integrations.print.configured ? "var(--green)" : "#ffb347",
+              color: integrations.print.configured ? "var(--green)" : "#94a3b8",
             }}
           >
             הדפסה: {integrations.print.configured ? "מחובר" : "לא מוגדר"}
@@ -431,7 +431,7 @@ export default function AdminOrdersPanel() {
                         log.level === "error"
                           ? "#ff6b7a"
                           : log.level === "warning"
-                            ? "#ffb347"
+                            ? "#94a3b8"
                             : "var(--green)",
                       fontWeight: 700,
                       minWidth: 52,

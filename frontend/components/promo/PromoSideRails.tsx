@@ -6,7 +6,75 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessDevGames } from "@/lib/lotto-only";
 import MandelesLogoMark from "./MandelesLogoMark";
 
-const RAIL_CARDS = {
+type RailCard = {
+  icon: string;
+  title: string;
+  lines: readonly string[];
+  href: string;
+  variant: string;
+  badge?: string;
+};
+
+const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
+  start: [
+    {
+      icon: "📄",
+      title: "הצעת מחיר",
+      lines: ["PDF עם לוגו", "מילוי אוטומטי עם AI"],
+      href: "/dashboard",
+      variant: "gold",
+      badge: "שירות",
+    },
+    {
+      icon: "✍️",
+      title: "חתימה דיגיטלית",
+      lines: ["שליחה ללקוח", "מעקב סטטוס"],
+      href: "/dashboard",
+      variant: "green",
+      badge: "מהיר",
+    },
+    {
+      icon: "📋",
+      title: "סיכום ביקור",
+      lines: ["תיעוד מקצועי", "שליחה מיידית"],
+      href: "/dashboard",
+      variant: "purple",
+    },
+  ],
+  end: [
+    {
+      icon: "👤",
+      title: "ניהול חשבון",
+      lines: ["פרטי עסק ולוגו", "הגדרות אישיות"],
+      href: "/profile/details",
+      variant: "navy",
+    },
+    {
+      icon: "🏆",
+      title: "הטבות ומתנות",
+      lines: ["מבצעים לחברים", "הטבות בלעדיות"],
+      href: "/promotions",
+      variant: "red",
+      badge: "חם",
+    },
+    {
+      icon: "💳",
+      title: "ניהול תשלומים",
+      lines: ["טעינת ארנק", "היסטוריית תשלומים"],
+      href: "/profile/topup",
+      variant: "teal",
+    },
+    {
+      icon: "🧾",
+      title: "חשבונית מס",
+      lines: ["הורדת חשבוניות", "מסמכים רשמיים"],
+      href: "/profile/orders",
+      variant: "gold",
+    },
+  ],
+};
+
+const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
   start: [
     {
       icon: "🎱",
@@ -56,9 +124,26 @@ const RAIL_CARDS = {
       variant: "teal",
     },
   ],
+};
+
+const RAIL_TICKERS_DOCS = {
+  start: [
+    "📄 PDF מקצועי עם לוגו",
+    "🤖 מילוי אוטומטי עם AI",
+    "✍️ חתימה דיגיטלית מהירה",
+    "📊 מעקב סטטוס בזמן אמת",
+    "🔒 מאובטח ופרטי",
+  ],
+  end: [
+    "👤 ניהול חשבון עסקי",
+    "🧾 חשבוניות ומסמכים",
+    "💳 תשלומים מאובטחים",
+    "📲 עדכונים ב-SMS",
+    "🔒 הצפנה מתקדמת",
+  ],
 } as const;
 
-const RAIL_TICKERS = {
+const RAIL_TICKERS_LOTTO = {
   start: [
     "📋 ניתוח סטטיסטי",
     "🚗 הגשה בשם הלקוח",
@@ -75,7 +160,20 @@ const RAIL_TICKERS = {
   ],
 } as const;
 
-const RAIL_STATS = {
+const RAIL_STATS_DOCS = {
+  start: [
+    { n: "3", l: "תבניות" },
+    { n: "AI", l: "מילוי" },
+    { n: "PDF", l: "מיידי" },
+  ],
+  end: [
+    { n: "24/7", l: "מעקב" },
+    { n: "100%", l: "מאובטח" },
+    { n: "✓", l: "חתימה" },
+  ],
+} as const;
+
+const RAIL_STATS_LOTTO = {
   start: [
     { n: "200", l: "סטים" },
     { n: "37", l: "מספרים" },
@@ -159,15 +257,7 @@ function RailCard({
   variant,
   badge,
   index = 0,
-}: {
-  icon: string;
-  title: string;
-  lines: readonly string[];
-  href: string;
-  variant: string;
-  badge?: string;
-  index?: number;
-}) {
+}: RailCard & { index?: number }) {
   return (
     <Link
       href={href}
@@ -192,8 +282,8 @@ function RailCard({
   );
 }
 
-function RailTicker({ side }: { side: "start" | "end" }) {
-  const items = RAIL_TICKERS[side];
+function RailTicker({ side, landing }: { side: "start" | "end"; landing: boolean }) {
+  const items = landing ? RAIL_TICKERS_DOCS[side] : RAIL_TICKERS_LOTTO[side];
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
@@ -212,7 +302,8 @@ function RailTicker({ side }: { side: "start" | "end" }) {
   );
 }
 
-function RailDeco({ side }: { side: "start" | "end" }) {
+function RailDeco({ side, landing }: { side: "start" | "end"; landing: boolean }) {
+  const stats = landing ? RAIL_STATS_DOCS[side] : RAIL_STATS_LOTTO[side];
   const balls = side === "start" ? [7, 14, 23, 31, 37, 42] : [3, 11, 19, 28, 33, 40];
   return (
     <div className="promo-side-rail-deco" aria-hidden>
@@ -221,17 +312,13 @@ function RailDeco({ side }: { side: "start" | "end" }) {
       </div>
       <div className="promo-side-rail-deco-balls">
         {balls.map((n, i) => (
-          <span
-            key={n}
-            className="promo-side-rail-ball"
-            style={{ animationDelay: `${i * 0.25}s` }}
-          >
+          <span key={n} className="promo-side-rail-ball" style={{ animationDelay: `${i * 0.25}s` }}>
             {n}
           </span>
         ))}
       </div>
       <div className="promo-side-rail-stats">
-        {RAIL_STATS[side].map((s) => (
+        {stats.map((s) => (
           <div key={s.l} className="promo-side-rail-stat">
             <strong>{s.n}</strong>
             <small>{s.l}</small>
@@ -242,12 +329,14 @@ function RailDeco({ side }: { side: "start" | "end" }) {
   );
 }
 
-export function PromoRailColumn({ side }: { side: "start" | "end" }) {
+export function PromoRailColumn({ side, landing = false }: { side: "start" | "end"; landing?: boolean }) {
   const { isStaff } = useAuth();
   const showDev = canAccessDevGames(isStaff);
-  const cards = RAIL_CARDS[side].filter((c) => showDev || !c.href.startsWith("/seven77"));
+  const source = landing ? RAIL_CARDS_DOCS : RAIL_CARDS_LOTTO;
+  const cards = source[side].filter((c) => showDev || !c.href.startsWith("/seven77"));
+
   return (
-    <aside className={`promo-side-rail promo-side-rail--${side}`} aria-label="מבצעים בצד">
+    <aside className={`promo-side-rail promo-side-rail--${side}`} aria-label="שירותים בצד">
       <RailConfetti count={20} tall />
       <RailFloatBalls />
 
@@ -265,18 +354,21 @@ export function PromoRailColumn({ side }: { side: "start" | "end" }) {
       ))}
 
       <div className="promo-side-rail-body">
-        <RailTicker side={side} />
-        <RailDeco side={side} />
+        <RailTicker side={side} landing={landing} />
+        <RailDeco side={side} landing={landing} />
       </div>
 
       <div className="promo-side-rail-footer">
-        <Link href={side === "start" ? "/lotto" : "/profile"} className="promo-side-rail-cta">
-          {side === "start" ? "למילוי טפסים" : "לאזור האישי"}
+        <Link
+          href={side === "start" ? (landing ? "/dashboard" : "/lotto") : "/profile"}
+          className="promo-side-rail-cta"
+        >
+          {side === "start" ? (landing ? "ליצירת מסמך" : "למילוי טפסים") : "לאזור האישי"}
           <span className="promo-side-rail-cta-arrow" aria-hidden>←</span>
         </Link>
         <div className="promo-side-rail-badge">
-          <span>18+</span>
-          <small>הימורים באחריות</small>
+          <span>{landing ? "B2B" : "18+"}</span>
+          <small>{landing ? "לעסקים" : "הימורים באחריות"}</small>
         </div>
       </div>
     </aside>
@@ -286,8 +378,8 @@ export function PromoRailColumn({ side }: { side: "start" | "end" }) {
 export default function PromoSideRails() {
   return (
     <>
-      <PromoRailColumn side="start" />
-      <PromoRailColumn side="end" />
+      <PromoRailColumn side="start" landing />
+      <PromoRailColumn side="end" landing />
     </>
   );
 }

@@ -17,6 +17,8 @@ type ChatMsg = {
 
 const HIDE_ON = ["/admin", "/auth"];
 
+const LIGHT_THEME_PATHS = ["/", "/dashboard", "/pricing", "/about", "/terms"];
+
 const SESSION_KEY = "mandeles-guide-session";
 
 function getSessionId(): string {
@@ -238,6 +240,9 @@ export default function SiteGuideChat() {
 
   if (hidden) return null;
 
+  const lightTheme =
+    LIGHT_THEME_PATHS.includes(path) || path.startsWith("/dashboard/");
+
   /** When dragged, panel opens above or below depending on free space. */
   const panelBelow = pos !== null && pos.y < 300;
 
@@ -245,6 +250,8 @@ export default function SiteGuideChat() {
     <div
       ref={rootRef}
       className={`site-guide-root${
+        lightTheme ? " site-guide-root--light" : ""
+      }${
         pos ? "" : " site-guide-root--anchored"
       }${cookieBarVisible ? " site-guide-root--cookie-lift" : ""}${panelBelow ? " site-guide-root--panel-below" : ""}`}
       style={
@@ -355,7 +362,7 @@ export default function SiteGuideChat() {
           title="צ'אט עזרה"
         >
           <span className="site-guide-fab-glyph" aria-hidden>
-            💬
+            <SiteIcon size={26} />
           </span>
           <span className="site-guide-fab-label">צ׳אט עזרה</span>
         </button>

@@ -275,7 +275,7 @@ function AuthForm() {
             style={{
               background: "rgba(232,160,48,.1)",
               border: "1px solid rgba(232,160,48,.35)",
-              color: "#e8c870",
+              color: "#94a3b8",
               borderRadius: 8,
               padding: "10px 12px",
               fontSize: ".75rem",

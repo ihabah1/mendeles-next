@@ -71,7 +71,7 @@ async function sendViaResend(
       <p>תודה שנרשמת ל-Mandeles.co.il. כדי להשלים את ההרשמה, אנא אמת את כתובת האימייל שלך:</p>
       <p style="text-align:center;margin:28px 0;">
         <a href="${verifyUrl}"
-           style="background:linear-gradient(135deg,#c9a84c,#e8c870);color:#0d1b2a;
+           style="background:linear-gradient(135deg,#64748b,#94a3b8);color:#f8fafc;
                   padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
           אימות אימייל
         </a>

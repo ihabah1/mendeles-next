@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/AdminUI";
 import { extractApiError } from "@/lib/api/client";
 import { serviceFlagsApi, type ServiceFlag } from "@/lib/api/serviceFlags";
+import WhatsAppAgentPanel from "@/components/admin/WhatsAppAgentPanel";
 import { useBackendOrigin } from "@/hooks/useBackendOrigin";
 
 export default function AdminServicesPage() {
@@ -95,7 +96,7 @@ function AdminServicesInner() {
                   <div style={{ fontWeight: 700, color: "var(--cream)", fontSize: ".88rem" }}>{flag.label}</div>
                   <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>{flag.description}</div>
                   {flag.requires_restart && (
-                    <div style={{ color: "#e8c870", fontSize: ".65rem", marginTop: 4 }}>⚠️ שינוי עשוי לדרוש restart</div>
+                    <div style={{ color: "#94a3b8", fontSize: ".65rem", marginTop: 4 }}>⚠️ שינוי עשוי לדרוש restart</div>
                   )}
                 </div>
                 <button
@@ -123,6 +124,8 @@ function AdminServicesInner() {
             ))}
           </div>
         )}
+
+        <WhatsAppAgentPanel />
 
         <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--navy-b)" }}>
           <h2 style={{ fontSize: ".9rem", color: "var(--cream)", marginBottom: 10 }}>קישורים מהירים</h2>

@@ -502,3 +502,161 @@ class SiteDailyMetric(models.Model):
         ordering = ['-date']
         verbose_name = 'מדד יומי'
         verbose_name_plural = 'מדדים יומיים'
+
+
+class BusinessProfile(models.Model):
+    """Business branding and contact details for document generation."""
+
+    class Trade(models.TextChoices):
+        GENERAL = 'general', 'כללי'
+        LAW = 'law', 'עורכי דין'
+        REAL_ESTATE = 'real_estate', 'נדל״ן'
+        ACCOUNTING = 'accounting', 'רואי חשבון'
+        CONTRACTOR = 'contractor', 'קבלנים / שיפוצים'
+        PLUMBING = 'plumbing', 'אינסטלציה'
+        GARDENING = 'gardening', 'גינון'
+        OTHER = 'other', 'אחר'
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='business_profile',
+    )
+    business_name = models.CharField('שם העסק', max_length=160, blank=True)
+    trade = models.CharField(
+        'תחום',
+        max_length=32,
+        choices=Trade.choices,
+        default=Trade.GENERAL,
+    )
+    phone = models.CharField('טלפון עסק', max_length=32, blank=True)
+    email = models.EmailField('אימייל עסק', blank=True)
+    address = models.CharField('כתובת', max_length=200, blank=True)
+    city = models.CharField('עיר', max_length=80, blank=True)
+    tax_id = models.CharField('ח.פ. / עוסק', max_length=20, blank=True)
+    logo_url = models.URLField('לוגו (קישור)', max_length=512, blank=True)
+    logo_data = models.TextField('לוגו (base64)', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'פרופיל עסק'
+        verbose_name_plural = 'פרופילי עסקים'
+
+    def __str__(self):
+        return self.business_name or str(self.user)
+
+
+class DocumentTemplate(models.Model):
+    """Reusable document template (quote, visit summary, call summary)."""
+
+    class DocType(models.TextChoices):
+        QUOTE = 'quote', 'הצעת מחיר'
+        VISIT_SUMMARY = 'visit_summary', 'סיכום ביקור'
+        CALL_SUMMARY = 'call_summary', 'סיכום שיחה'
+
+    slug = models.SlugField(unique=True, max_length=40)
+    doc_type = models.CharField(max_length=32, choices=DocType.choices)
+    name = models.CharField('שם', max_length=120)
+    description = models.TextField('תיאור', blank=True)
+    fields_schema = models.JSONField('שדות', default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = 'תבנית מסמך'
+        verbose_name_plural = 'תבניות מסמכים'
+
+    def __str__(self):
+        return self.name
+
+
+class Document(models.Model):
+    """A business document created by a user."""
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'טיוטה'
+        SENT = 'sent', 'נשלח'
+        VIEWED = 'viewed', 'נצפה'
+        SIGNED = 'signed', 'נחתם'
+        CANCELLED = 'cancelled', 'בוטל'
+
+    class DocType(models.TextChoices):
+        QUOTE = 'quote', 'הצעת מחיר'
+        VISIT_SUMMARY = 'visit_summary', 'סיכום ביקור'
+        CALL_SUMMARY = 'call_summary', 'סיכום שיחה'
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='documents',
+    )
+    template = models.ForeignKey(
+        DocumentTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents',
+    )
+    document_number = models.CharField('מספר מסמך', max_length=32, unique=True)
+    doc_type = models.CharField(max_length=32, choices=DocType.choices)
+    title = models.CharField('כותרת', max_length=200)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+    recipient_name = models.CharField('שם נמען', max_length=120, blank=True)
+    recipient_email = models.EmailField('אימייל נמען', blank=True)
+    recipient_phone = models.CharField('טלפון נמען', max_length=32, blank=True)
+    fields_data = models.JSONField('נתוני שדות', default=dict, blank=True)
+    notes = models.TextField('הערות פנימיות', blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'מסמך'
+        verbose_name_plural = 'מסמכים'
+
+    def __str__(self):
+        return f'{self.document_number} — {self.title}'
+
+
+class SignatureRequest(models.Model):
+    """Public signing link for a document."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'ממתין'
+        VIEWED = 'viewed', 'נצפה'
+        SIGNED = 'signed', 'נחתם'
+        EXPIRED = 'expired', 'פג תוקף'
+
+    document = models.OneToOneField(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='signature_request',
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    signature_data = models.TextField('חתימה', blank=True)
+    viewed_at = models.DateTimeField(null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'בקשת חתימה'
+        verbose_name_plural = 'בקשות חתימה'
+
+    def __str__(self):
+        return f'{self.document.document_number} ({self.status})'

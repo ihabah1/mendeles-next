@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const CONSENT_KEY = "mandeles-cookie-consent";
+const LIGHT_PATHS = ["/", "/dashboard", "/pricing", "/about", "/terms"];
 
 export default function CookieNotice() {
+  const path = usePathname() ?? "";
   const [visible, setVisible] = useState(false);
+  const light =
+    LIGHT_PATHS.includes(path) || path.startsWith("/dashboard/");
 
   useEffect(() => {
     try {
@@ -30,7 +35,7 @@ export default function CookieNotice() {
   if (!visible) return null;
 
   return (
-    <div className="cookie-notice" role="region" aria-label="הודעת Cookies">
+    <div className={`cookie-notice${light ? " cookie-notice--marketing" : ""}`} role="region" aria-label="הודעת Cookies">
       <span className="cookie-notice-icon" aria-hidden>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <circle cx="12" cy="12" r="10" />

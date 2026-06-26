@@ -3,16 +3,20 @@ from django.contrib import admin
 from .models import (
     ActionLog,
     ApprovedCombo,
+    BusinessProfile,
     CreditAccount,
     CustomerMessage,
     CustomerPermission,
     CustomerProfile,
+    Document,
+    DocumentTemplate,
     Kiosk,
     LottoSet,
     Order,
     PrintAgentHeartbeat,
     PrintJob,
     ServiceFlag,
+    SignatureRequest,
     Subscription,
 )
 
@@ -58,5 +62,30 @@ admin.site.register(LottoSet)
 class ServiceFlagAdmin(admin.ModelAdmin):
     list_display = ('key', 'label', 'enabled', 'requires_restart', 'updated_at')
     list_editable = ('enabled',)
-    readonly_fields = ('key', 'updated_at')
-    search_fields = ('key', 'label')
+
+
+@admin.register(BusinessProfile)
+class BusinessProfileAdmin(admin.ModelAdmin):
+    list_display = ('business_name', 'user', 'trade', 'city', 'updated_at')
+    search_fields = ('business_name', 'user__email', 'user__full_name')
+
+
+@admin.register(DocumentTemplate)
+class DocumentTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'doc_type', 'slug', 'is_active', 'sort_order')
+    list_filter = ('doc_type', 'is_active')
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    list_display = ('document_number', 'title', 'owner', 'doc_type', 'status', 'created_at')
+    list_filter = ('status', 'doc_type')
+    search_fields = ('document_number', 'title', 'owner__email', 'recipient_name')
+
+
+@admin.register(SignatureRequest)
+class SignatureRequestAdmin(admin.ModelAdmin):
+    list_display = ('document', 'status', 'token', 'created_at', 'signed_at')
+    list_filter = ('status',)
+    search_fields = ('token', 'document__document_number')
+    readonly_fields = ('token', 'created_at')

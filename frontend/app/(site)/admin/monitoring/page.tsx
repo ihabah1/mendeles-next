@@ -241,13 +241,13 @@ function MonitoringPageInner() {
                         ? `${formatCount(snap.comboPool.json.addedSinceLastImport)} בייבוא אחרון`
                         : "מאז עדכון קובץ אחרון"
                   }
-                  accent={snap.comboPool.json?.pendingImport ? "#ffb347" : undefined}
+                  accent={snap.comboPool.json?.pendingImport ? "#94a3b8" : undefined}
                 />
                 <AdminStatCard
                   label="ריצות אוטומציה"
                   value={String(auto?.stats.successCount ?? 0)}
                   sub={`${auto?.stats.failCount ?? 0} כשלונות`}
-                  accent={auto?.stats.failCount ? "#ffb347" : undefined}
+                  accent={auto?.stats.failCount ? "#94a3b8" : undefined}
                 />
               </AdminStatGrid>
             </section>

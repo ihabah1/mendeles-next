@@ -6,7 +6,9 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from . import (
     admin_views,
     ai_compose_views,
+    document_views,
     guide_views,
+    whatsapp_views,
     kiosk_views,
     messages_admin_views,
     lotto_views,
@@ -66,6 +68,17 @@ lotto_patterns = [
     path('submit/', lotto_views.submit_order, name='lotto-submit'),
     path('subscribe/', lotto_views.subscribe, name='lotto-subscribe'),
     path('print/', lotto_views.print_summary, name='lotto-print'),
+]
+
+document_patterns = [
+    path('templates/', document_views.document_templates_list, name='document-templates'),
+    path('generate/', document_views.document_generate, name='document-generate'),
+    path('', document_views.documents_list_create, name='documents-list'),
+    path('<int:doc_id>/', document_views.document_detail, name='document-detail'),
+]
+
+business_patterns = [
+    path('', document_views.business_profile_view, name='business-profile'),
 ]
 
 print_patterns = [
@@ -146,6 +159,10 @@ admin_patterns = [
 
 urlpatterns = [
     path('guide/chat/', guide_views.guide_chat, name='guide-chat'),
+    path('whatsapp/webhook/', whatsapp_views.whatsapp_webhook, name='whatsapp-webhook'),
+    path('whatsapp/status/', whatsapp_views.whatsapp_status, name='whatsapp-status'),
+    path('whatsapp/setup/', whatsapp_views.whatsapp_setup_info, name='whatsapp-setup'),
+    path('whatsapp/simulate/', whatsapp_views.whatsapp_simulate, name='whatsapp-simulate'),
     path('metrics/ping/', metrics_views.metrics_ping, name='metrics-ping'),
     path('kiosk/login/', kiosk_views.kiosk_login, name='kiosk-login'),
     path('kiosk/jobs/', kiosk_views.kiosk_jobs, name='kiosk-jobs'),
@@ -154,6 +171,8 @@ urlpatterns = [
     path('auth/', include(auth_patterns)),
     path('wallet/', include(wallet_patterns)),
     path('lotto/', include(lotto_patterns)),
+    path('documents/', include(document_patterns)),
+    path('business-profile/', include(business_patterns)),
     path('print/', include(print_patterns)),
     path('admin/', include(admin_patterns)),
     path('orders/<int:order_id>/scan/', print_views.customer_order_scan, name='order-scan'),

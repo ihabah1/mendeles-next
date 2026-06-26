@@ -5,12 +5,13 @@ import PromoLayout from "@/components/promo/PromoLayout";
 import SiteGuideChat from "@/components/SiteGuideChat";
 import SiteMetricsPing from "@/components/SiteMetricsPing";
 import CookieNotice from "@/components/CookieNotice";
+import SiteFooter from "@/components/SiteFooter";
 import AccessibilityWidget from "@/components/AccessibilityWidget";
 
 export const metadata: Metadata = {
-  title: { template: "%s — Mandeles.co.il", default: "Mandeles.co.il — ניתוח סטטיסטי ולוטו" },
-  description: "שירות ניתוח סטטיסטי והגשת טפסי לוטו בשם הלקוח — ללא קשר למפעל הפיס",
-  keywords: ["לוטו", "מפעל הפיס", "טפסים", "ניתוח סטטיסטי", "mandeles"],
+  title: { template: "%s — Mandeles.co.il", default: "מנדלס — מסמכים חכמים לעסקים" },
+  description: "יצירת PDF עם לוגו, מילוי אוטומטי עם AI, שליחה לחתימה ומעקב סטטוס — לעסקים בישראל",
+  keywords: ["מסמכים", "חתימה דיגיטלית", "הצעת מחיר", "PDF", "עסקים", "mandeles"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -30,14 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AccessibilityWidget />
           <CookieNotice />
         </AuthProvider>
-        <footer style={{ textAlign: "center", padding: "20px 16px", borderTop: "1px solid var(--border)", color: "var(--muted)", fontSize: ".7rem", lineHeight: 1.8, background: "var(--bg4)" }}>
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
-            <a href="/about" style={{ color: "var(--muted)", textDecoration: "none" }}>אודות</a>
-            <a href="/terms" style={{ color: "var(--muted)", textDecoration: "none" }}>תנאי שימוש</a>
-            <a href="/accessibility" style={{ color: "var(--muted)", textDecoration: "none" }}>נגישות</a>
-          </div>
-          © 2026 Mandeles.co.il — איננו קשורים למפעל הפיס | גיל מינימלי 18 | בעיות הימורים: <a href="tel:1800232425" style={{ color: "var(--gold)" }}>1-800-23-24-25</a>
-        </footer>
+        <SiteFooter />
       </body>
     </html>
   );

@@ -310,7 +310,12 @@ SMS_OTP_MAX_ATTEMPTS = int(os.getenv('SMS_OTP_MAX_ATTEMPTS', '5'))
 TWILIO_ACCOUNT_SID = _env_clean('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = _env_clean('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = _env_clean('TWILIO_FROM_NUMBER', '')
-# Firebase Phone Auth — paste full service account JSON (Railway multiline or single line)
+# WhatsApp agent (Twilio WhatsApp API — sandbox or business number)
+WHATSAPP_AGENT_ENABLED = os.getenv('WHATSAPP_AGENT_ENABLED', 'false').lower() in (
+    '1', 'true', 'yes',
+)
+TWILIO_WHATSAPP_FROM = _env_clean('TWILIO_WHATSAPP_FROM', '')
+BACKEND_PUBLIC_URL = _env_clean('BACKEND_PUBLIC_URL', '')
 FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON', '')
 FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON_BASE64', '')
 # Require SMS step after email verification (Firebase and/or legacy SMS)

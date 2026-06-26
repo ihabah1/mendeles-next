@@ -62,6 +62,27 @@ SMS_PROVIDER=log
 
 בדיקה: `GET /api/auth/sms-status/`
 
+### סוכן WhatsApp (Twilio)
+
+מענה אוטומטי ללקוחות — סטטוס מסמכים, הדרכה, ותשובות AI (Gemini).
+
+**Backend** — Variables:
+
+```env
+WHATSAPP_AGENT_ENABLED=true
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+BACKEND_PUBLIC_URL=https://eloquent-perfection-production-de3d.up.railway.app
+GEMINI_API_KEY=...
+```
+
+1. ב-[Twilio Console](https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn) — הפעל **WhatsApp Sandbox** (פיתוח) או מספר עסקי (production).
+2. **When a message comes in** → Webhook POST:
+   `https://<backend>/api/whatsapp/webhook/`
+3. בדיקה: `GET /api/whatsapp/status/` → `configured: true`
+4. סימולציה (צוות): `/admin/services` → סוכן WhatsApp, או `POST /api/whatsapp/simulate/` עם JWT צוות.
+
 ### Firebase Phone Auth (מומלץ — SMS דרך Firebase)
 
 **שני שירותים — שניהם חובה:**

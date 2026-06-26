@@ -8,6 +8,8 @@ export { contentService } from "./content";
 export { walletService } from "./wallet";
 export { adminService } from "./admin";
 export { lottoService } from "./lotto";
+export { documentsService, docTypeLabel, docStatusLabel } from "./documents";
+export type { BusinessDocument, DocumentTemplate, BusinessProfile, DocType, DocStatus, GenerateDocumentResult } from "./documents";
 export { inboxService } from "./inbox";
 export { messagesAdminService } from "./messages-admin";
 export { mapApiOrder, mapApiOrders, orderStatusLabel } from "./mappers";

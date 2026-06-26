@@ -35,8 +35,14 @@ const PUBLIC_AUTH_PATHS = [
   AUTH_ENDPOINTS.firebaseStatus,
 ] as const;
 
-function isPublicAuthRequest(url: string): boolean {
-  return PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+/** Routes that work without a JWT (guests + auth). */
+const PUBLIC_API_PATHS = [
+  ...PUBLIC_AUTH_PATHS,
+  "/documents/generate/",
+] as const;
+
+function isPublicApiRequest(url: string): boolean {
+  return PUBLIC_API_PATHS.some((path) => url.includes(path));
 }
 
 /** Called when the session can no longer be recovered (refresh failed). */
@@ -54,7 +60,7 @@ export const api = axios.create({
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   config.baseURL = await resolveApiBaseUrl();
   const url = config.url ?? "";
-  if (!isPublicAuthRequest(url)) {
+  if (!isPublicApiRequest(url)) {
     const token = tokenStore.getAccess();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -94,7 +100,7 @@ api.interceptors.response.use(
     const isAuthRoute =
       url.includes(AUTH_ENDPOINTS.refresh) ||
       url.includes(AUTH_ENDPOINTS.login) ||
-      isPublicAuthRequest(url);
+      isPublicApiRequest(url);
 
     if (status === 401 && original && !original._retry && !isAuthRoute) {
       original._retry = true;

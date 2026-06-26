@@ -32,7 +32,7 @@ export default async function HotNumbersPage() {
             <div key={t.number} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div style={{ width: 56, textAlign: 'center', fontWeight: 800, color: 'var(--gold)' }}>{t.number}</div>
               <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.round((t.count / Math.max(1, maxCount)) * 100)}%`, background: 'linear-gradient(90deg,var(--gold),#e6af00)', padding: '8px 10px', color: 'var(--navy)' }}>
+                <div style={{ width: `${Math.round((t.count / Math.max(1, maxCount)) * 100)}%`, background: 'linear-gradient(90deg,var(--gold),#64748b)', padding: '8px 10px', color: 'var(--navy)' }}>
                   {t.count}
                 </div>
               </div>
