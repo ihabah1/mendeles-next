@@ -22,7 +22,7 @@ const ITEMS: QuickItem[] = [
     href: "/admin",
     icon: "📊",
     title: "דשבורד",
-    desc: "סטטיסטיקות, זכיות ותוצאות הגרלה",
+    desc: "סטטיסטיקות וקיצורי דרך",
   },
   {
     id: "orders",
@@ -42,8 +42,8 @@ const ITEMS: QuickItem[] = [
     id: "monitoring",
     href: "/admin/monitoring",
     icon: "📡",
-    title: "ניטור תשתית",
-    desc: "אוטומציה, תנועה, קבצים ושירותים",
+    title: "ניטור",
+    desc: "אוטומציה, תשתית ולוגים",
   },
   {
     id: "services",

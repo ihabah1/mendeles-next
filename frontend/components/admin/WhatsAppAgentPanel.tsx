@@ -11,18 +11,7 @@ import {
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "3px 10px",
-        borderRadius: 999,
-        fontSize: ".68rem",
-        fontWeight: 700,
-        background: ok ? "rgba(29,185,106,.15)" : "rgba(255,80,80,.1)",
-        color: ok ? "#6ee7a0" : "#ff8a8a",
-        border: `1px solid ${ok ? "rgba(29,185,106,.35)" : "rgba(255,80,80,.3)"}`,
-      }}
-    >
+    <span className={`admin-status-pill${ok ? " admin-status-pill--ok" : " admin-status-pill--off"}`}>
       {label}
     </span>
   );
@@ -85,14 +74,7 @@ export default function WhatsAppAgentPanel() {
   const st: WhatsAppStatus | null = setup?.status ?? null;
 
   return (
-    <section
-      style={{
-        marginTop: 28,
-        paddingTop: 20,
-        borderTop: "1px solid var(--navy-b)",
-      }}
-      aria-labelledby="whatsapp-agent-heading"
-    >
+    <section className="admin-section-divider" aria-labelledby="whatsapp-agent-heading">
       <div
         style={{
           display: "flex",
@@ -104,15 +86,12 @@ export default function WhatsAppAgentPanel() {
         }}
       >
         <div>
-          <h2
-            id="whatsapp-agent-heading"
-            style={{ fontSize: ".95rem", color: "var(--cream)", marginBottom: 6 }}
-          >
+          <h2 id="whatsapp-agent-heading" style={{ fontSize: ".95rem", marginBottom: 6 }}>
             💬 סוכן WhatsApp
           </h2>
-          <p style={{ fontSize: ".72rem", color: "var(--muted)", maxWidth: 520 }}>
+          <p style={{ fontSize: ".72rem", maxWidth: 520 }}>
             מענה אוטומטי ללקוחות דרך Twilio — סטטוס מסמכים, הדרכה ליצירת הצעת מחיר, ותשובות AI
-            (Gemini).
+            (Gemini). ניתן להגדיר בשלב מאוחר יותר.
           </p>
         </div>
         <button
@@ -150,26 +129,10 @@ export default function WhatsAppAgentPanel() {
             </p>
           )}
 
-          <div
-            style={{
-              background: "rgba(26,45,66,.85)",
-              border: "1px solid var(--navy-b)",
-              borderRadius: 10,
-              padding: "14px 16px",
-            }}
-          >
-            <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 6 }}>
-              Webhook (POST ב-Twilio Console):
-            </div>
+          <div className="admin-inline-panel">
+            <div className="admin-field-label">Webhook (POST ב-Twilio Console):</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <code
-                style={{
-                  fontSize: ".68rem",
-                  wordBreak: "break-all",
-                  color: "var(--cream)",
-                  flex: 1,
-                }}
-              >
+              <code style={{ fontSize: ".68rem", wordBreak: "break-all", flex: 1 }}>
                 {setup.webhookUrl}
               </code>
               <button
@@ -190,32 +153,15 @@ export default function WhatsAppAgentPanel() {
                 Twilio Console ↗
               </a>
             </div>
-            <ol
-              style={{
-                margin: "12px 0 0",
-                paddingRight: 18,
-                fontSize: ".7rem",
-                color: "var(--muted)",
-                lineHeight: 1.6,
-              }}
-            >
+            <ol style={{ margin: "12px 0 0", paddingRight: 18, fontSize: ".7rem", lineHeight: 1.6 }}>
               {setup.steps.map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
           </div>
 
-          <div
-            style={{
-              background: "rgba(26,45,66,.85)",
-              border: "1px solid var(--navy-b)",
-              borderRadius: 10,
-              padding: "14px 16px",
-            }}
-          >
-            <h3 style={{ fontSize: ".82rem", color: "var(--cream)", marginBottom: 10 }}>
-              סימולציה (ללא Twilio)
-            </h3>
+          <div className="admin-inline-panel">
+            <h3 style={{ fontSize: ".82rem", marginBottom: 10 }}>סימולציה (ללא Twilio)</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
                 <label

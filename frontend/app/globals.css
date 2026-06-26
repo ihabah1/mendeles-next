@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./admin-theme.css";
 
 /* ═══════════════════════════════════════════════
   Mandeles.co.il — Design System
@@ -4299,20 +4300,61 @@ h2, .home-section-title { color: var(--text); }
   }
 }
 
-/* Landing layout — light center column + navy side rails */
+/* Landing / docs layout — light center + light gray side rails */
+.promo-layout--docs .promo-layout-main,
 .promo-layout--landing .promo-layout-main {
   background: #fff;
-  color: #1d2b4f;
+  color: #1e293b;
 }
 
 @media (min-width: 1024px) {
+  .promo-layout--docs .promo-side-rail,
   .promo-layout--landing .promo-side-rail {
     top: 64px;
     min-height: calc(100vh - 64px);
     max-height: calc(100vh - 64px);
-    background: linear-gradient(180deg, #0d1220 0%, #1a2030 100%);
-    border-inline-color: rgba(148, 163, 184, 0.25);
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-inline-color: #e2e8f0;
   }
+}
+
+.promo-layout--docs .promo-side-rail-crown,
+.promo-layout--landing .promo-side-rail-crown {
+  background: #fff;
+  border-bottom-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.06);
+}
+
+.promo-layout--docs .promo-rail-card,
+.promo-layout--docs .promo-rail-card--gold,
+.promo-layout--docs .promo-rail-card--green,
+.promo-layout--docs .promo-rail-card--navy,
+.promo-layout--docs .promo-rail-card--red,
+.promo-layout--docs .promo-rail-card--purple,
+.promo-layout--docs .promo-rail-card--teal,
+.promo-layout--docs .promo-rail-card--gray {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.06);
+  animation: promo-rail-card-in 0.5s ease-out both;
+}
+
+.promo-layout--docs .promo-rail-card-title,
+.promo-layout--docs .promo-rail-card--gray .promo-rail-card-title {
+  color: #334155;
+  text-shadow: none;
+}
+
+.promo-layout--docs .promo-rail-card-line {
+  color: #64748b;
+  text-shadow: none;
+}
+
+.promo-layout--docs .promo-rail-card-cta {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
 }
 
 .landing-page-inner {
@@ -4604,12 +4646,12 @@ h2, .home-section-title { color: var(--text); }
   font-size: 0.68rem;
   font-weight: 900;
   color: #fff;
-  background: linear-gradient(180deg, #2ed06a, #1a9e48);
-  border: 2px solid #fff;
+  background: linear-gradient(180deg, #64748b, #475569);
+  border: 2px solid #e2e8f0;
   border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(29,185,106,.4);
+  box-shadow: 0 4px 14px rgba(71, 85, 105, 0.2);
   transition: transform 0.15s ease, filter 0.15s ease;
-  animation: hero-cta-pulse 2.4s ease-in-out infinite;
+  animation: none;
 }
 .promo-side-rail-cta:hover {
   transform: translateY(-2px) scale(1.03);
@@ -4672,7 +4714,8 @@ h2, .home-section-title { color: var(--text); }
 .promo-rail-card--navy,
 .promo-rail-card--red,
 .promo-rail-card--purple,
-.promo-rail-card--teal {
+.promo-rail-card--teal,
+.promo-rail-card--gray {
   background: linear-gradient(160deg, var(--bg3) 0%, #141c2e 50%, var(--bg2) 100%);
   border-color: var(--gold-border);
   color: var(--text);

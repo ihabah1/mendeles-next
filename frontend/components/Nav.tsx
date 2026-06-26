@@ -68,7 +68,7 @@ export default function Nav() {
     return path === href || (path?.startsWith(href + "/") ?? false);
   };
 
-  const hidePromo = path?.startsWith("/auth");
+  const hidePromo = path?.startsWith("/auth") || path?.startsWith("/admin");
 
   return (
     <>

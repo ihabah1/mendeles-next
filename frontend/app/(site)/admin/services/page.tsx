@@ -79,24 +79,14 @@ function AdminServicesInner() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {flags.map((flag) => (
-              <div
-                key={flag.key}
-                style={{
-                  background: "rgba(26,45,66,.85)",
-                  border: "1px solid var(--navy-b)",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div key={flag.key} className="admin-flag-row">
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: "var(--cream)", fontSize: ".88rem" }}>{flag.label}</div>
-                  <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>{flag.description}</div>
+                  <div className="admin-flag-title">{flag.label}</div>
+                  <div className="admin-flag-desc">{flag.description}</div>
                   {flag.requires_restart && (
-                    <div style={{ color: "#94a3b8", fontSize: ".65rem", marginTop: 4 }}>⚠️ שינוי עשוי לדרוש restart</div>
+                    <div style={{ color: "#64748b", fontSize: ".65rem", marginTop: 4 }}>
+                      ⚠️ שינוי עשוי לדרוש restart
+                    </div>
                   )}
                 </div>
                 <button
@@ -105,18 +95,7 @@ function AdminServicesInner() {
                   onClick={() => toggle(flag)}
                   aria-pressed={flag.enabled}
                   aria-label={`${flag.label} — ${flag.enabled ? "פעיל, לחץ לכיבוי" : "כבוי, לחץ להפעלה"}`}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: 72,
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    border: `1px solid ${flag.enabled ? "var(--green)" : "var(--navy-b)"}`,
-                    background: flag.enabled ? "rgba(29,185,106,.15)" : "rgba(255,80,80,.08)",
-                    color: flag.enabled ? "#6ee7a0" : "#ff8a8a",
-                    fontWeight: 800,
-                    fontSize: ".72rem",
-                    cursor: saving === flag.key ? "wait" : "pointer",
-                  }}
+                  className={`admin-flag-toggle${flag.enabled ? " admin-flag-toggle--on" : " admin-flag-toggle--off"}`}
                 >
                   {saving === flag.key ? "..." : flag.enabled ? "פעיל" : "כבוי"}
                 </button>
@@ -127,8 +106,8 @@ function AdminServicesInner() {
 
         <WhatsAppAgentPanel />
 
-        <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--navy-b)" }}>
-          <h2 style={{ fontSize: ".9rem", color: "var(--cream)", marginBottom: 10 }}>קישורים מהירים</h2>
+        <div className="admin-section-divider">
+          <h2 style={{ fontSize: ".9rem", marginBottom: 10 }}>קישורים מהירים</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <a href={manageBaseUrl} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ fontSize: ".72rem" }}>
               דשבורד Django /manage ↗

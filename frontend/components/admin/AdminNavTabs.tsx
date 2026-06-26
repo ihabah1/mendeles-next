@@ -15,7 +15,7 @@ export type AdminTabId =
   | "kiosks";
 
 const TABS: { id: AdminTabId; href: string; label: string; title: string }[] = [
-  { id: "dashboard", href: "/admin", label: "דשבורד", title: "סטטיסטיקות, זכיות ותוצאות הגרלה" },
+  { id: "dashboard", href: "/admin", label: "דשבורד", title: "סטטיסטיקות וקיצורי דרך לניהול" },
   { id: "orders", href: "/admin/orders", label: "הזמנות", title: "רשימת הזמנות, הדפסה וסריקה" },
   { id: "users", href: "/admin/users", label: "משתמשים", title: "הרשאות, יתרות, מכתבים ותמיכה" },
   { id: "monitoring", href: "/admin/monitoring", label: "ניטור", title: "אוטומציה, תנועה ותשתית" },

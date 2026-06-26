@@ -22,7 +22,7 @@ const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
       title: "הצעת מחיר",
       lines: ["PDF עם לוגו", "מילוי אוטומטי עם AI"],
       href: "/dashboard",
-      variant: "gold",
+      variant: "gray",
       badge: "שירות",
     },
     {
@@ -30,7 +30,7 @@ const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
       title: "חתימה דיגיטלית",
       lines: ["שליחה ללקוח", "מעקב סטטוס"],
       href: "/dashboard",
-      variant: "green",
+      variant: "gray",
       badge: "מהיר",
     },
     {
@@ -38,7 +38,7 @@ const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
       title: "סיכום ביקור",
       lines: ["תיעוד מקצועי", "שליחה מיידית"],
       href: "/dashboard",
-      variant: "purple",
+      variant: "gray",
     },
   ],
   end: [
@@ -47,14 +47,14 @@ const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
       title: "ניהול חשבון",
       lines: ["פרטי עסק ולוגו", "הגדרות אישיות"],
       href: "/profile/details",
-      variant: "navy",
+      variant: "gray",
     },
     {
       icon: "🏆",
       title: "הטבות ומתנות",
       lines: ["מבצעים לחברים", "הטבות בלעדיות"],
       href: "/promotions",
-      variant: "red",
+      variant: "gray",
       badge: "חם",
     },
     {
@@ -62,14 +62,14 @@ const RAIL_CARDS_DOCS: Record<"start" | "end", RailCard[]> = {
       title: "ניהול תשלומים",
       lines: ["טעינת ארנק", "היסטוריית תשלומים"],
       href: "/profile/topup",
-      variant: "teal",
+      variant: "gray",
     },
     {
       icon: "🧾",
       title: "חשבונית מס",
       lines: ["הורדת חשבוניות", "מסמכים רשמיים"],
       href: "/profile/orders",
-      variant: "gold",
+      variant: "gray",
     },
   ],
 };
@@ -81,7 +81,7 @@ const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
       title: "לוטו — שירות שליחות",
       lines: ["200 צירופים סטטיסטיים", "מילוי והגשה בשמך"],
       href: "/lotto",
-      variant: "gold",
+      variant: "gray",
       badge: "שירות",
     },
     {
@@ -89,7 +89,7 @@ const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
       title: "הזמנה מהירה",
       lines: ["בחר טבלאות", "שלח לתור הדפסה"],
       href: "/lotto",
-      variant: "green",
+      variant: "gray",
       badge: "מהיר",
     },
     {
@@ -97,7 +97,7 @@ const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
       title: "777",
       lines: ["משחק מזל", "הגשה מהירה"],
       href: "/seven77",
-      variant: "purple",
+      variant: "gray",
     },
   ],
   end: [
@@ -106,14 +106,14 @@ const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
       title: "אזור אישי",
       lines: ["הזמנות וסריקות", "יתרה וחשבוניות"],
       href: "/profile",
-      variant: "navy",
+      variant: "gray",
     },
     {
       icon: "🏆",
       title: "בדיקת זכייה",
       lines: ["עדכון אוטומטי", "זיכוי לארנק"],
       href: "/profile/orders",
-      variant: "red",
+      variant: "gray",
       badge: "חם",
     },
     {
@@ -121,7 +121,7 @@ const RAIL_CARDS_LOTTO: Record<"start" | "end", RailCard[]> = {
       title: "ארנק דיגיטלי",
       lines: ["טעינה מאובטחת", "PayPal בקרוב"],
       href: "/profile",
-      variant: "teal",
+      variant: "gray",
     },
   ],
 };
@@ -186,7 +186,7 @@ const RAIL_STATS_LOTTO = {
   ],
 } as const;
 
-const CONFETTI_COLORS = ["#f0b048", "#30c49a", "#e4567a", "#8ec8ff", "#ffffff", "#ffb060"];
+const CONFETTI_COLORS = ["#e2e8f0", "#cbd5e1", "#94a3b8", "#f1f5f9", "#64748b", "#d1d5db"];
 
 function RailConfetti({ count = 12, tall = false }: { count?: number; tall?: boolean }) {
   const pieces = Array.from({ length: count }, (_, i) => ({
@@ -282,8 +282,8 @@ function RailCard({
   );
 }
 
-function RailTicker({ side, landing }: { side: "start" | "end"; landing: boolean }) {
-  const items = landing ? RAIL_TICKERS_DOCS[side] : RAIL_TICKERS_LOTTO[side];
+function RailTicker({ side, docsRails }: { side: "start" | "end"; docsRails: boolean }) {
+  const items = docsRails ? RAIL_TICKERS_DOCS[side] : RAIL_TICKERS_LOTTO[side];
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
@@ -302,8 +302,8 @@ function RailTicker({ side, landing }: { side: "start" | "end"; landing: boolean
   );
 }
 
-function RailDeco({ side, landing }: { side: "start" | "end"; landing: boolean }) {
-  const stats = landing ? RAIL_STATS_DOCS[side] : RAIL_STATS_LOTTO[side];
+function RailDeco({ side, docsRails }: { side: "start" | "end"; docsRails: boolean }) {
+  const stats = docsRails ? RAIL_STATS_DOCS[side] : RAIL_STATS_LOTTO[side];
   const balls = side === "start" ? [7, 14, 23, 31, 37, 42] : [3, 11, 19, 28, 33, 40];
   return (
     <div className="promo-side-rail-deco" aria-hidden>
@@ -329,10 +329,10 @@ function RailDeco({ side, landing }: { side: "start" | "end"; landing: boolean }
   );
 }
 
-export function PromoRailColumn({ side, landing = false }: { side: "start" | "end"; landing?: boolean }) {
+export function PromoRailColumn({ side, docsRails = true }: { side: "start" | "end"; docsRails?: boolean }) {
   const { isStaff } = useAuth();
   const showDev = canAccessDevGames(isStaff);
-  const source = landing ? RAIL_CARDS_DOCS : RAIL_CARDS_LOTTO;
+  const source = docsRails ? RAIL_CARDS_DOCS : RAIL_CARDS_LOTTO;
   const cards = source[side].filter((c) => showDev || !c.href.startsWith("/seven77"));
 
   return (
@@ -344,7 +344,7 @@ export function PromoRailColumn({ side, landing = false }: { side: "start" | "en
         <RailConfetti count={14} />
         <span className="promo-side-rail-crown-shine" aria-hidden />
         <span className="promo-side-rail-crown-glow" aria-hidden />
-        <MandelesLogoMark size="sm" showText={false} />
+        <MandelesLogoMark size="sm" showText={false} theme="light" accent="gray" />
         <span className="promo-side-rail-crown-title">MANDELES</span>
         <span className="promo-side-rail-crown-tag">PREMIUM CLUB</span>
       </div>
@@ -354,21 +354,21 @@ export function PromoRailColumn({ side, landing = false }: { side: "start" | "en
       ))}
 
       <div className="promo-side-rail-body">
-        <RailTicker side={side} landing={landing} />
-        <RailDeco side={side} landing={landing} />
+        <RailTicker side={side} docsRails={docsRails} />
+        <RailDeco side={side} docsRails={docsRails} />
       </div>
 
       <div className="promo-side-rail-footer">
         <Link
-          href={side === "start" ? (landing ? "/dashboard" : "/lotto") : "/profile"}
+          href={side === "start" ? (docsRails ? "/dashboard" : "/lotto") : "/profile"}
           className="promo-side-rail-cta"
         >
-          {side === "start" ? (landing ? "ליצירת מסמך" : "למילוי טפסים") : "לאזור האישי"}
+          {side === "start" ? (docsRails ? "ליצירת מסמך" : "למילוי טפסים") : "לאזור האישי"}
           <span className="promo-side-rail-cta-arrow" aria-hidden>←</span>
         </Link>
         <div className="promo-side-rail-badge">
-          <span>{landing ? "B2B" : "18+"}</span>
-          <small>{landing ? "לעסקים" : "הימורים באחריות"}</small>
+          <span>{docsRails ? "B2B" : "18+"}</span>
+          <small>{docsRails ? "לעסקים" : "הימורים באחריות"}</small>
         </div>
       </div>
     </aside>
@@ -378,8 +378,8 @@ export function PromoRailColumn({ side, landing = false }: { side: "start" | "en
 export default function PromoSideRails() {
   return (
     <>
-      <PromoRailColumn side="start" landing />
-      <PromoRailColumn side="end" landing />
+      <PromoRailColumn side="start" docsRails />
+      <PromoRailColumn side="end" docsRails />
     </>
   );
 }

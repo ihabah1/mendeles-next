@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { AdminStatCard, AdminStatGrid } from "@/components/admin/AdminUI";
+import { AdminStatCard, AdminStatGrid, AdminShell, AdminPageHeader, AdminPanel, AdminRefreshButton } from "@/components/admin/AdminUI";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { adminService } from "@/lib/api/admin";
 import { extractApiError } from "@/lib/api/client";
@@ -208,352 +208,229 @@ function AdminPageInner() {
           {toast.msg}
         </div>
       )}
-      <div className="admin-page-wrap">
-        <main id="admin-main" className="admin-main">
-          <h1 className="admin-page-title" style={{ marginBottom: 20 }}>
-            דשבורד אדמין
-          </h1>
+      <AdminShell>
+        <AdminPageHeader
+          title="דשבורד אדמין"
+          description="סקירה כללית של המערכת — הזמנות, משתמשים ושירותים."
+          actions={<AdminRefreshButton onClick={loadData} loading={loading} label="רענן סטטיסטיקות" />}
+        />
 
-          {stats && (
-            <AdminStatGrid>
-              {[
-                {
-                  label: "משתמשים",
-                  value: String(stats.total_users),
-                  sub: `+${stats.new_today} היום`,
-                },
-                { label: "מנויים פעילים", value: String(stats.active_subs) },
-                {
-                  label: "ממתינות להגשה",
-                  value: String(stats.pending_orders),
-                  accent: "#94a3b8",
-                },
-                { label: "הכנסות", value: `₪${stats.total_revenue?.toFixed(0)}` },
-                { label: "זכיות", value: String(stats.total_wins) },
-                { label: "פרסים", value: `₪${stats.total_prize?.toFixed(0)}` },
-              ].map((s) => (
-                <AdminStatCard
-                  key={s.label}
-                  label={s.label}
-                  value={s.value}
-                  sub={s.sub}
-                  accent={s.accent}
-                />
-              ))}
-            </AdminStatGrid>
-          )}
+        <nav className="admin-hub-links" aria-label="קיצורי דרך">
+          {[
+            { href: "/admin/orders", title: "הזמנות", desc: "רשימה, הדפסה וסריקה" },
+            { href: "/admin/users", title: "משתמשים", desc: "הרשאות ויתרות" },
+            { href: "/admin/services", title: "שירותים", desc: "הפעלה וכיבוי מודולים" },
+            { href: "/admin/monitoring", title: "ניטור", desc: "לוגים ואוטומציה" },
+            { href: "/dashboard", title: "מסמכים", desc: "אזור לקוחות" },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="admin-hub-link">
+              <strong>{link.title}</strong>
+              <span>{link.desc}</span>
+            </Link>
+          ))}
+        </nav>
 
-          {stats && stats.pending_orders > 0 && (
-            <p style={{ fontSize: ".78rem", marginBottom: 16 }}>
-              <Link href="/admin/orders" style={{ color: "var(--gold)" }}>
-                {stats.pending_orders} הזמנות ממתינות — עבור לניהול הזמנות →
+        {stats && (
+          <AdminStatGrid>
+            {[
+              {
+                label: "משתמשים",
+                value: String(stats.total_users),
+                sub: `+${stats.new_today} היום`,
+              },
+              { label: "מנויים פעילים", value: String(stats.active_subs) },
+              {
+                label: "ממתינות להגשה",
+                value: String(stats.pending_orders),
+                accent: "#64748b",
+              },
+              { label: "הכנסות", value: `₪${stats.total_revenue?.toFixed(0)}` },
+              { label: "זכיות", value: String(stats.total_wins) },
+              { label: "פרסים", value: `₪${stats.total_prize?.toFixed(0)}` },
+            ].map((s) => (
+              <AdminStatCard
+                key={s.label}
+                label={s.label}
+                value={s.value}
+                sub={s.sub}
+                accent={s.accent}
+              />
+            ))}
+          </AdminStatGrid>
+        )}
+
+        {stats && stats.pending_orders > 0 && (
+          <p style={{ fontSize: ".78rem", marginBottom: 16 }}>
+            <Link href="/admin/orders" style={{ color: "#475569" }}>
+              {stats.pending_orders} הזמנות ממתינות — עבור לניהול הזמנות →
+            </Link>
+          </p>
+        )}
+
+        <AdminPanel title="תוצאות הגרלה וזכיות (לוטו)" id="admin-lotto" defaultOpen={false}>
+          {canManageOrders && (
+            <p style={{ fontSize: ".72rem", marginBottom: 12 }}>
+              צוות: טען מפיס → בדוק זכיות (מזכה יתרות בארנק הלקוחות אוטומטית).{" "}
+              <Link href="/admin/orders" style={{ color: "#475569" }}>
+                ניהול הזמנות ←
               </Link>
             </p>
           )}
-
-          <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
-            <button
-              onClick={() => loadData()}
-              className="btn btn-outline"
-              style={{ fontSize: ".72rem", marginRight: "auto" }}
-              disabled={loading}
-            >
-              🔄 רענן סטטיסטיקות
-            </button>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(26,45,66,.85)",
-              border: "1px solid var(--navy-b)",
-              borderRadius: 14,
-              padding: "20px 18px",
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: "'Frank Ruhl Libre',serif",
-                fontSize: "1.05rem",
-                fontWeight: 700,
-                color: "var(--cream)",
-                marginBottom: 16,
-              }}
-            >
-              תוצאות הגרלה וזכיות
-            </h3>
-            {canManageOrders && (
-              <p style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 12 }}>
-                צוות: טען מפיס → בדוק זכיות (מזכה יתרות בארנק הלקוחות אוטומטית).{" "}
-                <Link href="/admin/orders" style={{ color: "var(--gold)" }}>
-                  ניהול הזמנות ←
-                </Link>
-              </p>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 5 }}>
-                  תאריך הגרלה:
-                </div>
-                <input
-                  type="date"
-                  value={winDate}
-                  onChange={(e) => setWinDate(e.target.value)}
-                  style={{
-                    background: "var(--navy)",
-                    border: "1px solid var(--navy-b)",
-                    borderRadius: 8,
-                    color: "var(--cream)",
-                    padding: "8px 12px",
-                    fontFamily: "Heebo,sans-serif",
-                    fontSize: ".88rem",
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 5 }}>
-                  6 מספרים (מופרדים בפסיקים):
-                </div>
-                <input
-                  value={winNums}
-                  onChange={(e) => setWinNums(e.target.value)}
-                  placeholder="3, 7, 12, 25, 33, 36"
-                  style={{
-                    width: "100%",
-                    background: "var(--navy)",
-                    border: "1px solid var(--navy-b)",
-                    borderRadius: 8,
-                    color: "var(--cream)",
-                    padding: "8px 12px",
-                    fontFamily: "Heebo,sans-serif",
-                    fontSize: ".88rem",
-                    textAlign: "right",
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 5 }}>
-                  מספר חזק (1–7):
-                </div>
-                <input
-                  value={winStrong}
-                  onChange={(e) => setWinStrong(e.target.value)}
-                  placeholder="5"
-                  maxLength={1}
-                  style={{
-                    width: 80,
-                    background: "var(--navy)",
-                    border: "1px solid var(--navy-b)",
-                    borderRadius: 8,
-                    color: "var(--cream)",
-                    padding: "8px 12px",
-                    fontFamily: "Heebo,sans-serif",
-                    fontSize: ".88rem",
-                    textAlign: "center",
-                  }}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                {canManageOrders ? (
-                  <>
-                    <button
-                      className="btn btn-outline"
-                      style={{ padding: "10px 20px" }}
-                      onClick={() => checkWins(true)}
-                    >
-                      🔎 תצוגה מקדימה (ללא זיכוי)
-                    </button>
-                    <button
-                      className="btn btn-gold"
-                      style={{ padding: "10px 20px" }}
-                      onClick={() => checkWins(false)}
-                    >
-                      💰 בדוק זכיות וזכה ארנקים
-                    </button>
-                  </>
-                ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div className="admin-field-label">תאריך הגרלה:</div>
+              <input
+                type="date"
+                className="admin-field"
+                value={winDate}
+                onChange={(e) => setWinDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <div className="admin-field-label">6 מספרים (מופרדים בפסיקים):</div>
+              <input
+                className="admin-field"
+                value={winNums}
+                onChange={(e) => setWinNums(e.target.value)}
+                placeholder="3, 7, 12, 25, 33, 36"
+                style={{ textAlign: "right" }}
+              />
+            </div>
+            <div>
+              <div className="admin-field-label">מספר חזק (1–7):</div>
+              <input
+                className="admin-field admin-field--narrow"
+                value={winStrong}
+                onChange={(e) => setWinStrong(e.target.value)}
+                placeholder="5"
+                maxLength={1}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+              {canManageOrders ? (
+                <>
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: "10px 20px" }}
+                    onClick={() => checkWins(true)}
+                  >
+                    🔎 תצוגה מקדימה (ללא זיכוי)
+                  </button>
                   <button
                     className="btn btn-gold"
                     style={{ padding: "10px 20px" }}
                     onClick={() => checkWins(false)}
                   >
-                    🔍 בדוק זכיות לקוחות
+                    💰 בדוק זכיות וזכה ארנקים
                   </button>
-                )}
-              </div>
-              <hr style={{ border: "none", borderTop: "1px solid var(--navy-b)", margin: "16px 0" }} />
-              <h4 style={{ color: "var(--cream)", fontSize: ".88rem", marginBottom: 12 }}>
-                💾 עדכן תוצאות הגרלה
-              </h4>
-              <p style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 12 }}>
-                הזן ידנית מאתר{" "}
-                <a
-                  href="https://www.pais.co.il/lotto/"
-                  target="_blank"
-                  style={{ color: "var(--gold)" }}
+                </>
+              ) : (
+                <button
+                  className="btn btn-gold"
+                  style={{ padding: "10px 20px" }}
+                  onClick={() => checkWins(false)}
                 >
-                  pais.co.il
-                </a>
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 4 }}>
-                    תאריך הגרלה:
-                  </div>
-                  <input
-                    type="date"
-                    value={drawDate}
-                    onChange={(e) => setDrawDate(e.target.value)}
-                    style={{
-                      background: "var(--navy)",
-                      border: "1px solid var(--navy-b)",
-                      borderRadius: 8,
-                      color: "var(--cream)",
-                      padding: "8px 12px",
-                      fontFamily: "Heebo,sans-serif",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 4 }}>
-                    6 מספרים (מופרדים בפסיקים):
-                  </div>
-                  <input
-                    value={drawNums2}
-                    onChange={(e) => setDrawNums2(e.target.value)}
-                    placeholder="10, 23, 25, 28, 32, 33"
-                    style={{
-                      width: "100%",
-                      background: "var(--navy)",
-                      border: "1px solid var(--navy-b)",
-                      borderRadius: 8,
-                      color: "var(--cream)",
-                      padding: "8px 12px",
-                      fontFamily: "Heebo,sans-serif",
-                      textAlign: "right",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 4 }}>
-                    מספר חזק (1-7):
-                  </div>
-                  <input
-                    value={drawStrong2}
-                    onChange={(e) => setDrawStrong2(e.target.value)}
-                    placeholder="4"
-                    maxLength={1}
-                    style={{
-                      width: 80,
-                      background: "var(--navy)",
-                      border: "1px solid var(--navy-b)",
-                      borderRadius: 8,
-                      color: "var(--cream)",
-                      padding: "8px 12px",
-                      fontFamily: "Heebo,sans-serif",
-                      textAlign: "center",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 6 }}>
-                    פרסים (₪):
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-                    {Object.entries(drawPrizes).map(([k, v]) => (
-                      <div key={k}>
-                        <div style={{ fontSize: ".6rem", color: "var(--muted)", marginBottom: 2 }}>
-                          {k}
-                        </div>
-                        <input
-                          type="number"
-                          value={v}
-                          onChange={(e) =>
-                            setDrawPrizes((p) => ({ ...p, [k]: parseInt(e.target.value) || 0 }))
-                          }
-                          style={{
-                            width: "100%",
-                            background: "var(--navy)",
-                            border: "1px solid var(--navy-b)",
-                            borderRadius: 6,
-                            color: "var(--cream)",
-                            padding: "5px 6px",
-                            fontFamily: "Heebo,sans-serif",
-                            fontSize: ".76rem",
-                            textAlign: "center",
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <input
-                    value={paisLotteryId}
-                    onChange={(e) => setPaisLotteryId(e.target.value)}
-                    placeholder="מס' הגרלה (ריק = אחרונה)"
-                    style={{
-                      width: 180,
-                      background: "var(--navy)",
-                      border: "1px solid var(--navy-b)",
-                      borderRadius: 8,
-                      color: "var(--cream)",
-                      padding: "8px 12px",
-                      fontFamily: "Heebo,sans-serif",
-                      fontSize: ".78rem",
-                    }}
-                  />
-                  <button className="btn btn-outline" onClick={fetchFromPais} disabled={paisLoading}>
-                    {paisLoading ? "...טוען" : "🔄 טען מפאיס.co.il"}
-                  </button>
-                  <button className="btn btn-gold" style={{ padding: "10px 20px" }} onClick={saveDraw}>
-                    💾 שמור תוצאות
-                  </button>
-                </div>
-              </div>
-
-              {winResult && (
-                <div
-                  style={{
-                    background:
-                      winResult.wins > 0 ? "rgba(29,185,106,.1)" : "rgba(26,45,66,.5)",
-                    border: `1px solid ${winResult.wins > 0 ? "rgba(29,185,106,.35)" : "var(--navy-b)"}`,
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    marginTop: 8,
-                  }}
-                >
-                  {winResult.wins > 0 ? (
-                    <>
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          color: "var(--green)",
-                          fontSize: ".92rem",
-                          marginBottom: 4,
-                        }}
-                      >
-                        🎉 נמצאו {winResult.wins} זכיות!
-                      </div>
-                      <div style={{ color: "var(--muted)", fontSize: ".76rem" }}>
-                        סה"כ פרסים: ₪{winResult.total_prize_ils.toLocaleString()}
-                      </div>
-                      {canManageOrders && (
-                        <div style={{ color: "var(--muted)", fontSize: ".72rem", marginTop: 4 }}>
-                          יתרות הארנק עודכנו בשרת
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ color: "var(--muted)", fontSize: ".82rem" }}>
-                      אין זכיות בהגרלה זו
-                    </div>
-                  )}
-                </div>
+                  🔍 בדוק זכיות לקוחות
+                </button>
               )}
             </div>
+            <hr className="admin-divider" />
+            <h4 style={{ fontSize: ".88rem", marginBottom: 12 }}>💾 עדכן תוצאות הגרלה</h4>
+            <p style={{ fontSize: ".72rem", marginBottom: 12 }}>
+              הזן ידנית מאתר{" "}
+              <a href="https://www.pais.co.il/lotto/" target="_blank" style={{ color: "#475569" }}>
+                pais.co.il
+              </a>
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <div className="admin-field-label">תאריך הגרלה:</div>
+                <input
+                  type="date"
+                  className="admin-field"
+                  value={drawDate}
+                  onChange={(e) => setDrawDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <div className="admin-field-label">6 מספרים (מופרדים בפסיקים):</div>
+                <input
+                  className="admin-field"
+                  value={drawNums2}
+                  onChange={(e) => setDrawNums2(e.target.value)}
+                  placeholder="10, 23, 25, 28, 32, 33"
+                  style={{ textAlign: "right" }}
+                />
+              </div>
+              <div>
+                <div className="admin-field-label">מספר חזק (1-7):</div>
+                <input
+                  className="admin-field admin-field--narrow"
+                  value={drawStrong2}
+                  onChange={(e) => setDrawStrong2(e.target.value)}
+                  placeholder="4"
+                  maxLength={1}
+                />
+              </div>
+              <div>
+                <div className="admin-field-label">פרסים (₪):</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+                  {Object.entries(drawPrizes).map(([k, v]) => (
+                    <div key={k}>
+                      <div style={{ fontSize: ".6rem", marginBottom: 2 }}>{k}</div>
+                      <input
+                        type="number"
+                        className="admin-field"
+                        value={v}
+                        onChange={(e) =>
+                          setDrawPrizes((p) => ({ ...p, [k]: parseInt(e.target.value) || 0 }))
+                        }
+                        style={{ fontSize: ".76rem", textAlign: "center", padding: "5px 6px" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <input
+                  className="admin-field admin-field--mid"
+                  value={paisLotteryId}
+                  onChange={(e) => setPaisLotteryId(e.target.value)}
+                  placeholder="מס' הגרלה (ריק = אחרונה)"
+                />
+                <button className="btn btn-outline" onClick={fetchFromPais} disabled={paisLoading}>
+                  {paisLoading ? "...טוען" : "🔄 טען מפאיס.co.il"}
+                </button>
+                <button className="btn btn-gold" style={{ padding: "10px 20px" }} onClick={saveDraw}>
+                  💾 שמור תוצאות
+                </button>
+              </div>
+            </div>
+
+            {winResult && (
+              <div
+                className={`admin-result-box${winResult.wins > 0 ? " admin-result-box--highlight" : ""}`}
+              >
+                {winResult.wins > 0 ? (
+                  <>
+                    <div className="admin-result-title">🎉 נמצאו {winResult.wins} זכיות!</div>
+                    <div style={{ fontSize: ".76rem" }}>
+                      סה"כ פרסים: ₪{winResult.total_prize_ils.toLocaleString()}
+                    </div>
+                    {canManageOrders && (
+                      <div style={{ fontSize: ".72rem", marginTop: 4 }}>
+                        יתרות הארנק עודכנו בשרת
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: ".82rem" }}>אין זכיות בהגרלה זו</div>
+                )}
+              </div>
+            )}
           </div>
-        </main>
-      </div>
+        </AdminPanel>
+      </AdminShell>
     </>
   );
 }
