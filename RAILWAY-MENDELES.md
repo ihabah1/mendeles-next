@@ -25,6 +25,7 @@ DJANGO_SECRET_KEY=<מחרוזת-אקראית-50+>
 JWT_SECRET_KEY=<מחרוזת-אקראית-32+>
 CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
 FRONTEND_URL=https://mendeles-next-production.up.railway.app
+# ALLOWED_HOSTS is optional — code always adds .railway.app for healthchecks
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 ```
 
