@@ -1,7 +1,7 @@
-# Frontend service — Root Directory = repo root (or use frontend/ + frontend/railway.toml)
+# Frontend service (mendeles-next) — Root Directory empty (repo root).
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "frontend/Dockerfile"
+dockerfilePath = "Dockerfile.frontend"
 
 [deploy]
 startCommand = "node server.js"

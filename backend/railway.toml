@@ -1,8 +1,10 @@
+# Backend service (eloquent-perfection) — Root Directory = backend
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "python manage.py migrate && python manage.py seed_rbac && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
-healthcheckPath = "/api/v1/health/"
+startCommand = "sh -c 'python manage.py migrate && python manage.py seed_rbac && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2'"
 restartPolicyType = "ON_FAILURE"
+healthcheckPath = "/api/v1/health/"
+healthcheckTimeout = 300
