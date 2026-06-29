@@ -14,7 +14,7 @@
 API_URL=https://${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
-> חובה ל-build ול-runtime — מפנה `/api/v1/*` ל-Django.
+> **חובה ב-runtime** (לא רק ב-build) — ה-frontend מעביר `/api/v1/*` ל-Django דרך proxy בזמן ריצה.
 
 ## Backend (`eloquent-perfection`) — Variables
 

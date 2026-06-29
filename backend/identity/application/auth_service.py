@@ -22,6 +22,8 @@ def _client_meta(request) -> tuple[str | None, str]:
     ip = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() or request.META.get(
         "REMOTE_ADDR"
     )
+    if ip == "":
+        ip = None
     ua = request.META.get("HTTP_USER_AGENT", "")
     return ip, ua
 

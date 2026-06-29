@@ -17,6 +17,16 @@ export class ApiError extends Error {
   }
 }
 
+async function parseResponseBody(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit & { json?: unknown } = {},
@@ -36,12 +46,13 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  const data = await res.json();
+  const data = await parseResponseBody(res);
   if (!res.ok) {
-    if (data?.error) {
-      throw new ApiError(data.error);
+    const payload = data as { error?: ApiErrorBody["error"]; message?: string } | null;
+    if (payload?.error) {
+      throw new ApiError(payload.error);
     }
-    throw new Error(data?.message || "Server error");
+    throw new Error(payload?.message || `Server error (${res.status})`);
   }
   return data as T;
 }
