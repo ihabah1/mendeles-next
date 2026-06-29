@@ -6,7 +6,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt requirements/
+COPY backend/requirements.txt .
+COPY backend/requirements requirements/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ .

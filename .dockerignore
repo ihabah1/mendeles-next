@@ -1,0 +1,14 @@
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.next
+**/out
+**/__pycache__
+**/*.pyc
+**/.venv
+tools
+*.md
+!README.md
