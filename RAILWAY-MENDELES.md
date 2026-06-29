@@ -11,10 +11,13 @@
 ## Frontend (`mendeles-next`) — Variables
 
 ```env
+# Set automatically via railway.toml [env], or paste manually:
 API_URL=https://${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}
+# Private network alternative (faster, no TLS between services):
+# API_URL=http://${{eloquent-perfection.RAILWAY_PRIVATE_DOMAIN}}:${{eloquent-perfection.PORT}}
 ```
 
-> **חובה ב-runtime** (לא רק ב-build) — ה-frontend מעביר `/api/v1/*` ל-Django דרך proxy בזמן ריצה.
+> **חובה ב-runtime** — ה-frontend מעביר `/api/v1/*` ל-Django דרך proxy (שומר trailing slash).
 
 ## Backend (`eloquent-perfection`) — Variables
 

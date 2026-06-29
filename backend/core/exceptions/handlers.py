@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 from core.exceptions.base import DomainException
@@ -33,7 +34,19 @@ def api_exception_handler(exc, context):
                 "details": response.data if isinstance(response.data, dict) else {},
             }
         }
-    return response
+        return response
+
+    logger.exception("unhandled_api_error", exc_info=exc)
+    return Response(
+        {
+            "error": {
+                "code": "internal_error",
+                "message": "שגיאת שרת פנימית",
+                "details": {},
+            }
+        },
+        status=500,
+    )
 
 
 def _code_for_status(status: int) -> str:

@@ -8,3 +8,6 @@ startCommand = "node server.js"
 restartPolicyType = "ON_FAILURE"
 healthcheckPath = "/"
 healthcheckTimeout = 300
+
+[env]
+API_URL = "https://${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}"
