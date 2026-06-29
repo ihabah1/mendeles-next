@@ -18,7 +18,7 @@ function VerifyEmailInner() {
     const token = params.get("token");
     if (!token) {
       setStatus("error");
-      setMessage("חסר אסימון אימות");
+      setMessage(t("missingVerifyToken"));
       return;
     }
     authApi
@@ -29,9 +29,9 @@ function VerifyEmailInner() {
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(getAuthErrorMessage(err));
+        setMessage(getAuthErrorMessage(err, tc("unexpectedError")));
       });
-  }, [params]);
+  }, [params, t, tc]);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md items-center p-6">

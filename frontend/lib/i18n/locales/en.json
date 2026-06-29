@@ -1,0 +1,72 @@
+{
+  "common": {
+    "appName": "Mendeles",
+    "tagline": "Lead generation platform for businesses",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "Something went wrong",
+    "serverError": "Server error",
+    "unexpectedError": "Unexpected error",
+    "language": "Language",
+    "hebrew": "עברית",
+    "english": "English"
+  },
+  "metadata": {
+    "title": "Mendeles — Lead generation platform",
+    "description": "Lead generation platform for businesses — landing pages, lead management, and growth"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "tenantName": "Business name",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "verifyTitle": "Email verification",
+    "verifySuccess": "Email verified successfully",
+    "resetTitle": "Reset password",
+    "savePassword": "Save password",
+    "sendResetLink": "Send reset link",
+    "backToLogin": "Back to login",
+    "missingToken": "Missing token",
+    "missingVerifyToken": "Missing verification token"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "settings": "Settings",
+    "audit": "Audit log",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "health": "System status",
+    "quickLinks": "Quick links",
+    "serverUnreachable": "Unable to reach the server"
+  },
+  "users": {
+    "title": "Users",
+    "loadError": "Failed to load users"
+  },
+  "settings": {
+    "title": "Settings",
+    "companyName": "Company name"
+  },
+  "audit": {
+    "title": "Audit log",
+    "loadError": "Failed to load audit log"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
+  "a11y": {
+    "mainNav": "Main navigation"
+  }
+}

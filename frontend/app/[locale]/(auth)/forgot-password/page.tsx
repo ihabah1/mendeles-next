@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { authApi } from "@/lib/api/auth";
@@ -11,6 +11,7 @@ import { getAuthErrorMessage } from "@/lib/auth/auth-context";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +22,7 @@ export default function ForgotPasswordPage() {
       const res = await authApi.forgotPassword(email);
       setMessage(res.message);
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, tc("unexpectedError")));
     }
   }
 
@@ -34,11 +35,11 @@ export default function ForgotPasswordPage() {
           {error && <p className="text-sm text-red-600">{error}</p>}
           {message && <p className="text-sm">{message}</p>}
           <Button type="submit" className="w-full">
-            שלח קישור
+            {t("sendResetLink")}
           </Button>
         </form>
         <p className="mt-4 text-sm">
-          <Link href="/login">חזרה להתחברות</Link>
+          <Link href="/login">{t("backToLogin")}</Link>
         </p>
       </Card>
     </div>

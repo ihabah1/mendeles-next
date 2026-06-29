@@ -41,7 +41,7 @@ export async function apiFetch<T>(
     if (data?.error) {
       throw new ApiError(data.error);
     }
-    throw new Error(data?.message || "שגיאת שרת");
+    throw new Error(data?.message || "Server error");
   }
   return data as T;
 }

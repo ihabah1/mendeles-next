@@ -72,8 +72,8 @@ export function useAuth() {
   return ctx;
 }
 
-export function getAuthErrorMessage(err: unknown) {
+export function getAuthErrorMessage(err: unknown, fallback = "Unexpected error") {
   if (err instanceof ApiError) return err.message;
   if (err instanceof Error) return err.message;
-  return "שגיאה לא צפויה";
+  return fallback;
 }

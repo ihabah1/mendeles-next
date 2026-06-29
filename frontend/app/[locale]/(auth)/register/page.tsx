@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, Link } from "@/lib/i18n/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { authApi } from "@/lib/api/auth";
@@ -12,6 +11,7 @@ import { getAuthErrorMessage } from "@/lib/auth/auth-context";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [form, setForm] = useState({
     email: "",
@@ -33,7 +33,7 @@ export default function RegisterPage() {
       setMessage(res.message);
       setTimeout(() => router.push("/login"), 2000);
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, tc("unexpectedError")));
     } finally {
       setLoading(false);
     }

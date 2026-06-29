@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/lib/i18n/navigation";
+import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ const NAV = [
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
+  const ta = useTranslations("a11y");
   const pathname = usePathname();
   const { user, logout, hasPermission } = useAuth();
 
@@ -23,15 +24,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen md:flex">
-      <aside className="w-full border-b border-[var(--border)] md:w-64 md:border-b-0 md:border-l">
-        <div className="flex items-center justify-between p-4 md:block">
+      <aside className="w-full border-b border-[var(--border)] md:w-64 md:border-b-0 md:border-e">
+        <div className="flex items-center justify-between gap-2 p-4 md:block">
           <div>
             <div className="text-lg font-bold">Mendeles</div>
             <div className="text-xs text-[var(--muted-fg)]">{user?.email}</div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2 md:mt-3">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col" aria-label="ניווט ראשי">
+        <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col" aria-label={ta("mainNav")}>
           {items.map((item) => (
             <Link
               key={item.href}

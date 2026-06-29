@@ -1,16 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Link } from "@/lib/i18n/navigation";
 import { useAuth, getAuthErrorMessage } from "@/lib/auth/auth-context";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -26,7 +27,7 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/dashboard");
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, tc("unexpectedError")));
     } finally {
       setLoading(false);
     }

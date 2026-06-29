@@ -5,7 +5,16 @@
     "loading": "טוען…",
     "save": "שמור",
     "cancel": "ביטול",
-    "error": "אירעה שגיאה"
+    "error": "אירעה שגיאה",
+    "serverError": "שגיאת שרת",
+    "unexpectedError": "שגיאה לא צפויה",
+    "language": "שפה",
+    "hebrew": "עברית",
+    "english": "English"
+  },
+  "metadata": {
+    "title": "Mendeles — פלטפורמת לידים",
+    "description": "פלטפורמת לידים לעסקים — דפי נחיתה, ניהול לידים וצמיחה"
   },
   "auth": {
     "login": "התחברות",
@@ -20,7 +29,12 @@
     "hasAccount": "כבר יש לך חשבון?",
     "verifyTitle": "אימות אימייל",
     "verifySuccess": "האימייל אומת בהצלחה",
-    "resetTitle": "איפוס סיסמה"
+    "resetTitle": "איפוס סיסמה",
+    "savePassword": "שמור סיסמה",
+    "sendResetLink": "שלח קישור",
+    "backToLogin": "חזרה להתחברות",
+    "missingToken": "חסר אסימון",
+    "missingVerifyToken": "חסר אסימון אימות"
   },
   "nav": {
     "dashboard": "דשבורד",
@@ -32,6 +46,27 @@
   "dashboard": {
     "welcome": "ברוך הבא",
     "health": "סטטוס מערכת",
-    "quickLinks": "קיצורי דרך"
+    "quickLinks": "קיצורי דרך",
+    "serverUnreachable": "לא ניתן להתחבר לשרת"
+  },
+  "users": {
+    "title": "משתמשים",
+    "loadError": "שגיאה בטעינת משתמשים"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "companyName": "שם החברה"
+  },
+  "audit": {
+    "title": "יומן פעולות",
+    "loadError": "שגיאה בטעינת יומן"
+  },
+  "theme": {
+    "toggle": "החלפת ערכת נושא",
+    "light": "מצב בהיר",
+    "dark": "מצב כהה"
+  },
+  "a11y": {
+    "mainNav": "ניווט ראשי"
   }
 }

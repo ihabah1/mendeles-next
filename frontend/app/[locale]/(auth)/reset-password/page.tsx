@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/lib/i18n/navigation";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { getAuthErrorMessage } from "@/lib/auth/auth-context";
 
 function ResetPasswordInner() {
   const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const params = useSearchParams();
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -21,7 +23,7 @@ function ResetPasswordInner() {
     e.preventDefault();
     const token = params.get("token");
     if (!token) {
-      setError("חסר אסימון");
+      setError(t("missingToken"));
       return;
     }
     try {
@@ -29,7 +31,7 @@ function ResetPasswordInner() {
       setMessage(res.message);
       setTimeout(() => router.push("/login"), 1500);
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setError(getAuthErrorMessage(err, tc("unexpectedError")));
     }
   }
 
@@ -48,7 +50,7 @@ function ResetPasswordInner() {
           {error && <p className="text-sm text-red-600">{error}</p>}
           {message && <p className="text-sm text-green-700">{message}</p>}
           <Button type="submit" className="w-full">
-            שמור סיסמה
+            {t("savePassword")}
           </Button>
         </form>
       </Card>
