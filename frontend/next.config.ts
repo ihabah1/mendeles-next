@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  skipTrailingSlashRedirect: true,
 };
 
 export default withNextIntl(nextConfig);

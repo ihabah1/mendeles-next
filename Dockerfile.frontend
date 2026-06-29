@@ -26,8 +26,6 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-# Runtime API proxy (app/api/v1/[...path]/route.ts) reads this at request time.
-ENV API_URL=http://localhost:8000
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
