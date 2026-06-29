@@ -49,7 +49,6 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={10}
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}

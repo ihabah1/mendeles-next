@@ -27,6 +27,8 @@ CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
 FRONTEND_URL=https://mendeles-next-production.up.railway.app
 # ALLOWED_HOSTS is optional — code always adds .railway.app for healthchecks
 # Do not set SECURE_SSL_REDIRECT=true — Railway terminates TLS; Django redirect breaks healthchecks
+BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
+BOOTSTRAP_ADMIN_PASSWORD=admin
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 ```
 
