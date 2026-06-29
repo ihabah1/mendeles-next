@@ -1,0 +1,1 @@
+"""Mendeles Django configuration package."""

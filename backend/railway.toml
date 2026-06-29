@@ -1,10 +1,8 @@
-# Backend service — set Root Directory = backend (not repo root)
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "bash scripts/start.sh"
-healthcheckPath = "/"
-healthcheckTimeout = 300
+startCommand = "python manage.py migrate && python manage.py seed_rbac && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
+healthcheckPath = "/api/v1/health/"
 restartPolicyType = "ON_FAILURE"

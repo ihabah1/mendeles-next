@@ -1,0 +1,37 @@
+{
+  "common": {
+    "appName": "Mendeles",
+    "tagline": "פלטפורמת לידים לעסקים",
+    "loading": "טוען…",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "error": "אירעה שגיאה"
+  },
+  "auth": {
+    "login": "התחברות",
+    "register": "הרשמה",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "firstName": "שם פרטי",
+    "lastName": "שם משפחה",
+    "tenantName": "שם העסק",
+    "forgotPassword": "שכחת סיסמה?",
+    "noAccount": "אין לך חשבון?",
+    "hasAccount": "כבר יש לך חשבון?",
+    "verifyTitle": "אימות אימייל",
+    "verifySuccess": "האימייל אומת בהצלחה",
+    "resetTitle": "איפוס סיסמה"
+  },
+  "nav": {
+    "dashboard": "דשבורד",
+    "users": "משתמשים",
+    "settings": "הגדרות",
+    "audit": "יומן פעולות",
+    "logout": "יציאה"
+  },
+  "dashboard": {
+    "welcome": "ברוך הבא",
+    "health": "סטטוס מערכת",
+    "quickLinks": "קיצורי דרך"
+  }
+}

@@ -1,58 +1,21 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
-RUN apk add --no-cache openssl libc6-compat
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache openssl libc6-compat
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-ARG RAILWAY_GIT_COMMIT_SHA=local
-ENV NEXT_PUBLIC_COMMIT_SHA=$RAILWAY_GIT_COMMIT_SHA
-# Firebase (Railway injects at build; runtime also via /api/config/firebase)
-ARG NEXT_PUBLIC_FIREBASE_API_KEY=
-ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-ARG NEXT_PUBLIC_FIREBASE_APP_ID=
-ARG NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=$NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-# Dummy URL for `prisma generate` + `next build` only (not used at runtime)
-ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
-RUN npx prisma generate
 RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl libc6-compat
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
-
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Prisma engines for API routes that still use legacy DB (optional — set DATABASE_URL on Railway)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/draw_results.json ./draw_results.json
-
-USER nextjs
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
-
 CMD ["node", "server.js"]

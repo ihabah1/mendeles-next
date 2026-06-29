@@ -1,8 +1,7 @@
-# Frontend service — use when Root Directory is empty (repo root).
-# Backend service MUST use Root Directory = backend (uses backend/railway.toml).
+# Frontend service — Root Directory = repo root (or use frontend/ + frontend/railway.toml)
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile.frontend"
+dockerfilePath = "frontend/Dockerfile"
 
 [deploy]
 startCommand = "node server.js"

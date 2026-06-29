@@ -1,0 +1,67 @@
+"""Phase 1 permission registry."""
+
+PERMISSIONS = [
+    ("users.view", "users", "view", "צפייה במשתמשים"),
+    ("users.invite", "users", "invite", "הזמנת משתמשים"),
+    ("users.edit", "users", "edit", "עריכת משתמשים"),
+    ("users.remove", "users", "remove", "הסרת משתמשים"),
+    ("users.change_roles", "users", "change_roles", "שינוי תפקידי משתמשים"),
+    ("roles.view", "roles", "view", "צפייה בתפקידים"),
+    ("roles.edit", "roles", "edit", "עריכת הרשאות תפקיד"),
+    ("settings.view", "settings", "view", "צפייה בהגדרות"),
+    ("settings.manage", "settings", "manage", "ניהול הגדרות"),
+    ("audit.view", "audit", "view", "צפייה ביומן פעולות"),
+    ("tenants.view", "tenants", "view", "צפייה בדיירים"),
+    ("tenants.edit", "tenants", "edit", "עריכת דיירים"),
+]
+
+ROLE_PERMISSIONS: dict[str, list[str]] = {
+    "super_admin": ["*"],
+    "platform_admin": [
+        "users.view",
+        "users.invite",
+        "users.edit",
+        "users.remove",
+        "users.change_roles",
+        "roles.view",
+        "settings.manage",
+        "audit.view",
+        "tenants.view",
+    ],
+    "business_owner": [
+        "users.view",
+        "users.invite",
+        "users.edit",
+        "users.remove",
+        "users.change_roles",
+        "roles.view",
+        "settings.view",
+        "settings.manage",
+        "audit.view",
+    ],
+    "business_manager": [
+        "users.view",
+        "users.invite",
+        "settings.view",
+        "audit.view",
+    ],
+    "editor": ["settings.view"],
+    "seo_manager": ["settings.view"],
+    "sales_manager": ["users.view", "audit.view"],
+    "marketing_manager": ["settings.view", "audit.view"],
+    "support_agent": ["users.view"],
+    "read_only": ["users.view", "settings.view", "audit.view"],
+}
+
+SYSTEM_ROLES = [
+    ("super_admin", "מנהל על", "גישה מלאה לפלטפורמה"),
+    ("platform_admin", "מנהל פלטפורמה", "ניהול פלטפורמה"),
+    ("business_owner", "בעל עסק", "בעלות מלאה על דייר"),
+    ("business_manager", "מנהל עסק", "ניהול צוות ומשתמשים"),
+    ("editor", "עורך", "עריכת תוכן"),
+    ("seo_manager", "מנהל SEO", "ניהול SEO"),
+    ("sales_manager", "מנהל מכירות", "ניהול לידים"),
+    ("marketing_manager", "מנהל שיווק", "קמפיינים ושיווק"),
+    ("support_agent", "נציג תמיכה", "תמיכת לקוחות"),
+    ("read_only", "קריאה בלבד", "צפייה ללא עריכה"),
+]
