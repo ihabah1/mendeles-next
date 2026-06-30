@@ -4,17 +4,16 @@ import { cn } from "@/lib/utils";
 
 export async function HeroSection() {
   const tl = await getTranslations("landing");
-  const tAuth = await getTranslations("auth");
 
   return (
-    <section className="relative overflow-hidden px-6 pb-20 pt-16">
+    <section className="relative overflow-hidden px-6 pb-20 pt-16" aria-labelledby="hero-title">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--accent-muted)_0%,_transparent_55%)]" />
       <div className="mx-auto max-w-6xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1 text-xs text-[var(--muted-fg)]">
-          <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
+          <span className="h-2 w-2 rounded-full bg-[var(--success)]" aria-hidden="true" />
           {tl("badge")}
         </div>
-        <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+        <h1 id="hero-title" className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
           {tl("heroTitle")}
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-[var(--muted-fg)] sm:text-xl">{tl("heroSubtitle")}</p>
@@ -27,19 +26,19 @@ export async function HeroSection() {
           >
             {tl("ctaPrimary")}
           </Link>
-          <Link
-            href="/login"
+          <a
+            href="#how-it-works"
             className="inline-flex h-11 items-center rounded-[var(--radius)] border border-[var(--border)] px-6 text-sm font-medium hover:bg-[var(--muted)]"
           >
-            {tAuth("login")}
-          </Link>
+            {tl("ctaSecondary")}
+          </a>
         </div>
-        <dl className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-4">
+        <dl id="stats" className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-4">
           {[
-            { label: tl("statPages"), value: "3" },
-            { label: tl("statViews"), value: "1.2K" },
-            { label: tl("statLeads"), value: "47" },
-            { label: tl("statConversion"), value: "3.2%" },
+            { label: tl("statLeads"), value: tl("statLeadsValue") },
+            { label: tl("statTraffic"), value: tl("statTrafficValue") },
+            { label: tl("statConversion"), value: tl("statConversionValue") },
+            { label: tl("statGrowth"), value: tl("statGrowthValue") },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-[var(--border)] bg-[var(--background)]/60 p-4">
               <dt className="text-xs text-[var(--muted-fg)]">{item.label}</dt>
