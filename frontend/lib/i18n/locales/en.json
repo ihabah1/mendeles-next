@@ -68,6 +68,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "overview": "Overview",
+    "pages": "Landing pages",
     "users": "Users",
     "roles": "Roles",
     "settings": "Settings",
@@ -103,6 +104,7 @@
     "viewAll": "View all",
     "usersByRole": "Users by role",
     "manageRoles": "Manage roles",
+    "managePages": "All pages",
     "noRoles": "No role assignments yet",
     "recentActivity": "Recent activity",
     "audit24h": "{n} events in 24h"
@@ -135,6 +137,43 @@
   "audit": {
     "title": "Audit log",
     "loadError": "Failed to load audit log"
+  },
+  "pages": {
+    "title": "Landing pages",
+    "subtitle": "Manage and preview your landing pages",
+    "colName": "Page name",
+    "colStatus": "Status",
+    "colViews": "Views",
+    "colLeads": "Leads",
+    "colActions": "Actions",
+    "published": "Published",
+    "draft": "Draft",
+    "viewPage": "Open page",
+    "preview": "Preview",
+    "demoNote": "Sample pages — Phase 2 will enable full create & edit",
+    "demo": {
+      "backHome": "Back to site",
+      "sampleBadge": "Sample landing page",
+      "formTitle": "Leave your details and we'll get back to you",
+      "namePlaceholder": "Full name",
+      "emailPlaceholder": "Email",
+      "demoNote": "Demo form — not saved to the system",
+      "designServices": {
+        "headline": "Design services that convert",
+        "subtitle": "Experienced team for landing pages, branding, and UX.",
+        "cta": "Get a quote"
+      },
+      "webinarSignup": {
+        "headline": "Sign up for the free webinar",
+        "subtitle": "Learn how to boost landing page conversions in 60 minutes.",
+        "cta": "Reserve your spot"
+      },
+      "summerPromo": {
+        "headline": "Summer sale — 30% off",
+        "subtitle": "Limited offer for new businesses until end of month.",
+        "cta": "Claim offer"
+      }
+    }
   },
   "theme": {
     "toggle": "Toggle theme",

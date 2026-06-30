@@ -7,6 +7,7 @@ import { StatCard } from "@/components/admin/stat-card";
 import { ViewsChart } from "@/components/admin/views-chart";
 import { Card } from "@/components/ui/card";
 import { adminApi } from "@/lib/api/dashboard";
+import { landingPagePath } from "@/lib/landing/demo-pages";
 import { healthApi } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -68,7 +69,9 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label={t("usersTotal")} value={data.system.users_total} hint={t("usersActive", { n: data.system.users_active })} accent />
             <StatCard label={t("tenantsTotal")} value={data.system.tenants_total} hint={t("tenantsActive", { n: data.system.tenants_active })} />
-            <StatCard label={t("pagesTotal")} value={lp?.pages_total ?? 0} hint={t("pagesPublished", { n: lp?.pages_published ?? 0 })} />
+            <Link href="/dashboard/pages" className="block transition hover:opacity-90">
+              <StatCard label={t("pagesTotal")} value={lp?.pages_total ?? 0} hint={t("pagesPublished", { n: lp?.pages_published ?? 0 })} accent />
+            </Link>
             <StatCard label={t("totalViews")} value={lp?.total_views?.toLocaleString() ?? 0} trend={`+${lp?.views_today ?? 0}`} hint={t("viewsToday")} />
           </div>
 
@@ -103,17 +106,17 @@ export default function DashboardPage() {
             <Card>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-semibold">{t("topPages")}</h3>
-                <Link href="/dashboard/audit" className="text-xs text-[var(--accent)] hover:underline">
-                  {t("viewAll")}
+                <Link href="/dashboard/pages" className="text-xs text-[var(--accent)] hover:underline">
+                  {t("managePages")}
                 </Link>
               </div>
               <ul className="space-y-3">
                 {lp?.top_pages.map((page) => (
                   <li key={page.slug} className="flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{page.name}</p>
-                      <p className="text-xs text-[var(--muted-fg)]">/{page.slug}</p>
-                    </div>
+                    <Link href={landingPagePath(page.slug)} className="min-w-0 flex-1 hover:opacity-80" target="_blank">
+                      <p className="truncate font-medium text-[var(--accent)]">{page.name}</p>
+                      <p className="text-xs text-[var(--muted-fg)]">{landingPagePath(page.slug)}</p>
+                    </Link>
                     <span className="shrink-0 rounded-md bg-[var(--muted)] px-2 py-1 text-xs font-medium">
                       {page.views.toLocaleString()}
                     </span>

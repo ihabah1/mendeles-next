@@ -68,6 +68,7 @@
   "nav": {
     "dashboard": "דשבורד",
     "overview": "סקירה",
+    "pages": "דפי נחיתה",
     "users": "משתמשים",
     "roles": "תפקידים",
     "settings": "הגדרות",
@@ -103,6 +104,7 @@
     "viewAll": "הצג הכל",
     "usersByRole": "משתמשים לפי תפקיד",
     "manageRoles": "נהל תפקידים",
+    "managePages": "כל הדפים",
     "noRoles": "אין הקצאות תפקידים עדיין",
     "recentActivity": "פעילות אחרונה",
     "audit24h": "{n} אירועים ב-24 שעות"
@@ -135,6 +137,43 @@
   "audit": {
     "title": "יומן פעולות",
     "loadError": "שגיאה בטעינת יומן"
+  },
+  "pages": {
+    "title": "דפי נחיתה",
+    "subtitle": "ניהול וצפייה בדפי הנחיתה שלך",
+    "colName": "שם הדף",
+    "colStatus": "סטטוס",
+    "colViews": "צפיות",
+    "colLeads": "לידים",
+    "colActions": "פעולות",
+    "published": "מפורסם",
+    "draft": "טיוטה",
+    "viewPage": "פתח דף",
+    "preview": "תצוגה מקדימה",
+    "demoNote": "דפי דוגמה — Phase 2 יאפשר יצירה ועריכה מלאה",
+    "demo": {
+      "backHome": "חזרה לאתר",
+      "sampleBadge": "דף נחיתה לדוגמה",
+      "formTitle": "השאירו פרטים ונחזור אליכם",
+      "namePlaceholder": "שם מלא",
+      "emailPlaceholder": "אימייל",
+      "demoNote": "טופס לדוגמה — לא נשמר במערכת",
+      "designServices": {
+        "headline": "שירותי עיצוב שממירים",
+        "subtitle": "צוות מעצבים מנוסה לדפי נחיתה, מיתוג וחוויית משתמש.",
+        "cta": "קבלו הצעת מחיר"
+      },
+      "webinarSignup": {
+        "headline": "הירשמו לוובינר החינמי",
+        "subtitle": "למדו איך להגדיל המרות בדפי נחיתה תוך 60 דקות.",
+        "cta": "שריינו מקום"
+      },
+      "summerPromo": {
+        "headline": "מבצע קיץ — 30% הנחה",
+        "subtitle": "הצעה מוגבלת לעסקים חדשים עד סוף החודש.",
+        "cta": "ממשו את ההטבה"
+      }
+    }
   },
   "theme": {
     "toggle": "החלפת ערכת נושא",
