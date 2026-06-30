@@ -27,11 +27,59 @@
     "navMenu": "Menu",
     "navClose": "Close",
     "navAria": "Site navigation",
-    "badge": "AI-powered lead generation platform",
+    "badge": "AI-Powered Lead Generation Platform",
+    "heroTitleLine1": "Turn Google Searches Into",
+    "heroTitleHighlight": "Qualified Customers",
     "heroTitle": "Turn Google Searches Into Qualified Customers",
     "heroSubtitle": "Mendeles helps businesses attract organic traffic, convert visitors into leads, and automate customer acquisition with SEO, landing pages, and AI.",
-    "ctaPrimary": "Start Building",
+    "ctaPrimary": "Start Building for Free",
     "ctaSecondary": "See How It Works",
+    "trust": {
+      "noCard": "No credit card required",
+      "fastSetup": "Setup in minutes",
+      "cancel": "Cancel anytime"
+    },
+    "platformOverview": {
+      "label": "Platform Overview",
+      "steps": {
+        "keyword": "Keyword Research",
+        "content": "AI Content",
+        "publish": "Publish & Rank",
+        "convert": "Convert & Grow"
+      },
+      "journeyTitle": "Start your journey",
+      "journeyDesc": "Build, rank, and grow — all in one platform."
+    },
+    "growthFeatures": {
+      "title": "Everything You Need to Grow",
+      "subtitle": "Powerful tools to help you attract more traffic, generate leads, and grow your business.",
+      "items": {
+        "keyword": {
+          "title": "Keyword Research",
+          "desc": "Discover profitable keywords with real search data and opportunity scores."
+        },
+        "content": {
+          "title": "AI Content Creation",
+          "desc": "Create SEO-optimized landing pages and articles in seconds."
+        },
+        "seo": {
+          "title": "SEO Automation",
+          "desc": "Automate technical SEO, sitemaps, meta tags, and internal linking."
+        },
+        "leads": {
+          "title": "Lead Generation",
+          "desc": "Capture, qualify, and manage leads with smart forms and CRM."
+        },
+        "analytics": {
+          "title": "Analytics",
+          "desc": "Track performance, rankings, and conversions in real-time."
+        },
+        "ai": {
+          "title": "AI Optimization",
+          "desc": "Get AI-powered insights and suggestions to improve rankings and results."
+        }
+      }
+    },
     "statLeads": "Qualified leads",
     "statLeadsValue": "More",
     "statTraffic": "Google visibility",

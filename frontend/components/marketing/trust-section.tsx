@@ -7,8 +7,8 @@ export async function TrustSection() {
   const t = await getTranslations("landing.trust");
 
   return (
-    <section id="trust" className="border-t border-[var(--border)] px-6 py-16" aria-labelledby="trust-title">
-      <div className="mx-auto max-w-6xl">
+    <section id="trust" className="border-t border-white/10 px-6 py-16" aria-labelledby="trust-title">
+      <div className="mx-auto max-w-7xl">
         <h2 id="trust-title" className="sr-only">
           {t("title")}
         </h2>
@@ -16,12 +16,12 @@ export async function TrustSection() {
           {TRUST_KEYS.map((key, i) => (
             <li
               key={key}
-              className="flex flex-col items-center rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-5 text-center"
+              className="flex flex-col items-center rounded-xl border border-white/10 bg-[#0f1528]/40 px-3 py-5 text-center"
             >
               <span className="text-2xl" aria-hidden="true">
                 {ICONS[i]}
               </span>
-              <span className="mt-2 text-sm font-semibold">{t(`items.${key}`)}</span>
+              <span className="mt-2 text-sm font-semibold text-white">{t(`items.${key}`)}</span>
             </li>
           ))}
         </ul>

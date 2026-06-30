@@ -32,6 +32,10 @@
   --warning: #f59e0b;
 }
 
+.marketing {
+  color-scheme: dark;
+}
+
 * {
   border-color: var(--border);
 }

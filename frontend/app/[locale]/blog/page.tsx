@@ -14,7 +14,7 @@ export default async function BlogPage() {
   return (
     <MarketingShell>
       <HubPageContent title={t("title")} subtitle={t("subtitle")}>
-        <p className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--muted)]/40 p-6 text-sm text-[var(--muted-fg)]">
+        <p className="mt-8 rounded-xl border border-white/10 bg-[#0f1528]/60 p-6 text-sm text-slate-400">
           {t("comingSoon")}
         </p>
       </HubPageContent>

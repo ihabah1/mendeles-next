@@ -17,21 +17,19 @@ type Props = {
 export function HubPageContent({ title, subtitle, links, children }: Props) {
   return (
     <section className="px-6 py-16 sm:py-20">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-        <p className="mt-4 max-w-2xl text-lg text-[var(--muted-fg)]">{subtitle}</p>
+      <div className="mx-auto max-w-7xl">
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{title}</h1>
+        <p className="mt-4 max-w-2xl text-lg text-slate-400">{subtitle}</p>
         {links && links.length > 0 && (
           <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {links.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--background)] p-5 transition hover:border-[var(--accent)]/40 hover:shadow-sm"
+                  className="flex h-full flex-col rounded-xl border border-white/10 bg-[#0f1528]/60 p-5 transition hover:border-indigo-500/30"
                 >
-                  <span className="font-semibold">{link.label}</span>
-                  {link.description && (
-                    <span className="mt-2 text-sm text-[var(--muted-fg)]">{link.description}</span>
-                  )}
+                  <span className="font-semibold text-white">{link.label}</span>
+                  {link.description && <span className="mt-2 text-sm text-slate-400">{link.description}</span>}
                 </Link>
               </li>
             ))}
@@ -56,15 +54,15 @@ export function DetailPageContent({ title, subtitle, body, backHref, backLabel, 
   return (
     <section className="px-6 py-16 sm:py-20">
       <div className="mx-auto max-w-3xl">
-        <Link href={backHref} className="text-sm font-medium text-[var(--accent)] hover:underline">
+        <Link href={backHref} className="text-sm font-medium text-indigo-300 hover:text-indigo-200">
           ← {backLabel}
         </Link>
-        <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-        <p className="mt-4 text-lg text-[var(--muted-fg)]">{subtitle}</p>
-        <p className="mt-6 leading-relaxed text-[var(--muted-fg)]">{body}</p>
+        <h1 className="mt-6 text-3xl font-bold tracking-tight text-white sm:text-4xl">{title}</h1>
+        <p className="mt-4 text-lg text-slate-400">{subtitle}</p>
+        <p className="mt-6 leading-relaxed text-slate-400">{body}</p>
         <Link
           href="/register"
-          className="mt-10 inline-flex h-11 items-center rounded-[var(--radius)] bg-[var(--accent)] px-6 text-sm font-semibold text-[var(--accent-fg)] hover:opacity-90"
+          className="mt-10 inline-flex h-11 items-center rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 text-sm font-semibold text-white hover:opacity-95"
         >
           {ctaLabel}
         </Link>

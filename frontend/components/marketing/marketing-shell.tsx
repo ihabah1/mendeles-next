@@ -8,7 +8,7 @@ type Props = {
 
 export function MarketingShell({ children }: Props) {
   return (
-    <div className="min-h-screen">
+    <div className="marketing min-h-screen bg-[#0a0e1a] text-slate-100">
       <PublicHeader />
       <main>{children}</main>
       <FooterSection />
