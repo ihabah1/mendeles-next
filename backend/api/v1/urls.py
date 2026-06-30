@@ -9,6 +9,7 @@ from identity.api.v1.user_views import (
     UserRoleAssignView,
 )
 from siteconfig.api.v1.views import HealthView, SettingsView
+from siteconfig.api.v1.admin_views import AdminOverviewView
 from rbac.api.v1.views import PermissionListView, RoleListView
 
 urlpatterns = [
@@ -26,5 +27,6 @@ urlpatterns = [
     path("roles/", RoleListView.as_view(), name="roles-list"),
     path("permissions/", PermissionListView.as_view(), name="permissions-list"),
     path("settings/", SettingsView.as_view(), name="settings"),
+    path("admin/overview/", AdminOverviewView.as_view(), name="admin-overview"),
     path("audit-logs/", AuditLogListView.as_view(), name="audit-logs"),
 ]

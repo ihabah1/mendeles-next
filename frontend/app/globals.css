@@ -8,8 +8,13 @@
   --border: #e4e4e7;
   --primary: #18181b;
   --primary-fg: #fafafa;
+  --accent: #6366f1;
+  --accent-fg: #ffffff;
+  --accent-muted: #eef2ff;
+  --success: #16a34a;
+  --warning: #d97706;
   --ring: #a1a1aa;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 }
 
 .dark {
@@ -20,6 +25,11 @@
   --border: #27272a;
   --primary: #fafafa;
   --primary-fg: #18181b;
+  --accent: #818cf8;
+  --accent-fg: #18181b;
+  --accent-muted: #1e1b4b;
+  --success: #22c55e;
+  --warning: #f59e0b;
 }
 
 * {
