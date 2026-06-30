@@ -23,18 +23,24 @@ class UserListView(APIView):
     def get(self, request):
         tenant_id = request.user.default_tenant_id
         users = UserManagementService.list_users(tenant_id)
-        data = [
-            {
-                "id": str(u.id),
-                "email": u.email,
-                "first_name": u.first_name,
-                "last_name": u.last_name,
-                "is_active": u.is_active,
-                "roles": PermissionService.get_user_roles(u, tenant_id),
-                "created_at": u.created_at.isoformat(),
-            }
-            for u in users
-        ]
+        data = []
+        for u in users:
+            role_rows = UserRole.objects.filter(user=u, tenant_id=tenant_id).select_related("role")
+            data.append(
+                {
+                    "id": str(u.id),
+                    "email": u.email,
+                    "first_name": u.first_name,
+                    "last_name": u.last_name,
+                    "is_active": u.is_active,
+                    "roles": PermissionService.get_user_roles(u, tenant_id),
+                    "role_assignments": [
+                        {"id": str(ur.role_id), "slug": ur.role.slug, "name": ur.role.name}
+                        for ur in role_rows
+                    ],
+                    "created_at": u.created_at.isoformat(),
+                }
+            )
         return Response({"results": data})
 
 

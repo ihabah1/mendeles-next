@@ -139,6 +139,7 @@ PASSWORD_RESET_TTL = timedelta(hours=int(os.environ.get("PASSWORD_RESET_TTL_HOUR
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
+RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@mendeles.co.il")
 EMAIL_BACKEND = os.environ.get(

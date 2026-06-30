@@ -9,3 +9,5 @@ DATABASES["default"] = {  # noqa: F405
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+JWT_SECRET_KEY = "test-jwt-secret-key-minimum-32-characters-long"
+RATELIMIT_ENABLE = False

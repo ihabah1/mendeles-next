@@ -39,7 +39,7 @@ export async function FooterSection() {
   return (
     <footer className="border-t border-white/10 px-6 py-12">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <div className="font-bold text-white">{tc("appName")}</div>
             <p className="mt-2 text-sm text-slate-400">{tc("tagline")}</p>
@@ -55,31 +55,6 @@ export async function FooterSection() {
               <li>
                 <Link href="/industries" className="hover:text-white">
                   {tl("industries")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/templates" className="hover:text-white">
-                  {tl("templates")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="hover:text-white">
-                  {tl("pricing")}
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">{tl("resources")}</h3>
-            <ul className="mt-3 space-y-2 text-sm text-slate-400">
-              <li>
-                <Link href="/blog" className="hover:text-white">
-                  {tl("blog")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/resources" className="hover:text-white">
-                  {tl("guides")}
                 </Link>
               </li>
             </ul>

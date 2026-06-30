@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from audit.application.audit_service import AuditService
 from core.exceptions.base import ConflictError, NotFoundError
@@ -39,7 +40,7 @@ class UserManagementService:
 
         user = User.objects.create_user(
             email=email,
-            password=User.objects.make_random_password(length=32),
+            password=get_random_string(32),
             first_name=first_name.strip(),
             last_name=last_name.strip(),
             default_tenant=tenant,

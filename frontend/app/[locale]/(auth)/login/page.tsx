@@ -39,12 +39,13 @@ export default function LoginPage() {
         <h1 className="mb-6 text-2xl font-bold">{t("login")}</h1>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm">{t("email")}</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <label htmlFor="login-email" className="mb-1 block text-sm">{t("email")}</label>
+            <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div>
-            <label className="mb-1 block text-sm">{t("password")}</label>
+            <label htmlFor="login-password" className="mb-1 block text-sm">{t("password")}</label>
             <Input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

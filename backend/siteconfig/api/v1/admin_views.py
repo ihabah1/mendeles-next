@@ -68,23 +68,5 @@ class AdminOverviewView(APIView):
                     }
                     for row in recent_audit
                 ],
-                "landing_preview": {
-                    "demo": True,
-                    "pages_total": 3,
-                    "pages_published": 2,
-                    "total_views": 1284,
-                    "views_today": 86,
-                    "leads_total": 47,
-                    "conversion_rate": 3.2,
-                    "top_pages": [
-                        {"name": "דף נחיתה — שירותי עיצוב", "slug": "design-services", "views": 512},
-                        {"name": "הרשמה לוובינר", "slug": "webinar-signup", "views": 398},
-                        {"name": "מבצע קיץ", "slug": "summer-promo", "views": 374},
-                    ],
-                    "views_by_day": [
-                        {"date": (now - timezone.timedelta(days=i)).strftime("%Y-%m-%d"), "views": v}
-                        for i, v in zip(range(6, -1, -1), [98, 112, 134, 156, 142, 178, 186])
-                    ],
-                },
             }
         )

@@ -238,6 +238,7 @@ class AuthService:
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
+            "is_active": user.is_active,
             "tenant_id": str(tid) if tid else None,
             "roles": PermissionService.get_user_roles(user, tid),
             "permissions": sorted(PermissionService.get_user_permissions(user, tid)),

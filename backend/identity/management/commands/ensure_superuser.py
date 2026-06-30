@@ -1,5 +1,6 @@
 import os
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -12,8 +13,24 @@ class Command(BaseCommand):
     help = "Create or update the bootstrap superuser (idempotent)."
 
     def handle(self, *args, **options):
-        email = os.environ.get("BOOTSTRAP_ADMIN_EMAIL", "admin@admin.com").strip().lower()
-        password = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD", "admin")
+        email = os.environ.get("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
+        password = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD", "")
+
+        if not email or not password:
+            if settings.DEBUG:
+                email = email or "admin@admin.com"
+                password = password or "admin"
+            else:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "Skipping bootstrap superuser: set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD"
+                    )
+                )
+                return
+
+        if not settings.DEBUG and len(password) < 10:
+            self.stdout.write(self.style.ERROR("BOOTSTRAP_ADMIN_PASSWORD must be at least 10 characters"))
+            return
 
         User = get_user_model()
         tenant, _ = Tenant.objects.get_or_create(

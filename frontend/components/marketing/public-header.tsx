@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/marketing/mobile-nav";
 import { MAIN_NAV } from "@/lib/marketing/content";
 import { cn } from "@/lib/utils";
 
-const DROPDOWN_NAV = new Set(["navSolutions", "navResources", "navCompany"]);
+const DROPDOWN_NAV = new Set(["navSolutions"]);
 
 const btnGhost = "inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:text-white";
 const btnGradient =

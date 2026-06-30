@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions.base import HasPermission
+from core.ratelimit import enforce_rate_limit
 from identity.api.cookies import clear_refresh_cookie, get_refresh_from_request, set_refresh_cookie
 from identity.api.v1.serializers import (
     ForgotPasswordSerializer,
@@ -19,6 +20,8 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-register", rate="10/h"):
+            return blocked
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = AuthService.register(request=request, **serializer.validated_data)
@@ -35,6 +38,8 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-login", rate="20/m"):
+            return blocked
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = AuthService.login(request=request, **serializer.validated_data)
@@ -96,6 +101,8 @@ class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-forgot-password", rate="10/h"):
+            return blocked
         serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         AuthService.forgot_password(email=serializer.validated_data["email"], request=request)

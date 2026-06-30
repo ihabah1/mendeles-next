@@ -2,7 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 const frontendUrl =
   process.env.FRONTEND_URL?.replace(/\/$/, "") ||
-  "https://mendeles-next-production.up.railway.app";
+  process.env.PLAYWRIGHT_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",

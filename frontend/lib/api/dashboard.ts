@@ -28,17 +28,17 @@ export type AdminOverview = {
     user_email: string | null;
     resource_type: string | null;
   }>;
-  landing_preview: {
-    demo: boolean;
-    pages_total: number;
-    pages_published: number;
-    total_views: number;
-    views_today: number;
-    leads_total: number;
-    conversion_rate: number;
-    top_pages: Array<{ name: string; slug: string; views: number }>;
-    views_by_day: Array<{ date: string; views: number }>;
-  };
+};
+
+export type UserRow = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  roles: string[];
+  role_assignments: Array<{ id: string; slug: string; name: string }>;
+  created_at: string;
 };
 
 export type RoleRow = {
@@ -55,7 +55,32 @@ export const adminApi = {
 };
 
 export const usersApi = {
-  list: () => apiFetch<{ results: Array<Record<string, unknown>> }>("/api/v1/users/", { headers: authHeaders() }),
+  list: () => apiFetch<{ results: UserRow[] }>("/api/v1/users/", { headers: authHeaders() }),
+  invite: (data: { email: string; first_name: string; last_name: string; role_slug: string }) =>
+    apiFetch<{ id: string; email: string }>("/api/v1/users/invite/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
+  update: (id: string, data: Partial<Pick<UserRow, "first_name" | "last_name" | "is_active">>) =>
+    apiFetch<UserRow>(`/api/v1/users/${id}/`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      json: data,
+    }),
+  remove: (id: string) =>
+    apiFetch<void>(`/api/v1/users/${id}/`, { method: "DELETE", headers: authHeaders() }),
+  assignRole: (id: string, role_slug: string) =>
+    apiFetch<{ message: string }>(`/api/v1/users/${id}/roles/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { role_slug },
+    }),
+  removeRole: (id: string, roleId: string) =>
+    apiFetch<void>(`/api/v1/users/${id}/roles/${roleId}/`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }),
 };
 
 export const rolesApi = {
