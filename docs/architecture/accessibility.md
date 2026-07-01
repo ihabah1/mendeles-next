@@ -89,6 +89,9 @@ Automated tools cannot fully certify WCAG compliance. Manual verification with N
 
 ## Pre-launch checklist
 
+See the full published checklist: **[accessibility-checklist.md](../accessibility-checklist.md)**.
+
+Quick summary:
 - [ ] Set `NEXT_PUBLIC_A11Y_COORDINATOR_*` env vars
 - [ ] Set `NEXT_PUBLIC_A11Y_STATEMENT_UPDATED`
 - [ ] Run `npm run test:a11y` — zero serious/critical axe violations
