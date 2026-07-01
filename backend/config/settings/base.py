@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "rbac",
     "audit",
     "siteconfig",
+    "seo",
 ]
 
 MIDDLEWARE = [

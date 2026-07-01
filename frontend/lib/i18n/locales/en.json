@@ -311,6 +311,7 @@
     "users": "Users",
     "roles": "Roles",
     "settings": "Settings",
+    "seo": "SEO",
     "audit": "Audit log",
     "logout": "Log out"
   },
@@ -381,6 +382,39 @@
   "settings": {
     "title": "Settings",
     "companyName": "Company name"
+  },
+  "seo": {
+    "title": "SEO Management",
+    "noAccess": "You do not have permission to view SEO",
+    "tabs": {
+      "settings": "Global settings",
+      "status": "SEO status",
+      "validation": "SEO validation"
+    },
+    "fields": {
+      "site_name": "Site name",
+      "default_title": "Default title",
+      "default_description": "Default description",
+      "default_keywords": "Keywords",
+      "default_author": "Default author",
+      "default_language": "Default language",
+      "robots_policy": "Robots policy",
+      "canonical_base_url": "Canonical base URL",
+      "default_og_image": "Open Graph image",
+      "default_twitter_image": "Twitter image",
+      "organization_name": "Organization name",
+      "organization_logo": "Organization logo",
+      "organization_url": "Organization URL"
+    },
+    "overallScore": "Overall score",
+    "productionReady": "Production ready",
+    "globalHealth": "Global health",
+    "homepageHealth": "Homepage health",
+    "score": "Score",
+    "valid": "Valid",
+    "invalid": "Invalid",
+    "yes": "Yes",
+    "no": "No"
   },
   "audit": {
     "title": "Audit log",

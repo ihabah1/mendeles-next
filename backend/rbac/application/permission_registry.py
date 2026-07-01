@@ -11,6 +11,8 @@ PERMISSIONS = [
     ("settings.view", "settings", "view", "צפייה בהגדרות"),
     ("settings.manage", "settings", "manage", "ניהול הגדרות"),
     ("audit.view", "audit", "view", "צפייה ביומן פעולות"),
+    ("seo.view", "seo", "view", "צפייה ב-SEO"),
+    ("seo.manage", "seo", "manage", "ניהול SEO"),
     ("tenants.view", "tenants", "view", "צפייה בדיירים"),
     ("tenants.edit", "tenants", "edit", "עריכת דיירים"),
 ]
@@ -27,6 +29,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "settings.manage",
         "audit.view",
         "tenants.view",
+        "seo.view",
+        "seo.manage",
     ],
     "business_owner": [
         "users.view",
@@ -38,6 +42,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "settings.view",
         "settings.manage",
         "audit.view",
+        "seo.view",
+        "seo.manage",
     ],
     "business_manager": [
         "users.view",
@@ -46,7 +52,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "audit.view",
     ],
     "editor": ["settings.view"],
-    "seo_manager": ["settings.view"],
+    "seo_manager": ["settings.view", "seo.view", "seo.manage"],
     "sales_manager": ["users.view", "audit.view"],
     "marketing_manager": ["settings.view", "audit.view"],
     "support_agent": ["users.view"],

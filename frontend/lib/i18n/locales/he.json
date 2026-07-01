@@ -275,6 +275,7 @@
     "users": "משתמשים",
     "roles": "תפקידים",
     "settings": "הגדרות",
+    "seo": "SEO",
     "audit": "יומן פעולות",
     "logout": "יציאה"
   },
@@ -345,6 +346,39 @@
   "settings": {
     "title": "הגדרות",
     "companyName": "שם החברה"
+  },
+  "seo": {
+    "title": "ניהול SEO",
+    "noAccess": "אין הרשאה לצפות ב-SEO",
+    "tabs": {
+      "settings": "הגדרות גלובליות",
+      "status": "סטטוס SEO",
+      "validation": "אימות SEO"
+    },
+    "fields": {
+      "site_name": "שם האתר",
+      "default_title": "כותרת ברירת מחדל",
+      "default_description": "תיאור ברירת מחדל",
+      "default_keywords": "מילות מפתח",
+      "default_author": "מחבר ברירת מחדל",
+      "default_language": "שפת ברירת מחדל",
+      "robots_policy": "מדיניות Robots",
+      "canonical_base_url": "כתובת Canonical בסיסית",
+      "default_og_image": "תמונת Open Graph",
+      "default_twitter_image": "תמונת Twitter",
+      "organization_name": "שם הארגון",
+      "organization_logo": "לוגו הארגון",
+      "organization_url": "כתובת הארגון"
+    },
+    "overallScore": "ציון כולל",
+    "productionReady": "מוכן לפרודקשן",
+    "globalHealth": "בריאות גלובלית",
+    "homepageHealth": "בריאות דף הבית",
+    "score": "ציון",
+    "valid": "תקין",
+    "invalid": "לא תקין",
+    "yes": "כן",
+    "no": "לא"
   },
   "audit": {
     "title": "יומן פעולות",

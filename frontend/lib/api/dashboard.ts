@@ -111,3 +111,55 @@ export const auditApi = {
       headers: authHeaders(),
     }),
 };
+
+export type SEOSettings = {
+  site_name: string;
+  default_title: string;
+  default_description: string;
+  default_keywords: string;
+  default_author: string;
+  default_language: string;
+  robots_policy: string;
+  canonical_base_url: string;
+  default_og_image: string;
+  default_twitter_image: string;
+  organization_name: string;
+  organization_logo: string;
+  organization_url: string;
+};
+
+export type SEOValidationReport = {
+  valid: boolean;
+  score: number;
+  issues: Array<{ code: string; severity: string; message: string }>;
+};
+
+export type SEOStatus = {
+  global: SEOValidationReport & { settings?: SEOSettings };
+  homepage: SEOValidationReport;
+  overall_score: number;
+  ready_for_production: boolean;
+};
+
+export const seoApi = {
+  getSettings: () => apiFetch<SEOSettings>("/api/v1/seo/settings/", { headers: authHeaders() }),
+  updateSettings: (data: Partial<SEOSettings>) =>
+    apiFetch<SEOSettings>("/api/v1/seo/settings/", {
+      method: "PATCH",
+      headers: authHeaders(),
+      json: data,
+    }),
+  status: () => apiFetch<SEOStatus>("/api/v1/seo/status/", { headers: authHeaders() }),
+  validate: (page?: Record<string, unknown>) =>
+    apiFetch<SEOValidationReport>("/api/v1/seo/validate/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: page ? { page } : {},
+    }),
+  generateSlug: (text: string, locale = "he") =>
+    apiFetch<{ slug: string }>("/api/v1/seo/slugs/generate/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: { text, locale },
+    }),
+};

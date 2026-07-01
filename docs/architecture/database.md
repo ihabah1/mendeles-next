@@ -47,6 +47,18 @@
 
 Key/value settings scoped by tenant (e.g. `company.name`).
 
+## seo_global_settings (Phase 2)
+
+Per-tenant centralized SEO configuration: site name, default title/description/keywords, robots policy, canonical base URL, OG/Twitter images, organization metadata.
+
+## seo_slugs
+
+Central slug registry — unique per `(tenant, slug, locale)`. Supports content types: static, landing_page, blog, industry, template, resource.
+
+## seo_redirects
+
+Redirect registry (`from_path` → `to_path`, 301/302). Infrastructure for future redirect management UI.
+
 ## Auth tokens
 
 - **email_verification_tokens** — hashed token, expiry

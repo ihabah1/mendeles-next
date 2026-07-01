@@ -34,4 +34,20 @@ Base URL: `/api/v1/`
 | GET | `/roles/` | roles.view |
 | GET | `/permissions/` | roles.view |
 
+## SEO (Phase 2)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET/PATCH | `/seo/settings/` | seo.view / seo.manage | Global SEO settings |
+| GET | `/seo/status/` | seo.view | SEO health score |
+| POST | `/seo/validate/` | seo.view | Validate page or global SEO |
+| POST | `/seo/metadata/` | seo.view | Build metadata + schemas |
+| GET | `/seo/sitemap/` | Public | Sitemap entries (JSON) |
+| GET | `/seo/robots/` | Public | robots.txt content |
+| GET | `/seo/public/` | Public | SSR SEO bundle |
+| GET/POST | `/seo/redirects/` | seo.view / seo.manage | Redirect registry |
+| POST | `/seo/slugs/generate/` | seo.manage | Generate unique slug |
+
+See [SEO architecture](seo.md).
+
 OpenAPI: `/api/v1/docs/`
