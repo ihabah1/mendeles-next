@@ -308,6 +308,7 @@
     "dashboard": "Dashboard",
     "overview": "Overview",
     "pages": "Landing pages",
+    "content": "Content",
     "users": "Users",
     "roles": "Roles",
     "settings": "Settings",
@@ -415,6 +416,21 @@
     "invalid": "Invalid",
     "yes": "Yes",
     "no": "No"
+  },
+  "content": {
+    "title": "Content management",
+    "subtitle": "Content architecture — page list, status, and publish. Block editor arrives in Phase 3.",
+    "noAccess": "You do not have permission to view content",
+    "createPage": "Create page",
+    "pageTitle": "Title",
+    "pageSlug": "Slug (optional)",
+    "create": "Create page",
+    "pages": "Pages",
+    "path": "Path",
+    "status": "Status",
+    "version": "Version",
+    "publish": "Publish",
+    "empty": "No pages yet"
   },
   "audit": {
     "title": "Audit log",

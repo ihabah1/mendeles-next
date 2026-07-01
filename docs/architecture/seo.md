@@ -23,7 +23,7 @@ Centralized SEO infrastructure shared by every Mendeles page module.
 | Breadcrumbs | `seo.application.breadcrumb_service` | `lib/seo/breadcrumbs.ts` |
 | Validation | `seo.application.validation_service` | `lib/seo/validation.ts` |
 | Redirects | `seo.application.redirect_service` | API only (no UI) |
-| Internal links | `seo.application.internal_linking_service` | stub |
+| Internal linking | `content.application.internal_link_service` | stub delegates to content |
 
 ## Metadata Flow
 
@@ -76,7 +76,7 @@ Permissions: `seo.view`, `seo.manage`
 
 | Module | Integration point |
 |--------|-------------------|
-| Landing Pages | `SEOSlug.ContentType.LANDING_PAGE`, `SitemapService.dynamic_entries()` |
+| Landing Pages | `content.Page` + `SEOSlug.ContentType.LANDING_PAGE` |
 | Blog | `ContentType.BLOG`, `SchemaService.article()` |
 | Industries/Templates | slug registry + sitemap hooks |
 | Keyword Intelligence | consumes `SEOValidationService` reports |

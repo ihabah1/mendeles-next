@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "audit",
     "siteconfig",
     "seo",
+    "content",
 ]
 
 MIDDLEWARE = [

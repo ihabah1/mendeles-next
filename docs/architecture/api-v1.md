@@ -50,4 +50,20 @@ Base URL: `/api/v1/`
 
 See [SEO architecture](seo.md).
 
+## Content (Phase 2.5)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET/POST | `/content/pages/` | content.view / create | List or create pages |
+| GET/PATCH/DELETE | `/content/pages/{id}/` | view / edit / delete | Page detail |
+| POST | `/content/pages/{id}/publish/` | content.publish | Publishing workflow |
+| GET | `/content/pages/{id}/versions/` | content.view | Version history |
+| GET/POST | `/content/pages/{id}/blocks/` | view / edit | Content blocks |
+| GET/POST | `/content/pages/{id}/links/` | view / edit | Internal links |
+| GET/POST | `/content/taxonomies/` | view / create | Taxonomies |
+| GET/POST | `/content/taxonomies/{id}/terms/` | view / create | Categories & tags |
+| GET/POST | `/content/templates/` | view / create | Page templates |
+
+See [Content architecture](content.md).
+
 OpenAPI: `/api/v1/docs/`

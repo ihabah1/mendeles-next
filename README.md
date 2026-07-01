@@ -1,6 +1,6 @@
 # Mendeles — Lead Generation Platform
 
-Production-ready **Phase 1 foundation** + **Phase 2 SEO Core**: Auth, RBAC, Users, Audit, Settings, centralized SEO engine.
+Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Content Architecture**.
 
 ## Stack
 
@@ -12,6 +12,7 @@ Production-ready **Phase 1 foundation** + **Phase 2 SEO Core**: Auth, RBAC, User
 
 - [Architecture overview](docs/architecture/overview.md)
 - [SEO architecture](docs/architecture/seo.md)
+- [Content architecture](docs/architecture/content.md)
 - [Database schema](docs/architecture/database.md)
 - [API v1](docs/architecture/api-v1.md)
 - [Deployment](docs/deployment.md)
@@ -40,10 +41,10 @@ cd frontend && npx playwright test
 
 See [RAILWAY-MENDELES.md](RAILWAY-MENDELES.md) and [docs/deployment.md](docs/deployment.md).
 
-## Phase 2 (SEO Core — included)
+## Phase 2.5 (Content Architecture — included)
 
-Centralized SEO settings, metadata engine, slugs, sitemap, robots, schema.org, validation, dashboard.
+Page model, URL hierarchy, taxonomies, blocks, templates, versioning, publishing workflow, internal links.
 
 ## Phase 3+ (not included)
 
-Landing pages, blog, leads, AI, keyword research, payments.
+Landing Page Builder UI, blog module, AI content generation, keyword research, payments.

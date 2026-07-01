@@ -163,3 +163,33 @@ export const seoApi = {
       json: { text, locale },
     }),
 };
+
+export type ContentPage = {
+  id: string;
+  title: string;
+  slug: string;
+  full_path: string;
+  locale: string;
+  page_type: string;
+  status: string;
+  published_version: number;
+  published_at: string | null;
+  created_at: string;
+};
+
+export const contentApi = {
+  listPages: () =>
+    apiFetch<{ results: ContentPage[] }>("/api/v1/content/pages/", { headers: authHeaders() }),
+  createPage: (data: { title: string; slug?: string; page_type?: string; locale?: string }) =>
+    apiFetch<ContentPage>("/api/v1/content/pages/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
+  publishPage: (id: string, status = "published") =>
+    apiFetch<ContentPage>(`/api/v1/content/pages/${id}/publish/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { status },
+    }),
+};

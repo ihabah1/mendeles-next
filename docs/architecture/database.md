@@ -59,6 +59,34 @@ Central slug registry — unique per `(tenant, slug, locale)`. Supports content 
 
 Redirect registry (`from_path` → `to_path`, 301/302). Infrastructure for future redirect management UI.
 
+## content_pages (Phase 2.5)
+
+Central page model: hierarchy (`parent`), `full_path`, `page_type`, `status`, locale, SEO meta overrides, `published_version`.
+
+## content_page_versions
+
+Immutable publish snapshots (blocks + terms JSON).
+
+## content_blocks
+
+Ordered blocks (`block_type`, `config` JSON) per page.
+
+## content_templates
+
+Reusable block schemas per page type.
+
+## content_taxonomies / content_taxonomy_terms
+
+Unified categories, tags, and custom vocabularies (hierarchical terms).
+
+## content_page_terms
+
+M2M page ↔ taxonomy term.
+
+## content_internal_links
+
+Directed links between pages for internal linking graph.
+
 ## Auth tokens
 
 - **email_verification_tokens** — hashed token, expiry
