@@ -53,7 +53,7 @@ export async function HeroSection() {
             </a>
           </div>
 
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-300">
             {TRUST_KEYS.map((key) => (
               <li key={key} className="flex items-center gap-1.5">
                 <span className="text-slate-400" aria-hidden="true">

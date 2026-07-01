@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { AccessibilityCoordinatorSection } from "@/components/a11y/accessibility-coordinator";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
@@ -48,12 +49,7 @@ export default async function AccessibilityPage({ params }: Props) {
           <p className="text-slate-300">{t("standardBody")}</p>
         </section>
 
-        <section className="mt-10 space-y-4" aria-labelledby="a11y-contact">
-          <h2 id="a11y-contact" className="text-xl font-semibold text-white">
-            {t("contactTitle")}
-          </h2>
-          <p className="text-slate-300">{t("contactBody")}</p>
-        </section>
+        <AccessibilityCoordinatorSection />
       </article>
     </MarketingShell>
   );

@@ -80,7 +80,7 @@ export async function FooterSection() {
             </ul>
           </div>
         </div>
-        <p className="mt-10 text-xs text-slate-500">{tl("copyright")}</p>
+        <p className="mt-10 text-xs text-slate-400">{tl("copyright")}</p>
       </div>
     </footer>
   );

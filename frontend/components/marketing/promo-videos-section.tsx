@@ -19,7 +19,10 @@ export async function PromoVideosSection() {
         </div>
 
         <ul className="mt-12 grid gap-8 lg:grid-cols-3">
-          {PROMO_VIDEOS.map((video) => (
+          {PROMO_VIDEOS.map((video) => {
+            const titleId = `promo-video-title-${video.id}`;
+            const descId = `promo-video-desc-${video.id}`;
+            return (
             <li
               key={video.id}
               className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1528]/60 shadow-xl shadow-indigo-950/30"
@@ -31,17 +34,19 @@ export async function PromoVideosSection() {
                   controls
                   playsInline
                   preload="metadata"
-                  aria-label={t(`items.${video.labelKey}.title`)}
+                  aria-labelledby={titleId}
+                  aria-describedby={descId}
                 />
               </div>
               <div className="p-5">
-                <h3 className="text-lg font-semibold text-white">{t(`items.${video.labelKey}.title`)}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                <h3 id={titleId} className="text-lg font-semibold text-white">{t(`items.${video.labelKey}.title`)}</h3>
+                <p id={descId} className="mt-2 text-sm leading-relaxed text-slate-400">
                   {t(`items.${video.labelKey}.desc`)}
                 </p>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </section>

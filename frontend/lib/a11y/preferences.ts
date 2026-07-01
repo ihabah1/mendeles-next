@@ -6,8 +6,11 @@ export function loadPreferences(): AccessibilityPreferences {
   if (typeof window === "undefined") return DEFAULT_A11Y_PREFERENCES;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_A11Y_PREFERENCES;
-    return { ...DEFAULT_A11Y_PREFERENCES, ...JSON.parse(raw) };
+    if (raw) {
+      return { ...DEFAULT_A11Y_PREFERENCES, ...JSON.parse(raw) };
+    }
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return prefersReducedMotion ? { ...DEFAULT_A11Y_PREFERENCES, reduceMotion: true } : DEFAULT_A11Y_PREFERENCES;
   } catch {
     return DEFAULT_A11Y_PREFERENCES;
   }
@@ -26,6 +29,7 @@ export function applyPreferencesToDocument(prefs: AccessibilityPreferences): voi
   root.classList.toggle("a11y-readable-font", prefs.readableFont);
   root.classList.toggle("a11y-reduce-motion", prefs.reduceMotion);
   root.classList.toggle("a11y-underline-links", prefs.underlineLinks);
+  root.dataset.a11yMotion = prefs.reduceMotion ? "reduced" : "enabled";
 }
 
 /** Inline script to apply saved prefs before React hydration (prevents flash). */

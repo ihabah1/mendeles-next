@@ -10,7 +10,8 @@
     "unexpectedError": "Unexpected error",
     "language": "Language",
     "hebrew": "עברית",
-    "english": "English"
+    "english": "English",
+    "homeLink": "Mendeles — Home"
   },
   "metadata": {
     "title": "Mendeles — AI Lead Generation Platform",
@@ -55,8 +56,18 @@
     "trust": {
       "noCard": "No credit card required",
       "fastSetup": "Setup in minutes",
-      "cancel": "Cancel anytime"
+      "cancel": "Cancel anytime",
+      "title": "Built for production",
+      "items": {
+        "fast": "Fast",
+        "secure": "Secure",
+        "accessible": "Accessible",
+        "seo": "SEO Optimized",
+        "production": "Production Ready",
+        "ai": "AI Powered"
+      }
     },
+    "ctaTitle": "Ready to grow your business?",
     "platformOverview": {
       "label": "Platform Overview",
       "steps": {
@@ -172,17 +183,6 @@
         "seoAssistant": { "title": "AI SEO Assistant", "desc": "Improve titles, structure, and keywords to rank for the searches that matter." },
         "leadQualification": { "title": "AI Lead Qualification", "desc": "Score and route leads so your team focuses on buyers ready to act." },
         "contentOptimization": { "title": "AI Content Optimization", "desc": "Refine messaging to increase engagement and conversion rates." }
-      }
-    },
-    "trust": {
-      "title": "Built for production",
-      "items": {
-        "fast": "Fast",
-        "secure": "Secure",
-        "accessible": "Accessible",
-        "seo": "SEO Optimized",
-        "production": "Production Ready",
-        "ai": "AI Powered"
       }
     },
     "ctaTitle": "Ready to grow your business?",
@@ -513,7 +513,8 @@
     "readableFont": "Readable font",
     "reduceMotion": "Reduce motion",
     "reset": "Reset settings",
-    "statement": "This site supports WCAG 2.1 Level AA accessibility standards and is continuously improved for all users.",
+    "statementLink": "Full accessibility statement",
+    "statement": "This site supports Israeli Standard 5568 and WCAG 2.2 Level AA accessibility guidelines, with ongoing improvements for all users.",
     "page": {
       "title": "Accessibility statement",
       "description": "Information about site accessibility, available adjustments, and how to contact us about accessibility.",
@@ -526,9 +527,16 @@
       "featureKeyboard": "Full keyboard navigation, including a skip-to-content link",
       "featureWidget": "Floating accessibility button to open the options panel",
       "standardTitle": "Accessibility standard",
-      "standardBody": "This site follows WCAG 2.1 Level AA and Israeli Standard 5568. We perform ongoing testing and improvements.",
+      "standardBody": "This site follows WCAG 2.2 Level AA and Israeli Standard 5568. We perform ongoing testing and improvements.",
       "contactTitle": "Accessibility contact",
-      "contactBody": "Encountered an accessibility issue? Contact us via the site contact form or support email and we will respond promptly."
+      "contactBody": "Encountered an accessibility issue? Contact our accessibility coordinator using the details below.",
+      "coordinatorTitle": "Accessibility coordinator",
+      "coordinatorNameLabel": "Name",
+      "coordinatorPhoneLabel": "Phone",
+      "coordinatorEmailLabel": "Email",
+      "placeholderValue": "[To be completed before launch]",
+      "coordinatorPending": "Accessibility coordinator details are not configured yet. Set NEXT_PUBLIC_A11Y_COORDINATOR_* environment variables before launch.",
+      "lastUpdatedLabel": "Last updated"
     }
   }
 }
