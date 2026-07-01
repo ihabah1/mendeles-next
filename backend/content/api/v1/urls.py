@@ -1,9 +1,11 @@
 from django.urls import path
 
 from content.api.v1.views import (
+    MediaListView,
     PageBlockDetailView,
     PageBlockListView,
     PageDetailView,
+    PageDuplicateView,
     PageLinkDetailView,
     PageLinkListView,
     PageListView,
@@ -19,6 +21,7 @@ from content.api.v1.views import (
 urlpatterns = [
     path("pages/", PageListView.as_view(), name="content-pages"),
     path("pages/<uuid:page_id>/", PageDetailView.as_view(), name="content-page-detail"),
+    path("pages/<uuid:page_id>/duplicate/", PageDuplicateView.as_view(), name="content-page-duplicate"),
     path("pages/<uuid:page_id>/publish/", PagePublishView.as_view(), name="content-page-publish"),
     path("pages/<uuid:page_id>/versions/", PageVersionListView.as_view(), name="content-page-versions"),
     path(
@@ -51,4 +54,5 @@ urlpatterns = [
         name="content-taxonomy-terms",
     ),
     path("templates/", TemplateListView.as_view(), name="content-templates"),
+    path("media/", MediaListView.as_view(), name="content-media"),
 ]

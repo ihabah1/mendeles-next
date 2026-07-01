@@ -59,6 +59,8 @@ See [SEO architecture](seo.md).
 | POST | `/content/pages/{id}/publish/` | content.publish | Publishing workflow |
 | GET | `/content/pages/{id}/versions/` | content.view | Version history |
 | GET/POST | `/content/pages/{id}/blocks/` | view / edit | Content blocks |
+| POST | `/content/pages/{id}/duplicate/` | content.create | Duplicate page as draft |
+| GET/POST | `/content/media/` | view / create | Media assets |
 | GET/POST | `/content/pages/{id}/links/` | view / edit | Internal links |
 | GET/POST | `/content/taxonomies/` | view / create | Taxonomies |
 | GET/POST | `/content/taxonomies/{id}/terms/` | view / create | Categories & tags |

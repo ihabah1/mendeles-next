@@ -14,6 +14,12 @@ class ContentTemplate(BaseModel):
     description = models.TextField(blank=True, default="")
     page_type = models.CharField(max_length=30, choices=PageType.choices, default=PageType.LANDING_PAGE)
     block_schema = models.JSONField(default=list, help_text="Default block definitions [{type, config}]")
+    theme_slug = models.SlugField(max_length=100, blank=True, default="")
+    theme_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Theme tokens: colors, fonts, spacing overrides",
+    )
     is_system = models.BooleanField(default=False)
 
     class Meta:
@@ -107,6 +113,14 @@ class Page(BaseModel):
     published_version = models.PositiveIntegerField(default=0)
     published_at = models.DateTimeField(null=True, blank=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="authored_pages",
+        help_text="Content author attribution (may differ from created_by)",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -180,12 +194,15 @@ class ContentBlock(BaseModel):
     class BlockType(models.TextChoices):
         HERO = "hero", "Hero"
         TEXT = "text", "Text"
+        RICH_TEXT = "rich_text", "Rich text"
         CTA = "cta", "Call to action"
         FAQ = "faq", "FAQ"
         IMAGE = "image", "Image"
+        GALLERY = "gallery", "Gallery"
         FEATURES = "features", "Features"
         TESTIMONIALS = "testimonials", "Testimonials"
         FORM = "form", "Form"
+        CONTACT_FORM = "contact_form", "Contact form"
         CUSTOM = "custom", "Custom"
 
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="blocks")
@@ -243,4 +260,34 @@ class InternalLink(BaseModel):
         indexes = [
             models.Index(fields=["tenant", "source_page"]),
             models.Index(fields=["tenant", "target_page"]),
+        ]
+
+
+class MediaAsset(BaseModel):
+    """Central media registry — image, video, and document references for blocks."""
+
+    class MediaType(models.TextChoices):
+        IMAGE = "image", "Image"
+        VIDEO = "video", "Video"
+        DOCUMENT = "document", "Document"
+
+    tenant = models.ForeignKey("tenancy.Tenant", on_delete=models.CASCADE, related_name="media_assets")
+    media_type = models.CharField(max_length=20, choices=MediaType.choices)
+    title = models.CharField(max_length=300)
+    url = models.URLField(max_length=1000)
+    alt_text = models.CharField(max_length=300, blank=True, default="")
+    mime_type = models.CharField(max_length=100, blank=True, default="")
+    file_size = models.PositiveIntegerField(null=True, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_media",
+    )
+
+    class Meta:
+        db_table = "content_media_assets"
+        indexes = [
+            models.Index(fields=["tenant", "media_type"]),
         ]

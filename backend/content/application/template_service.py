@@ -20,6 +20,8 @@ class TemplateService:
             description=data.get("description", ""),
             page_type=data.get("page_type", "landing_page"),
             block_schema=data.get("block_schema", []),
+            theme_slug=data.get("theme_slug", ""),
+            theme_config=data.get("theme_config", {}),
             is_system=data.get("is_system", False),
         )
 
@@ -32,5 +34,7 @@ class TemplateService:
             "description": template.description,
             "page_type": template.page_type,
             "block_schema": template.block_schema,
+            "theme_slug": template.theme_slug,
+            "theme_config": template.theme_config,
             "is_system": template.is_system,
         }

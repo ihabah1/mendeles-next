@@ -3,7 +3,9 @@ from rest_framework.views import APIView
 
 from core.permissions.base import HasPermission
 from content.application.block_service import BlockService
+from content.application.duplicate_service import DuplicateService
 from content.application.internal_link_service import InternalLinkService
+from content.application.media_service import MediaService
 from content.application.page_service import PageService
 from content.application.publish_service import PublishService
 from content.application.taxonomy_service import TaxonomyService
@@ -56,6 +58,18 @@ class PageDetailView(APIView):
         _check(request, self, "content.delete")
         PageService.soft_delete(request.user.default_tenant_id, page_id)
         return Response(status=204)
+
+
+class PageDuplicateView(APIView):
+    def post(self, request, page_id):
+        _check(request, self, "content.create")
+        page = DuplicateService.duplicate_page(
+            request.user.default_tenant_id,
+            page_id,
+            request.user,
+            title_suffix=request.data.get("title_suffix", " (copy)"),
+        )
+        return Response(PageService.serialize_page(page), status=201)
 
 
 class PagePublishView(APIView):
@@ -201,3 +215,20 @@ class TemplateListView(APIView):
         _check(request, self, "content.create")
         template = TemplateService.create_template(request.user.default_tenant_id, request.data)
         return Response(TemplateService.serialize_template(template), status=201)
+
+
+class MediaListView(APIView):
+    def get(self, request):
+        _check(request, self, "content.view")
+        assets = MediaService.list_media(
+            request.user.default_tenant_id,
+            media_type=request.query_params.get("media_type"),
+        )
+        return Response({"results": [MediaService.serialize_media(a) for a in assets]})
+
+    def post(self, request):
+        _check(request, self, "content.create")
+        asset = MediaService.create_media(
+            request.user.default_tenant_id, request.user, request.data
+        )
+        return Response(MediaService.serialize_media(asset), status=201)

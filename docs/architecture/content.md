@@ -31,7 +31,7 @@ Tenant
 
 | Field | Purpose |
 |-------|---------|
-| `page_type` | landing_page, blog, resource, industry |
+| `page_type` | landing_page, blog, **static**, resource, industry |
 | `status` | draft → in_review → scheduled → published → unpublished → archived |
 | `parent` | URL hierarchy (`/blog/my-post` under `/blog`) |
 | `full_path` | Canonical path segment (unique per tenant + locale) |
@@ -55,9 +55,18 @@ On `PUBLISHED`:
 
 ## URL hierarchy
 
-`UrlHierarchyService.build_page_path(slug, parent)`:
-- Root: `/my-page`
-- Child: `/parent-slug/child-slug`
+`UrlHierarchyService` applies type-based root prefixes:
+
+| Page type | Root prefix | Example |
+|-----------|-------------|---------|
+| `landing_page` | `/pages` | `/pages/promo` |
+| `blog` | `/blog` | `/blog/my-post` |
+| `static` | *(root)* | `/about` |
+| `resource` | `/resources` | `/resources/guide` |
+
+Static marketing hubs (`/solutions/...`, `/industries/...`) remain Next.js routes until migrated to `Page` records.
+
+Children inherit parent path: `/blog/hub/post-slug`.
 
 Uniqueness: `(tenant, full_path, locale)`.
 
@@ -71,13 +80,27 @@ Uniqueness: `(tenant, full_path, locale)`.
 
 ## Content blocks
 
-Block types (extensible): `hero`, `text`, `cta`, `faq`, `image`, `features`, `testimonials`, `form`, `custom`.
+Block types (extensible): `hero`, `text`, `rich_text`, `cta`, `faq`, `image`, `gallery`, `features`, `testimonials`, `form`, `contact_form`, `custom`.
 
-Each block: `{ block_type, sort_order, config: JSON, is_visible }`.
+Each block: `{ block_type, sort_order, config: JSON, is_visible }`. Media blocks reference `MediaAsset` via `config.media_id`.
 
 ## Templates
 
 `ContentTemplate.block_schema` defines default blocks for new pages of a given `page_type`.
+
+`theme_slug` + `theme_config` (JSON) hold design tokens for Phase 3 builder themes.
+
+## Media
+
+`MediaAsset` — centralized registry for `image`, `video`, `document` references used in block `config`.
+
+## Scheduled publishing
+
+Run `python manage.py publish_scheduled_pages` (cron) to publish pages where `status=scheduled` and `scheduled_at <= now`.
+
+## Duplicate
+
+`POST /content/pages/{id}/duplicate/` — copies page, blocks, and terms as a new draft.
 
 ## Internal linking
 

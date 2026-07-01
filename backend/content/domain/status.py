@@ -15,6 +15,7 @@ class PageStatus(models.TextChoices):
 class PageType(models.TextChoices):
     LANDING_PAGE = "landing_page", "Landing page"
     BLOG = "blog", "Blog article"
+    STATIC = "static", "Static page"
     RESOURCE = "resource", "Resource"
     INDUSTRY = "industry", "Industry"
     TEMPLATE_PREVIEW = "template_preview", "Template preview"

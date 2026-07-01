@@ -87,6 +87,10 @@ M2M page ↔ taxonomy term.
 
 Directed links between pages for internal linking graph.
 
+## content_media_assets (Phase 2.5)
+
+Media registry: `image`, `video`, `document` — referenced from block `config.media_id`.
+
 ## Auth tokens
 
 - **email_verification_tokens** — hashed token, expiry

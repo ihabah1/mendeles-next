@@ -109,3 +109,33 @@ def test_read_only_cannot_create_page(readonly_client):
         format="json",
     )
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_duplicate_page_api(owner_client):
+    create = owner_client.post(
+        "/api/v1/content/pages/",
+        {"title": "Source", "slug": "source", "page_type": "landing_page"},
+        format="json",
+    )
+    page_id = create.json()["id"]
+    dup = owner_client.post(f"/api/v1/content/pages/{page_id}/duplicate/", format="json")
+    assert dup.status_code == 201
+    assert dup.json()["title"] == "Source (copy)"
+    assert dup.json()["status"] == PageStatus.DRAFT
+
+
+@pytest.mark.django_db
+def test_media_api(owner_client):
+    response = owner_client.post(
+        "/api/v1/content/media/",
+        {
+            "media_type": "document",
+            "title": "Brochure",
+            "url": "https://cdn.example.com/brochure.pdf",
+            "mime_type": "application/pdf",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.json()["media_type"] == "document"

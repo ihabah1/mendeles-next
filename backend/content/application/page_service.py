@@ -1,10 +1,7 @@
-from django.utils import timezone
-
 from content.application.url_hierarchy_service import UrlHierarchyService
 from content.domain.status import PageStatus
 from content.infrastructure.models import ContentBlock, Page, PageTerm
 from seo.application.slug_service import SlugService
-from seo.infrastructure.models import SEOSlug
 
 
 class PageService:
@@ -17,43 +14,50 @@ class PageService:
             qs = qs.filter(page_type=page_type)
         if parent_id:
             qs = qs.filter(parent_id=parent_id)
-        return qs.select_related("parent", "template").order_by("sort_order", "title")
+        return qs.select_related("parent", "template", "author").order_by("sort_order", "title")
 
     @staticmethod
     def get_page(tenant_id, page_id) -> Page:
-        return Page.objects.select_related("parent", "template").get(
+        return Page.objects.select_related("parent", "template", "author").get(
             id=page_id,
             tenant_id=tenant_id,
             deleted_at__isnull=True,
         )
 
     @classmethod
+    def _resolve_path(cls, slug: str, parent: Page | None, page_type: str) -> str:
+        return UrlHierarchyService.build_page_path(slug, parent, page_type=page_type)
+
+    @classmethod
     def create_page(cls, tenant_id, user, data: dict) -> Page:
         parent = None
+        page_type = data.get("page_type", "landing_page")
+        locale = data.get("locale", "he")
+
         if parent_id := data.get("parent_id"):
             parent = Page.objects.get(id=parent_id, tenant_id=tenant_id, deleted_at__isnull=True)
 
-        slug = data.get("slug") or SlugService.generate_unique_slug(
-            tenant_id, data["title"], locale=data.get("locale", "he")
-        )
-        full_path = UrlHierarchyService.build_page_path(slug, parent)
+        slug = data.get("slug") or SlugService.generate_unique_slug(tenant_id, data["title"], locale=locale)
+        full_path = cls._resolve_path(slug, parent, page_type)
 
-        if not UrlHierarchyService.is_path_available(tenant_id, full_path, data.get("locale", "he")):
-            slug = SlugService.generate_unique_slug(tenant_id, data["title"], locale=data.get("locale", "he"))
-            full_path = UrlHierarchyService.build_page_path(slug, parent)
+        if not UrlHierarchyService.is_path_available(tenant_id, full_path, locale):
+            slug = SlugService.generate_unique_slug(tenant_id, data["title"], locale=locale)
+            full_path = cls._resolve_path(slug, parent, page_type)
 
+        author_id = data.get("author_id")
         page = Page.objects.create(
             tenant_id=tenant_id,
             parent=parent,
             template_id=data.get("template_id"),
-            page_type=data.get("page_type", "landing_page"),
+            page_type=page_type,
             status=PageStatus.DRAFT,
-            locale=data.get("locale", "he"),
+            locale=locale,
             title=data["title"],
             slug=slug,
             full_path=full_path,
             meta_title=data.get("meta_title", ""),
             meta_description=data.get("meta_description", ""),
+            author_id=author_id or (user.id if user else None),
             created_by=user,
             updated_by=user,
         )
@@ -77,6 +81,8 @@ class PageService:
             page.sort_order = data["sort_order"]
         if "scheduled_at" in data:
             page.scheduled_at = data["scheduled_at"]
+        if "author_id" in data:
+            page.author_id = data["author_id"]
 
         if "parent_id" in data:
             parent = None
@@ -87,7 +93,7 @@ class PageService:
         if "slug" in data:
             page.slug = data["slug"]
 
-        page.full_path = UrlHierarchyService.build_page_path(page.slug, page.parent)
+        page.full_path = cls._resolve_path(page.slug, page.parent, page.page_type)
         page.updated_by = user
         page.save()
         cls._rebuild_child_paths(page)
@@ -96,7 +102,7 @@ class PageService:
     @classmethod
     def _rebuild_child_paths(cls, page: Page) -> None:
         for child in Page.objects.filter(parent_id=page.id, deleted_at__isnull=True):
-            child.full_path = UrlHierarchyService.build_page_path(child.slug, page)
+            child.full_path = cls._resolve_path(child.slug, page, child.page_type)
             child.save(update_fields=["full_path", "updated_at"])
             cls._rebuild_child_paths(child)
 
@@ -112,6 +118,7 @@ class PageService:
             "status": page.status,
             "parent_id": str(page.parent_id) if page.parent_id else None,
             "template_id": str(page.template_id) if page.template_id else None,
+            "author_id": str(page.author_id) if page.author_id else None,
             "meta_title": page.meta_title,
             "meta_description": page.meta_description,
             "published_version": page.published_version,
