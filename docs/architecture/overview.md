@@ -46,3 +46,10 @@ frontend/
 - Admin dashboard shell
 
 Phase 2 (not included): landing pages, leads, SEO product, AI, payments.
+
+## Phase 3+ architecture (design)
+
+| Phase | Doc | Status |
+|-------|-----|--------|
+| 3 — Landing Page Engine | [landing-page-engine.md](./architecture/landing-page-engine.md) | Awaiting approval |
+| 4 — Lead Generation Engine | [lead-generation-engine.md](./architecture/lead-generation-engine.md) | Awaiting approval |

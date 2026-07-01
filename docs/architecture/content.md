@@ -128,10 +128,14 @@ Run `python manage.py publish_scheduled_pages` (cron) to publish pages where `st
 
 ## What comes next (Phase 3)
 
-- **Landing Page Builder UI** — visual block editor consuming this API
-- **Public render route** — `GET /p/{path}` or dynamic Next.js route
-- **AI content generation** — writes to `Page` + `ContentBlock`
-- **Blog module** — `page_type=blog` + `SchemaService.article()`
+See **[landing-page-engine.md](./landing-page-engine.md)** for full architecture (awaiting approval).
+
+- **Landing Page Builder UI** — block editor consuming this API (no drag-and-drop)
+- **Public render route** — `/[locale]/pages/[...slug]`
+- **Block library** — 14 block types + reorder/duplicate/hide
+- **Analytics hooks** — page_view, cta_click, form_submit, whatsapp_click
+
+Phase 4 (leads): **[lead-generation-engine.md](./lead-generation-engine.md)**.
 
 ## Dashboard
 
