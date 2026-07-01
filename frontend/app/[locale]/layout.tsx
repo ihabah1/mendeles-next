@@ -4,6 +4,10 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import { routing, type Locale } from "@/lib/i18n/routing";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { AccessibilityProvider } from "@/lib/a11y/context";
+import { EARLY_A11Y_SCRIPT } from "@/lib/a11y/preferences";
+import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
+import { SkipToContent } from "@/components/a11y/skip-to-content";
 import { Providers } from "../providers";
 
 type Props = {
@@ -28,10 +32,15 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: EARLY_A11Y_SCRIPT }} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <NextIntlClientProvider messages={messages}>
             <Providers>
-              <AuthProvider>{children}</AuthProvider>
+              <AccessibilityProvider>
+                <SkipToContent />
+                <AuthProvider>{children}</AuthProvider>
+                <AccessibilityWidget />
+              </AccessibilityProvider>
             </Providers>
           </NextIntlClientProvider>
         </ThemeProvider>

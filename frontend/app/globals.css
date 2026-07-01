@@ -45,3 +45,90 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+html {
+  font-size: calc(100% * var(--a11y-font-scale, 1));
+  scroll-behavior: smooth;
+}
+
+html.a11y-reduce-motion {
+  scroll-behavior: auto;
+}
+
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.a11y-readable-font body {
+  font-family: Arial, Helvetica, "Nimbus Sans L", sans-serif !important;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  word-spacing: 0.08em;
+}
+
+html.a11y-highlight-links a,
+html.a11y-underline-links a {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+}
+
+html.a11y-highlight-links a {
+  outline: 2px solid #facc15 !important;
+  outline-offset: 2px;
+}
+
+html.a11y-high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted: #1a1a1a;
+  --muted-fg: #e5e5e5;
+  --border: #ffffff;
+  --primary: #ffff00;
+  --primary-fg: #000000;
+  --accent: #00ffff;
+  --accent-fg: #000000;
+  --ring: #ffff00;
+}
+
+html.a11y-high-contrast .marketing {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.a11y-high-contrast .marketing * {
+  border-color: #ffffff !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+html.a11y-high-contrast .marketing a,
+html.a11y-high-contrast .marketing button {
+  outline: 2px solid #ffff00 !important;
+}
+
+html.a11y-high-contrast img,
+html.a11y-high-contrast video {
+  filter: contrast(1.2);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

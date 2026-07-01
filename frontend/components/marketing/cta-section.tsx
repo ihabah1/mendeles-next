@@ -72,6 +72,11 @@ export async function FooterSection() {
                   {tl("getStarted")}
                 </Link>
               </li>
+              <li>
+                <Link href="/accessibility" className="hover:text-white">
+                  {tl("accessibility")}
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

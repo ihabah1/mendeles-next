@@ -60,7 +60,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </button>
         </nav>
       </aside>
-      <main className="flex-1 p-6">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 p-6 outline-none">
+        {children}
+      </main>
     </div>
   );
 }

@@ -34,6 +34,24 @@
     "heroSubtitle": "Mendeles helps businesses attract organic traffic, convert visitors into leads, and automate customer acquisition with SEO, landing pages, and AI.",
     "ctaPrimary": "Start Building for Free",
     "ctaSecondary": "See How It Works",
+    "promoVideos": {
+      "title": "See Mendeles in action",
+      "subtitle": "From brand to a Google-ready landing page — all in one platform.",
+      "items": {
+        "logo": {
+          "title": "Your brand, ready to grow",
+          "desc": "Mendeles builds a professional digital presence that earns trust instantly."
+        },
+        "landingPage": {
+          "title": "Landing page, assembled automatically",
+          "desc": "The platform composes a modular conversion page — ready to publish and capture leads."
+        },
+        "seoSettings": {
+          "title": "Full SEO out of the box",
+          "desc": "Meta settings, schemas, and validation — so Google understands and ranks you."
+        }
+      }
+    },
     "trust": {
       "noCard": "No credit card required",
       "fastSetup": "Setup in minutes",
@@ -181,6 +199,7 @@
       "company": "Company",
       "about": "About",
       "getStarted": "Get started",
+      "accessibility": "Accessibility statement",
       "copyright": "© Mendeles — AI-powered lead generation platform"
     }
   },
@@ -479,6 +498,37 @@
     "dark": "Dark mode"
   },
   "a11y": {
-    "mainNav": "Main navigation"
+    "mainNav": "Main navigation",
+    "skipToContent": "Skip to main content",
+    "openPanel": "Open accessibility menu",
+    "closePanel": "Close accessibility menu",
+    "panelTitle": "Accessibility options",
+    "panelDesc": "Customize the site for your needs. Settings are saved in your browser.",
+    "fontSize": "Text size",
+    "increaseFont": "Increase text size",
+    "decreaseFont": "Decrease text size",
+    "highContrast": "High contrast",
+    "highlightLinks": "Highlight links",
+    "underlineLinks": "Underline links",
+    "readableFont": "Readable font",
+    "reduceMotion": "Reduce motion",
+    "reset": "Reset settings",
+    "statement": "This site supports WCAG 2.1 Level AA accessibility standards and is continuously improved for all users.",
+    "page": {
+      "title": "Accessibility statement",
+      "description": "Information about site accessibility, available adjustments, and how to contact us about accessibility.",
+      "intro": "We are committed to making this site accessible to everyone, including people with disabilities. A floating accessibility widget lets you customize your browsing experience.",
+      "featuresTitle": "Available adjustments",
+      "featureFont": "Text size increase and decrease",
+      "featureContrast": "High contrast mode",
+      "featureLinks": "Link highlighting and underlining",
+      "featureMotion": "Reduced motion and animations",
+      "featureKeyboard": "Full keyboard navigation, including a skip-to-content link",
+      "featureWidget": "Floating accessibility button to open the options panel",
+      "standardTitle": "Accessibility standard",
+      "standardBody": "This site follows WCAG 2.1 Level AA and Israeli Standard 5568. We perform ongoing testing and improvements.",
+      "contactTitle": "Accessibility contact",
+      "contactBody": "Encountered an accessibility issue? Contact us via the site contact form or support email and we will respond promptly."
+    }
   }
 }
