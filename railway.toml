@@ -12,8 +12,8 @@ dockerfilePath = "Dockerfile.frontend"
 [deploy]
 startCommand = "node server.js"
 restartPolicyType = "ON_FAILURE"
-healthcheckPath = "/"
-healthcheckTimeout = 300
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
 
 [env]
 # Private network (preferred — no TLS between services):

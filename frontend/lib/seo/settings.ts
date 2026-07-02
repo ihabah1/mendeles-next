@@ -28,6 +28,7 @@ export async function fetchPublicSEO(): Promise<SEOPublicBundle | null> {
   try {
     const res = await fetch(`${backendBase()}/api/v1/seo/public/`, {
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
     cachedBundle = (await res.json()) as SEOPublicBundle;

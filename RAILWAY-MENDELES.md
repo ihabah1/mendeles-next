@@ -41,6 +41,11 @@ EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 
 אחרי שמירה → **Redeploy** על שני השירותים.
 
+## Healthcheck
+
+Frontend healthcheck: `GET /api/health` (configured in `railway.toml`).  
+Do **not** use `/` — it triggers full SSR and backend fetches during deploy probes.
+
 ## בדיקה
 
 - API: `https://<backend>/api/v1/health/` → `healthy`
