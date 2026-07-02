@@ -1,6 +1,6 @@
 # Mendeles — Lead Generation Platform
 
-Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Content Architecture** + **Phase 4 Lead Generation Engine**.
+Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Content Architecture** + **Phase 4 Lead Generation Engine** + **Phase X Automation Center** (infrastructure).
 
 ## Stack
 
@@ -16,7 +16,9 @@ Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Con
 - [SEO architecture](docs/architecture/seo.md)
 - [Content architecture](docs/architecture/content.md)
 - [Lead generation (Phase 4)](docs/architecture/lead-generation-engine.md)
+- [Automation Center (Phase X)](docs/architecture/automation-center.md)
 - [Phase 4 completion report](docs/phase4-completion-report.md)
+- [Phase X completion report](docs/phase-x-completion-report.md)
 - [Database schema](docs/architecture/database.md)
 - [API v1](docs/architecture/api-v1.md)
 - [Deployment](docs/deployment.md)
@@ -56,6 +58,17 @@ Centralized lead capture, dashboard list/detail, status workflow, notes, activit
 ```bash
 cd backend && python manage.py seed_leads   # default sources + contact form per tenant
 ```
+
+## Phase X (Automation Center — infrastructure included)
+
+Job orchestration: queue, workers, scheduler schema, workflows, approval checkpoints, notifications. Dashboard shows **real data only**.
+
+```bash
+cd backend && python manage.py seed_automation      # default queue per tenant
+cd backend && python manage.py process_automation_queue   # process queued jobs
+```
+
+AI content generation and external provider handlers are **not** implemented — await explicit approval.
 
 ## Phase 3 (not included — next approved phase)
 

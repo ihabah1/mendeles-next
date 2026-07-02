@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "seo",
     "content",
     "leads",
+    "automation",
 ]
 
 MIDDLEWARE = [

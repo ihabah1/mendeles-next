@@ -1,7 +1,6 @@
 # Phase X — Automation Center (Architecture)
 
-> **Status:** Design only — **not authorized for implementation.**  
-> **Governance:** See [master-development-roadmap.md](../master-development-roadmap.md). Implementation requires explicit phase approval.
+> **Status:** Implemented (Phase X infrastructure). Job handlers for AI/external providers are not enabled.
 
 The Automation Center is the orchestration engine of Mendeles.
 

@@ -63,7 +63,7 @@ See [master-development-roadmap.md](../master-development-roadmap.md) for full l
 | 2.5 — Content | [content.md](./content.md) |
 | 3 — Landing pages | [landing-page-engine.md](./landing-page-engine.md) |
 | 4 — Leads | [lead-generation-engine.md](./lead-generation-engine.md) |
-| X — Automation Center | [automation-center.md](./automation-center.md) (design only) |
+| X — Automation Center | [automation-center.md](./architecture/automation-center.md) | ✅ Infrastructure |
 
 **Checklists:** [master-enterprise-checklist.md](../master-enterprise-checklist.md) · [phase3-phase4-checklist.md](../phase3-phase4-checklist.md) · [phase4-completion-report.md](../phase4-completion-report.md) · [accessibility-checklist.md](../accessibility-checklist.md)
 

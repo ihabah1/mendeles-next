@@ -10,6 +10,7 @@ from identity.api.v1.user_views import (
 )
 from content.api.v1.urls import urlpatterns as content_urls
 from leads.api.v1.urls import urlpatterns as leads_urls
+from automation.api.v1.urls import urlpatterns as automation_urls
 from seo.api.v1.urls import urlpatterns as seo_urls
 from siteconfig.api.v1.views import HealthView, SettingsView
 from siteconfig.api.v1.admin_views import AdminOverviewView
@@ -35,4 +36,5 @@ urlpatterns = [
     path("seo/", include(seo_urls)),
     path("content/", include(content_urls)),
     path("leads/", include(leads_urls)),
+    path("automation/", include(automation_urls)),
 ]

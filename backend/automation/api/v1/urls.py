@@ -1,0 +1,41 @@
+from django.urls import path
+
+from automation.api.v1.views import (
+    AutomationDashboardView,
+    AutomationJobApproveView,
+    AutomationJobCancelView,
+    AutomationJobDetailView,
+    AutomationJobDuplicateView,
+    AutomationJobListView,
+    AutomationJobLogsView,
+    AutomationJobPauseView,
+    AutomationJobProgressView,
+    AutomationJobQueueView,
+    AutomationJobRejectView,
+    AutomationJobResumeView,
+    AutomationJobRetryView,
+    AutomationNotificationsView,
+    AutomationQueueView,
+    AutomationWorkersView,
+    JobTypeListView,
+)
+
+urlpatterns = [
+    path("", AutomationJobListView.as_view(), name="automation-jobs"),
+    path("dashboard/", AutomationDashboardView.as_view(), name="automation-dashboard"),
+    path("queue/", AutomationQueueView.as_view(), name="automation-queue"),
+    path("workers/", AutomationWorkersView.as_view(), name="automation-workers"),
+    path("job-types/", JobTypeListView.as_view(), name="automation-job-types"),
+    path("notifications/", AutomationNotificationsView.as_view(), name="automation-notifications"),
+    path("<uuid:job_id>/", AutomationJobDetailView.as_view(), name="automation-job-detail"),
+    path("<uuid:job_id>/logs/", AutomationJobLogsView.as_view(), name="automation-job-logs"),
+    path("<uuid:job_id>/progress/", AutomationJobProgressView.as_view(), name="automation-job-progress"),
+    path("<uuid:job_id>/queue/", AutomationJobQueueView.as_view(), name="automation-job-queue"),
+    path("<uuid:job_id>/pause/", AutomationJobPauseView.as_view(), name="automation-job-pause"),
+    path("<uuid:job_id>/resume/", AutomationJobResumeView.as_view(), name="automation-job-resume"),
+    path("<uuid:job_id>/retry/", AutomationJobRetryView.as_view(), name="automation-job-retry"),
+    path("<uuid:job_id>/cancel/", AutomationJobCancelView.as_view(), name="automation-job-cancel"),
+    path("<uuid:job_id>/duplicate/", AutomationJobDuplicateView.as_view(), name="automation-job-duplicate"),
+    path("<uuid:job_id>/approve/", AutomationJobApproveView.as_view(), name="automation-job-approve"),
+    path("<uuid:job_id>/reject/", AutomationJobRejectView.as_view(), name="automation-job-reject"),
+]

@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added — Phase X Automation Center
+
+- Django `automation` app: AutomationJob, AutomationJobStep, AutomationQueue, AutomationSchedule, AutomationExecution, AutomationLog, AutomationWorker, AutomationNotification, AutomationTemplate, AutomationWorkflow
+- Database-backed job queue with priority, dependencies, approval checkpoints
+- Worker architecture with heartbeat; `process_automation_queue` management command
+- System job handlers: `health_check`, `cleanup`, `cache_refresh` (other types fail honestly)
+- Automation API: CRUD, dashboard, queue, workers, logs, progress, pause/resume/retry/cancel/duplicate/approve/reject
+- RBAC: `automation.view`, `automation.create`, `automation.manage`, `automation.approve`, `automation.cancel`, `automation.logs`
+- Dashboard pages: `/dashboard/automation`, `/dashboard/automation/[id]`
+- Admin control center: real automation stats (no placeholder widgets)
+- Unit/API tests; Playwright E2E; accessibility coverage for automation dashboard
+- Documentation: Phase X completion report, updated API and architecture docs
+
 ### Added — Phase 4 Lead Generation Engine
 
 - Django `leads` app: Lead, LeadSource, LeadUTM, LeadNote, LeadActivity, FormDefinition, FormSubmission

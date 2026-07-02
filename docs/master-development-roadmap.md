@@ -319,7 +319,7 @@ Modules:
 
 **Goal:** Orchestration engine for scheduled and triggered jobs across all platform modules.
 
-**Status:** Architecture reference only — not authorized for implementation.
+**Status:** ✅ Infrastructure implemented (handlers for AI/external providers await approval).
 
 Modules:
 
@@ -330,7 +330,8 @@ Modules:
 - Manual approval checkpoints
 - Job history and notifications
 
-Architecture: [automation-center.md](./architecture/automation-center.md)
+Architecture: [automation-center.md](./architecture/automation-center.md)  
+Completion report: [phase-x-completion-report.md](./phase-x-completion-report.md)
 
 ---
 
@@ -415,6 +416,6 @@ Every implementation decision must support this objective.
 ## Related documents
 
 - [Master enterprise checklist](./master-enterprise-checklist.md) — full production vision tracker
-- [Automation Center (Phase X)](./architecture/automation-center.md) — design only
+- [Automation Center (Phase X)](./architecture/automation-center.md) — infrastructure implemented
 - [Phase 3+4 checklist](./phase3-phase4-checklist.md)
 - [Accessibility checklist](./accessibility-checklist.md)

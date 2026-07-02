@@ -26,24 +26,29 @@ export type AdminOverview = {
   };
   automation: {
     status: string;
-    phase: string;
     active_jobs: number;
     scheduled_jobs: number;
     running_jobs: number;
     completed_jobs: number;
     failed_jobs: number;
+    paused_jobs: number;
+    waiting_approval: number;
     queue_size: number;
     upcoming_jobs: number;
     credits_used: number;
+    average_runtime_ms: number | null;
     estimated_completion_minutes: number | null;
+    workers_total: number;
+    workers_busy: number;
+    total_jobs: number;
   };
   recent_jobs: Array<{
     id: string;
     name: string;
     status: string;
-    progress: number;
-    started_at: string | null;
-    finished_at: string | null;
+    job_type: string;
+    progress_percent: number;
+    created_at: string | null;
   }>;
   users_by_role: Array<{ role: string; name: string; count: number }>;
   recent_audit: Array<{
@@ -344,4 +349,101 @@ export const leadsApi = {
     if (!res.ok) throw new Error("Export failed");
     return res.blob();
   },
+};
+
+export type AutomationJobRow = {
+  id: string;
+  name: string;
+  job_type: string;
+  status: string;
+  priority: string;
+  progress_percent: number;
+  queue_id: string;
+  requires_approval: boolean;
+  auto_publish_enabled: boolean;
+  retry_count: number;
+  max_retries: number;
+  error_message: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  created_by: string | null;
+  completed_tasks: number;
+  failed_tasks: number;
+  remaining_tasks: number;
+  total_tasks: number;
+};
+
+export type AutomationJobDetail = AutomationJobRow & {
+  config: Record<string, unknown>;
+  steps: Array<Record<string, unknown>>;
+  executions: Array<Record<string, unknown>>;
+  logs: Array<{ id: string; level: string; message: string; created_at: string }>;
+};
+
+export type AutomationStats = AdminOverview["automation"];
+
+export const automationApi = {
+  dashboard: () =>
+    apiFetch<{ stats: AutomationStats; recent_jobs: AutomationJobRow[] }>(
+      "/api/v1/automation/dashboard/",
+      { headers: authHeaders() },
+    ),
+  list: (params?: { status?: string; job_type?: string; q?: string; page?: string }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v) sp.set(k, v);
+      }
+    }
+    const qs = sp.toString();
+    return apiFetch<Paginated<AutomationJobRow>>(`/api/v1/automation/${qs ? `?${qs}` : ""}`, {
+      headers: authHeaders(),
+    });
+  },
+  get: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/`, { headers: authHeaders() }),
+  create: (data: { name: string; job_type: string; priority?: string; config?: Record<string, unknown> }) =>
+    apiFetch<AutomationJobDetail>("/api/v1/automation/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
+  jobTypes: () =>
+    apiFetch<{
+      results: Array<{ value: string; label: string }>;
+      priorities: Array<{ value: string; label: string }>;
+      statuses: Array<{ value: string; label: string }>;
+    }>("/api/v1/automation/job-types/", { headers: authHeaders() }),
+  pause: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/pause/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  resume: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/resume/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  cancel: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/cancel/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  retry: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/retry/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  approve: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/approve/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  workers: () =>
+    apiFetch<{ results: Array<Record<string, unknown>> }>("/api/v1/automation/workers/", {
+      headers: authHeaders(),
+    }),
 };

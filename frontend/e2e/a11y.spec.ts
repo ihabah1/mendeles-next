@@ -45,6 +45,21 @@ test.describe("axe: dashboard leads", () => {
   });
 });
 
+test.describe("axe: dashboard automation", () => {
+  test("has no serious or critical violations", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/dashboard/automation");
+    await page.waitForLoadState("networkidle");
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+
+    const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
+    expect(blocking, formatViolations(blocking)).toEqual([]);
+  });
+});
+
 test.describe("keyboard navigation", () => {
   test("skip link focuses main content on homepage", async ({ page }) => {
     await page.goto("/");

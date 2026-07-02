@@ -93,22 +93,19 @@ export default function DashboardPage() {
                 <h3 className="font-semibold">{t("automationTitle")}</h3>
                 <p className="mt-1 text-sm text-[var(--muted-fg)]">{t("automationSubtitle")}</p>
               </div>
-              <span className="rounded-full bg-[var(--muted)] px-3 py-1 text-xs font-medium">
-                {t("automationPhaseBadge", { phase: data.automation.phase })}
-              </span>
+              <Link href="/dashboard/automation" className="text-xs text-[var(--accent)] hover:underline">
+                {t("viewAll")}
+              </Link>
             </div>
-            <p className="mb-4 text-sm text-[var(--muted-fg)]" role="status">
-              {t("automationNotImplemented")}
-            </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard label={t("automationActive")} value={data.automation.active_jobs} />
-              <StatCard label={t("automationScheduled")} value={data.automation.scheduled_jobs} />
               <StatCard label={t("automationRunning")} value={data.automation.running_jobs} />
+              <StatCard label={t("automationQueue")} value={data.automation.queue_size} />
+              <StatCard label={t("automationScheduled")} value={data.automation.scheduled_jobs} />
               <StatCard label={t("automationCompleted")} value={data.automation.completed_jobs} />
               <StatCard label={t("automationFailed")} value={data.automation.failed_jobs} />
-              <StatCard label={t("automationQueue")} value={data.automation.queue_size} />
-              <StatCard label={t("automationUpcoming")} value={data.automation.upcoming_jobs} />
-              <StatCard label={t("automationCredits")} value={data.automation.credits_used} />
+              <StatCard label={t("automationPaused")} value={data.automation.paused_jobs} />
+              <StatCard label={t("automationWaitingApproval")} value={data.automation.waiting_approval} />
+              <StatCard label={t("automationWorkers")} value={data.automation.workers_total} />
               <StatCard
                 label={t("automationEta")}
                 value={
@@ -118,8 +115,19 @@ export default function DashboardPage() {
                 }
               />
             </div>
-            {data.recent_jobs.length === 0 && (
+            {data.recent_jobs.length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-fg)]">{t("automationNoJobs")}</p>
+            ) : (
+              <ul className="mt-4 divide-y text-sm">
+                {data.recent_jobs.map((job) => (
+                  <li key={job.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <Link href={`/dashboard/automation/${job.id}`} className="font-medium hover:underline">
+                      {job.name}
+                    </Link>
+                    <span className="text-xs text-[var(--muted-fg)]">{job.status}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </Card>
 

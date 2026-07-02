@@ -42,4 +42,5 @@ def test_super_admin_overview_has_no_landing_preview(api_client, seeded, tenant)
     assert "recent_landing_pages" in data
     assert "leads_total" in data["system"]
     assert "automation" in data
-    assert data["automation"]["status"] == "not_implemented"
+    assert data["automation"]["status"] == "operational"
+    assert data["automation"]["total_jobs"] == 0

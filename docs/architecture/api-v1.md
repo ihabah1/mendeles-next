@@ -92,4 +92,30 @@ Public submit body: `{ formId, fields: { name, phone, email, message }, pageId?,
 
 See [Lead generation architecture](lead-generation-engine.md).
 
+## Automation (Phase X)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET/POST | `/automation/` | automation.view / create | List or create jobs |
+| GET/PATCH/DELETE | `/automation/{id}/` | automation.view / manage | Job detail, update, soft delete |
+| GET | `/automation/dashboard/` | automation.view | Real-time stats (no fabricated data) |
+| GET | `/automation/queue/` | automation.view | Queue entries |
+| GET | `/automation/workers/` | automation.view | Worker status |
+| GET | `/automation/job-types/` | automation.view | Available job types |
+| GET | `/automation/notifications/` | automation.view | In-app notifications |
+| GET | `/automation/{id}/logs/` | automation.logs | Job logs |
+| GET | `/automation/{id}/progress/` | automation.view | Progress and steps |
+| POST | `/automation/{id}/queue/` | automation.manage | Queue job |
+| POST | `/automation/{id}/pause/` | automation.manage | Pause job |
+| POST | `/automation/{id}/resume/` | automation.manage | Resume job |
+| POST | `/automation/{id}/retry/` | automation.manage | Retry failed job |
+| POST | `/automation/{id}/cancel/` | automation.cancel | Cancel job |
+| POST | `/automation/{id}/duplicate/` | automation.create | Duplicate job |
+| POST | `/automation/{id}/approve/` | automation.approve | Approve waiting job |
+| POST | `/automation/{id}/reject/` | automation.approve | Reject waiting job |
+
+Management commands: `seed_automation`, `process_automation_queue`.
+
+See [Automation Center architecture](automation-center.md).
+
 OpenAPI: `/api/v1/docs/`
