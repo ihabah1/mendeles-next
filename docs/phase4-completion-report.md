@@ -177,3 +177,7 @@ See [phase3-phase4-checklist.md](./phase3-phase4-checklist.md) — Phase 4 secti
 - [x] API Updated
 - [x] README Updated
 - [x] Changelog Updated
+
+### Control center (מרכז שליטה)
+- [x] כניסות — סטטיסטיקת 7 ימים + רשימת כניסות אחרונות
+- [x] עמודי נחיתה — סיכום (סה״כ / מפורסמים / טיוטות) + רשימה אחרונה

@@ -36,3 +36,7 @@ def test_super_admin_overview_has_no_landing_preview(api_client, seeded, tenant)
     data = response.json()
     assert "landing_preview" not in data
     assert data["system"]["users_total"] >= 1
+    assert "logins_last_7d" in data["system"]
+    assert "landing_pages_total" in data["system"]
+    assert "recent_logins" in data
+    assert "recent_landing_pages" in data

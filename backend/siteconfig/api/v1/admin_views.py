@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.infrastructure.models import AuditLog
+from content.domain.status import PageStatus, PageType
+from content.infrastructure.models import Page
 from core.permissions.base import HasPermission
 from rbac.infrastructure.models import Permission, Role, UserRole
 from tenancy.infrastructure.models import Tenant
@@ -37,6 +39,23 @@ class AdminOverviewView(APIView):
             .values("id", "action", "created_at", "user__email", "resource_type")
         )
 
+        recent_logins = list(
+            AuditLog.objects.filter(action="auth.login")
+            .select_related("user")
+            .order_by("-created_at")[:8]
+            .values("id", "created_at", "user__email", "ip_address")
+        )
+
+        landing_pages_qs = Page.objects.filter(
+            deleted_at__isnull=True,
+            page_type=PageType.LANDING_PAGE,
+        )
+        recent_landing_pages = list(
+            landing_pages_qs.select_related("tenant")
+            .order_by("-updated_at")[:6]
+            .values("id", "title", "status", "full_path", "tenant__name", "published_at", "updated_at")
+        )
+
         return Response(
             {
                 "generated_at": now.isoformat(),
@@ -53,6 +72,11 @@ class AdminOverviewView(APIView):
                     "logins_last_7d": AuditLog.objects.filter(
                         action="auth.login", created_at__gte=week_ago
                     ).count(),
+                    "landing_pages_total": landing_pages_qs.count(),
+                    "landing_pages_published": landing_pages_qs.filter(
+                        status=PageStatus.PUBLISHED
+                    ).count(),
+                    "landing_pages_draft": landing_pages_qs.filter(status=PageStatus.DRAFT).count(),
                 },
                 "users_by_role": [
                     {"role": row["role__slug"], "name": row["role__name"], "count": row["count"]}
@@ -67,6 +91,27 @@ class AdminOverviewView(APIView):
                         "resource_type": row["resource_type"],
                     }
                     for row in recent_audit
+                ],
+                "recent_logins": [
+                    {
+                        "id": str(row["id"]),
+                        "user_email": row["user__email"],
+                        "ip_address": row["ip_address"],
+                        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                    }
+                    for row in recent_logins
+                ],
+                "recent_landing_pages": [
+                    {
+                        "id": str(row["id"]),
+                        "title": row["title"],
+                        "status": row["status"],
+                        "full_path": row["full_path"],
+                        "tenant_name": row["tenant__name"],
+                        "published_at": row["published_at"].isoformat() if row["published_at"] else None,
+                        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+                    }
+                    for row in recent_landing_pages
                 ],
             }
         )

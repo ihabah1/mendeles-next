@@ -63,6 +63,30 @@ export default function DashboardPage() {
             <StatCard label={t("rolesTotal")} value={data.system.roles_total} hint={t("permissionsTotal", { n: data.system.permissions_total })} />
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label={t("logins7d")}
+              value={data.system.logins_last_7d}
+              hint={t("audit24h", { n: data.system.audit_last_24h })}
+              accent
+            />
+            <StatCard
+              label={t("landingPagesTotal")}
+              value={data.system.landing_pages_total}
+              hint={t("landingPagesPublished", { n: data.system.landing_pages_published })}
+            />
+            <StatCard
+              label={t("landingPagesPublishedLabel")}
+              value={data.system.landing_pages_published}
+              hint={t("landingPagesDraft", { n: data.system.landing_pages_draft })}
+            />
+            <StatCard
+              label={t("audit24hLabel")}
+              value={data.system.audit_last_24h}
+              hint={t("logins7d")}
+            />
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <div className="mb-4 flex items-center justify-between">
@@ -101,10 +125,76 @@ export default function DashboardPage() {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/dashboard/content" className="text-[var(--accent)] hover:underline">
+                    {t("manageContent")}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/leads" className="text-[var(--accent)] hover:underline">
+                    {t("viewLeads")}
+                  </Link>
+                </li>
+                <li>
                   <Link href="/dashboard/audit" className="text-[var(--accent)] hover:underline">
                     {t("viewAudit")}
                   </Link>
                 </li>
+              </ul>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold">{t("recentLogins")}</h3>
+                <Link href="/dashboard/audit" className="text-xs text-[var(--accent)] hover:underline">
+                  {t("viewAll")}
+                </Link>
+              </div>
+              <ul className="divide-y text-sm">
+                {data.recent_logins.length === 0 ? (
+                  <li className="py-3 text-[var(--muted-fg)]">{t("noLogins")}</li>
+                ) : (
+                  data.recent_logins.map((row) => (
+                    <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                      <div>
+                        <p className="font-medium">{row.user_email || "—"}</p>
+                        <p className="text-xs text-[var(--muted-fg)]">{row.ip_address || "—"}</p>
+                      </div>
+                      <time className="text-xs text-[var(--muted-fg)]">
+                        {row.created_at ? new Date(row.created_at).toLocaleString() : "—"}
+                      </time>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </Card>
+
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold">{t("recentLandingPages")}</h3>
+                <Link href="/dashboard/content" className="text-xs text-[var(--accent)] hover:underline">
+                  {t("viewAll")}
+                </Link>
+              </div>
+              <ul className="divide-y text-sm">
+                {data.recent_landing_pages.length === 0 ? (
+                  <li className="py-3 text-[var(--muted-fg)]">{t("noLandingPages")}</li>
+                ) : (
+                  data.recent_landing_pages.map((page) => (
+                    <li key={page.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                      <div className="min-w-0">
+                        <p className="font-medium">{page.title}</p>
+                        <p className="truncate text-xs text-[var(--muted-fg)]">
+                          {page.tenant_name} · {page.full_path || "—"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded bg-[var(--muted)] px-2 py-0.5 text-xs">
+                        {t(`pageStatus.${page.status}` as "pageStatus.published")}
+                      </span>
+                    </li>
+                  ))
+                )}
               </ul>
             </Card>
           </div>

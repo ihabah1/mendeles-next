@@ -19,6 +19,9 @@ export type AdminOverview = {
     permissions_total: number;
     audit_last_24h: number;
     logins_last_7d: number;
+    landing_pages_total: number;
+    landing_pages_published: number;
+    landing_pages_draft: number;
   };
   users_by_role: Array<{ role: string; name: string; count: number }>;
   recent_audit: Array<{
@@ -27,6 +30,21 @@ export type AdminOverview = {
     created_at: string | null;
     user_email: string | null;
     resource_type: string | null;
+  }>;
+  recent_logins: Array<{
+    id: string;
+    user_email: string | null;
+    ip_address: string | null;
+    created_at: string | null;
+  }>;
+  recent_landing_pages: Array<{
+    id: string;
+    title: string;
+    status: string;
+    full_path: string;
+    tenant_name: string;
+    published_at: string | null;
+    updated_at: string | null;
   }>;
 };
 

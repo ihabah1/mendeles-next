@@ -12,3 +12,8 @@
 - Rate limiting + honeypot on public lead submit
 - Unit and API tests; Playwright E2E for leads dashboard
 - Documentation: Phase 4 completion report, updated API and architecture docs
+
+### Added — Control center visibility
+
+- Admin overview: login stats (7 days), landing page counts, recent logins list, recent landing pages list
+- Dashboard control center UI cards and panels for logins and landing pages

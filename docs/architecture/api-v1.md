@@ -34,6 +34,12 @@ Base URL: `/api/v1/`
 | GET | `/roles/` | roles.view |
 | GET | `/permissions/` | roles.view |
 
+## Admin (platform)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | `/admin/overview/` | tenants.view | Control center stats: users, logins, landing pages, recent activity |
+
 ## SEO (Phase 2)
 
 | Method | Path | Permission | Description |
