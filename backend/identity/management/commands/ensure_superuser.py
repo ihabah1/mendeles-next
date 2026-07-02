@@ -65,5 +65,9 @@ class Command(BaseCommand):
         if role:
             UserRole.objects.get_or_create(user=user, role=role, tenant=tenant)
 
+        from seo.application.settings_service import SEOSettingsService
+
+        SEOSettingsService.seed_defaults(tenant.id)
+
         verb = "Created" if created else "Updated"
         self.stdout.write(self.style.SUCCESS(f"{verb} superuser: {email}"))

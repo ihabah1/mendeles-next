@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from seo.application.metadata_service import MetadataService
 from seo.application.schema_service import SchemaService
 from seo.application.settings_service import SEOSettingsService
@@ -79,15 +81,46 @@ class SEOValidationService:
         }
 
     @classmethod
+    def _homepage_page_payload(cls, tenant_id) -> dict:
+        from content.infrastructure.models import Page
+
+        settings = SEOSettingsService.get_settings(tenant_id)
+        locale = settings.get("default_language") or "he"
+
+        page = (
+            Page.objects.filter(
+                tenant_id=tenant_id,
+                deleted_at__isnull=True,
+                locale=locale,
+            )
+            .filter(Q(full_path="/") | Q(full_path="") | Q(slug="home"))
+            .order_by("sort_order", "created_at")
+            .first()
+        )
+        if page:
+            return {
+                "path": page.full_path or "/",
+                "title": page.meta_title or page.title,
+                "description": page.meta_description,
+                "locale": page.locale,
+                "content_id": str(page.id),
+            }
+        return {"path": "/", "locale": locale}
+
+    @classmethod
     def status(cls, tenant_id) -> dict:
         global_report = cls.validate_global(tenant_id)
-        sample_page = cls.validate_page(
-            tenant_id,
-            {"path": "/", "title": "", "description": ""},
+        homepage_report = cls.validate_page(tenant_id, cls._homepage_page_payload(tenant_id))
+        overall = round((global_report["score"] + homepage_report["score"]) / 2)
+        production_ready = (
+            global_report["valid"]
+            and homepage_report["valid"]
+            and global_report["score"] >= 70
+            and homepage_report["score"] >= 70
         )
         return {
             "global": global_report,
-            "homepage": sample_page,
-            "overall_score": round((global_report["score"] + sample_page["score"]) / 2),
-            "ready_for_production": global_report["valid"] and global_report["score"] >= 70,
+            "homepage": homepage_report,
+            "overall_score": overall,
+            "ready_for_production": production_ready,
         }

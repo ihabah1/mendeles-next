@@ -474,7 +474,20 @@
     "valid": "Valid",
     "invalid": "Invalid",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "issues": {
+      "missing_site_name": "Missing site name",
+      "missing_default_title": "Missing default title",
+      "missing_default_description": "Missing default description",
+      "missing_canonical_base": "Missing canonical base URL",
+      "missing_organization": "Missing organization name",
+      "missing_title": "Missing page title",
+      "missing_description": "Missing meta description",
+      "missing_canonical": "Missing canonical URL",
+      "missing_open_graph": "Missing Open Graph image",
+      "duplicate_slug": "Slug is already in use",
+      "missing_schema": "Missing breadcrumb schema"
+    }
   },
   "content": {
     "title": "Content management",

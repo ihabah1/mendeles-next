@@ -437,7 +437,20 @@
     "valid": "תקין",
     "invalid": "לא תקין",
     "yes": "כן",
-    "no": "לא"
+    "no": "לא",
+    "issues": {
+      "missing_site_name": "חסר שם אתר",
+      "missing_default_title": "חסרה כותרת ברירת מחדל",
+      "missing_default_description": "חסר תיאור ברירת מחדל",
+      "missing_canonical_base": "חסרה כתובת Canonical בסיסית",
+      "missing_organization": "חסר שם ארגון",
+      "missing_title": "חסרה כותרת דף",
+      "missing_description": "חסר תיאור מטא",
+      "missing_canonical": "חסרה כתובת Canonical",
+      "missing_open_graph": "חסרה תמונת Open Graph",
+      "duplicate_slug": "ה-slug כבר בשימוש",
+      "missing_schema": "חסר סכמת breadcrumb"
+    }
   },
   "content": {
     "title": "ניהול תוכן",

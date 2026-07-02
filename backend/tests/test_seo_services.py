@@ -81,10 +81,35 @@ def test_sitemap_includes_static_pages(tenant):
 
 @pytest.mark.django_db
 def test_validation_detects_missing_fields(tenant):
+    SEOSettingsService.update_settings(
+        tenant.id,
+        {
+            "site_name": "Acme",
+            "default_title": "Acme Title",
+            "default_description": "Desc",
+            "canonical_base_url": "https://example.com",
+            "organization_name": "Acme",
+        },
+    )
     obj = SEOSettingsService.get_or_create(tenant.id)
-    obj.canonical_base_url = ""
     obj.site_name = ""
     obj.save()
     report = SEOValidationService.validate_global(tenant.id)
     assert report["valid"] is False
     assert any(i["code"] == "missing_site_name" for i in report["issues"])
+
+
+@pytest.mark.django_db
+def test_settings_auto_seed_when_never_configured(tenant):
+    obj = SEOSettingsService.get_or_create(tenant.id)
+    obj.site_name = ""
+    obj.default_title = ""
+    obj.default_description = ""
+    obj.organization_name = ""
+    obj.save()
+
+    settings = SEOSettingsService.get_settings(tenant.id)
+    assert settings["site_name"]
+    assert settings["default_title"]
+    assert settings["default_description"]
+    assert settings["canonical_base_url"]

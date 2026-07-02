@@ -185,13 +185,20 @@ export default function SeoPage() {
   );
 }
 
-function IssueList({ issues }: { issues: Array<{ code: string; severity: string; message: string }> }) {
+function IssueList({
+  issues,
+}: {
+  issues: Array<{ code: string; severity: string; message: string }>;
+}) {
+  const t = useTranslations("seo");
   if (!issues.length) return <p className="text-[var(--muted-fg)]">—</p>;
   return (
     <ul className="mt-1 list-inside list-disc space-y-1">
       {issues.map((issue) => (
         <li key={issue.code} className={issue.severity === "error" ? "text-red-600" : "text-amber-600"}>
-          {issue.message}
+          {t.has(`issues.${issue.code}` as "issues.missing_site_name")
+            ? t(`issues.${issue.code}` as "issues.missing_site_name")
+            : issue.message}
         </li>
       ))}
     </ul>
