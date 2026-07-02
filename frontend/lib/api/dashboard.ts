@@ -22,7 +22,29 @@ export type AdminOverview = {
     landing_pages_total: number;
     landing_pages_published: number;
     landing_pages_draft: number;
+    leads_total: number;
   };
+  automation: {
+    status: string;
+    phase: string;
+    active_jobs: number;
+    scheduled_jobs: number;
+    running_jobs: number;
+    completed_jobs: number;
+    failed_jobs: number;
+    queue_size: number;
+    upcoming_jobs: number;
+    credits_used: number;
+    estimated_completion_minutes: number | null;
+  };
+  recent_jobs: Array<{
+    id: string;
+    name: string;
+    status: string;
+    progress: number;
+    started_at: string | null;
+    finished_at: string | null;
+  }>;
   users_by_role: Array<{ role: string; name: string; count: number }>;
   recent_audit: Array<{
     id: string;

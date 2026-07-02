@@ -315,6 +315,25 @@ Modules:
 
 ---
 
+## Phase X — Automation Center
+
+**Goal:** Orchestration engine for scheduled and triggered jobs across all platform modules.
+
+**Status:** Architecture reference only — not authorized for implementation.
+
+Modules:
+
+- Automation Dashboard
+- Scheduler (cron, recurring, timezone-aware)
+- Job queue (batch, pause, resume, retry)
+- Workflow rules and dependencies
+- Manual approval checkpoints
+- Job history and notifications
+
+Architecture: [automation-center.md](./architecture/automation-center.md)
+
+---
+
 ## Phase 14 — Autonomous Growth Engine
 
 **Goal:** Create a self-improving SEO platform.
@@ -396,5 +415,6 @@ Every implementation decision must support this objective.
 ## Related documents
 
 - [Master enterprise checklist](./master-enterprise-checklist.md) — full production vision tracker
+- [Automation Center (Phase X)](./architecture/automation-center.md) — design only
 - [Phase 3+4 checklist](./phase3-phase4-checklist.md)
 - [Accessibility checklist](./accessibility-checklist.md)

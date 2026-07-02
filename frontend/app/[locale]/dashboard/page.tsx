@@ -81,11 +81,47 @@ export default function DashboardPage() {
               hint={t("landingPagesDraft", { n: data.system.landing_pages_draft })}
             />
             <StatCard
-              label={t("audit24hLabel")}
-              value={data.system.audit_last_24h}
-              hint={t("logins7d")}
+              label={t("leadsTotal")}
+              value={data.system.leads_total}
+              hint={t("audit24h", { n: data.system.audit_last_24h })}
             />
           </div>
+
+          <Card>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="font-semibold">{t("automationTitle")}</h3>
+                <p className="mt-1 text-sm text-[var(--muted-fg)]">{t("automationSubtitle")}</p>
+              </div>
+              <span className="rounded-full bg-[var(--muted)] px-3 py-1 text-xs font-medium">
+                {t("automationPhaseBadge", { phase: data.automation.phase })}
+              </span>
+            </div>
+            <p className="mb-4 text-sm text-[var(--muted-fg)]" role="status">
+              {t("automationNotImplemented")}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <StatCard label={t("automationActive")} value={data.automation.active_jobs} />
+              <StatCard label={t("automationScheduled")} value={data.automation.scheduled_jobs} />
+              <StatCard label={t("automationRunning")} value={data.automation.running_jobs} />
+              <StatCard label={t("automationCompleted")} value={data.automation.completed_jobs} />
+              <StatCard label={t("automationFailed")} value={data.automation.failed_jobs} />
+              <StatCard label={t("automationQueue")} value={data.automation.queue_size} />
+              <StatCard label={t("automationUpcoming")} value={data.automation.upcoming_jobs} />
+              <StatCard label={t("automationCredits")} value={data.automation.credits_used} />
+              <StatCard
+                label={t("automationEta")}
+                value={
+                  data.automation.estimated_completion_minutes != null
+                    ? t("automationEtaMinutes", { n: data.automation.estimated_completion_minutes })
+                    : "—"
+                }
+              />
+            </div>
+            {data.recent_jobs.length === 0 && (
+              <p className="mt-4 text-sm text-[var(--muted-fg)]">{t("automationNoJobs")}</p>
+            )}
+          </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>

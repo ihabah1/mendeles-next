@@ -8,6 +8,7 @@ from audit.infrastructure.models import AuditLog
 from content.domain.status import PageStatus, PageType
 from content.infrastructure.models import Page
 from core.permissions.base import HasPermission
+from leads.infrastructure.models import Lead
 from rbac.infrastructure.models import Permission, Role, UserRole
 from tenancy.infrastructure.models import Tenant
 
@@ -56,6 +57,8 @@ class AdminOverviewView(APIView):
             .values("id", "title", "status", "full_path", "tenant__name", "published_at", "updated_at")
         )
 
+        leads_qs = Lead.objects.filter(deleted_at__isnull=True)
+
         return Response(
             {
                 "generated_at": now.isoformat(),
@@ -77,7 +80,22 @@ class AdminOverviewView(APIView):
                         status=PageStatus.PUBLISHED
                     ).count(),
                     "landing_pages_draft": landing_pages_qs.filter(status=PageStatus.DRAFT).count(),
+                    "leads_total": leads_qs.count(),
                 },
+                "automation": {
+                    "status": "not_implemented",
+                    "phase": "X",
+                    "active_jobs": 0,
+                    "scheduled_jobs": 0,
+                    "running_jobs": 0,
+                    "completed_jobs": 0,
+                    "failed_jobs": 0,
+                    "queue_size": 0,
+                    "upcoming_jobs": 0,
+                    "credits_used": 0,
+                    "estimated_completion_minutes": None,
+                },
+                "recent_jobs": [],
                 "users_by_role": [
                     {"role": row["role__slug"], "name": row["role__name"], "count": row["count"]}
                     for row in users_by_role
