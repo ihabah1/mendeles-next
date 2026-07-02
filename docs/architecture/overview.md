@@ -53,3 +53,5 @@ Phase 2 (not included): landing pages, leads, SEO product, AI, payments.
 |-------|-----|--------|
 | 3 — Landing Page Engine | [landing-page-engine.md](./architecture/landing-page-engine.md) | Awaiting approval |
 | 4 — Lead Generation Engine | [lead-generation-engine.md](./architecture/lead-generation-engine.md) | Awaiting approval |
+
+**Implementation checklist:** [phase3-phase4-checklist.md](../phase3-phase4-checklist.md)
