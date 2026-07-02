@@ -37,4 +37,5 @@ urlpatterns = [
     path("content/", include(content_urls)),
     path("leads/", include(leads_urls)),
     path("automation/", include(automation_urls)),
+    path("integrations/", include("integrations.api.v1.urls")),
 ]

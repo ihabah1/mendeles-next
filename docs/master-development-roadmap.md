@@ -172,6 +172,8 @@ Preparation for: ClickOn, AffiliaXe
 
 **Status:** Architecture reference only — not authorized for implementation.
 
+**Dashboard design:** [ai-seo-automation-dashboard.md](./architecture/ai-seo-automation-dashboard.md) — AI SEO Automation Center UI (design only).
+
 Modules:
 
 - Keyword Research
@@ -333,7 +335,8 @@ Modules:
 - Job history and notifications
 
 Architecture: [automation-center.md](./architecture/automation-center.md)  
-Completion report: [phase-x-completion-report.md](./phase-x-completion-report.md)
+Completion report: [phase-x-completion-report.md](./phase-x-completion-report.md)  
+Dashboard design: [ai-seo-automation-dashboard.md](./architecture/ai-seo-automation-dashboard.md) (design only)
 
 ---
 

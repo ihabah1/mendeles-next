@@ -394,6 +394,7 @@
       "seo": { "label": "ניהול SEO", "description": "הגדרות גלובליות, סטטוס ואימות" },
       "roles": { "label": "תפקידים והרשאות", "description": "מטריצת RBAC" },
       "settings": { "label": "הגדרות", "description": "הגדרות ארגון ומערכת" },
+      "integrations": { "label": "אינטגרציות Google", "description": "Search Console, Analytics 4 ו-Trends" },
       "audit": { "label": "יומן פעולות", "description": "מעקב אחר פעולות משתמשים" },
       "login": { "label": "התחברות" },
       "register": { "label": "הרשמה" },
@@ -449,7 +450,8 @@
   },
   "settings": {
     "title": "הגדרות",
-    "companyName": "שם החברה"
+    "companyName": "שם החברה",
+    "integrationsLink": "אינטגרציות Google →"
   },
   "seo": {
     "title": "ניהול SEO",
@@ -632,6 +634,43 @@
       "failed": "נכשל",
       "cancelled": "בוטל",
       "retrying": "מנסה שוב"
+    }
+  },
+  "integrations": {
+    "noAccess": "אין לך הרשאה לצפות באינטגרציות.",
+    "backToSettings": "הגדרות",
+    "google": {
+      "title": "אינטגרציות Google",
+      "subtitle": "Search Console, Analytics 4 ו-Trends — סטטוס חיבור וסנכרון",
+      "setupRequired": "נדרשת הגדרה ב-Google Cloud",
+      "setupHint": "השלימו את השלבים הבאים לפני חיבור. אין אחסון credentials בקוד.",
+      "oauthError": "שגיאת OAuth",
+      "connect": "חיבור חשבון",
+      "disconnect": "ניתוק",
+      "loadProperties": "טעינת properties",
+      "syncNow": "סנכרון עכשיו",
+      "account": "חשבון מחובר",
+      "property": "Property פעיל",
+      "lastSync": "סנכרון אחרון",
+      "nextSync": "סנכרון הבא",
+      "error": "שגיאה אחרונה",
+      "trendsKeywords": "מילות מפתח (שורה או פסיק לכל מילה)",
+      "selectProperty": "בחירת property",
+      "chooseProperty": "בחרו property…",
+      "recentSyncs": "סנכרונים אחרונים",
+      "noSyncs": "אין רשומות סנכרון. חברו שירות והריצו סנכרון ידני.",
+      "services": {
+        "search_console": "Google Search Console",
+        "analytics": "Google Analytics 4",
+        "trends": "Google Trends"
+      },
+      "status": {
+        "connected": "מחובר",
+        "waiting_authorization": "ממתין לאישור",
+        "config_required": "נדרשת הגדרה",
+        "not_connected": "לא מחובר",
+        "error": "שגיאה"
+      }
     }
   },
   "audit": {

@@ -118,4 +118,23 @@ Management commands: `seed_automation`, `process_automation_queue`.
 
 See [Automation Center architecture](automation-center.md).
 
+## Google integrations
+
+Path in UI: **Dashboard → Settings → Integrations → Google** (`/dashboard/settings/integrations/google`).
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | `/integrations/google/` | integrations.view | Connection status for Search Console, Analytics, Trends |
+| POST | `/integrations/google/connect/` | integrations.manage | Start OAuth (Search Console / Analytics only) |
+| GET | `/integrations/google/oauth/callback/` | public | OAuth redirect handler |
+| POST | `/integrations/google/disconnect/` | integrations.manage | Revoke connection |
+| GET | `/integrations/google/properties/` | integrations.view | List GSC sites or GA4 properties |
+| POST | `/integrations/google/properties/select/` | integrations.manage | Set active property |
+| POST | `/integrations/google/sync/` | integrations.manage | Enqueue manual sync via Automation Center |
+| GET | `/integrations/google/sync/history/` | integrations.view | Sync records (raw + processed stored in DB) |
+
+Requires env: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, `INTEGRATIONS_ENCRYPTION_KEY`.
+
+Scheduled jobs: `python manage.py schedule_google_syncs` (daily Search Console, Analytics, Trends refresh).
+
 OpenAPI: `/api/v1/docs/`

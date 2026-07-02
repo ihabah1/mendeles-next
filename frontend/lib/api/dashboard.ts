@@ -447,3 +447,68 @@ export const automationApi = {
       headers: authHeaders(),
     }),
 };
+
+export type GoogleServiceStatus = {
+  service_type: string;
+  status: string;
+  connected_account: string | null;
+  property_id: string | null;
+  property_label: string | null;
+  last_sync_at: string | null;
+  next_sync_at: string | null;
+  last_error: string | null;
+  sync_enabled: boolean;
+  oauth_configured: boolean;
+  setup_instructions: string[];
+};
+
+export type GoogleIntegrationDashboard = {
+  oauth_platform_configured: boolean;
+  setup_instructions: string[];
+  services: GoogleServiceStatus[];
+  recent_syncs: Array<{
+    id: string;
+    service_type: string;
+    sync_status: string;
+    retrieved_at: string;
+    error_message: string | null;
+  }>;
+};
+
+export const integrationsApi = {
+  googleDashboard: () =>
+    apiFetch<GoogleIntegrationDashboard>("/api/v1/integrations/google/", { headers: authHeaders() }),
+  googleConnect: (service_type: string) =>
+    apiFetch<{ auth_url?: string; message?: string; setup_instructions?: string[] }>(
+      "/api/v1/integrations/google/connect/",
+      { method: "POST", headers: authHeaders(), json: { service_type } },
+    ),
+  googleDisconnect: (service_type: string) =>
+    apiFetch<{ ok: boolean }>("/api/v1/integrations/google/disconnect/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: { service_type },
+    }),
+  googleProperties: (service_type: string) =>
+    apiFetch<{ properties: Array<{ id: string; label: string; is_active: boolean }> }>(
+      `/api/v1/integrations/google/properties/?service_type=${service_type}`,
+      { headers: authHeaders() },
+    ),
+  googleSelectProperty: (service_type: string, property_id: string) =>
+    apiFetch<GoogleServiceStatus>("/api/v1/integrations/google/properties/select/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: { service_type, property_id },
+    }),
+  googleSync: (service_type: string, config: Record<string, unknown> = {}) =>
+    apiFetch<{ job_id: string; status: string }>("/api/v1/integrations/google/sync/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: { service_type, ...config },
+    }),
+  googleSyncHistory: (service_type?: string) =>
+    apiFetch<{ results: Array<Record<string, unknown>> }>(
+      `/api/v1/integrations/google/sync/history/${service_type ? `?service_type=${service_type}` : ""}`,
+      { headers: authHeaders() },
+    ),
+};

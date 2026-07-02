@@ -18,6 +18,7 @@ Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Con
 - [Content architecture](docs/architecture/content.md)
 - [Lead generation (Phase 4)](docs/architecture/lead-generation-engine.md)
 - [Automation Center (Phase X)](docs/architecture/automation-center.md)
+- [AI SEO Automation Center (design)](docs/architecture/ai-seo-automation-dashboard.md)
 - [Autonomous Growth Engine (Phase 14 — vision)](docs/architecture/autonomous-growth-engine.md)
 - [Phase 4 completion report](docs/phase4-completion-report.md)
 - [Phase X completion report](docs/phase-x-completion-report.md)

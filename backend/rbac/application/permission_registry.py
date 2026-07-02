@@ -29,6 +29,8 @@ PERMISSIONS = [
     ("automation.approve", "automation", "approve", "אישור משימות אוטומציה"),
     ("automation.cancel", "automation", "cancel", "ביטול משימות אוטומציה"),
     ("automation.logs", "automation", "logs", "צפייה בלוגי אוטומציה"),
+    ("integrations.view", "integrations", "view", "צפייה באינטגרציות"),
+    ("integrations.manage", "integrations", "manage", "ניהול אינטגרציות"),
     ("tenants.view", "tenants", "view", "צפייה בדיירים"),
     ("tenants.edit", "tenants", "edit", "עריכת דיירים"),
 ]
@@ -63,6 +65,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "automation.approve",
         "automation.cancel",
         "automation.logs",
+        "integrations.view",
+        "integrations.manage",
     ],
     "business_owner": [
         "users.view",
@@ -92,6 +96,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "automation.approve",
         "automation.cancel",
         "automation.logs",
+        "integrations.view",
+        "integrations.manage",
     ],
     "business_manager": [
         "users.view",
@@ -100,7 +106,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "audit.view",
     ],
     "editor": ["settings.view", "content.view", "content.create", "content.edit"],
-    "seo_manager": ["settings.view", "seo.view", "seo.manage", "content.view", "content.edit", "content.publish", "automation.view", "automation.create", "automation.manage"],
+    "seo_manager": ["settings.view", "seo.view", "seo.manage", "content.view", "content.edit", "content.publish", "automation.view", "automation.create", "automation.manage", "integrations.view", "integrations.manage"],
     "sales_manager": ["users.view", "audit.view", "leads.view", "leads.edit", "leads.export", "automation.view"],
     "marketing_manager": [
         "settings.view",

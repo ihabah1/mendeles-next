@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,11 @@ export default function SettingsPage() {
   return (
     <Card>
       <h1 className="text-xl font-bold">{t("title")}</h1>
+      <p className="mt-2 text-sm">
+        <Link href="/dashboard/settings/integrations/google" className="text-[var(--accent)] hover:underline">
+          {t("integrationsLink")}
+        </Link>
+      </p>
       {isLoading ? (
         <p className="mt-4 text-sm">{tc("loading")}</p>
       ) : (

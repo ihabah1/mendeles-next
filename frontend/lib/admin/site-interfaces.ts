@@ -22,6 +22,7 @@ export const ADMIN_INTERFACE_DEFS: SiteInterfaceDef[] = [
   { id: "seo", href: "/dashboard/seo", permission: "seo.view" },
   { id: "roles", href: "/dashboard/roles", permission: "roles.view" },
   { id: "settings", href: "/dashboard/settings", permission: "settings.view" },
+  { id: "integrations", href: "/dashboard/settings/integrations/google", permission: "integrations.view" },
   { id: "audit", href: "/dashboard/audit", permission: "audit.view" },
 ];
 

@@ -66,6 +66,7 @@ See [master-development-roadmap.md](../master-development-roadmap.md) for full l
 | 4 — Leads | [lead-generation-engine.md](./lead-generation-engine.md) |
 | X — Automation Center | [automation-center.md](./automation-center.md) | ✅ Infrastructure |
 | 14 — Autonomous Growth | [autonomous-growth-engine.md](./autonomous-growth-engine.md) | Vision only |
+| AI SEO Automation Center | [ai-seo-automation-dashboard.md](./ai-seo-automation-dashboard.md) | Design only |
 
 **Checklists:** [master-enterprise-checklist.md](../master-enterprise-checklist.md) · [phase3-phase4-checklist.md](../phase3-phase4-checklist.md) · [phase4-completion-report.md](../phase4-completion-report.md) · [accessibility-checklist.md](../accessibility-checklist.md)
 

@@ -141,6 +141,20 @@ class JobExecutor:
         if job_type == JobType.CACHE_REFRESH:
             AutomationLogService.log(job, "Cache refresh acknowledged (no external cache configured)", execution=execution)
             return
+        if job_type in {
+            JobType.SEARCH_CONSOLE_SYNC.value,
+            JobType.GOOGLE_TRENDS_SYNC.value,
+            JobType.REFRESH_METRICS.value,
+        }:
+            from integrations.application.sync_service import IntegrationSyncService
+
+            record = IntegrationSyncService.run_sync_for_job(job)
+            AutomationLogService.log(
+                job,
+                f"Integration sync completed: {record.service_type} ({record.sync_status})",
+                execution=execution,
+            )
+            return
         if job_type not in {t.value for t in IMPLEMENTED_JOB_TYPES}:
             raise RuntimeError(
                 f"Job type '{job_type}' is not implemented yet. "

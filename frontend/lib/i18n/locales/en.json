@@ -431,6 +431,7 @@
       "seo": { "label": "SEO management", "description": "Global settings, status, and validation" },
       "roles": { "label": "Roles & permissions", "description": "RBAC matrix" },
       "settings": { "label": "Settings", "description": "Organization and system settings" },
+      "integrations": { "label": "Google integrations", "description": "Search Console, Analytics 4, and Trends" },
       "audit": { "label": "Audit log", "description": "User action history" },
       "login": { "label": "Log in" },
       "register": { "label": "Register" },
@@ -486,7 +487,8 @@
   },
   "settings": {
     "title": "Settings",
-    "companyName": "Company name"
+    "companyName": "Company name",
+    "integrationsLink": "Google integrations →"
   },
   "seo": {
     "title": "SEO Management",
@@ -669,6 +671,43 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "retrying": "Retrying"
+    }
+  },
+  "integrations": {
+    "noAccess": "You do not have permission to view integrations.",
+    "backToSettings": "Settings",
+    "google": {
+      "title": "Google integrations",
+      "subtitle": "Search Console, Analytics 4, and Trends — connection status and sync",
+      "setupRequired": "Google Cloud setup required",
+      "setupHint": "Complete these steps before connecting. No credentials are stored in the app code.",
+      "oauthError": "OAuth error",
+      "connect": "Connect account",
+      "disconnect": "Disconnect",
+      "loadProperties": "Load properties",
+      "syncNow": "Sync now",
+      "account": "Connected account",
+      "property": "Active property",
+      "lastSync": "Last sync",
+      "nextSync": "Next sync",
+      "error": "Last error",
+      "trendsKeywords": "Keywords (one per line or comma-separated)",
+      "selectProperty": "Select property",
+      "chooseProperty": "Choose a property…",
+      "recentSyncs": "Recent syncs",
+      "noSyncs": "No sync records yet. Connect a service and run a manual sync.",
+      "services": {
+        "search_console": "Google Search Console",
+        "analytics": "Google Analytics 4",
+        "trends": "Google Trends"
+      },
+      "status": {
+        "connected": "Connected",
+        "waiting_authorization": "Waiting for authorization",
+        "config_required": "Configuration required",
+        "not_connected": "Not connected",
+        "error": "Error"
+      }
     }
   },
   "audit": {
