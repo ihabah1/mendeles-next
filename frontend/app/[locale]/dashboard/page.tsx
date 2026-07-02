@@ -156,6 +156,9 @@ export default function DashboardPage() {
             <Card>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-semibold">{t("quickLinks")}</h3>
+                <Link href="/dashboard/links" className="text-xs text-[var(--accent)] hover:underline">
+                  {t("viewAllInterfaces")}
+                </Link>
               </div>
               <ul className="space-y-2 text-sm">
                 <li>

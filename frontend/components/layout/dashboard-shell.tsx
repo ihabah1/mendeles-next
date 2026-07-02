@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
+  { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },

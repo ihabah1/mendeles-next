@@ -337,7 +337,7 @@ Completion report: [phase-x-completion-report.md](./phase-x-completion-report.md
 
 ## Phase 14 — Autonomous Growth Engine
 
-**Goal:** Create a self-improving SEO platform.
+**Goal:** Create a self-improving SEO platform — an Autonomous AI Growth Operating System.
 
 **Status:** Architecture reference only — not authorized for implementation.
 
@@ -353,6 +353,12 @@ Modules:
 - Revenue Optimization
 - Continuous Improvement
 - Human Approval Workflow
+- AI Operations Dashboard
+- Learning Loop (rank → lead → recommend)
+
+Architecture: [autonomous-growth-engine.md](./architecture/autonomous-growth-engine.md)
+
+**Prerequisite:** Phase X Automation Center (implemented).
 
 ---
 
@@ -417,5 +423,6 @@ Every implementation decision must support this objective.
 
 - [Master enterprise checklist](./master-enterprise-checklist.md) — full production vision tracker
 - [Automation Center (Phase X)](./architecture/automation-center.md) — infrastructure implemented
+- [Autonomous Growth Engine (Phase 14)](./architecture/autonomous-growth-engine.md) — vision / design only
 - [Phase 3+4 checklist](./phase3-phase4-checklist.md)
 - [Accessibility checklist](./accessibility-checklist.md)

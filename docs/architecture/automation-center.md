@@ -289,7 +289,7 @@ The Automation Center must support **thousands of scheduled jobs** while remaini
 | 8 — AI Optimization | Refresh, validation jobs |
 | 9 — Marketing Automation | Campaign jobs |
 | 11 — Analytics | Report and health scan jobs |
-| 14 — Autonomous Growth | Strategy orchestration (future) |
+| 14 — Autonomous Growth | Strategy orchestration — see [autonomous-growth-engine.md](./autonomous-growth-engine.md) |
 
 ---
 
