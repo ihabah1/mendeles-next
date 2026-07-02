@@ -11,6 +11,7 @@ const NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
+  { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
   { href: "/dashboard/roles", labelKey: "roles", permission: "roles.view" },
   { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
   { href: "/dashboard/seo", labelKey: "seo", permission: "seo.view" },

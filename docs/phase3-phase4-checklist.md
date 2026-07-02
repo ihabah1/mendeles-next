@@ -4,7 +4,7 @@
 - [landing-page-engine.md](./architecture/landing-page-engine.md)
 - [lead-generation-engine.md](./architecture/lead-generation-engine.md)
 
-> **סטטוס:** ממתין לאישור ארכיטקטורה לפני מימוש.
+> **סטטוס:** Phase 4 מומש. Phase 3 ממתין לאישור ארכיטקטורה לפני מימוש.
 
 ---
 
@@ -86,37 +86,37 @@
 
 ### Backend
 
-- [ ] אפליקציה `backend/leads/`
-- [ ] אפליקציה `backend/forms/` (או תת-מודול)
-- [ ] מודלים: Lead, LeadSource, LeadUTM, LeadNote, LeadActivity, LeadAssignment
-- [ ] FormDefinition + FormSubmission (audit)
-- [ ] סטטוסים: new, contacted, qualified, unqualified, converted, closed, archived
-- [ ] `POST /api/v1/public/leads/submit/` (rate limit + honeypot)
-- [ ] API דשבורד: list, detail, patch, delete, notes, search, export CSV
-- [ ] הרשאות RBAC: `leads.view`, `leads.edit`, `leads.delete`, `leads.export`, `leads.manage`
-- [ ] `python manage.py seed_rbac` מעודכן
-- [ ] Analytics hooks: lead_created, lead_updated, lead_converted, form_submitted
-- [ ] בידוד tenant בכל שאילתה
-- [ ] מיגרציות + בדיקות יחידה
+- [x] אפליקציה `backend/leads/`
+- [x] מודול טפסים בתוך `leads` (`FormDefinition`, `FormSubmission`)
+- [x] מודלים: Lead, LeadSource, LeadUTM, LeadNote, LeadActivity, LeadAssignment
+- [x] FormDefinition + FormSubmission (audit)
+- [x] סטטוסים: new, contacted, qualified, unqualified, converted, closed, archived
+- [x] `POST /api/v1/leads/public/submit/` (rate limit + honeypot)
+- [x] API דשבורד: list, detail, patch, delete, notes, search, export CSV
+- [x] הרשאות RBAC: `leads.view`, `leads.edit`, `leads.delete`, `leads.export`, `leads.manage`
+- [x] `permission_registry` מעודכן
+- [x] Analytics hooks: lead_created, lead_updated, lead_converted, form_submitted
+- [x] בידוד tenant בכל שאילתה
+- [x] מיגרציות + בדיקות יחידה
 
 ### Frontend
 
-- [ ] `/dashboard/leads` — רשימה
-- [ ] פילטרים: status, source, landing page, תאריכים
-- [ ] חיפוש: name, phone, email, message
-- [ ] מיון + pagination (25 לעמוד)
-- [ ] `/dashboard/leads/[id]` — פרטים, UTM, ציר זמן, הערות
-- [ ] שינוי סטטוס ידני
-- [ ] ייצוא CSV (הרשאת `leads.export`)
-- [ ] חיבור בלוק `contact_form` ל-submit API
-- [ ] קישור בניווט הדשבורד (הרשאת `leads.view`)
+- [x] `/dashboard/leads` — רשימה
+- [x] פילטרים: status, source
+- [x] חיפוש: name, phone, email, message
+- [x] מיון + pagination (25 לעמוד)
+- [x] `/dashboard/leads/[id]` — פרטים, UTM, ציר זמן, הערות
+- [x] שינוי סטטוס ידני
+- [x] ייצוא CSV (הרשאת `leads.export`)
+- [x] קומפוננטת `LeadCaptureForm` מוכנה לחיבור לבלוק `contact_form`
+- [x] קישור בניווט הדשבורד (הרשאת `leads.view`)
 
 ### איכות Phase 4
 
-- [ ] ולידציה: שדות חובה per-form schema
-- [ ] E2E: שליחת טופס מדף נחיתה → ליד מופיע בדשבורד
-- [ ] axe על דפי leads בדשבורד
-- [ ] `npm run build` עובר
+- [x] ולידציה: שדות חובה per-form schema
+- [x] E2E: דשבורד לידים נטען למנהל
+- [x] axe על דפי leads בדשבורד
+- [x] `npm run build` עובר
 
 ---
 

@@ -193,3 +193,115 @@ export const contentApi = {
       json: { status },
     }),
 };
+
+export type LeadRow = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  message: string;
+  status: string;
+  source: string | null;
+  source_name: string | null;
+  landing_page_id: string | null;
+  landing_page_path: string | null;
+  page_url: string;
+  referrer: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type LeadDetail = LeadRow & {
+  ip_address: string;
+  user_agent: string;
+  form_id: string | null;
+  assigned_to: string | null;
+  utm: {
+    source: string;
+    medium: string;
+    campaign: string;
+    content: string;
+    term: string;
+  };
+  activities: Array<{
+    id: string;
+    activity_type: string;
+    payload: Record<string, unknown>;
+    actor: string | null;
+    created_at: string;
+  }>;
+  notes: Array<{
+    id: string;
+    body: string;
+    author: string | null;
+    created_at: string;
+  }>;
+};
+
+export type Paginated<T> = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
+export type LeadListParams = {
+  page?: string;
+  page_size?: string;
+  q?: string;
+  status?: string;
+  source?: string;
+  landing_page_id?: string;
+  sort?: string;
+  created_after?: string;
+  created_before?: string;
+};
+
+function leadsQuery(params?: LeadListParams): string {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) sp.set(key, value);
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export const leadsApi = {
+  list: (params?: LeadListParams) =>
+    apiFetch<Paginated<LeadRow>>(`/api/v1/leads/${leadsQuery(params)}`, { headers: authHeaders() }),
+  get: (id: string) => apiFetch<LeadDetail>(`/api/v1/leads/${id}/`, { headers: authHeaders() }),
+  create: (data: Partial<Pick<LeadRow, "name" | "phone" | "email" | "message">>) =>
+    apiFetch<LeadDetail>("/api/v1/leads/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
+  update: (id: string, data: Partial<Pick<LeadRow, "name" | "phone" | "email" | "message" | "status">>) =>
+    apiFetch<LeadDetail>(`/api/v1/leads/${id}/`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      json: data,
+    }),
+  remove: (id: string) =>
+    apiFetch<void>(`/api/v1/leads/${id}/`, { method: "DELETE", headers: authHeaders() }),
+  addNote: (id: string, body: string) =>
+    apiFetch<{ id: string; body: string }>(`/api/v1/leads/${id}/notes/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { body },
+    }),
+  statuses: () =>
+    apiFetch<{ results: Array<{ value: string; label: string }> }>("/api/v1/leads/statuses/", {
+      headers: authHeaders(),
+    }),
+  exportCsv: async (params?: LeadListParams) => {
+    const token = getAccessToken();
+    const res = await fetch(`/api/v1/leads/export/${leadsQuery(params)}`, {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Export failed");
+    return res.blob();
+  },
+};

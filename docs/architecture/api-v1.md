@@ -68,4 +68,22 @@ See [SEO architecture](seo.md).
 
 See [Content architecture](content.md).
 
+## Leads (Phase 4)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET/POST | `/leads/` | leads.view / leads.edit | List (paginated, filterable) or manual create |
+| GET/PATCH/DELETE | `/leads/{id}/` | leads.view / edit / delete | Detail, update, soft delete |
+| POST | `/leads/{id}/notes/` | leads.edit | Add note |
+| GET | `/leads/export/` | leads.export | CSV export (same filters as list) |
+| GET | `/leads/statuses/` | leads.view | Status enum |
+| GET/POST | `/leads/forms/` | leads.view / leads.manage | Form definitions |
+| POST | `/leads/public/submit/` | Public (rate limited) | Landing page form submit |
+
+Query params for list/export: `q`, `status`, `source`, `landing_page_id`, `sort`, `created_after`, `created_before`, `page`, `page_size`.
+
+Public submit body: `{ formId, fields: { name, phone, email, message }, pageId?, pageUrl?, utm?, honeypot? }`.
+
+See [Lead generation architecture](lead-generation-engine.md).
+
 OpenAPI: `/api/v1/docs/`

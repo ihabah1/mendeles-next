@@ -1,6 +1,6 @@
 # Phase 4 — Lead Generation Engine (Architecture)
 
-> **Status:** Design only — awaiting approval before implementation.  
+> **Status:** Implemented (Phase 4).  
 > **Out of scope:** AI, CRM integrations, Payments, Affiliate networks, Lead Routing automation.
 
 ## Objective

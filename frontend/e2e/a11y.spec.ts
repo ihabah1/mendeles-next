@@ -1,6 +1,17 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+const email = process.env.E2E_EMAIL || "admin@admin.com";
+const password = process.env.E2E_PASSWORD || "admin";
+
+async function loginAsAdmin(page: import("@playwright/test").Page) {
+  await page.goto("/login");
+  await page.getByLabel(/email|אימייל/i).fill(email);
+  await page.getByLabel(/password|סיסמה/i).fill(password);
+  await page.getByRole("button", { name: /log in|התחברות/i }).click();
+  await page.waitForURL("**/dashboard**", { timeout: 15000 });
+}
+
 const PAGES = ["/", "/accessibility", "/login", "/company"];
 
 for (const path of PAGES) {
@@ -18,6 +29,21 @@ for (const path of PAGES) {
     });
   });
 }
+
+test.describe("axe: dashboard leads", () => {
+  test("has no serious or critical violations", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/dashboard/leads");
+    await page.waitForLoadState("networkidle");
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+
+    const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
+    expect(blocking, formatViolations(blocking)).toEqual([]);
+  });
+});
 
 test.describe("keyboard navigation", () => {
   test("skip link focuses main content on homepage", async ({ page }) => {
