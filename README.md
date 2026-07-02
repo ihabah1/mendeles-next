@@ -10,6 +10,8 @@ Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Con
 
 ## Documentation
 
+- [Master development roadmap](docs/master-development-roadmap.md)
+- [Master enterprise checklist](docs/master-enterprise-checklist.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [SEO architecture](docs/architecture/seo.md)
 - [Content architecture](docs/architecture/content.md)
@@ -55,6 +57,10 @@ Centralized lead capture, dashboard list/detail, status workflow, notes, activit
 cd backend && python manage.py seed_leads   # default sources + contact form per tenant
 ```
 
-## Phase 3+ (not included)
+## Phase 3 (not included — next approved phase)
 
-Landing Page Builder UI, blog module, AI content generation, keyword research, payments.
+Landing Page Engine: block renderer, editor, public SSR pages, analytics hooks. See [master roadmap](docs/master-development-roadmap.md).
+
+## Phase 5+ (not included)
+
+Revenue engine, AI SEO, marketing automation, and later phases — roadmap reference only.

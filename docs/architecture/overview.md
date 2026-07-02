@@ -1,5 +1,8 @@
 # Mendeles — Architecture Overview
 
+> **Master roadmap:** [master-development-roadmap.md](../master-development-roadmap.md) — guides decisions only; does not authorize future phases.  
+> **Enterprise checklist:** [master-enterprise-checklist.md](../master-enterprise-checklist.md) — full production vision tracker.
+
 ## Stack
 
 | Layer | Technology |
@@ -21,6 +24,9 @@ backend/
   rbac/            # Roles, permissions, assignments
   audit/           # Audit log service + API
   siteconfig/      # System settings + admin overview
+  seo/             # Phase 2 SEO engine
+  content/         # Phase 2.5 content architecture
+  leads/           # Phase 4 lead generation
 
 frontend/
   app/[locale]/    # App Router pages (auth, dashboard, marketing)
@@ -36,22 +42,30 @@ frontend/
 4. `HasPermission` checks RBAC before protected endpoints.
 5. Domain services write audit events on mutations.
 
-## Phase 1 scope
+## Phase status
 
-- Authentication & email verification
-- RBAC with seeded roles
-- User management (invite, edit, deactivate, roles)
-- Audit logs
-- Tenant settings
-- Admin dashboard shell
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 — Foundation | Auth, RBAC, users, audit, dashboard, settings | ✅ Complete |
+| 2 — SEO Core | Metadata, slugs, schema, sitemap, robots, validation | ✅ Complete |
+| 2.5 — Content | Pages, blocks, templates, publishing, media | ✅ Complete |
+| 3 — Landing Page Engine | Block renderer, editor, public SSR pages | ⏳ Approved — not implemented |
+| 4 — Lead Generation | Lead capture, dashboard, UTM, export | ✅ Complete |
+| 5–14 | Revenue, AI, automation, BI, growth | 📋 Roadmap reference only |
 
-Phase 2 (not included): landing pages, leads, SEO product, AI, payments.
+See [master-development-roadmap.md](../master-development-roadmap.md) for full long-term plan.
 
-## Phase 3+ architecture (design)
+## Phase architecture docs
 
-| Phase | Doc | Status |
-|-------|-----|--------|
-| 3 — Landing Page Engine | [landing-page-engine.md](./architecture/landing-page-engine.md) | Awaiting approval |
-| 4 — Lead Generation Engine | [lead-generation-engine.md](./architecture/lead-generation-engine.md) | Awaiting approval |
+| Phase | Document |
+|-------|----------|
+| 2 — SEO | [seo.md](./seo.md) |
+| 2.5 — Content | [content.md](./content.md) |
+| 3 — Landing pages | [landing-page-engine.md](./landing-page-engine.md) |
+| 4 — Leads | [lead-generation-engine.md](./lead-generation-engine.md) |
 
-**Implementation checklist:** [phase3-phase4-checklist.md](../phase3-phase4-checklist.md)
+**Checklists:** [master-enterprise-checklist.md](../master-enterprise-checklist.md) · [phase3-phase4-checklist.md](../phase3-phase4-checklist.md) · [phase4-completion-report.md](../phase4-completion-report.md) · [accessibility-checklist.md](../accessibility-checklist.md)
+
+## API
+
+Base: `/api/v1/` — see [api-v1.md](./api-v1.md) and OpenAPI at `/api/v1/docs/`.
