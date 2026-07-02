@@ -1,19 +1,17 @@
-# Frontend — build from REPO ROOT (Railway Root Directory empty).
-# If Root Directory = frontend, Railway uses frontend/Dockerfile instead.
+# Frontend — Railway: set Root Directory to EMPTY (repo root).
+# Dockerfile path: Dockerfile.frontend
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY frontend/package.json frontend/package-lock.json ./
-# Use env-based npm config (more reliable than `npm config set` across npm versions)
-ENV NPM_CONFIG_FETCH_RETRIES=5 \
-    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
-    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
-    NPM_CONFIG_FETCH_TIMEOUT=300000 \
-    NPM_CONFIG_MAXSOCKETS=5 \
-    NPM_CONFIG_AUDIT=false \
-    NPM_CONFIG_FUND=false
-RUN npm ci --ignore-scripts \
-  || npm ci --ignore-scripts --maxsockets 1
+# Pin npm 10 — avoids npm 11 ci regressions on some Alpine images
+RUN npm install -g npm@10.9.2
+
+COPY frontend/package.json ./
+COPY frontend/package-lock.json ./
+
+RUN test -s package-lock.json \
+  && node -e "const p=require('./package.json'); if(!p.dependencies?.next){console.error('FATAL: wrong package.json copied — Railway Root Directory must be empty (repo root)'); process.exit(1)}" \
+  && npm ci --ignore-scripts --no-audit --no-fund
 
 FROM node:20-alpine AS builder
 WORKDIR /app

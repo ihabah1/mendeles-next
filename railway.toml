@@ -1,4 +1,10 @@
-# Frontend service (mendeles-next) — Root Directory empty (repo root).
+# Frontend service (mendeles-next)
+#
+# IMPORTANT — Railway Settings for mendeles-next:
+#   Root Directory:  (empty — repo root, NOT "frontend")
+#   Dockerfile path: Dockerfile.frontend
+#
+# If Root Directory is "frontend", use Dockerfile path: Dockerfile instead.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.frontend"

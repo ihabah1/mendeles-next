@@ -5,6 +5,8 @@
 | שירות | Root Directory | Dockerfile |
 |--------|----------------|------------|
 | **mendeles-next** (Frontend) | *(ריק — שורש repo)* | `Dockerfile.frontend` |
+
+> **חשוב:** Root Directory חייב להיות **ריק** (לא `frontend`). אם מוגדר `frontend`, שנה ל-Dockerfile `Dockerfile` בתוך התיקייה.
 | **eloquent-perfection** (API) | `backend` | `Dockerfile` |
 | **Postgres** | — | DB חדש |
 

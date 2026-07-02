@@ -1,16 +1,14 @@
+# Frontend — Railway: use when Root Directory = frontend
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY package.json package-lock.json ./
-ENV NPM_CONFIG_FETCH_RETRIES=5 \
-    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
-    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
-    NPM_CONFIG_FETCH_TIMEOUT=300000 \
-    NPM_CONFIG_MAXSOCKETS=5 \
-    NPM_CONFIG_AUDIT=false \
-    NPM_CONFIG_FUND=false
-RUN npm ci --ignore-scripts \
-  || npm ci --ignore-scripts --maxsockets 1
+RUN npm install -g npm@10.9.2
+
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN test -s package-lock.json \
+  && npm ci --ignore-scripts --no-audit --no-fund
 
 FROM node:20-alpine AS builder
 WORKDIR /app
