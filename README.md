@@ -11,6 +11,7 @@ Production-ready **Phase 1 foundation** + **Phase 2 SEO Core** + **Phase 2.5 Con
 ## Documentation
 
 - [Master development roadmap](docs/master-development-roadmap.md)
+- [Master AI Growth Vision](docs/master-ai-growth-vision.md)
 - [Master enterprise checklist](docs/master-enterprise-checklist.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [SEO architecture](docs/architecture/seo.md)

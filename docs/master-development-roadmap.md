@@ -16,7 +16,9 @@ Never implement functionality from future phases unless explicitly approved.
 
 ## Project vision
 
-Mendeles is an AI-powered Lead Generation Operating System.
+Mendeles is an AI-powered Lead Generation Operating System evolving into an **Enterprise AI Growth Operating System**.
+
+Full product specification: [master-ai-growth-vision.md](./master-ai-growth-vision.md) (vision only — not implementation authorization).
 
 The mission is to help businesses transform Google traffic into qualified customers using SEO, Landing Pages, AI and Marketing Automation.
 
@@ -422,6 +424,7 @@ Every implementation decision must support this objective.
 ## Related documents
 
 - [Master enterprise checklist](./master-enterprise-checklist.md) — full production vision tracker
+- [Master AI Growth Vision](./master-ai-growth-vision.md) — final product specification v1.0 (vision only)
 - [Automation Center (Phase X)](./architecture/automation-center.md) — infrastructure implemented
 - [Autonomous Growth Engine (Phase 14)](./architecture/autonomous-growth-engine.md) — vision / design only
 - [Phase 3+4 checklist](./phase3-phase4-checklist.md)

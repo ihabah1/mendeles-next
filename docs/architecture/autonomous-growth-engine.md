@@ -1,6 +1,7 @@
 # Phase 14 — Autonomous AI Growth Engine (Architecture)
 
 > **Status:** Architecture reference only — **not authorized for implementation.**  
+> **Product spec:** [master-ai-growth-vision.md](../master-ai-growth-vision.md)  
 > **Prerequisite:** Phase X Automation Center infrastructure (implemented).  
 > **Orchestration:** All long-running growth operations must execute as Automation Center jobs.
 

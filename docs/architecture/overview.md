@@ -1,6 +1,7 @@
 # Mendeles — Architecture Overview
 
 > **Master roadmap:** [master-development-roadmap.md](../master-development-roadmap.md) — guides decisions only; does not authorize future phases.  
+> **Product vision:** [master-ai-growth-vision.md](../master-ai-growth-vision.md) — final product specification v1.0 (vision only).  
 > **Enterprise checklist:** [master-enterprise-checklist.md](../master-enterprise-checklist.md) — full production vision tracker.
 
 ## Stack
