@@ -512,3 +512,110 @@ export const integrationsApi = {
       { headers: authHeaders() },
     ),
 };
+
+export type AiSeoServiceFlag = {
+  id: string;
+  status: string;
+  configured: boolean;
+  connected: boolean;
+  last_sync_at: string | null;
+  last_error: string | null;
+  property_label: string | null;
+  requires_action: boolean;
+};
+
+export type AiSeoKpi = {
+  available: boolean;
+  value: number | null;
+  change_pct?: number | null;
+  total?: number;
+  period_days?: number;
+};
+
+export type AiSeoDashboard = {
+  generated_at: string;
+  services: AiSeoServiceFlag[];
+  kpis: {
+    lead_revenue: AiSeoKpi;
+    new_leads: AiSeoKpi;
+    organic_clicks: AiSeoKpi;
+    impressions: AiSeoKpi;
+    page_one_rankings: AiSeoKpi;
+  };
+  organic: {
+    available: boolean;
+    reason?: string;
+    connection_status?: string;
+    last_sync_at?: string;
+    series: Array<{ date: string; clicks: number; impressions: number }>;
+    summary: Record<string, number | null | undefined>;
+  };
+  hot_keywords: {
+    available: boolean;
+    last_sync_at: string | null;
+    items: Array<{
+      keyword: string;
+      source: string;
+      volume: number | null;
+      trend: string | null;
+      clicks?: number;
+      position?: number;
+    }>;
+  };
+  automation_tasks: Array<{
+    id: string;
+    name: string;
+    job_type: string;
+    status: string;
+    progress_percent: number;
+    updated_at: string | null;
+  }>;
+  lead_funnel: {
+    available: boolean;
+    gsc_connected: boolean;
+    stages: Array<{ label: string; value: number }>;
+  };
+  content_review: {
+    available: boolean;
+    waiting_count: number;
+    items: Array<{
+      id: string;
+      title: string;
+      page_type: string;
+      status: string;
+      updated_at: string | null;
+      full_path: string;
+    }>;
+  };
+  system: {
+    database: string;
+    workers_total: number;
+    workers_busy: number;
+    queue_size: number;
+    running_jobs: number;
+    waiting_approval: number;
+  };
+  recent_activity: Array<{ id: string; action: string; created_at: string | null; user_email: string | null }>;
+  reminders: Array<{ type: string; count: number }>;
+};
+
+export const aiSeoApi = {
+  dashboard: () => apiFetch<AiSeoDashboard>("/api/v1/ai-seo/dashboard/", { headers: authHeaders() }),
+  refresh: (section: "all" | "search_console" | "analytics" | "trends" = "all") =>
+    apiFetch<{ queued: Array<Record<string, unknown>>; dashboard: AiSeoDashboard }>(
+      "/api/v1/ai-seo/refresh/",
+      { method: "POST", headers: authHeaders(), json: { section } },
+    ),
+  keywordsStudio: () =>
+    apiFetch<{ available: boolean; results: Array<Record<string, unknown>>; services: AiSeoServiceFlag[] }>(
+      "/api/v1/ai-seo/studio/keywords/",
+      { headers: authHeaders() },
+    ),
+  contentStudio: () =>
+    apiFetch<{ available: boolean; services: AiSeoServiceFlag[]; message: string }>(
+      "/api/v1/ai-seo/studio/content/",
+      { headers: authHeaders() },
+    ),
+  reviewStudio: () =>
+    apiFetch<AiSeoDashboard["content_review"]>("/api/v1/ai-seo/studio/review/", { headers: authHeaders() }),
+};

@@ -19,9 +19,14 @@ BACKEND_PUBLIC_HOST=${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}
 
 # Fallback — public HTTPS:
 # API_URL=https://${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}
+
+# Google Analytics 4 (required at build time for NEXT_PUBLIC_*)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-2H3YHNVJWK
 ```
 
 > **חובה ב-runtime** — ב-Variables של `mendeles-next` ודא ש-`API_URL` או `BACKEND_PUBLIC_HOST` מוגדרים (לא `localhost`).
+>
+> **GA4:** `NEXT_PUBLIC_GA_MEASUREMENT_ID` חייב להיות מוגדר **לפני build** (Redeploy אחרי הוספה).
 
 ## Backend (`eloquent-perfection`) — Variables
 

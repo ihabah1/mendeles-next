@@ -38,4 +38,5 @@ urlpatterns = [
     path("leads/", include(leads_urls)),
     path("automation/", include(automation_urls)),
     path("integrations/", include("integrations.api.v1.urls")),
+    path("ai-seo/", include("ai_seo.api.v1.urls")),
 ]

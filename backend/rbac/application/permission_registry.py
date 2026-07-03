@@ -31,6 +31,8 @@ PERMISSIONS = [
     ("automation.logs", "automation", "logs", "צפייה בלוגי אוטומציה"),
     ("integrations.view", "integrations", "view", "צפייה באינטגרציות"),
     ("integrations.manage", "integrations", "manage", "ניהול אינטגרציות"),
+    ("ai_seo.view", "ai_seo", "view", "צפייה ב-AI SEO Automation Center"),
+    ("ai_seo.manage", "ai_seo", "manage", "ניהול AI SEO Automation Center"),
     ("tenants.view", "tenants", "view", "צפייה בדיירים"),
     ("tenants.edit", "tenants", "edit", "עריכת דיירים"),
 ]
@@ -67,6 +69,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "automation.logs",
         "integrations.view",
         "integrations.manage",
+        "ai_seo.view",
+        "ai_seo.manage",
     ],
     "business_owner": [
         "users.view",
@@ -98,6 +102,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "automation.logs",
         "integrations.view",
         "integrations.manage",
+        "ai_seo.view",
+        "ai_seo.manage",
     ],
     "business_manager": [
         "users.view",
@@ -106,7 +112,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "audit.view",
     ],
     "editor": ["settings.view", "content.view", "content.create", "content.edit"],
-    "seo_manager": ["settings.view", "seo.view", "seo.manage", "content.view", "content.edit", "content.publish", "automation.view", "automation.create", "automation.manage", "integrations.view", "integrations.manage"],
+    "seo_manager": ["settings.view", "seo.view", "seo.manage", "content.view", "content.edit", "content.publish", "automation.view", "automation.create", "automation.manage", "integrations.view", "integrations.manage", "ai_seo.view", "ai_seo.manage"],
     "sales_manager": ["users.view", "audit.view", "leads.view", "leads.edit", "leads.export", "automation.view"],
     "marketing_manager": [
         "settings.view",
@@ -118,6 +124,9 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "leads.view",
         "automation.view",
         "automation.create",
+        "integrations.view",
+        "ai_seo.view",
+        "ai_seo.manage",
     ],
     "support_agent": ["users.view"],
     "read_only": ["users.view", "settings.view", "audit.view"],

@@ -19,7 +19,9 @@ RUN apk add --no-cache libc6-compat
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 ARG API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=
 ENV API_URL=$API_URL
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 RUN npm run build

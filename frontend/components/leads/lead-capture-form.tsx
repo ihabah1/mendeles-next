@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { publicLeadsApi, readUtmFromLocation, type LeadCaptureFields } from "@/lib/api/public-leads";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 type Props = {
   formId: string;
@@ -34,6 +35,11 @@ export function LeadCaptureForm({ formId, pageId, pageUrl, className }: Props) {
         fields,
         utm,
         honeypot,
+      });
+      trackEvent("generate_lead", {
+        form_id: formId,
+        page_id: pageId ?? "",
+        page_url: pageUrl || (typeof window !== "undefined" ? window.location.pathname : ""),
       });
       setStatus("success");
       setFields({ name: "", email: "", phone: "", message: "" });

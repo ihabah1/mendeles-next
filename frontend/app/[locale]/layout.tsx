@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -8,6 +9,8 @@ import { AccessibilityProvider } from "@/lib/a11y/context";
 import { EARLY_A11Y_SCRIPT } from "@/lib/a11y/preferences";
 import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
 import { SkipToContent } from "@/components/a11y/skip-to-content";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { AnalyticsRouteTracker } from "@/components/analytics/analytics-route-tracker";
 import { Providers } from "../providers";
 
 type Props = {
@@ -32,6 +35,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body>
+        <GoogleAnalytics />
+        <Suspense fallback={null}>
+          <AnalyticsRouteTracker />
+        </Suspense>
         <script dangerouslySetInnerHTML={{ __html: EARLY_A11Y_SCRIPT }} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <NextIntlClientProvider messages={messages}>
