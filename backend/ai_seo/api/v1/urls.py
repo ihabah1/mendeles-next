@@ -9,6 +9,7 @@ from ai_seo.api.v1.views import (
     AiSeoWorkspaceGenerateView,
     AiSeoWorkspacePublishView,
     AiSeoWorkspaceRegenerateView,
+    AiSeoWorkspaceRunJobView,
     AiSeoWorkspaceView,
 )
 
@@ -22,4 +23,5 @@ urlpatterns = [
     path("workspace/generate/", AiSeoWorkspaceGenerateView.as_view(), name="ai-seo-workspace-generate"),
     path("workspace/regenerate/", AiSeoWorkspaceRegenerateView.as_view(), name="ai-seo-workspace-regenerate"),
     path("workspace/publish/", AiSeoWorkspacePublishView.as_view(), name="ai-seo-workspace-publish"),
+    path("workspace/jobs/<uuid:job_id>/run/", AiSeoWorkspaceRunJobView.as_view(), name="ai-seo-workspace-run-job"),
 ]

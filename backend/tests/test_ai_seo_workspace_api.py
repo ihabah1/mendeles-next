@@ -36,3 +36,38 @@ def test_ai_seo_workspace_generate_creates_batch_job(owner_client, settings):
     jobs = response.json()["jobs"]
     assert len(jobs) == 2
     assert {job["job_type"] for job in jobs} == {"generate_blog_article", "generate_landing_page"}
+    assert [step["name"] for step in jobs[0]["steps"]] == ["דאטה", "AI", "עיצוב", "הקמת דף", "סיום"]
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+
+    def fake_generate_json(prompt):
+        return {
+            "title": "דף בדיקה",
+            "meta_title": "דף בדיקה",
+            "meta_description": "תיאור בדיקה",
+            "blocks": [{"type": "hero", "config": {"headline": "כותרת", "cta": "דברו איתנו"}}],
+        }
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        fake_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {"domains": ["law"], "output_types": ["landing_page"], "keywords": ["עורך דין"]},
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+
+    response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["progress_percent"] == 100
+    assert body["generated_page_id"]
+    assert all(step["status"] == "completed" for step in body["steps"])
+    assert body["logs"]

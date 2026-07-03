@@ -71,6 +71,11 @@ export default function WorkspacePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
+  const runJob = useMutation({
+    mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
   if (!canView) {
     return (
       <Card>
@@ -204,17 +209,80 @@ export default function WorkspacePage() {
         {jobs.length === 0 ? (
           <p className="mt-4 text-sm text-[var(--muted-fg)]">אין jobs עדיין.</p>
         ) : (
-          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+          <ul className="mt-4 grid gap-4">
             {jobs.map((job) => (
-              <li key={job.id} className="rounded-lg border border-emerald-500/30 bg-black/10 p-3">
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <Link href={`/dashboard/automation/${job.id}`} className="font-medium hover:underline">
-                    {job.name}
-                  </Link>
-                  <span>{job.status}</span>
+              <li key={job.id} className="rounded-lg border border-emerald-500/30 bg-black/10 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <div>
+                    <Link href={`/dashboard/automation/${job.id}`} className="font-medium hover:underline">
+                      {job.name}
+                    </Link>
+                    <p className="mt-1 text-xs text-[var(--muted-fg)]">
+                      סטטוס: {job.status} · התקדמות: {job.progress_percent}%
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(job.status === "queued" || job.status === "scheduled" || job.status === "failed") && canManage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={runJob.isPending}
+                        onClick={() => runJob.mutate(job.id)}
+                      >
+                        הרץ עכשיו
+                      </Button>
+                    )}
+                    <span className="rounded-full border border-emerald-500/30 px-2 py-1 text-xs">{job.status}</span>
+                  </div>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-emerald-950">
                   <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${job.progress_percent}%` }} />
+                </div>
+                <ol className="mt-4 grid gap-2 sm:grid-cols-5">
+                  {(job.steps.length
+                    ? job.steps
+                    : [
+                        { id: `${job.id}-data`, name: "דאטה", status: job.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null },
+                        { id: `${job.id}-ai`, name: "AI", status: job.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null },
+                        { id: `${job.id}-design`, name: "עיצוב", status: job.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null },
+                        { id: `${job.id}-page`, name: "הקמת דף", status: job.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null },
+                        { id: `${job.id}-finish`, name: "סיום", status: job.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null },
+                      ]
+                  ).map((step) => (
+                    <li
+                      key={step.id}
+                      className={`rounded-md border p-2 text-center text-xs ${
+                        step.status === "completed"
+                          ? "border-emerald-400/60 bg-emerald-500/20"
+                          : step.status === "running"
+                            ? "border-sky-400/60 bg-sky-500/20"
+                            : step.status === "failed"
+                              ? "border-red-400/60 bg-red-500/20"
+                              : "border-[var(--border)] bg-black/10"
+                      }`}
+                    >
+                      <p className="font-medium">{step.name}</p>
+                      <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-4 rounded-md border border-emerald-500/20 bg-black/20 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Logs</p>
+                  {job.logs.length === 0 ? (
+                    <p className="mt-2 text-xs text-[var(--muted-fg)]">
+                      עדיין אין לוגים. אם ה-job נשאר queued, לחץ “הרץ עכשיו” או ודא שה-worker פעיל.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
+                      {job.logs.map((log) => (
+                        <li key={log.id} className="flex gap-2">
+                          <span className="text-emerald-300">{log.level}</span>
+                          <span>{log.message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 {job.error_message && <p className="mt-2 text-xs text-red-500">{job.error_message}</p>}
               </li>

@@ -6,8 +6,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from automation.application.job_service import JobService
+from automation.application.log_service import AutomationLogService
 from automation.domain.enums import JobStatus, JobType
-from automation.infrastructure.models import AutomationJob, AutomationQueue
+from automation.infrastructure.models import AutomationJob, AutomationJobStep, AutomationQueue
 from content.application.block_service import BlockService
 from content.application.page_service import PageService
 from content.application.publish_service import PublishService
@@ -28,6 +29,14 @@ OUTPUT_TO_PAGE_TYPE = {
     "article": PageType.BLOG,
     "landing_page": PageType.LANDING_PAGE,
 }
+
+GENERATION_STEPS = [
+    ("ai_seo.data", "דאטה"),
+    ("ai_seo.ai", "AI"),
+    ("ai_seo.design", "עיצוב"),
+    ("ai_seo.page", "הקמת דף"),
+    ("ai_seo.finish", "סיום"),
+]
 
 
 def _parse_scheduled_at(value):
@@ -67,11 +76,31 @@ class AiSeoGenerationService:
             "job_type": job.job_type,
             "status": job.status,
             "progress_percent": job.progress_percent,
+            "current_step_index": job.current_step_index,
             "scheduled_at": job.scheduled_at.isoformat() if job.scheduled_at else None,
             "created_at": job.created_at.isoformat() if job.created_at else None,
             "error_message": job.error_message or None,
             "config": job.config,
             "generated_page_id": (job.config or {}).get("generated_page_id"),
+            "steps": [
+                {
+                    "id": str(step.id),
+                    "name": step.name,
+                    "step_type": step.step_type,
+                    "status": step.status,
+                    "error_message": step.error_message or None,
+                }
+                for step in job.steps.filter(deleted_at__isnull=True).order_by("step_order")
+            ],
+            "logs": [
+                {
+                    "id": str(log.id),
+                    "level": log.level,
+                    "message": log.message,
+                    "created_at": log.created_at.isoformat() if log.created_at else None,
+                }
+                for log in job.logs.order_by("-created_at")[:12]
+            ],
         }
 
     @staticmethod
@@ -129,6 +158,10 @@ class AiSeoGenerationService:
                         "requires_approval": True,
                         "auto_publish_enabled": False,
                         "scheduled_at": scheduled_at,
+                        "steps": [
+                            {"name": name, "step_type": step_type, "config": {"output_type": output_type}}
+                            for step_type, name in GENERATION_STEPS
+                        ],
                     },
                     request=request,
                 )
@@ -180,6 +213,119 @@ class AiSeoGenerationService:
         job.save(update_fields=["config", "updated_at"])
         return page
 
+    @classmethod
+    def execute_generation_step(cls, job: AutomationJob, step: AutomationJobStep, *, execution=None) -> Page | None:
+        config = job.config or {}
+        step_type = step.step_type
+        if step_type == "ai_seo.data":
+            keywords = config.get("keywords") or []
+            domain = config.get("domain") or {}
+            if not keywords:
+                raise RuntimeError("No keywords selected for generation.")
+            job.config = {
+                **config,
+                "data_ready": True,
+                "data_summary": {
+                    "domain": domain.get("label", ""),
+                    "keywords_count": len(keywords),
+                    "keywords": keywords,
+                },
+            }
+            job.save(update_fields=["config", "updated_at"])
+            AutomationLogService.log(
+                job,
+                f"דאטה מוכן: {len(keywords)} keywords עבור {domain.get('label', '')}",
+                execution=execution,
+            )
+            return None
+
+        if step_type == "ai_seo.ai":
+            output_type = config.get("output_type", "blog")
+            domain = config.get("domain") or {}
+            prompt = cls._build_prompt(
+                output_type=output_type,
+                domain_label=domain.get("label", ""),
+                keywords=config.get("keywords") or [],
+                locale=config.get("locale", "he"),
+                feedback=config.get("feedback", ""),
+                user_prompt=config.get("prompt", ""),
+            )
+            result = GeminiService.generate_json(prompt)
+            job.config = {**config, "gemini_payload": result}
+            job.save(update_fields=["config", "updated_at"])
+            AutomationLogService.log(job, "Gemini החזיר JSON תקין לתוכן", execution=execution)
+            return None
+
+        if step_type == "ai_seo.design":
+            payload = config.get("gemini_payload") or {}
+            blocks = payload.get("blocks") or []
+            if not blocks:
+                raise RuntimeError("Gemini response did not include content blocks.")
+            designed_blocks = cls._normalize_blocks(blocks)
+            job.config = {
+                **config,
+                "gemini_payload": {**payload, "blocks": designed_blocks},
+                "design_ready": True,
+            }
+            job.save(update_fields=["config", "updated_at"])
+            AutomationLogService.log(job, f"עיצוב מוכן: {len(designed_blocks)} blocks", execution=execution)
+            return None
+
+        if step_type == "ai_seo.page":
+            if config.get("generated_page_id"):
+                AutomationLogService.log(job, "טיוטת הדף כבר קיימת, מדלג על יצירה כפולה", execution=execution)
+                return None
+            payload = config.get("gemini_payload") or {}
+            page = cls._create_page_from_payload(job, payload)
+            AutomationLogService.log(job, f"הוקם דף טיוטה: {page.title}", execution=execution)
+            return page
+
+        if step_type == "ai_seo.finish":
+            page_title = (job.config or {}).get("generated_page_title", "")
+            AutomationLogService.log(job, f"סיום: התוצר מוכן לבדיקה{f' — {page_title}' if page_title else ''}", execution=execution)
+            return None
+
+        raise RuntimeError(f"Unknown AI SEO generation step: {step_type}")
+
+    @classmethod
+    def _create_page_from_payload(cls, job: AutomationJob, payload: dict) -> Page:
+        config = job.config or {}
+        output_type = config.get("output_type", "blog")
+        page_type = OUTPUT_TO_PAGE_TYPE.get(output_type, PageType.BLOG)
+        domain = config.get("domain") or {}
+        page = PageService.create_page(
+            job.tenant_id,
+            job.created_by,
+            {
+                "title": payload.get("title") or f"{domain.get('label', 'AI')} — {output_type}",
+                "page_type": page_type,
+                "locale": config.get("locale", "he"),
+                "meta_title": payload.get("meta_title", ""),
+                "meta_description": payload.get("meta_description", ""),
+            },
+        )
+        for index, block in enumerate(payload.get("blocks") or [], start=1):
+            BlockService.create_block(
+                page,
+                {
+                    "block_type": block.get("type", "rich_text"),
+                    "sort_order": index,
+                    "config": block.get("config", {}),
+                },
+            )
+        job.config = {**config, "generated_page_id": str(page.id), "generated_page_title": page.title}
+        job.save(update_fields=["config", "updated_at"])
+        return page
+
+    @staticmethod
+    def _normalize_blocks(blocks: list[dict]) -> list[dict]:
+        normalized = []
+        for block in blocks:
+            block_type = block.get("type") or "rich_text"
+            config = block.get("config") or {}
+            normalized.append({"type": block_type, "config": config})
+        return normalized
+
     @staticmethod
     def _build_prompt(*, output_type: str, domain_label: str, keywords: list[str], locale: str, feedback: str, user_prompt: str) -> str:
         asset = "SEO landing page" if output_type == "landing_page" else "SEO blog article"
@@ -224,6 +370,10 @@ Locale: {locale}.
                 "config": config,
                 "requires_approval": True,
                 "auto_publish_enabled": False,
+                "steps": [
+                    {"name": name, "step_type": step_type, "config": {"output_type": config["output_type"]}}
+                    for step_type, name in GENERATION_STEPS
+                ],
             },
             request=request,
         )

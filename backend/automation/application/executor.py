@@ -100,12 +100,21 @@ class JobExecutor:
             step.status = StepStatus.RUNNING
             step.started_at = timezone.now()
             step.save(update_fields=["status", "started_at", "updated_at"])
+            AutomationLogService.log(job, f"Step started: {step.name}", execution=execution)
 
-            JobExecutor._execute_step(job, step, execution)
+            try:
+                JobExecutor._execute_step(job, step, execution)
+            except Exception as exc:
+                step.status = StepStatus.FAILED
+                step.error_message = str(exc)[:2000]
+                step.finished_at = timezone.now()
+                step.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+                raise
 
             step.status = StepStatus.COMPLETED
             step.finished_at = timezone.now()
             step.save(update_fields=["status", "finished_at", "updated_at"])
+            AutomationLogService.log(job, f"Step completed: {step.name}", execution=execution)
 
             job.current_step_index = index + 1
             job.progress_percent = int(((index + 1) / total) * 100)
@@ -132,6 +141,14 @@ class JobExecutor:
 
     @staticmethod
     def _run_handler(job: AutomationJob, job_type: str, execution: AutomationExecution) -> None:
+        if job_type.startswith("ai_seo."):
+            from ai_seo.application.generation_service import AiSeoGenerationService
+
+            step = job.steps.filter(step_type=job_type, status=StepStatus.RUNNING).order_by("step_order").first()
+            if not step:
+                raise RuntimeError(f"AI SEO step '{job_type}' is not running.")
+            AiSeoGenerationService.execute_generation_step(job, step, execution=execution)
+            return
         if job_type == JobType.HEALTH_CHECK:
             AutomationLogService.log(job, "Running platform health check", execution=execution)
             return

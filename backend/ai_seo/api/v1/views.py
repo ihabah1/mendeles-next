@@ -3,6 +3,9 @@ from rest_framework.views import APIView
 
 from ai_seo.application.dashboard_service import AiSeoDashboardService
 from ai_seo.application.generation_service import AiSeoGenerationService
+from automation.application.executor import JobExecutor
+from automation.application.job_service import JobService
+from automation.domain.enums import JobStatus
 from audit.application.audit_service import AuditService
 from core.exceptions.base import ForbiddenError
 from core.permissions.base import HasPermission
@@ -45,7 +48,7 @@ class AiSeoContentStudioView(APIView):
                 "message": (
                     "Content generation is not configured. Set GEMINI_API_KEY and connect integrations."
                     if not (ai and ai["connected"])
-                    else "Content generation handlers are not implemented yet. Use Content to create pages manually."
+                    else "Content generation is available in the AI SEO Workspace."
                 ),
             }
         )
@@ -154,3 +157,19 @@ class AiSeoWorkspacePublishView(APIView):
         except Exception as exc:
             return Response({"error": str(exc)}, status=400)
         return Response(AiSeoGenerationService.serialize_page(page))
+
+
+class AiSeoWorkspaceRunJobView(APIView):
+    def post(self, request, job_id):
+        _check(request, self, "ai_seo.manage")
+        try:
+            job = JobService.get_job(request.user.default_tenant_id, job_id)
+            if job.status not in {JobStatus.QUEUED, JobStatus.SCHEDULED, JobStatus.FAILED}:
+                return Response({"error": f"Job cannot run while status is {job.status}."}, status=400)
+            if job.status in {JobStatus.SCHEDULED, JobStatus.FAILED}:
+                job = JobService.queue_job(request.user.default_tenant_id, request.user, job.id, request=request)
+            JobExecutor.run(job)
+            job.refresh_from_db()
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(AiSeoGenerationService.serialize_job(job))

@@ -645,6 +645,11 @@ export const aiSeoApi = {
       headers: authHeaders(),
       json: { page_id },
     }),
+  runWorkspaceJob: (jobId: string) =>
+    apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/run/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
 };
 
 export type AiSeoWorkspaceDomain = { value: string; label: string; keywords: string[] };
@@ -654,11 +659,25 @@ export type AiSeoWorkspaceJob = {
   job_type: string;
   status: string;
   progress_percent: number;
+  current_step_index: number;
   scheduled_at: string | null;
   created_at: string | null;
   error_message: string | null;
   config: Record<string, unknown>;
   generated_page_id?: string | null;
+  steps: Array<{
+    id: string;
+    name: string;
+    step_type: string;
+    status: string;
+    error_message: string | null;
+  }>;
+  logs: Array<{
+    id: string;
+    level: string;
+    message: string;
+    created_at: string | null;
+  }>;
 };
 export type AiSeoWorkspaceDraft = {
   id: string;
