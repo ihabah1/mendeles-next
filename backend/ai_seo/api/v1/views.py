@@ -5,7 +5,8 @@ from ai_seo.application.dashboard_service import AiSeoDashboardService
 from ai_seo.application.generation_service import AiSeoGenerationService
 from automation.application.executor import JobExecutor
 from automation.application.job_service import JobService
-from automation.domain.enums import JobStatus
+from automation.domain.enums import JobStatus, JobType
+from automation.infrastructure.models import AutomationJob
 from audit.application.audit_service import AuditService
 from core.exceptions.base import ForbiddenError
 from core.permissions.base import HasPermission
@@ -173,3 +174,70 @@ class AiSeoWorkspaceRunJobView(APIView):
         except Exception as exc:
             return Response({"error": str(exc)}, status=400)
         return Response(AiSeoGenerationService.serialize_job(job))
+
+
+class AiSeoWorkspaceRunNextView(APIView):
+    def post(self, request):
+        _check(request, self, "ai_seo.manage")
+        tenant_id = request.user.default_tenant_id
+        try:
+            job = (
+                AutomationJob.objects.filter(
+                    tenant_id=tenant_id,
+                    job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+                    status=JobStatus.RUNNING,
+                    deleted_at__isnull=True,
+                ).order_by("created_at").first()
+                or AutomationJob.objects.filter(
+                    tenant_id=tenant_id,
+                    job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+                    status=JobStatus.QUEUED,
+                    deleted_at__isnull=True,
+                ).order_by("created_at").first()
+            )
+            if not job:
+                return Response({"job": None, "workspace": AiSeoGenerationService.workspace_state(tenant_id)})
+            JobExecutor.run_next_step(job)
+            job.refresh_from_db()
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(
+            {
+                "job": AiSeoGenerationService.serialize_job(job),
+                "workspace": AiSeoGenerationService.workspace_state(tenant_id),
+            }
+        )
+
+
+class AiSeoWorkspaceRetryStepView(APIView):
+    def post(self, request, job_id, step_id):
+        _check(request, self, "ai_seo.manage")
+        try:
+            job = JobService.get_job(request.user.default_tenant_id, job_id)
+            job = AiSeoGenerationService.reset_step_for_retry(job, step_id)
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(AiSeoGenerationService.serialize_job(job))
+
+
+class AiSeoWorkspaceCancelJobView(APIView):
+    def post(self, request, job_id):
+        _check(request, self, "ai_seo.manage")
+        try:
+            job = JobService.cancel_job(request.user.default_tenant_id, request.user, job_id, request=request)
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(AiSeoGenerationService.serialize_job(job))
+
+
+class AiSeoWorkspaceDeleteJobView(APIView):
+    def delete(self, request, job_id):
+        _check(request, self, "ai_seo.manage")
+        try:
+            job = JobService.get_job(request.user.default_tenant_id, job_id)
+            if job.status not in {JobStatus.COMPLETED, JobStatus.CANCELLED}:
+                JobService.cancel_job(request.user.default_tenant_id, request.user, job.id, request=request)
+            JobService.delete_job(request.user.default_tenant_id, request.user, job.id, request=request)
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(status=204)

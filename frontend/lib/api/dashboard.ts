@@ -650,6 +650,26 @@ export const aiSeoApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  runNextWorkspaceQueueStep: () =>
+    apiFetch<{ job: AiSeoWorkspaceJob | null; workspace: AiSeoWorkspace }>("/api/v1/ai-seo/workspace/queue/run-next/", {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  retryWorkspaceStep: (jobId: string, stepId: string) =>
+    apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/steps/${stepId}/retry/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  cancelWorkspaceJob: (jobId: string) =>
+    apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/cancel/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  deleteWorkspaceJob: (jobId: string) =>
+    apiFetch<void>(`/api/v1/ai-seo/workspace/jobs/${jobId}/delete/`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }),
 };
 
 export type AiSeoWorkspaceDomain = { value: string; label: string; keywords: string[] };
@@ -665,6 +685,9 @@ export type AiSeoWorkspaceJob = {
   error_message: string | null;
   config: Record<string, unknown>;
   generated_page_id?: string | null;
+  function: string;
+  current_step_name: string;
+  user: string;
   steps: Array<{
     id: string;
     name: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
 import { aiSeoApi, type AiSeoWorkspaceDraft } from "@/lib/api/dashboard";
@@ -28,6 +28,8 @@ export default function WorkspacePage() {
   const [prompt, setPrompt] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
+  const [queueRunning, setQueueRunning] = useState(false);
+  const [queueTick, setQueueTick] = useState(0);
 
   const workspace = useQuery({
     queryKey: ["ai-seo-workspace"],
@@ -71,8 +73,32 @@ export default function WorkspacePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
-  const runJob = useMutation({
-    mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
+  const runNextStep = useMutation({
+    mutationFn: aiSeoApi.runNextWorkspaceQueueStep,
+    onSuccess: (data) => {
+      qc.setQueryData(["ai-seo-workspace"], data.workspace);
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      if (!data.job || data.job.status === "failed") {
+        setQueueRunning(false);
+        return;
+      }
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 600);
+    },
+    onError: () => setQueueRunning(false),
+  });
+
+  const retryStep = useMutation({
+    mutationFn: ({ jobId, stepId }: { jobId: string; stepId: string }) => aiSeoApi.retryWorkspaceStep(jobId, stepId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
+  const cancelJob = useMutation({
+    mutationFn: (jobId: string) => aiSeoApi.cancelWorkspaceJob(jobId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
+  const deleteJob = useMutation({
+    mutationFn: (jobId: string) => aiSeoApi.deleteWorkspaceJob(jobId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
@@ -97,6 +123,18 @@ export default function WorkspacePage() {
   function toggleOutput(value: string) {
     setOutputTypes((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   }
+
+  function confirmDeleteJob(jobId: string) {
+    if (window.confirm("למחוק את ה-job? אם הוא עדיין פעיל או בתור, הוא יבוטל אוטומטית לפני המחיקה.")) {
+      deleteJob.mutate(jobId);
+    }
+  }
+
+  useEffect(() => {
+    if (queueRunning && !runNextStep.isPending) {
+      runNextStep.mutate();
+    }
+  }, [queueRunning, queueTick]);
 
   const jobs = workspace.data?.jobs ?? [];
   const drafts = workspace.data?.drafts ?? [];
@@ -196,45 +234,95 @@ export default function WorkspacePage() {
         </Card>
       </div>
 
-      <Card className="border-emerald-500/40 bg-emerald-500/10">
+      <Card className="border-emerald-500/40 bg-[#00140b] font-mono text-emerald-300 shadow-[0_0_24px_rgba(16,185,129,0.16)]">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Batch Jobs</h2>
-            <p className="text-xs text-[var(--muted-fg)]">מתעדכן כל 10 שניות.</p>
+            <h2 className="font-semibold text-emerald-200">Batch Jobs</h2>
+            <p className="text-xs text-emerald-500">AS400 queue view · job אחד רץ בכל פעם · שלב אחד בכל pulse</p>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] })}>
-            רענן
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {canManage && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={runNextStep.isPending}
+                onClick={() => {
+                  setQueueRunning((running) => !running);
+                  if (!queueRunning) setQueueTick((tick) => tick + 1);
+                }}
+              >
+                {queueRunning ? "עצור תור" : "הפעל תור"}
+              </Button>
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] })}>
+              רענן
+            </Button>
+          </div>
         </div>
         {jobs.length === 0 ? (
-          <p className="mt-4 text-sm text-[var(--muted-fg)]">אין jobs עדיין.</p>
+          <p className="mt-4 text-sm text-emerald-500">אין jobs עדיין.</p>
         ) : (
           <ul className="mt-4 grid gap-4">
             {jobs.map((job) => (
-              <li key={job.id} className="rounded-lg border border-emerald-500/30 bg-black/10 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <div>
+              <li key={job.id} className="rounded border border-emerald-500/30 bg-black p-3 text-xs">
+                <div className="grid gap-2 text-emerald-500 sm:grid-cols-[48px_1.2fr_1fr_80px_70px_1fr_120px]">
+                  <span>Opt</span>
+                  <span>Subsystem/Job</span>
+                  <span>Current User</span>
+                  <span>Type</span>
+                  <span>CPU %</span>
+                  <span>Function</span>
+                  <span>Status</span>
+                </div>
+                <div className="mt-2 grid gap-2 text-emerald-200 sm:grid-cols-[48px_1.2fr_1fr_80px_70px_1fr_120px]">
+                  <span>{job.status === "running" ? "▶" : job.status === "failed" ? "R" : "_"}</span>
+                  <span>
                     <Link href={`/dashboard/automation/${job.id}`} className="font-medium hover:underline">
                       {job.name}
                     </Link>
-                    <p className="mt-1 text-xs text-[var(--muted-fg)]">
-                      סטטוס: {job.status} · התקדמות: {job.progress_percent}%
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {(job.status === "queued" || job.status === "scheduled" || job.status === "failed") && canManage && (
+                  </span>
+                  <span className="truncate">{job.user}</span>
+                  <span>BCI</span>
+                  <span>{job.progress_percent.toString().padStart(2, "0")}</span>
+                  <span className="truncate">{job.current_step_name || job.function}</span>
+                  <span>{job.status.toUpperCase()}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {canManage && (job.status === "queued" || job.status === "running") && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={runJob.isPending}
-                        onClick={() => runJob.mutate(job.id)}
+                        disabled={runNextStep.isPending}
+                        onClick={() => runNextStep.mutate()}
                       >
-                        הרץ עכשיו
+                        שלב הבא
                       </Button>
                     )}
-                    <span className="rounded-full border border-emerald-500/30 px-2 py-1 text-xs">{job.status}</span>
-                  </div>
+                    {job.status !== "completed" && job.status !== "cancelled" && canManage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={cancelJob.isPending}
+                        onClick={() => cancelJob.mutate(job.id)}
+                      >
+                        בטל
+                      </Button>
+                    )}
+                    {canManage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={deleteJob.isPending}
+                        onClick={() => confirmDeleteJob(job.id)}
+                      >
+                        מחק
+                      </Button>
+                    )}
+                    <span className="rounded border border-emerald-500/30 px-2 py-1 text-xs">{job.progress_percent}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-emerald-950">
                   <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${job.progress_percent}%` }} />
@@ -264,14 +352,26 @@ export default function WorkspacePage() {
                     >
                       <p className="font-medium">{step.name}</p>
                       <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
+                      {step.status === "failed" && canManage && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          disabled={retryStep.isPending}
+                          onClick={() => retryStep.mutate({ jobId: job.id, stepId: step.id })}
+                        >
+                          Retry
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ol>
                 <div className="mt-4 rounded-md border border-emerald-500/20 bg-black/20 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Logs</p>
                   {job.logs.length === 0 ? (
-                    <p className="mt-2 text-xs text-[var(--muted-fg)]">
-                      עדיין אין לוגים. אם ה-job נשאר queued, לחץ “הרץ עכשיו” או ודא שה-worker פעיל.
+                    <p className="mt-2 text-xs text-emerald-500">
+                      עדיין אין לוגים. לחץ “הפעל תור” כדי להתחיל שיקוף מלא מהשלב הראשון.
                     </p>
                   ) : (
                     <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">

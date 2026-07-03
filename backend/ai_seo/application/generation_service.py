@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_datetime
 
 from automation.application.job_service import JobService
 from automation.application.log_service import AutomationLogService
-from automation.domain.enums import JobStatus, JobType
+from automation.domain.enums import JobStatus, JobType, StepStatus
 from automation.infrastructure.models import AutomationJob, AutomationJobStep, AutomationQueue
 from content.application.block_service import BlockService
 from content.application.page_service import PageService
@@ -70,6 +70,8 @@ class AiSeoGenerationService:
 
     @staticmethod
     def serialize_job(job: AutomationJob) -> dict:
+        active_step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).order_by("step_order").first()
+        current_step = active_step or job.steps.filter(deleted_at__isnull=True).order_by("step_order")[job.current_step_index:job.current_step_index + 1].first()
         return {
             "id": str(job.id),
             "name": job.name,
@@ -82,6 +84,9 @@ class AiSeoGenerationService:
             "error_message": job.error_message or None,
             "config": job.config,
             "generated_page_id": (job.config or {}).get("generated_page_id"),
+            "function": current_step.step_type if current_step else job.job_type,
+            "current_step_name": current_step.name if current_step else "",
+            "user": job.created_by.email if job.created_by_id else "QSYS",
             "steps": [
                 {
                     "id": str(step.id),
@@ -217,6 +222,7 @@ class AiSeoGenerationService:
     def execute_generation_step(cls, job: AutomationJob, step: AutomationJobStep, *, execution=None) -> Page | None:
         config = job.config or {}
         step_type = step.step_type
+
         if step_type == "ai_seo.data":
             keywords = config.get("keywords") or []
             domain = config.get("domain") or {}
@@ -286,6 +292,51 @@ class AiSeoGenerationService:
             return None
 
         raise RuntimeError(f"Unknown AI SEO generation step: {step_type}")
+
+    @staticmethod
+    def reset_step_for_retry(job: AutomationJob, step_id: str) -> AutomationJob:
+        steps = list(job.steps.filter(deleted_at__isnull=True).order_by("step_order"))
+        target = next((step for step in steps if str(step.id) == str(step_id)), None)
+        if not target:
+            raise RuntimeError("Step not found.")
+
+        for step in steps:
+            if step.step_order >= target.step_order:
+                step.status = StepStatus.PENDING
+                step.error_message = ""
+                step.started_at = None
+                step.finished_at = None
+                step.save(update_fields=["status", "error_message", "started_at", "finished_at", "updated_at"])
+
+        config = job.config or {}
+        if target.step_type in {"ai_seo.ai", "ai_seo.design", "ai_seo.page"}:
+            config.pop("generated_page_id", None)
+            config.pop("generated_page_title", None)
+        if target.step_type in {"ai_seo.ai", "ai_seo.design"}:
+            config.pop("design_ready", None)
+        if target.step_type == "ai_seo.ai":
+            config.pop("gemini_payload", None)
+
+        completed_before = len([step for step in steps if step.step_order < target.step_order and step.status == StepStatus.COMPLETED])
+        job.config = config
+        job.status = JobStatus.RUNNING if completed_before else JobStatus.QUEUED
+        job.error_message = ""
+        job.finished_at = None
+        job.current_step_index = completed_before
+        job.progress_percent = int((completed_before / len(steps)) * 100) if steps else 0
+        job.save(
+            update_fields=[
+                "config",
+                "status",
+                "error_message",
+                "finished_at",
+                "current_step_index",
+                "progress_percent",
+                "updated_at",
+            ]
+        )
+        AutomationLogService.log(job, f"Retry requested for step: {target.name}")
+        return job
 
     @classmethod
     def _create_page_from_payload(cls, job: AutomationJob, payload: dict) -> Page:

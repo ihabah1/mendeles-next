@@ -76,6 +76,96 @@ class JobExecutor:
         return execution
 
     @staticmethod
+    def run_next_step(job: AutomationJob, *, worker=None) -> AutomationExecution:
+        execution_number = job.executions.count() + 1
+        execution = AutomationExecution.objects.create(
+            job=job,
+            execution_number=execution_number,
+            status=JobStatus.RUNNING,
+            started_at=timezone.now(),
+            worker=worker,
+        )
+
+        job.status = JobStatus.RUNNING
+        job.started_at = job.started_at or timezone.now()
+        job.error_message = ""
+        job.save(update_fields=["status", "started_at", "error_message", "updated_at"])
+
+        try:
+            steps = list(job.steps.filter(deleted_at__isnull=True).order_by("step_order"))
+            if not steps:
+                JobExecutor._execute_job_type(job, execution)
+                JobExecutor._mark_step_execution_complete(job, execution)
+                return execution
+
+            next_step = next((step for step in steps if step.status != StepStatus.COMPLETED), None)
+            if not next_step:
+                job.status = JobStatus.COMPLETED
+                job.progress_percent = 100
+                job.finished_at = timezone.now()
+                job.save(update_fields=["status", "progress_percent", "finished_at", "updated_at"])
+                JobExecutor._mark_step_execution_complete(job, execution)
+                AutomationLogService.log(job, "Queue job completed", execution=execution)
+                return execution
+
+            index = steps.index(next_step)
+            AutomationLogService.log(job, f"Step started: {next_step.name}", execution=execution)
+            next_step.status = StepStatus.RUNNING
+            next_step.started_at = timezone.now()
+            next_step.error_message = ""
+            next_step.save(update_fields=["status", "started_at", "error_message", "updated_at"])
+
+            JobExecutor._execute_step(job, next_step, execution)
+
+            next_step.status = StepStatus.COMPLETED
+            next_step.finished_at = timezone.now()
+            next_step.save(update_fields=["status", "finished_at", "updated_at"])
+            AutomationLogService.log(job, f"Step completed: {next_step.name}", execution=execution)
+
+            job.current_step_index = index + 1
+            job.progress_percent = int(((index + 1) / len(steps)) * 100)
+            if index + 1 >= len(steps):
+                job.status = JobStatus.COMPLETED
+                job.finished_at = timezone.now()
+                save_fields = ["current_step_index", "progress_percent", "status", "finished_at", "updated_at"]
+                AutomationLogService.log(job, "Queue job completed", execution=execution)
+            else:
+                job.status = JobStatus.RUNNING
+                save_fields = ["current_step_index", "progress_percent", "status", "updated_at"]
+            job.save(update_fields=save_fields)
+
+            JobExecutor._mark_step_execution_complete(job, execution)
+        except Exception as exc:
+            failed_step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).first()
+            if failed_step:
+                failed_step.status = StepStatus.FAILED
+                failed_step.error_message = str(exc)[:2000]
+                failed_step.finished_at = timezone.now()
+                failed_step.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+
+            job.status = JobStatus.FAILED
+            job.error_message = str(exc)[:2000]
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+
+            execution.status = JobStatus.FAILED
+            execution.error_message = job.error_message
+            execution.finished_at = timezone.now()
+            execution.duration_ms = JobExecutor._duration_ms(execution)
+            execution.save()
+            AutomationLogService.log(job, f"Step failed: {exc}", level=LogLevel.ERROR, execution=execution)
+
+        return execution
+
+    @staticmethod
+    def _mark_step_execution_complete(job: AutomationJob, execution: AutomationExecution) -> None:
+        execution.status = job.status if job.status in {JobStatus.COMPLETED, JobStatus.FAILED} else JobStatus.RUNNING
+        execution.finished_at = timezone.now()
+        execution.duration_ms = JobExecutor._duration_ms(execution)
+        execution.result = {"ok": execution.status != JobStatus.FAILED}
+        execution.save()
+
+    @staticmethod
     def _run_steps(job: AutomationJob, execution: AutomationExecution) -> None:
         steps = list(job.steps.filter(deleted_at__isnull=True).order_by("step_order"))
         if not steps:
