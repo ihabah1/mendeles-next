@@ -21,6 +21,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         worker = WorkerService.register_or_heartbeat(options["worker_id"] or None)
         limit = options["limit"]
+        AutomationJob.objects.filter(
+            status=JobStatus.SCHEDULED,
+            scheduled_at__lte=timezone.now(),
+            deleted_at__isnull=True,
+        ).update(status=JobStatus.QUEUED, updated_at=timezone.now())
 
         paused_queues = set(
             AutomationQueue.objects.filter(is_paused=True, deleted_at__isnull=True).values_list("id", flat=True)

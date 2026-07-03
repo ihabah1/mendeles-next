@@ -618,4 +618,60 @@ export const aiSeoApi = {
     ),
   reviewStudio: () =>
     apiFetch<AiSeoDashboard["content_review"]>("/api/v1/ai-seo/studio/review/", { headers: authHeaders() }),
+  workspace: () =>
+    apiFetch<AiSeoWorkspace>("/api/v1/ai-seo/workspace/", { headers: authHeaders() }),
+  generateWorkspaceBatch: (body: {
+    domains: string[];
+    keywords?: string[];
+    output_types: string[];
+    prompt?: string;
+    scheduled_at?: string;
+    locale?: string;
+  }) =>
+    apiFetch<{ jobs: AiSeoWorkspaceJob[]; workspace: AiSeoWorkspace }>("/api/v1/ai-seo/workspace/generate/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
+  regenerateWorkspacePage: (body: { page_id: string; feedback: string; keywords?: string[]; domain?: string }) =>
+    apiFetch<AiSeoWorkspaceJob>("/api/v1/ai-seo/workspace/regenerate/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
+  publishWorkspacePage: (page_id: string) =>
+    apiFetch<AiSeoWorkspaceDraft>("/api/v1/ai-seo/workspace/publish/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: { page_id },
+    }),
+};
+
+export type AiSeoWorkspaceDomain = { value: string; label: string; keywords: string[] };
+export type AiSeoWorkspaceJob = {
+  id: string;
+  name: string;
+  job_type: string;
+  status: string;
+  progress_percent: number;
+  scheduled_at: string | null;
+  created_at: string | null;
+  error_message: string | null;
+  config: Record<string, unknown>;
+  generated_page_id?: string | null;
+};
+export type AiSeoWorkspaceDraft = {
+  id: string;
+  title: string;
+  page_type: string;
+  status: string;
+  full_path: string;
+  updated_at: string | null;
+  test_url: string;
+};
+export type AiSeoWorkspace = {
+  domains: AiSeoWorkspaceDomain[];
+  gemini_configured: boolean;
+  jobs: AiSeoWorkspaceJob[];
+  drafts: AiSeoWorkspaceDraft[];
 };

@@ -424,6 +424,7 @@ Every architectural decision, every feature, and every future module must suppor
 | [master-enterprise-checklist.md](./master-enterprise-checklist.md) | Production readiness tracker |
 | [autonomous-growth-engine.md](./architecture/autonomous-growth-engine.md) | Phase 14 architecture |
 | [automation-center.md](./architecture/automation-center.md) | Phase X orchestration (implemented) |
+| [ai-seo-automation-dashboard.md](./architecture/ai-seo-automation-dashboard.md) | AI SEO Automation Center UI (design only) |
 | [lead-generation-engine.md](./architecture/lead-generation-engine.md) | Phase 4 (implemented) |
 | [landing-page-engine.md](./architecture/landing-page-engine.md) | Phase 3 (planned) |
 

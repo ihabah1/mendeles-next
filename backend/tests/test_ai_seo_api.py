@@ -1,4 +1,5 @@
 import pytest
+from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db
@@ -17,7 +18,11 @@ def test_ai_seo_dashboard_returns_real_structure(owner_client):
 
 
 @pytest.mark.django_db
-def test_ai_seo_refresh_requires_manage(owner_client, readonly_client):
+def test_ai_seo_refresh_requires_manage(owner_user, read_only_user):
+    owner_client = APIClient()
+    owner_client.force_authenticate(owner_user)
+    readonly_client = APIClient()
+    readonly_client.force_authenticate(read_only_user)
     denied = readonly_client.post("/api/v1/ai-seo/refresh/", {"section": "trends"}, format="json")
     assert denied.status_code == 403
     ok = owner_client.post("/api/v1/ai-seo/refresh/", {"section": "trends"}, format="json")

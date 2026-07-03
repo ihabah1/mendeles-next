@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ai_seo.application.dashboard_service import AiSeoDashboardService
+from ai_seo.application.generation_service import AiSeoGenerationService
 from audit.application.audit_service import AuditService
 from core.exceptions.base import ForbiddenError
 from core.permissions.base import HasPermission
@@ -84,7 +85,7 @@ class AiSeoRefreshView(APIView):
                     request=request,
                 )
                 queued.append({"section": key, "job_id": str(job.id), "status": job.status})
-            except (GoogleOAuthError, ValueError) as exc:
+            except (GoogleOAuthError, ValueError, Exception) as exc:
                 queued.append({"section": key, "error": str(exc)})
 
         AuditService.log(
@@ -97,3 +98,59 @@ class AiSeoRefreshView(APIView):
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
         return Response({"queued": queued, "dashboard": AiSeoDashboardService.build(tenant_id)})
+
+
+class AiSeoWorkspaceView(APIView):
+    def get(self, request):
+        _check(request, self, "ai_seo.view")
+        return Response(AiSeoGenerationService.workspace_state(request.user.default_tenant_id))
+
+
+class AiSeoWorkspaceGenerateView(APIView):
+    def post(self, request):
+        _check(request, self, "ai_seo.manage")
+        try:
+            jobs = AiSeoGenerationService.create_batch(
+                request.user.default_tenant_id,
+                request.user,
+                request.data,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(
+            {
+                "jobs": [AiSeoGenerationService.serialize_job(job) for job in jobs],
+                "workspace": AiSeoGenerationService.workspace_state(request.user.default_tenant_id),
+            },
+            status=201,
+        )
+
+
+class AiSeoWorkspaceRegenerateView(APIView):
+    def post(self, request):
+        _check(request, self, "ai_seo.manage")
+        try:
+            job = AiSeoGenerationService.regenerate(
+                request.user.default_tenant_id,
+                request.user,
+                request.data,
+                request=request,
+            )
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(AiSeoGenerationService.serialize_job(job), status=201)
+
+
+class AiSeoWorkspacePublishView(APIView):
+    def post(self, request):
+        _check(request, self, "content.publish")
+        try:
+            page = AiSeoGenerationService.publish_page(
+                request.user.default_tenant_id,
+                request.user,
+                request.data["page_id"],
+            )
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(AiSeoGenerationService.serialize_page(page))

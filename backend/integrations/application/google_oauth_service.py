@@ -37,11 +37,9 @@ class GoogleOAuthService:
     @classmethod
     def effective_status(cls, conn: GoogleServiceConnection) -> str:
         if conn.service_type == GoogleServiceType.TRENDS:
-            if conn.last_sync_at and conn.status == ConnectionStatus.CONNECTED:
-                return ConnectionStatus.CONNECTED
             if conn.last_error:
                 return ConnectionStatus.ERROR
-            return ConnectionStatus.NOT_CONNECTED
+            return ConnectionStatus.CONNECTED
         if not oauth_configured():
             return ConnectionStatus.CONFIG_REQUIRED
         if conn.status == ConnectionStatus.WAITING_AUTHORIZATION and conn.oauth_state:

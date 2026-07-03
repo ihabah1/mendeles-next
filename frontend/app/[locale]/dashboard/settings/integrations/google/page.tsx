@@ -136,6 +136,10 @@ export default function GoogleIntegrationsPage() {
         const icon = STATUS_ICON[svc.status] || "🔴";
         const isOAuth = key !== "trends";
         const props = propertyLists[key] ?? [];
+        const statusText =
+          key === "trends" && svc.status === "connected" && !svc.last_sync_at
+            ? t("google.trendsAvailable")
+            : t(`google.status.${svc.status}`);
 
         return (
           <Card key={svc.service_type}>
@@ -144,7 +148,7 @@ export default function GoogleIntegrationsPage() {
                 <h2 className="text-lg font-semibold">
                   {icon} {t(`google.services.${key}`)}
                 </h2>
-                <p className="text-sm text-[var(--muted-fg)]">{t(`google.status.${svc.status}`)}</p>
+                <p className="text-sm text-[var(--muted-fg)]">{statusText}</p>
               </div>
               {canManage && (
                 <div className="flex flex-wrap gap-2">
@@ -231,6 +235,10 @@ export default function GoogleIntegrationsPage() {
 
             {key === "trends" && canManage && (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm sm:col-span-2">
+                  <p className="font-medium">{t("google.trendsNoOAuthTitle")}</p>
+                  <p className="mt-1 text-xs text-[var(--muted-fg)]">{t("google.trendsNoOAuthBody")}</p>
+                </div>
                 <label className="block text-sm sm:col-span-2">
                   <span className="mb-1 block font-medium">{t("google.trendsKeywords")}</span>
                   <textarea

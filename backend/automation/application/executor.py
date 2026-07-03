@@ -155,6 +155,16 @@ class JobExecutor:
                 execution=execution,
             )
             return
+        if job_type in {JobType.GENERATE_BLOG_ARTICLE.value, JobType.GENERATE_LANDING_PAGE.value}:
+            from ai_seo.application.generation_service import AiSeoGenerationService
+
+            page = AiSeoGenerationService.execute_generation_job(job)
+            AutomationLogService.log(
+                job,
+                f"Generated draft content: {page.title} ({page.page_type})",
+                execution=execution,
+            )
+            return
         if job_type not in {t.value for t in IMPLEMENTED_JOB_TYPES}:
             raise RuntimeError(
                 f"Job type '{job_type}' is not implemented yet. "

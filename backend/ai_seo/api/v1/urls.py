@@ -6,6 +6,10 @@ from ai_seo.api.v1.views import (
     AiSeoKeywordsStudioView,
     AiSeoRefreshView,
     AiSeoReviewStudioView,
+    AiSeoWorkspaceGenerateView,
+    AiSeoWorkspacePublishView,
+    AiSeoWorkspaceRegenerateView,
+    AiSeoWorkspaceView,
 )
 
 urlpatterns = [
@@ -14,4 +18,8 @@ urlpatterns = [
     path("studio/content/", AiSeoContentStudioView.as_view(), name="ai-seo-studio-content"),
     path("studio/review/", AiSeoReviewStudioView.as_view(), name="ai-seo-studio-review"),
     path("refresh/", AiSeoRefreshView.as_view(), name="ai-seo-refresh"),
+    path("workspace/", AiSeoWorkspaceView.as_view(), name="ai-seo-workspace"),
+    path("workspace/generate/", AiSeoWorkspaceGenerateView.as_view(), name="ai-seo-workspace-generate"),
+    path("workspace/regenerate/", AiSeoWorkspaceRegenerateView.as_view(), name="ai-seo-workspace-regenerate"),
+    path("workspace/publish/", AiSeoWorkspacePublishView.as_view(), name="ai-seo-workspace-publish"),
 ]
