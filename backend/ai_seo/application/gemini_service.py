@@ -14,7 +14,12 @@ class GeminiError(RuntimeError):
 
 
 class GeminiService:
-    MODEL = "gemini-1.5-flash"
+    FALLBACK_MODELS = (
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash",
+    )
 
     @classmethod
     def configured(cls) -> bool:
@@ -26,7 +31,31 @@ class GeminiService:
         if not api_key:
             raise GeminiError("GEMINI_API_KEY is not configured.")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{cls.MODEL}:generateContent?key={api_key}"
+        errors = []
+        for model in cls._candidate_models():
+            try:
+                return cls._generate_json_with_model(api_key, model, prompt)
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="ignore")
+                errors.append(f"{model}: {exc.code} {detail[:250]}")
+                if exc.code != 404:
+                    raise GeminiError(f"Gemini API error {exc.code} using {model}: {detail[:500]}") from exc
+            except GeminiError:
+                raise
+            except Exception as exc:
+                raise GeminiError(f"Gemini request failed using {model}: {exc}") from exc
+        raise GeminiError("No configured Gemini model supports generateContent. Tried: " + " | ".join(errors))
+
+    @classmethod
+    def _candidate_models(cls) -> list[str]:
+        configured = getattr(settings, "GEMINI_MODEL", "")
+        models = [configured] if configured else []
+        models.extend(cls.FALLBACK_MODELS)
+        return list(dict.fromkeys([m for m in models if m]))
+
+    @classmethod
+    def _generate_json_with_model(cls, api_key: str, model: str, prompt: str) -> dict:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -40,17 +69,10 @@ class GeminiService:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="ignore")
-            raise GeminiError(f"Gemini API error {exc.code}: {detail[:500]}") from exc
-        except Exception as exc:
-            raise GeminiError(f"Gemini request failed: {exc}") from exc
-
+        with urllib.request.urlopen(request, timeout=60) as response:
+            body = json.loads(response.read().decode("utf-8"))
         try:
             text = body["candidates"][0]["content"]["parts"][0]["text"]
             return json.loads(text)
         except Exception as exc:
-            raise GeminiError("Gemini returned an invalid JSON response.") from exc
+            raise GeminiError(f"Gemini returned an invalid JSON response using {model}.") from exc

@@ -30,6 +30,7 @@ export default function WorkspacePage() {
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   const workspace = useQuery({
     queryKey: ["ai-seo-workspace"],
@@ -87,6 +88,11 @@ export default function WorkspacePage() {
     onError: () => setQueueRunning(false),
   });
 
+  const runSelectedJob = useMutation({
+    mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
   const retryStep = useMutation({
     mutationFn: ({ jobId, stepId }: { jobId: string; stepId: string }) => aiSeoApi.retryWorkspaceStep(jobId, stepId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
@@ -130,6 +136,15 @@ export default function WorkspacePage() {
     }
   }
 
+  function startSelectedJob() {
+    if (selectedJobId) {
+      runSelectedJob.mutate(selectedJobId);
+      return;
+    }
+    setQueueRunning(true);
+    setQueueTick((tick) => tick + 1);
+  }
+
   useEffect(() => {
     if (queueRunning && !runNextStep.isPending) {
       runNextStep.mutate();
@@ -139,6 +154,7 @@ export default function WorkspacePage() {
   const jobs = workspace.data?.jobs ?? [];
   const drafts = workspace.data?.drafts ?? [];
   const geminiReady = workspace.data?.gemini_configured;
+  const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -234,26 +250,53 @@ export default function WorkspacePage() {
         </Card>
       </div>
 
-      <Card className="border-emerald-500/40 bg-[#00140b] font-mono text-emerald-300 shadow-[0_0_24px_rgba(16,185,129,0.16)]">
-        <div className="flex items-center justify-between gap-3">
+      <Card className="overflow-hidden border-[var(--border)] bg-[var(--card)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
           <div>
-            <h2 className="font-semibold text-emerald-200">Batch Jobs</h2>
-            <p className="text-xs text-emerald-500">AS400 queue view · job אחד רץ בכל פעם · שלב אחד בכל pulse</p>
+            <h2 className="font-semibold">Batch Jobs</h2>
+            <p className="text-xs text-[var(--muted-fg)]">
+              בחר שורת job ואז הפעל פעולה. התור מריץ job אחד בכל פעם, שלב אחד בכל pulse.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {canManage && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={runNextStep.isPending}
-                onClick={() => {
-                  setQueueRunning((running) => !running);
-                  if (!queueRunning) setQueueTick((tick) => tick + 1);
-                }}
-              >
-                {queueRunning ? "עצור תור" : "הפעל תור"}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={runSelectedJob.isPending || runNextStep.isPending || (selectedJob ? selectedJob.status === "completed" || selectedJob.status === "cancelled" : false)}
+                  onClick={startSelectedJob}
+                >
+                  התחל
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!queueRunning}
+                  onClick={() => setQueueRunning(false)}
+                >
+                  עצור
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!selectedJob || selectedJob.status === "completed" || selectedJob.status === "cancelled" || cancelJob.isPending}
+                  onClick={() => selectedJob && cancelJob.mutate(selectedJob.id)}
+                >
+                  בטל
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!selectedJob || deleteJob.isPending}
+                  onClick={() => selectedJob && confirmDeleteJob(selectedJob.id)}
+                >
+                  מחק
+                </Button>
+              </>
             )}
             <Button type="button" variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] })}>
               רענן
@@ -261,133 +304,130 @@ export default function WorkspacePage() {
           </div>
         </div>
         {jobs.length === 0 ? (
-          <p className="mt-4 text-sm text-emerald-500">אין jobs עדיין.</p>
+          <p className="mt-4 text-sm text-[var(--muted-fg)]">אין jobs עדיין.</p>
         ) : (
-          <ul className="mt-4 grid gap-4">
-            {jobs.map((job) => (
-              <li key={job.id} className="rounded border border-emerald-500/30 bg-black p-3 text-xs">
-                <div className="grid gap-2 text-emerald-500 sm:grid-cols-[48px_1.2fr_1fr_80px_70px_1fr_120px]">
-                  <span>Opt</span>
-                  <span>Subsystem/Job</span>
-                  <span>Current User</span>
-                  <span>Type</span>
-                  <span>CPU %</span>
-                  <span>Function</span>
-                  <span>Status</span>
-                </div>
-                <div className="mt-2 grid gap-2 text-emerald-200 sm:grid-cols-[48px_1.2fr_1fr_80px_70px_1fr_120px]">
-                  <span>{job.status === "running" ? "▶" : job.status === "failed" ? "R" : "_"}</span>
-                  <span>
-                    <Link href={`/dashboard/automation/${job.id}`} className="font-medium hover:underline">
-                      {job.name}
-                    </Link>
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)]">
+            <div className="grid grid-cols-[44px_1.4fr_1fr_1fr_110px_110px] bg-[var(--muted)] px-3 py-2 text-xs font-medium text-[var(--muted-fg)]">
+              <span></span>
+              <span>Job</span>
+              <span>משתמש</span>
+              <span>שלב נוכחי</span>
+              <span>התקדמות</span>
+              <span>סטטוס</span>
+            </div>
+            {jobs.map((job) => {
+              const isSelected = selectedJobId === job.id;
+              const statusTone =
+                job.status === "completed"
+                  ? "bg-emerald-500/15 text-emerald-500"
+                  : job.status === "failed"
+                    ? "bg-red-500/15 text-red-500"
+                    : job.status === "running"
+                      ? "bg-sky-500/15 text-sky-500"
+                      : "bg-amber-500/15 text-amber-500";
+
+              return (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => setSelectedJobId(job.id)}
+                  className={`grid w-full grid-cols-[44px_1.4fr_1fr_1fr_110px_110px] items-center border-t border-[var(--border)] px-3 py-3 text-start text-sm transition ${
+                    isSelected ? "bg-sky-500/10 ring-1 ring-inset ring-sky-500/40" : "hover:bg-[var(--muted)]/60"
+                  }`}
+                >
+                  <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-sky-500" : "bg-[var(--border)]"}`} />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{job.name}</span>
+                    <span className="block truncate text-xs text-[var(--muted-fg)]">{job.id}</span>
                   </span>
-                  <span className="truncate">{job.user}</span>
-                  <span>BCI</span>
-                  <span>{job.progress_percent.toString().padStart(2, "0")}</span>
+                  <span className="truncate text-xs text-[var(--muted-fg)]">{job.user}</span>
                   <span className="truncate">{job.current_step_name || job.function}</span>
-                  <span>{job.status.toUpperCase()}</span>
+                  <span>
+                    <span className="mb-1 block text-xs">{job.progress_percent}%</span>
+                    <span className="block h-1.5 rounded-full bg-[var(--border)]">
+                      <span className="block h-1.5 rounded-full bg-sky-500" style={{ width: `${job.progress_percent}%` }} />
+                    </span>
+                  </span>
+                  <span className={`w-fit rounded-full px-2 py-1 text-xs ${statusTone}`}>{job.status}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {selectedJob && (
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+            <div className="rounded-xl border border-[var(--border)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">{selectedJob.name}</h3>
+                  <p className="text-xs text-[var(--muted-fg)]">שלבים, retry וסטטוס מפורט</p>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {canManage && (job.status === "queued" || job.status === "running") && (
+                <Link href={`/dashboard/automation/${selectedJob.id}`}>
+                  <Button type="button" variant="outline" size="sm">פתח ג׳וב</Button>
+                </Link>
+              </div>
+              <ol className="mt-4 grid gap-2 sm:grid-cols-5">
+                {(selectedJob.steps.length
+                  ? selectedJob.steps
+                  : [
+                      { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null },
+                      { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null },
+                      { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null },
+                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null },
+                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null },
+                    ]
+                ).map((step) => (
+                  <li
+                    key={step.id}
+                    className={`rounded-lg border p-3 text-center text-xs ${
+                      step.status === "completed"
+                        ? "border-emerald-400/60 bg-emerald-500/10"
+                        : step.status === "running"
+                          ? "border-sky-400/60 bg-sky-500/10"
+                          : step.status === "failed"
+                            ? "border-red-400/60 bg-red-500/10"
+                            : "border-[var(--border)]"
+                    }`}
+                  >
+                    <p className="font-medium">{step.name}</p>
+                    <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
+                    {step.error_message && <p className="mt-1 text-red-500">{step.error_message}</p>}
+                    {step.status === "failed" && canManage && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={runNextStep.isPending}
-                        onClick={() => runNextStep.mutate()}
+                        className="mt-2"
+                        disabled={retryStep.isPending}
+                        onClick={() => retryStep.mutate({ jobId: selectedJob.id, stepId: step.id })}
                       >
-                        שלב הבא
+                        Retry
                       </Button>
                     )}
-                    {job.status !== "completed" && job.status !== "cancelled" && canManage && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={cancelJob.isPending}
-                        onClick={() => cancelJob.mutate(job.id)}
-                      >
-                        בטל
-                      </Button>
-                    )}
-                    {canManage && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={deleteJob.isPending}
-                        onClick={() => confirmDeleteJob(job.id)}
-                      >
-                        מחק
-                      </Button>
-                    )}
-                    <span className="rounded border border-emerald-500/30 px-2 py-1 text-xs">{job.progress_percent}%</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-emerald-950">
-                  <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${job.progress_percent}%` }} />
-                </div>
-                <ol className="mt-4 grid gap-2 sm:grid-cols-5">
-                  {(job.steps.length
-                    ? job.steps
-                    : [
-                        { id: `${job.id}-data`, name: "דאטה", status: job.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null },
-                        { id: `${job.id}-ai`, name: "AI", status: job.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null },
-                        { id: `${job.id}-design`, name: "עיצוב", status: job.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null },
-                        { id: `${job.id}-page`, name: "הקמת דף", status: job.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null },
-                        { id: `${job.id}-finish`, name: "סיום", status: job.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null },
-                      ]
-                  ).map((step) => (
-                    <li
-                      key={step.id}
-                      className={`rounded-md border p-2 text-center text-xs ${
-                        step.status === "completed"
-                          ? "border-emerald-400/60 bg-emerald-500/20"
-                          : step.status === "running"
-                            ? "border-sky-400/60 bg-sky-500/20"
-                            : step.status === "failed"
-                              ? "border-red-400/60 bg-red-500/20"
-                              : "border-[var(--border)] bg-black/10"
-                      }`}
-                    >
-                      <p className="font-medium">{step.name}</p>
-                      <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
-                      {step.status === "failed" && canManage && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          disabled={retryStep.isPending}
-                          onClick={() => retryStep.mutate({ jobId: job.id, stepId: step.id })}
-                        >
-                          Retry
-                        </Button>
-                      )}
+                  </li>
+                ))}
+              </ol>
+              {selectedJob.error_message && <p className="mt-3 text-sm text-red-500">{selectedJob.error_message}</p>}
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] p-4">
+              <h3 className="font-semibold">לוג ריצה</h3>
+              {selectedJob.logs.length === 0 ? (
+                <p className="mt-3 text-sm text-[var(--muted-fg)]">אין לוגים עדיין. לחץ “התחל” כדי להריץ את השלב הבא.</p>
+              ) : (
+                <ul className="mt-3 max-h-72 space-y-2 overflow-auto text-sm">
+                  {selectedJob.logs.map((log) => (
+                    <li key={log.id} className="rounded-lg bg-[var(--muted)] p-2">
+                      <span className="font-medium">{log.level}</span>
+                      <span className="mx-2 text-[var(--muted-fg)]">·</span>
+                      <span>{log.message}</span>
                     </li>
                   ))}
-                </ol>
-                <div className="mt-4 rounded-md border border-emerald-500/20 bg-black/20 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Logs</p>
-                  {job.logs.length === 0 ? (
-                    <p className="mt-2 text-xs text-emerald-500">
-                      עדיין אין לוגים. לחץ “הפעל תור” כדי להתחיל שיקוף מלא מהשלב הראשון.
-                    </p>
-                  ) : (
-                    <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
-                      {job.logs.map((log) => (
-                        <li key={log.id} className="flex gap-2">
-                          <span className="text-emerald-300">{log.level}</span>
-                          <span>{log.message}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                {job.error_message && <p className="mt-2 text-xs text-red-500">{job.error_message}</p>}
-              </li>
-            ))}
-          </ul>
+                </ul>
+              )}
+            </div>
+          </div>
         )}
       </Card>
 

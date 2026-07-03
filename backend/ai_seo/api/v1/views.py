@@ -165,11 +165,11 @@ class AiSeoWorkspaceRunJobView(APIView):
         _check(request, self, "ai_seo.manage")
         try:
             job = JobService.get_job(request.user.default_tenant_id, job_id)
-            if job.status not in {JobStatus.QUEUED, JobStatus.SCHEDULED, JobStatus.FAILED}:
+            if job.status not in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.SCHEDULED, JobStatus.FAILED}:
                 return Response({"error": f"Job cannot run while status is {job.status}."}, status=400)
             if job.status in {JobStatus.SCHEDULED, JobStatus.FAILED}:
                 job = JobService.queue_job(request.user.default_tenant_id, request.user, job.id, request=request)
-            JobExecutor.run(job)
+            JobExecutor.run_next_step(job)
             job.refresh_from_db()
         except Exception as exc:
             return Response({"error": str(exc)}, status=400)

@@ -62,8 +62,11 @@ def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkey
     )
     job_id = create.json()["jobs"][0]["id"]
 
-    response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+    response = None
+    for _ in range(5):
+        response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
 
+    assert response is not None
     assert response.status_code == 200, response.content
     body = response.json()
     assert body["status"] == "completed"
