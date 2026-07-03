@@ -406,6 +406,18 @@ export default function WorkspacePage() {
                         Retry שלב
                       </Button>
                     )}
+                    {step.status === "running" && !step.is_stale && canManage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        disabled={runSelectedJob.isPending}
+                        onClick={() => runSelectedJob.mutate(selectedJob.id)}
+                      >
+                        הרץ שלב
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ol>

@@ -110,6 +110,9 @@ def test_ai_seo_workspace_run_next_processes_one_step_at_a_time(owner_client, se
     assert first.status_code == 200, first.content
     assert first.json()["job"]["id"] == job_id
     assert first.json()["job"]["progress_percent"] == 20
+    first_ai_step = next(step for step in first.json()["job"]["steps"] if step["step_type"] == "ai_seo.ai")
+    assert first_ai_step["status"] == "running"
+    assert first_ai_step["started_at"] is None
     assert second.json()["job"]["progress_percent"] == 40
 
 

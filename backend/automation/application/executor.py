@@ -109,11 +109,18 @@ class JobExecutor:
                 return execution
 
             index = steps.index(next_step)
-            AutomationLogService.log(job, f"Step started: {next_step.name}", execution=execution)
-            next_step.status = StepStatus.RUNNING
-            next_step.started_at = timezone.now()
-            next_step.error_message = ""
-            next_step.save(update_fields=["status", "started_at", "error_message", "updated_at"])
+            if next_step.status != StepStatus.RUNNING:
+                next_step.status = StepStatus.RUNNING
+                next_step.error_message = ""
+                next_step.save(update_fields=["status", "error_message", "updated_at"])
+                AutomationLogService.log(job, f"Step entered running state: {next_step.name}", execution=execution)
+
+            if not next_step.started_at:
+                next_step.started_at = timezone.now()
+                next_step.save(update_fields=["started_at", "updated_at"])
+                AutomationLogService.log(job, f"Step execution started: {next_step.name}", execution=execution)
+            else:
+                AutomationLogService.log(job, f"Step execution resumed: {next_step.name}", execution=execution)
 
             JobExecutor._execute_step(job, next_step, execution)
 
@@ -130,6 +137,15 @@ class JobExecutor:
                 save_fields = ["current_step_index", "progress_percent", "status", "finished_at", "updated_at"]
                 AutomationLogService.log(job, "Queue job completed", execution=execution)
             else:
+                upcoming_step = steps[index + 1]
+                if upcoming_step.status == StepStatus.PENDING:
+                    upcoming_step.status = StepStatus.RUNNING
+                    upcoming_step.save(update_fields=["status", "updated_at"])
+                    AutomationLogService.log(
+                        job,
+                        f"Next step is ready: {upcoming_step.name}",
+                        execution=execution,
+                    )
                 job.status = JobStatus.RUNNING
                 save_fields = ["current_step_index", "progress_percent", "status", "updated_at"]
             job.save(update_fields=save_fields)

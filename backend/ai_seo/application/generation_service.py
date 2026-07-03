@@ -285,10 +285,16 @@ class AiSeoGenerationService:
         if step_type == "ai_seo.ai":
             output_type = config.get("output_type", "blog")
             domain = config.get("domain") or {}
+            keywords = config.get("keywords") or []
+            AutomationLogService.log(
+                job,
+                f"AI request starting: output={output_type}, domain={domain.get('label', '')}, keywords={len(keywords)}",
+                execution=execution,
+            )
             prompt = cls._build_prompt(
                 output_type=output_type,
                 domain_label=domain.get("label", ""),
-                keywords=config.get("keywords") or [],
+                keywords=keywords,
                 locale=config.get("locale", "he"),
                 feedback=config.get("feedback", ""),
                 user_prompt=config.get("prompt", ""),
@@ -296,7 +302,11 @@ class AiSeoGenerationService:
             result = GeminiService.generate_json(prompt)
             job.config = {**config, "gemini_payload": result}
             job.save(update_fields=["config", "updated_at"])
-            AutomationLogService.log(job, "Gemini החזיר JSON תקין לתוכן", execution=execution)
+            AutomationLogService.log(
+                job,
+                f"Gemini returned JSON: title={result.get('title', '')}, blocks={len(result.get('blocks') or [])}",
+                execution=execution,
+            )
             return None
 
         if step_type == "ai_seo.design":
@@ -304,6 +314,7 @@ class AiSeoGenerationService:
             blocks = payload.get("blocks") or []
             if not blocks:
                 raise RuntimeError("Gemini response did not include content blocks.")
+            AutomationLogService.log(job, f"Design normalization starting for {len(blocks)} blocks", execution=execution)
             designed_blocks = cls._normalize_blocks(blocks)
             job.config = {
                 **config,
@@ -319,6 +330,7 @@ class AiSeoGenerationService:
                 AutomationLogService.log(job, "טיוטת הדף כבר קיימת, מדלג על יצירה כפולה", execution=execution)
                 return None
             payload = config.get("gemini_payload") or {}
+            AutomationLogService.log(job, f"Draft page creation starting: {payload.get('title', '')}", execution=execution)
             page = cls._create_page_from_payload(job, payload)
             AutomationLogService.log(job, f"הוקם דף טיוטה: {page.title}", execution=execution)
             return page
