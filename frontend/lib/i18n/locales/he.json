@@ -655,6 +655,25 @@
       "nextSync": "סנכרון הבא",
       "error": "שגיאה אחרונה",
       "trendsKeywords": "מילות מפתח (שורה או פסיק לכל מילה)",
+      "trendsCountry": "מדינה / שוק",
+      "trendsLanguage": "שפה",
+      "trendsDateRange": "טווח תאריכים",
+      "trendsHint": "מבוסס pytrends — Trending Searches, Related Queries, Related Topics, Interest Over Time. ללא OAuth.",
+      "trendsCountries": {
+        "IL": "🇮🇱 ישראל",
+        "US": "🇺🇸 ארה\"ב",
+        "BOTH": "ישראל + ארה\"ב"
+      },
+      "trendsLanguages": {
+        "auto": "אוטומטי (עברית ל-IL, אנגלית ל-US)",
+        "he": "עברית",
+        "en": "אנגלית"
+      },
+      "trendsRanges": {
+        "24h": "24 שעות אחרונות",
+        "7d": "7 ימים אחרונים",
+        "30d": "30 ימים אחרונים"
+      },
       "selectProperty": "בחירת property",
       "chooseProperty": "בחרו property…",
       "recentSyncs": "סנכרונים אחרונים",

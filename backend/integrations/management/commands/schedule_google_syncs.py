@@ -50,8 +50,7 @@ class Command(BaseCommand):
                         "config": {
                             "service_type": GoogleServiceType.TRENDS,
                             "keywords": ["mendeles"],
-                            "language": "he",
-                            "country": "IL",
+                            "countries": ["IL", "US"],
                             "date_range": "7d",
                         },
                     },

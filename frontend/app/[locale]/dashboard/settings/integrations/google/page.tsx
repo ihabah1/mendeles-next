@@ -29,6 +29,9 @@ export default function GoogleIntegrationsPage() {
   const qc = useQueryClient();
   const searchParams = useSearchParams();
   const [trendsKeywords, setTrendsKeywords] = useState("mendeles");
+  const [trendsCountry, setTrendsCountry] = useState<"IL" | "US" | "BOTH">("IL");
+  const [trendsLanguage, setTrendsLanguage] = useState<"he" | "en" | "auto">("auto");
+  const [trendsDateRange, setTrendsDateRange] = useState<"24h" | "7d" | "30d">("7d");
   const [propertyLists, setPropertyLists] = useState<Record<string, Array<{ id: string; label: string }>>>({});
 
   const dashboard = useQuery({
@@ -62,9 +65,18 @@ export default function GoogleIntegrationsPage() {
   });
 
   const sync = useMutation({
-    mutationFn: (payload: { service_type: ServiceKey; keywords?: string }) =>
+    mutationFn: (payload: {
+      service_type: ServiceKey;
+      keywords?: string;
+      countries?: string[];
+      language?: string;
+      date_range?: string;
+    }) =>
       integrationsApi.googleSync(payload.service_type, {
         keywords: payload.keywords?.split("\n").map((k) => k.trim()).filter(Boolean),
+        ...(payload.countries ? { countries: payload.countries } : {}),
+        ...(payload.language ? { language: payload.language } : {}),
+        ...(payload.date_range ? { date_range: payload.date_range } : {}),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["integrations-google"] }),
   });
@@ -171,6 +183,14 @@ export default function GoogleIntegrationsPage() {
                       sync.mutate({
                         service_type: key,
                         keywords: key === "trends" ? trendsKeywords : undefined,
+                        countries:
+                          key === "trends"
+                            ? trendsCountry === "BOTH"
+                              ? ["IL", "US"]
+                              : [trendsCountry]
+                            : undefined,
+                        language: key === "trends" && trendsLanguage !== "auto" ? trendsLanguage : undefined,
+                        date_range: key === "trends" ? trendsDateRange : undefined,
                       })
                     }
                   >
@@ -210,15 +230,54 @@ export default function GoogleIntegrationsPage() {
             </dl>
 
             {key === "trends" && canManage && (
-              <label className="mt-4 block text-sm">
-                <span className="mb-1 block font-medium">{t("google.trendsKeywords")}</span>
-                <textarea
-                  className="w-full rounded-md border border-[var(--border)] bg-transparent p-2 text-sm"
-                  rows={3}
-                  value={trendsKeywords}
-                  onChange={(e) => setTrendsKeywords(e.target.value)}
-                />
-              </label>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium">{t("google.trendsKeywords")}</span>
+                  <textarea
+                    className="w-full rounded-md border border-[var(--border)] bg-transparent p-2 text-sm"
+                    rows={3}
+                    value={trendsKeywords}
+                    onChange={(e) => setTrendsKeywords(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">{t("google.trendsCountry")}</span>
+                  <select
+                    className="w-full rounded-md border border-[var(--border)] bg-transparent p-2 text-sm"
+                    value={trendsCountry}
+                    onChange={(e) => setTrendsCountry(e.target.value as "IL" | "US" | "BOTH")}
+                  >
+                    <option value="IL">{t("google.trendsCountries.IL")}</option>
+                    <option value="US">{t("google.trendsCountries.US")}</option>
+                    <option value="BOTH">{t("google.trendsCountries.BOTH")}</option>
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium">{t("google.trendsLanguage")}</span>
+                  <select
+                    className="w-full rounded-md border border-[var(--border)] bg-transparent p-2 text-sm"
+                    value={trendsLanguage}
+                    onChange={(e) => setTrendsLanguage(e.target.value as "he" | "en" | "auto")}
+                  >
+                    <option value="auto">{t("google.trendsLanguages.auto")}</option>
+                    <option value="he">{t("google.trendsLanguages.he")}</option>
+                    <option value="en">{t("google.trendsLanguages.en")}</option>
+                  </select>
+                </label>
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium">{t("google.trendsDateRange")}</span>
+                  <select
+                    className="w-full rounded-md border border-[var(--border)] bg-transparent p-2 text-sm"
+                    value={trendsDateRange}
+                    onChange={(e) => setTrendsDateRange(e.target.value as "24h" | "7d" | "30d")}
+                  >
+                    <option value="24h">{t("google.trendsRanges.24h")}</option>
+                    <option value="7d">{t("google.trendsRanges.7d")}</option>
+                    <option value="30d">{t("google.trendsRanges.30d")}</option>
+                  </select>
+                </label>
+                <p className="text-xs text-[var(--muted-fg)] sm:col-span-2">{t("google.trendsHint")}</p>
+              </div>
             )}
 
             {props.length > 0 && (

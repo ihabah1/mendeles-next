@@ -692,6 +692,25 @@
       "nextSync": "Next sync",
       "error": "Last error",
       "trendsKeywords": "Keywords (one per line or comma-separated)",
+      "trendsCountry": "Country / market",
+      "trendsLanguage": "Language",
+      "trendsDateRange": "Date range",
+      "trendsHint": "Powered by pytrends — Trending Searches, Related Queries, Related Topics, Interest Over Time. No OAuth required.",
+      "trendsCountries": {
+        "IL": "🇮🇱 Israel",
+        "US": "🇺🇸 United States",
+        "BOTH": "Israel + United States"
+      },
+      "trendsLanguages": {
+        "auto": "Auto (he for IL, en for US)",
+        "he": "Hebrew",
+        "en": "English"
+      },
+      "trendsRanges": {
+        "24h": "Last 24 hours",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
       "selectProperty": "Select property",
       "chooseProperty": "Choose a property…",
       "recentSyncs": "Recent syncs",

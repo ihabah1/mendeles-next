@@ -55,8 +55,9 @@ class IntegrationSyncService:
             return TrendsService.sync(
                 tenant_id,
                 keywords=cfg.get("keywords") or ["mendeles"],
-                language=cfg.get("language", "he"),
+                language=cfg.get("language"),
                 country=cfg.get("country", "IL"),
+                countries=cfg.get("countries"),
                 date_range=cfg.get("date_range", "7d"),
                 job=job,
             )

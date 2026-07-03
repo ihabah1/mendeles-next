@@ -28,6 +28,26 @@ class TrendsDateRange(models.TextChoices):
     DAYS_30 = "30d", "Last 30 Days"
 
 
+class TrendsCountry(models.TextChoices):
+    ISRAEL = "IL", "Israel"
+    UNITED_STATES = "US", "United States"
+
+
+# pytrends: geo uses ISO codes; trending_searches(pn=) uses country slug
+TRENDS_MARKET_CONFIG: dict[str, dict[str, str]] = {
+    TrendsCountry.ISRAEL: {
+        "geo": "IL",
+        "pn": "israel",
+        "default_language": "he",
+    },
+    TrendsCountry.UNITED_STATES: {
+        "geo": "US",
+        "pn": "united_states",
+        "default_language": "en",
+    },
+}
+
+
 # OAuth scopes per service
 GOOGLE_OAUTH_SCOPES: dict[str, list[str]] = {
     GoogleServiceType.SEARCH_CONSOLE: [
