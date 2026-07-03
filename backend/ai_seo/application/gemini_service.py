@@ -69,7 +69,8 @@ class GeminiService:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
+        timeout = int(getattr(settings, "GEMINI_TIMEOUT_SECONDS", 25))
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             body = json.loads(response.read().decode("utf-8"))
         try:
             text = body["candidates"][0]["content"]["parts"][0]["text"]

@@ -371,11 +371,11 @@ export default function WorkspacePage() {
                 {(selectedJob.steps.length
                   ? selectedJob.steps
                   : [
-                      { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null },
-                      { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null },
-                      { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null },
-                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null },
-                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null },
+                      { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null, started_at: null, is_stale: false },
+                      { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null, started_at: null, is_stale: false },
+                      { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null, started_at: null, is_stale: false },
+                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null, started_at: null, is_stale: false },
+                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null, started_at: null, is_stale: false },
                     ]
                 ).map((step) => (
                   <li
@@ -393,7 +393,8 @@ export default function WorkspacePage() {
                     <p className="font-medium">{step.name}</p>
                     <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
                     {step.error_message && <p className="mt-1 text-red-500">{step.error_message}</p>}
-                    {step.status === "failed" && canManage && (
+                    {step.is_stale && <p className="mt-1 text-amber-500">תקוע מעל זמן ההמתנה</p>}
+                    {(step.status === "failed" || step.is_stale) && canManage && (
                       <Button
                         type="button"
                         variant="outline"
@@ -402,7 +403,7 @@ export default function WorkspacePage() {
                         disabled={retryStep.isPending}
                         onClick={() => retryStep.mutate({ jobId: selectedJob.id, stepId: step.id })}
                       >
-                        Retry
+                        Retry שלב
                       </Button>
                     )}
                   </li>

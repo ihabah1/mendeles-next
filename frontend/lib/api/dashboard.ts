@@ -694,6 +694,8 @@ export type AiSeoWorkspaceJob = {
     step_type: string;
     status: string;
     error_message: string | null;
+    started_at: string | null;
+    is_stale: boolean;
   }>;
   logs: Array<{
     id: string;

@@ -1,4 +1,9 @@
 import pytest
+from datetime import timedelta
+from django.utils import timezone
+
+from automation.domain.enums import JobStatus, StepStatus
+from automation.infrastructure.models import AutomationJobStep
 
 
 @pytest.mark.django_db
@@ -135,6 +140,34 @@ def test_ai_seo_workspace_retry_failed_step(owner_client, settings, monkeypatch)
     retried_step = next(step for step in body["steps"] if step["id"] == failed_step["id"])
     assert retried_step["status"] == "pending"
     assert body["status"] == "running"
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_marks_stale_running_step_failed(owner_client, settings):
+    settings.GEMINI_API_KEY = "test-key"
+    settings.AI_SEO_STEP_TIMEOUT_SECONDS = 1
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {"domains": ["law"], "output_types": ["landing_page"], "keywords": ["עורך דין"]},
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+    job_step = AutomationJobStep.objects.filter(job_id=job_id, step_type="ai_seo.ai").first()
+    job_step.status = StepStatus.RUNNING
+    job_step.started_at = timezone.now() - timedelta(seconds=5)
+    job_step.save(update_fields=["status", "started_at", "updated_at"])
+    job_step.job.status = JobStatus.RUNNING
+    job_step.job.progress_percent = 20
+    job_step.job.save(update_fields=["status", "progress_percent", "updated_at"])
+
+    response = owner_client.get("/api/v1/ai-seo/workspace/")
+
+    assert response.status_code == 200
+    job = next(item for item in response.json()["jobs"] if item["id"] == job_id)
+    ai_step = next(step for step in job["steps"] if step["step_type"] == "ai_seo.ai")
+    assert job["status"] == "failed"
+    assert ai_step["status"] == "failed"
+    assert "timed out" in ai_step["error_message"]
 
 
 @pytest.mark.django_db

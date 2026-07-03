@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -51,6 +54,7 @@ def _parse_scheduled_at(value):
 class AiSeoGenerationService:
     @staticmethod
     def workspace_state(tenant_id) -> dict:
+        AiSeoGenerationService.recover_stale_jobs(tenant_id)
         jobs = AutomationJob.objects.filter(
             tenant_id=tenant_id,
             job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
@@ -70,6 +74,8 @@ class AiSeoGenerationService:
 
     @staticmethod
     def serialize_job(job: AutomationJob) -> dict:
+        timeout_seconds = int(getattr(settings, "AI_SEO_STEP_TIMEOUT_SECONDS", 90))
+        stale_before = timezone.now() - timedelta(seconds=timeout_seconds)
         active_step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).order_by("step_order").first()
         current_step = active_step or job.steps.filter(deleted_at__isnull=True).order_by("step_order")[job.current_step_index:job.current_step_index + 1].first()
         return {
@@ -94,6 +100,8 @@ class AiSeoGenerationService:
                     "step_type": step.step_type,
                     "status": step.status,
                     "error_message": step.error_message or None,
+                    "started_at": step.started_at.isoformat() if step.started_at else None,
+                    "is_stale": bool(step.status == StepStatus.RUNNING and step.started_at and step.started_at < stale_before),
                 }
                 for step in job.steps.filter(deleted_at__isnull=True).order_by("step_order")
             ],
@@ -107,6 +115,35 @@ class AiSeoGenerationService:
                 for log in job.logs.order_by("-created_at")[:12]
             ],
         }
+
+    @staticmethod
+    def recover_stale_jobs(tenant_id) -> None:
+        timeout_seconds = int(getattr(settings, "AI_SEO_STEP_TIMEOUT_SECONDS", 90))
+        stale_before = timezone.now() - timedelta(seconds=timeout_seconds)
+        stale_steps = AutomationJobStep.objects.select_related("job").filter(
+            job__tenant_id=tenant_id,
+            job__status=JobStatus.RUNNING,
+            status=StepStatus.RUNNING,
+            started_at__lt=stale_before,
+            deleted_at__isnull=True,
+            job__deleted_at__isnull=True,
+        )
+        for step in stale_steps:
+            message = (
+                f"Step timed out after {timeout_seconds}s. "
+                "The external provider did not respond in time; retry the step."
+            )
+            step.status = StepStatus.FAILED
+            step.error_message = message
+            step.finished_at = timezone.now()
+            step.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+
+            job = step.job
+            job.status = JobStatus.FAILED
+            job.error_message = message
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+            AutomationLogService.log(job, message, level="error")
 
     @staticmethod
     def serialize_page(page: Page) -> dict:
