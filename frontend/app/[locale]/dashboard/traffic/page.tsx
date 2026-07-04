@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
 import { aiSeoApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 export default function TrafficTrackingPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("ai_seo.view");
+  const canManage = hasPermission("ai_seo.manage");
+  const qc = useQueryClient();
 
   const workspace = useQuery({
     queryKey: ["ai-seo-workspace"],
@@ -17,6 +19,17 @@ export default function TrafficTrackingPage() {
     enabled: canView,
     refetchInterval: 30000,
   });
+
+  const deletePage = useMutation({
+    mutationFn: (pageId: string) => aiSeoApi.deleteWorkspacePage(pageId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
+  function confirmDeletePage(pageId: string, title: string) {
+    if (window.confirm(`למחוק את הדף "${title}"? הפעולה תסיר אותו מרשימת הדפים והתוצרים.`)) {
+      deletePage.mutate(pageId);
+    }
+  }
 
   if (!canView) {
     return (
@@ -82,6 +95,17 @@ export default function TrafficTrackingPage() {
                   <Link href={page.test_url}>
                     <Button type="button" variant="outline" size="sm">פתח בניהול תוכן</Button>
                   </Link>
+                  {canManage && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={deletePage.isPending}
+                      onClick={() => confirmDeletePage(page.id, page.title)}
+                    >
+                      מחק דף
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
