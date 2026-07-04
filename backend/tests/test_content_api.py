@@ -1,5 +1,8 @@
 import pytest
 
+from content.application.block_service import BlockService
+from content.application.page_service import PageService
+from content.application.publish_service import PublishService
 from content.domain.status import PageStatus
 
 
@@ -139,3 +142,22 @@ def test_media_api(owner_client):
     )
     assert response.status_code == 201
     assert response.json()["media_type"] == "document"
+
+
+@pytest.mark.django_db
+def test_public_page_resolve_serves_only_published_pages(api_client, tenant, owner_user):
+    page = PageService.create_page(
+        tenant.id,
+        owner_user,
+        {"title": "Live Promo", "slug": "live-promo", "page_type": "landing_page"},
+    )
+    BlockService.create_block(page, {"block_type": "hero", "config": {"headline": "Live headline"}})
+
+    draft = api_client.get("/api/v1/content/public/pages/resolve/?path=/pages/live-promo&locale=he")
+    assert draft.status_code == 404
+
+    PublishService.publish(tenant.id, page.id, owner_user)
+    live = api_client.get("/api/v1/content/public/pages/resolve/?path=/pages/live-promo&locale=he")
+    assert live.status_code == 200
+    assert live.json()["title"] == "Live Promo"
+    assert live.json()["blocks"][0]["config"]["headline"] == "Live headline"

@@ -1,3 +1,6 @@
+import os
+
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,7 +15,8 @@ from content.application.taxonomy_service import TaxonomyService
 from content.application.template_service import TemplateService
 from content.application.version_service import VersionService
 from content.domain.status import PageStatus
-from content.infrastructure.models import ContentBlock, InternalLink
+from content.infrastructure.models import ContentBlock, InternalLink, Page
+from tenancy.infrastructure.models import Tenant
 
 
 def _check(request, view, permission: str):
@@ -21,6 +25,44 @@ def _check(request, view, permission: str):
         from core.exceptions.base import ForbiddenError
 
         raise ForbiddenError()
+
+
+def _resolve_public_tenant_id() -> str | None:
+    slug = os.environ.get("SEO_PUBLIC_TENANT_SLUG", "")
+    if slug:
+        tenant = Tenant.objects.filter(slug=slug, deleted_at__isnull=True).first()
+        return str(tenant.id) if tenant else None
+    tenant = Tenant.objects.filter(deleted_at__isnull=True, status="active").order_by("created_at").first()
+    return str(tenant.id) if tenant else None
+
+
+class PublicPageResolveView(APIView):
+    """Resolve a published content page by public path without requiring admin auth."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tenant_id = _resolve_public_tenant_id()
+        if not tenant_id:
+            return Response({"error": {"code": "not_found", "message": "Page not found"}}, status=404)
+
+        raw_path = request.query_params.get("path", "")
+        path = "/" + raw_path.strip().strip("/")
+        locale = request.query_params.get("locale") or "he"
+        page = (
+            Page.objects.select_related("parent", "template", "author")
+            .filter(
+                tenant_id=tenant_id,
+                full_path=path,
+                locale=locale,
+                status=PageStatus.PUBLISHED,
+                deleted_at__isnull=True,
+            )
+            .first()
+        )
+        if not page:
+            return Response({"error": {"code": "not_found", "message": "Page not found"}}, status=404)
+        return Response(PageService.serialize_page_detail(page))
 
 
 class PageListView(APIView):

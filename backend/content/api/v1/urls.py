@@ -13,12 +13,14 @@ from content.api.v1.views import (
     PageTermView,
     PageVersionDetailView,
     PageVersionListView,
+    PublicPageResolveView,
     TaxonomyListView,
     TaxonomyTermListView,
     TemplateListView,
 )
 
 urlpatterns = [
+    path("public/pages/resolve/", PublicPageResolveView.as_view(), name="content-public-page-resolve"),
     path("pages/", PageListView.as_view(), name="content-pages"),
     path("pages/<uuid:page_id>/", PageDetailView.as_view(), name="content-page-detail"),
     path("pages/<uuid:page_id>/duplicate/", PageDuplicateView.as_view(), name="content-page-duplicate"),
