@@ -34,8 +34,10 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <body>
+      <head>
         <GoogleAnalytics />
+      </head>
+      <body>
         <Suspense fallback={null}>
           <AnalyticsRouteTracker />
         </Suspense>
