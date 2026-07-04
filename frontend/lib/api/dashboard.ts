@@ -620,6 +620,14 @@ export const aiSeoApi = {
     apiFetch<AiSeoDashboard["content_review"]>("/api/v1/ai-seo/studio/review/", { headers: authHeaders() }),
   workspace: () =>
     apiFetch<AiSeoWorkspace>("/api/v1/ai-seo/workspace/", { headers: authHeaders() }),
+  workspaceResearch: () =>
+    apiFetch<AiSeoResearch>("/api/v1/ai-seo/workspace/research/", { headers: authHeaders() }),
+  refreshWorkspaceResearch: (body: { domains?: string[]; keywords?: string[]; refresh?: boolean }) =>
+    apiFetch<AiSeoResearch>("/api/v1/ai-seo/workspace/research/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
   generateWorkspaceBatch: (body: {
     domains: string[];
     keywords?: string[];
@@ -690,6 +698,22 @@ export const aiSeoApi = {
 };
 
 export type AiSeoWorkspaceDomain = { value: string; label: string; keywords: string[] };
+export type AiSeoResearchRow = {
+  id: string;
+  keyword: string;
+  volume: number | null;
+  volume_metric: string;
+  category: string;
+  category_value: string;
+  source: string;
+};
+export type AiSeoResearch = {
+  available: boolean;
+  last_sync_at: string | null;
+  refresh_error: string;
+  note: string;
+  items: AiSeoResearchRow[];
+};
 export type AiSeoWorkspaceHistory = {
   id: string;
   label: string;

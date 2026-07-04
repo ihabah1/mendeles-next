@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
-import { aiSeoApi, type AiSeoWorkspaceDraft, type AiSeoWorkspaceHistory } from "@/lib/api/dashboard";
+import { aiSeoApi, type AiSeoResearchRow, type AiSeoWorkspaceDraft, type AiSeoWorkspaceHistory } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,6 +30,57 @@ function toLocalInputValue(value: string): string {
   if (Number.isNaN(date.getTime())) return "";
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+const TABLE_PAGE_SIZE = 4;
+
+function pageCount(total: number): number {
+  return Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
+}
+
+function pageSlice<T>(items: T[], page: number): T[] {
+  return items.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+}
+
+function PaginationControls({
+  page,
+  total,
+  onPageChange,
+}: {
+  page: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = pageCount(total);
+  if (total <= TABLE_PAGE_SIZE) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-fg)]">
+      <span>
+        עמוד {page} מתוך {totalPages} · מוצגות עד {TABLE_PAGE_SIZE} רשומות
+      </span>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+        >
+          הקודם
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        >
+          הבא
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
@@ -133,6 +184,11 @@ export default function WorkspacePage() {
   const [landingDesignEnabled, setLandingDesignEnabled] = useState(true);
   const [freeImageEnabled, setFreeImageEnabled] = useState(true);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
+  const [selectedResearchIds, setSelectedResearchIds] = useState<string[]>([]);
+  const [researchScheduleHours, setResearchScheduleHours] = useState(1);
+  const [researchPage, setResearchPage] = useState(1);
+  const [jobsPage, setJobsPage] = useState(1);
+  const [draftsPage, setDraftsPage] = useState(1);
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
@@ -145,6 +201,13 @@ export default function WorkspacePage() {
     queryFn: aiSeoApi.workspace,
     enabled: canView,
     refetchInterval: 10000,
+  });
+
+  const research = useQuery({
+    queryKey: ["ai-seo-workspace-research"],
+    queryFn: aiSeoApi.workspaceResearch,
+    enabled: canView,
+    refetchInterval: 60000,
   });
 
   const domains = workspace.data?.domains ?? [];
@@ -171,6 +234,39 @@ export default function WorkspacePage() {
         locale: "he",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
+  const refreshResearch = useMutation({
+    mutationFn: () =>
+      aiSeoApi.refreshWorkspaceResearch({
+        domains: selectedDomains,
+        keywords: splitLines(keywordsText),
+        refresh: true,
+      }),
+    onSuccess: (data) => {
+      qc.setQueryData(["ai-seo-workspace-research"], data);
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace-research"] });
+    },
+  });
+
+  const scheduleResearchJobs = useMutation({
+    mutationFn: (rows: AiSeoResearchRow[]) => {
+      const scheduleDate = new Date(Date.now() + Math.max(0, researchScheduleHours) * 60 * 60 * 1000);
+      const domainsFromRows = Array.from(new Set(rows.map((row) => row.category_value).filter(Boolean)));
+      return aiSeoApi.generateWorkspaceBatch({
+        domains: selectedDomains.length ? selectedDomains : domainsFromRows,
+        keywords: rows.map((row) => row.keyword),
+        output_types: ["blog", "landing_page"],
+        prompt: prompt || "Generate from SEO research selected phrases.",
+        scheduled_at: scheduleDate.toISOString(),
+        auto_publish_enabled: autoPublishEnabled,
+        locale: "he",
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      setSelectedResearchIds([]);
+    },
   });
 
   const publish = useMutation<unknown, Error, AiSeoWorkspaceDraft>({
@@ -292,6 +388,16 @@ export default function WorkspacePage() {
     setSelectedPageIds((prev) => (prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId]));
   }
 
+  function toggleResearchSelection(rowId: string) {
+    setSelectedResearchIds((prev) => (prev.includes(rowId) ? prev.filter((id) => id !== rowId) : [...prev, rowId]));
+  }
+
+  function addResearchToKeywords(rows: AiSeoResearchRow[]) {
+    const existing = splitLines(keywordsText);
+    const next = Array.from(new Set([...existing, ...rows.map((row) => row.keyword)]));
+    setKeywordsText(next.join("\n"));
+  }
+
   function confirmDeleteSelectedPages() {
     if (!selectedPageIds.length) return;
     if (window.confirm(`למחוק ${selectedPageIds.length} פאנלים/תוצרים מסומנים?`)) {
@@ -326,6 +432,16 @@ export default function WorkspacePage() {
   const jobs = workspace.data?.jobs ?? [];
   const drafts = workspace.data?.drafts ?? [];
   const history = workspace.data?.history ?? [];
+  const researchRows = research.data?.items ?? [];
+  const researchCurrentPage = Math.min(researchPage, pageCount(researchRows.length));
+  const jobsCurrentPage = Math.min(jobsPage, pageCount(jobs.length));
+  const draftsCurrentPage = Math.min(draftsPage, pageCount(drafts.length));
+  const pagedResearchRows = pageSlice(researchRows, researchCurrentPage);
+  const pagedJobs = pageSlice(jobs, jobsCurrentPage);
+  const pagedDrafts = pageSlice(drafts, draftsCurrentPage);
+  const selectedResearchRows = researchRows.filter((row) => selectedResearchIds.includes(row.id));
+  const selectedResearchDomainValues = Array.from(new Set(selectedResearchRows.map((row) => row.category_value).filter(Boolean)));
+  const canScheduleResearchJobs = selectedResearchRows.length > 0 && (selectedDomains.length > 0 || selectedResearchDomainValues.length > 0);
   const geminiReady = workspace.data?.gemini_configured;
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
 
@@ -349,6 +465,116 @@ export default function WorkspacePage() {
           <p className="mt-1 text-sm text-[var(--muted-fg)]">הוסף `GEMINI_API_KEY` ב-Railway ובצע Redeploy.</p>
         </Card>
       )}
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">מחקר SEO</h2>
+            <p className="mt-1 text-sm text-[var(--muted-fg)]">
+              אסוף צירופי חיפוש פופולריים כרגע מתוך Google Trends/Search Console. מוצגים עד 20 צירופים עם volume אמיתי או ציון Trends יחסי.
+            </p>
+            {research.data?.last_sync_at && (
+              <p className="mt-1 text-xs text-[var(--muted-fg)]">
+                סנכרון אחרון: {new Date(research.data.last_sync_at).toLocaleString("he-IL")}
+              </p>
+            )}
+          </div>
+          {canManage && (
+            <Button type="button" variant="outline" size="sm" disabled={refreshResearch.isPending} onClick={() => refreshResearch.mutate()}>
+              {refreshResearch.isPending ? "אוסף מחקר..." : "אסוף מילים פופולריות כרגע"}
+            </Button>
+          )}
+        </div>
+
+        {research.data?.refresh_error && (
+          <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-600">
+            Google Trends לא החזיר רענון חדש: {research.data.refresh_error}
+          </p>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selectedResearchRows.length === 0}
+              onClick={() => addResearchToKeywords(selectedResearchRows)}
+            >
+              הוסף לרשימת הקטגוריות והצירופים ({selectedResearchRows.length})
+            </Button>
+            {canManage && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={!geminiReady || !canScheduleResearchJobs || scheduleResearchJobs.isPending}
+                onClick={() => scheduleResearchJobs.mutate(selectedResearchRows)}
+              >
+                תזמן ג׳ובים ליצירת עמודי נחיתה ומאמרים
+              </Button>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <span>תזמון בעוד</span>
+            <select
+              className="rounded-md border border-[var(--border)] bg-transparent p-2"
+              value={researchScheduleHours}
+              onChange={(e) => setResearchScheduleHours(Number(e.target.value))}
+            >
+              <option value={0}>עכשיו</option>
+              <option value={1}>שעה</option>
+              <option value={3}>3 שעות</option>
+              <option value={6}>6 שעות</option>
+              <option value={12}>12 שעות</option>
+              <option value={24}>24 שעות</option>
+            </select>
+          </label>
+        </div>
+        {!canScheduleResearchJobs && selectedResearchRows.length > 0 && (
+          <p className="mt-2 text-xs text-amber-600">
+            כדי לתזמן מהמחקר, בחר תחום במסך או בחר צירופים שיש להם category ממופה.
+          </p>
+        )}
+
+        {research.isLoading ? (
+          <p className="mt-4 text-sm text-[var(--muted-fg)]">טוען מחקר SEO...</p>
+        ) : researchRows.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--muted-fg)]">
+            אין עדיין נתוני מחקר. לחץ “אסוף מילים פופולריות כרגע” כדי למשוך נתונים אמיתיים מ-Google Trends.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)]">
+            <div className="grid grid-cols-[44px_1.4fr_120px_1fr_120px] bg-[var(--muted)] px-3 py-2 text-xs font-medium text-[var(--muted-fg)]">
+              <span></span>
+              <span>צירוף פופולרי</span>
+              <span>Volume</span>
+              <span>קטגוריה</span>
+              <span>מקור</span>
+            </div>
+            {pagedResearchRows.map((row) => (
+              <label
+                key={row.id}
+                className="grid cursor-pointer grid-cols-[44px_1.4fr_120px_1fr_120px] items-center border-t border-[var(--border)] px-3 py-3 text-sm hover:bg-[var(--muted)]/50"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedResearchIds.includes(row.id)}
+                  onChange={() => toggleResearchSelection(row.id)}
+                />
+                <span className="font-medium">{row.keyword}</span>
+                <span>
+                  {row.volume === null ? "אין נתון" : row.volume.toLocaleString("he-IL")}
+                  <span className="mt-0.5 block text-[10px] text-[var(--muted-fg)]">{row.volume_metric}</span>
+                </span>
+                <span>{row.category}</span>
+                <span className="text-xs text-[var(--muted-fg)]">{row.source}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <PaginationControls page={researchCurrentPage} total={researchRows.length} onPageChange={setResearchPage} />
+        {research.data?.note && <p className="mt-3 text-xs text-[var(--muted-fg)]">{research.data.note}</p>}
+      </Card>
 
       <Card>
         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -594,7 +820,7 @@ export default function WorkspacePage() {
               <span>התקדמות</span>
               <span>סטטוס</span>
             </div>
-            {jobs.map((job) => {
+            {pagedJobs.map((job) => {
               const isSelected = selectedJobId === job.id;
               const statusTone =
                 job.status === "completed"
@@ -633,6 +859,7 @@ export default function WorkspacePage() {
             })}
           </div>
         )}
+        <PaginationControls page={jobsCurrentPage} total={jobs.length} onPageChange={setJobsPage} />
 
         {selectedJob && (
           <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_0.9fr]">
@@ -762,7 +989,7 @@ export default function WorkspacePage() {
           <p className="mt-4 text-sm text-[var(--muted-fg)]">בסיום generation יופיעו כאן לינקים לטיוטות.</p>
         ) : (
           <ul className="mt-4 space-y-4">
-            {drafts.map((page) => {
+            {pagedDrafts.map((page) => {
               const previewExpanded = expandedPreviewIds.includes(page.id);
               return (
               <li key={page.id} className="rounded-lg border border-[var(--border)] p-4">
@@ -830,6 +1057,7 @@ export default function WorkspacePage() {
             })}
           </ul>
         )}
+        <PaginationControls page={draftsCurrentPage} total={drafts.length} onPageChange={setDraftsPage} />
       </Card>
     </div>
   );

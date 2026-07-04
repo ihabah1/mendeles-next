@@ -110,6 +110,23 @@ class AiSeoWorkspaceView(APIView):
         return Response(AiSeoGenerationService.workspace_state(request.user.default_tenant_id))
 
 
+class AiSeoWorkspaceResearchView(APIView):
+    def get(self, request):
+        _check(request, self, "ai_seo.view")
+        return Response(AiSeoGenerationService.seo_research(request.user.default_tenant_id))
+
+    def post(self, request):
+        _check(request, self, "ai_seo.manage")
+        return Response(
+            AiSeoGenerationService.seo_research(
+                request.user.default_tenant_id,
+                refresh=bool(request.data.get("refresh", True)),
+                domains=request.data.get("domains") or [],
+                keywords=request.data.get("keywords") or [],
+            )
+        )
+
+
 class AiSeoWorkspaceGenerateView(APIView):
     def post(self, request):
         _check(request, self, "ai_seo.manage")

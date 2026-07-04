@@ -21,6 +21,9 @@ from content.domain.status import PageStatus, PageType
 from content.infrastructure.models import Page, Taxonomy, TaxonomyTerm
 from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, selected_domain_rows
 from ai_seo.application.gemini_service import GeminiService
+from integrations.application.trends_service import TrendsService
+from integrations.domain.enums import GoogleServiceType, TrendsCountry, TrendsDateRange
+from integrations.infrastructure.models import IntegrationSyncRecord
 
 
 OUTPUT_TO_JOB = {
@@ -78,6 +81,79 @@ FREE_STOCK_IMAGES = [
     },
 ]
 
+DOMAIN_STOCK_IMAGES = {
+    "insurance": [
+        {
+            "url": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Car on an open road for auto insurance content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        },
+        {
+            "url": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Driver holding steering wheel for vehicle insurance content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        },
+    ],
+    "automotive": [
+        {
+            "url": "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Modern car for automotive services content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "real_estate": [
+        {
+            "url": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Modern home exterior for real estate content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "medical": [
+        {
+            "url": "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Medical clinic equipment for healthcare content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "dentistry": [
+        {
+            "url": "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Dental clinic for dentistry content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "law": [
+        {
+            "url": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Legal books and gavel for law content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "finance": [
+        {
+            "url": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Financial planning paperwork for finance content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "home_services": [
+        {
+            "url": "https://images.unsplash.com/photo-1581091215367-59ab6b4a9f5c?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Home repair tools for home services content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+}
+
 LANDING_THEMES = [
     {"slug": "cyan-growth", "label": "Growth Cyan", "accent": "cyan"},
     {"slug": "emerald-trust", "label": "Trust Emerald", "accent": "emerald"},
@@ -114,8 +190,12 @@ class AiSeoGenerationService:
         return keywords
 
     @staticmethod
-    def _random_visual_asset() -> dict:
-        return random.choice(FREE_STOCK_IMAGES)
+    def _random_visual_asset(domain: dict | None = None) -> dict:
+        domain_value = (domain or {}).get("value", "")
+        pool = DOMAIN_STOCK_IMAGES.get(domain_value) or FREE_STOCK_IMAGES
+        asset = dict(random.choice(pool))
+        asset["matched_domain"] = domain_value or "general"
+        return asset
 
     @staticmethod
     def workspace_state(tenant_id) -> dict:
@@ -137,6 +217,119 @@ class AiSeoGenerationService:
             "drafts": [AiSeoGenerationService.serialize_page(page) for page in pages],
             "history": AiSeoGenerationService.run_history(tenant_id),
         }
+
+    @classmethod
+    def seo_research(cls, tenant_id, *, refresh=False, domains: list[str] | None = None, keywords: list[str] | None = None) -> dict:
+        seed_domains = selected_domain_rows(domains or [])
+        seed_keywords = keywords or []
+        if not seed_keywords:
+            seed_keywords = list(dict.fromkeys([kw for domain in (seed_domains or DOMAIN_OPTIONS[:5]) for kw in domain["keywords"]]))[:5]
+
+        refresh_error = ""
+        if refresh and seed_keywords:
+            try:
+                TrendsService.sync(
+                    tenant_id,
+                    keywords=seed_keywords[:5],
+                    country=TrendsCountry.ISRAEL,
+                    date_range=TrendsDateRange.HOURS_24,
+                    language="he",
+                )
+            except Exception as exc:
+                refresh_error = str(exc)
+
+        trends = cls._latest_integration_sync(tenant_id, GoogleServiceType.TRENDS)
+        gsc = cls._latest_integration_sync(tenant_id, GoogleServiceType.SEARCH_CONSOLE)
+        rows: list[dict] = []
+        seen = set()
+
+        def add_row(keyword: str, *, category: dict | None, volume, source: str, metric: str):
+            normalized = (keyword or "").strip()
+            if not normalized or normalized in seen:
+                return
+            seen.add(normalized)
+            rows.append(
+                {
+                    "id": f"{source}:{len(rows)}:{normalized}",
+                    "keyword": normalized,
+                    "volume": volume,
+                    "volume_metric": metric,
+                    "category": (category or {}).get("label") or "כללי",
+                    "category_value": (category or {}).get("value") or "",
+                    "source": source,
+                }
+            )
+
+        if trends:
+            processed = trends.processed_data or {}
+            related_queries = processed.get("related_queries") or {}
+            for seed, query_groups in related_queries.items():
+                category = cls._category_for_keyword(seed)
+                groups = query_groups if isinstance(query_groups, dict) else {"top": query_groups}
+                for group_rows in groups.values():
+                    for row in group_rows or []:
+                        if isinstance(row, dict):
+                            add_row(
+                                row.get("query", ""),
+                                category=category,
+                                volume=row.get("value"),
+                                source="google_trends",
+                                metric="trends_score_0_100",
+                            )
+            for row in (processed.get("trending_searches") or []):
+                term = row[0] if isinstance(row, (list, tuple)) and row else str(row)
+                add_row(
+                    term,
+                    category=cls._category_for_keyword(term),
+                    volume=None,
+                    source="google_trends",
+                    metric="trending_now_no_absolute_volume",
+                )
+
+        if gsc:
+            for query in (gsc.processed_data or {}).get("queries") or []:
+                add_row(
+                    query.get("query", ""),
+                    category=cls._category_for_keyword(query.get("query", "")),
+                    volume=query.get("impressions"),
+                    source="search_console",
+                    metric="impressions",
+                )
+
+        rows.sort(key=lambda item: (item["volume"] is not None, item["volume"] or 0), reverse=True)
+        last_sync_at = None
+        for record in (trends, gsc):
+            if record and (not last_sync_at or record.retrieved_at > last_sync_at):
+                last_sync_at = record.retrieved_at
+
+        return {
+            "available": bool(rows),
+            "last_sync_at": last_sync_at.isoformat() if last_sync_at else None,
+            "refresh_error": refresh_error,
+            "items": rows[:20],
+            "note": "Google Trends returns relative scores, not absolute monthly search volume. Search Console rows use real impressions.",
+        }
+
+    @staticmethod
+    def _latest_integration_sync(tenant_id, service_type: str):
+        return (
+            IntegrationSyncRecord.objects.filter(
+                tenant_id=tenant_id,
+                service_type=service_type,
+                deleted_at__isnull=True,
+            )
+            .order_by("-retrieved_at")
+            .first()
+        )
+
+    @staticmethod
+    def _category_for_keyword(keyword: str) -> dict | None:
+        value = (keyword or "").lower()
+        for domain in DOMAIN_OPTIONS:
+            domain_terms = [domain["label"], domain["value"], *(domain.get("keywords") or [])]
+            if any((term or "").lower() in value or value in (term or "").lower() for term in domain_terms):
+                return domain
+        return None
 
     @staticmethod
     def run_history(tenant_id, *, limit=12) -> list[dict]:
@@ -350,7 +543,7 @@ class AiSeoGenerationService:
             keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
             for output_type in output_types:
                 job_type = OUTPUT_TO_JOB[output_type]
-                visual_asset = cls._random_visual_asset() if free_image_enabled else None
+                visual_asset = cls._random_visual_asset(domain) if free_image_enabled else None
                 landing_theme = random.choice(LANDING_THEMES) if landing_design_enabled else None
                 job = JobService.create_job(
                     tenant_id,
@@ -585,7 +778,7 @@ class AiSeoGenerationService:
                     random_topics_enabled=True,
                 )
                 if next_config.get("free_image_enabled", True):
-                    next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset()
+                    next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset(domain)
                 if next_config.get("landing_design_enabled", True):
                     next_config["landing_theme"] = random.choice(LANDING_THEMES)
         next_run_at = timezone.now() + interval

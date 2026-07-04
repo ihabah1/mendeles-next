@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { GA_MEASUREMENT_ID, isGaEnabled } from "@/lib/analytics/gtag";
 
 export function GoogleAnalytics() {
@@ -6,19 +5,22 @@ export function GoogleAnalytics() {
 
   return (
     <>
-      <Script
+      <script
+        async
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
       />
-      <Script id="google-analytics-init" strategy="afterInteractive">
-        {`
+      <script
+        id="google-analytics-init"
+        dangerouslySetInnerHTML={{
+          __html: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           window.gtag = gtag;
           gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
-        `}
-      </Script>
+          gtag('config', '${GA_MEASUREMENT_ID}');
+        `,
+        }}
+      />
     </>
   );
 }

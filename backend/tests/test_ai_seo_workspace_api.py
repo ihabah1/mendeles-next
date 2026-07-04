@@ -6,6 +6,9 @@ from automation.domain.enums import JobStatus, StepStatus
 from automation.infrastructure.models import AutomationJob, AutomationJobStep
 from content.domain.status import PageStatus
 from content.infrastructure.models import Page
+from integrations.domain.enums import GoogleServiceType, SyncStatus
+from integrations.infrastructure.models import IntegrationSyncRecord
+from ai_seo.application.generation_service import AiSeoGenerationService
 
 
 @pytest.mark.django_db
@@ -29,6 +32,45 @@ def test_ai_seo_workspace_generate_requires_gemini(owner_client, settings):
     )
     assert response.status_code == 400
     assert "GEMINI_API_KEY" in response.json()["error"]
+
+
+def test_ai_seo_visual_asset_matches_domain():
+    asset = AiSeoGenerationService._random_visual_asset({"value": "insurance"})
+    assert asset["matched_domain"] == "insurance"
+    assert "car" in asset["alt"].lower() or "driver" in asset["alt"].lower() or "vehicle" in asset["alt"].lower()
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_research_lists_trends_phrases(owner_client, tenant):
+    IntegrationSyncRecord.objects.create(
+        tenant=tenant,
+        service_type=GoogleServiceType.TRENDS,
+        source="pytrends",
+        language="he",
+        country="IL",
+        retrieved_at=timezone.now(),
+        sync_status=SyncStatus.SUCCESS,
+        processed_data={
+            "keywords": ["עורך דין"],
+            "related_queries": {
+                "עורך דין": {
+                    "top": [
+                        {"query": "עורך דין תעבורה", "value": 100},
+                        {"query": "עורך דין פלילי", "value": 85},
+                    ]
+                }
+            },
+        },
+    )
+
+    response = owner_client.get("/api/v1/ai-seo/workspace/research/")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["available"] is True
+    assert body["items"][0]["keyword"] == "עורך דין תעבורה"
+    assert body["items"][0]["volume"] == 100
+    assert body["items"][0]["category"] == "עריכת דין"
 
 
 @pytest.mark.django_db
