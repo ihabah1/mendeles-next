@@ -119,6 +119,7 @@ def test_ai_seo_workspace_run_next_processes_one_step_at_a_time(owner_client, se
 @pytest.mark.django_db
 def test_ai_seo_workspace_retry_failed_step(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
+    settings.AI_SEO_STEP_MAX_RETRIES = 0
 
     def broken_generate_json(prompt):
         raise RuntimeError("Gemini timeout")
@@ -146,9 +147,40 @@ def test_ai_seo_workspace_retry_failed_step(owner_client, settings, monkeypatch)
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_auto_retries_failed_step(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+    settings.AI_SEO_STEP_MAX_RETRIES = 3
+
+    def broken_generate_json(prompt):
+        raise RuntimeError("Gemini timeout")
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        broken_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {"domains": ["law"], "output_types": ["landing_page"], "keywords": ["עורך דין"]},
+        format="json",
+    )
+    owner_client.post("/api/v1/ai-seo/workspace/queue/run-next/")
+
+    response = owner_client.post("/api/v1/ai-seo/workspace/queue/run-next/")
+
+    assert response.status_code == 200, response.content
+    job = response.json()["job"]
+    ai_step = next(step for step in job["steps"] if step["step_type"] == "ai_seo.ai")
+    assert job["status"] == "running"
+    assert ai_step["status"] == "running"
+    assert ai_step["started_at"] is None
+    assert ai_step["retry_count"] == 1
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_marks_stale_running_step_failed(owner_client, settings):
     settings.GEMINI_API_KEY = "test-key"
     settings.AI_SEO_STEP_TIMEOUT_SECONDS = 1
+    settings.AI_SEO_STEP_MAX_RETRIES = 0
     create = owner_client.post(
         "/api/v1/ai-seo/workspace/generate/",
         {"domains": ["law"], "output_types": ["landing_page"], "keywords": ["עורך דין"]},

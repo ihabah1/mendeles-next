@@ -154,6 +154,21 @@ class JobExecutor:
         except Exception as exc:
             failed_step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).first()
             if failed_step:
+                if JobExecutor._schedule_auto_retry_if_available(job, failed_step, str(exc)):
+                    execution.status = JobStatus.RUNNING
+                    execution.error_message = ""
+                    execution.finished_at = timezone.now()
+                    execution.duration_ms = JobExecutor._duration_ms(execution)
+                    execution.result = {"ok": True, "auto_retry": True}
+                    execution.save()
+                    AutomationLogService.log(
+                        job,
+                        f"Step auto-retry queued after failure: {failed_step.name}",
+                        level=LogLevel.WARNING,
+                        execution=execution,
+                    )
+                    return execution
+
                 failed_step.status = StepStatus.FAILED
                 failed_step.error_message = str(exc)[:2000]
                 failed_step.finished_at = timezone.now()
@@ -172,6 +187,14 @@ class JobExecutor:
             AutomationLogService.log(job, f"Step failed: {exc}", level=LogLevel.ERROR, execution=execution)
 
         return execution
+
+    @staticmethod
+    def _schedule_auto_retry_if_available(job: AutomationJob, step: AutomationJobStep, reason: str) -> bool:
+        if job.job_type not in {JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE}:
+            return False
+        from ai_seo.application.generation_service import AiSeoGenerationService
+
+        return AiSeoGenerationService.schedule_step_auto_retry(job, step, reason)
 
     @staticmethod
     def _mark_step_execution_complete(job: AutomationJob, execution: AutomationExecution) -> None:

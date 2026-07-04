@@ -75,7 +75,9 @@ class AiSeoGenerationService:
     @staticmethod
     def serialize_job(job: AutomationJob) -> dict:
         timeout_seconds = int(getattr(settings, "AI_SEO_STEP_TIMEOUT_SECONDS", 90))
+        max_retries = int(getattr(settings, "AI_SEO_STEP_MAX_RETRIES", 3))
         stale_before = timezone.now() - timedelta(seconds=timeout_seconds)
+        retry_counts = (job.config or {}).get("step_retry_counts", {})
         active_step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).order_by("step_order").first()
         current_step = active_step or job.steps.filter(deleted_at__isnull=True).order_by("step_order")[job.current_step_index:job.current_step_index + 1].first()
         return {
@@ -102,6 +104,8 @@ class AiSeoGenerationService:
                     "error_message": step.error_message or None,
                     "started_at": step.started_at.isoformat() if step.started_at else None,
                     "is_stale": bool(step.status == StepStatus.RUNNING and step.started_at and step.started_at < stale_before),
+                    "retry_count": int(retry_counts.get(str(step.id), 0)),
+                    "max_retries": max_retries,
                 }
                 for step in job.steps.filter(deleted_at__isnull=True).order_by("step_order")
             ],
@@ -119,6 +123,7 @@ class AiSeoGenerationService:
     @staticmethod
     def recover_stale_jobs(tenant_id) -> None:
         timeout_seconds = int(getattr(settings, "AI_SEO_STEP_TIMEOUT_SECONDS", 90))
+        max_retries = int(getattr(settings, "AI_SEO_STEP_MAX_RETRIES", 3))
         stale_before = timezone.now() - timedelta(seconds=timeout_seconds)
         stale_steps = AutomationJobStep.objects.select_related("job").filter(
             job__tenant_id=tenant_id,
@@ -129,16 +134,39 @@ class AiSeoGenerationService:
             job__deleted_at__isnull=True,
         )
         for step in stale_steps:
+            job = step.job
+            config = job.config or {}
+            retry_counts = config.get("step_retry_counts", {})
+            step_key = str(step.id)
+            attempts = int(retry_counts.get(step_key, 0))
+            if attempts < max_retries:
+                retry_counts[step_key] = attempts + 1
+                config["step_retry_counts"] = retry_counts
+                step.error_message = f"Auto retry {attempts + 1}/{max_retries} after {timeout_seconds}s timeout."
+                step.started_at = None
+                step.finished_at = None
+                step.save(update_fields=["error_message", "started_at", "finished_at", "updated_at"])
+                job.config = config
+                job.status = JobStatus.RUNNING
+                job.error_message = ""
+                job.finished_at = None
+                job.save(update_fields=["config", "status", "error_message", "finished_at", "updated_at"])
+                AutomationLogService.log(
+                    job,
+                    f"Auto retry {attempts + 1}/{max_retries} scheduled for step: {step.name}",
+                    level="warning",
+                )
+                continue
+
             message = (
                 f"Step timed out after {timeout_seconds}s. "
-                "The external provider did not respond in time; retry the step."
+                f"Auto retry limit reached ({max_retries}); retry the step manually."
             )
             step.status = StepStatus.FAILED
             step.error_message = message
             step.finished_at = timezone.now()
             step.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
 
-            job = step.job
             job.status = JobStatus.FAILED
             job.error_message = message
             job.finished_at = timezone.now()
@@ -153,8 +181,18 @@ class AiSeoGenerationService:
             "page_type": page.page_type,
             "status": page.status,
             "full_path": page.full_path,
+            "meta_title": page.meta_title,
+            "meta_description": page.meta_description,
             "updated_at": page.updated_at.isoformat() if page.updated_at else None,
             "test_url": f"/dashboard/content?highlight={page.id}",
+            "blocks": [
+                {
+                    "id": str(block.id),
+                    "type": block.block_type,
+                    "config": block.config,
+                }
+                for block in page.blocks.filter(deleted_at__isnull=True, is_visible=True).order_by("sort_order")
+            ],
         }
 
     @classmethod
@@ -365,6 +403,14 @@ class AiSeoGenerationService:
             config.pop("design_ready", None)
         if target.step_type == "ai_seo.ai":
             config.pop("gemini_payload", None)
+        retry_counts = config.get("step_retry_counts", {})
+        for step in steps:
+            if step.step_order >= target.step_order:
+                retry_counts.pop(str(step.id), None)
+        if retry_counts:
+            config["step_retry_counts"] = retry_counts
+        else:
+            config.pop("step_retry_counts", None)
 
         completed_before = len([step for step in steps if step.step_order < target.step_order and step.status == StepStatus.COMPLETED])
         job.config = config
@@ -386,6 +432,67 @@ class AiSeoGenerationService:
         )
         AutomationLogService.log(job, f"Retry requested for step: {target.name}")
         return job
+
+    @staticmethod
+    def schedule_step_auto_retry(job: AutomationJob, step: AutomationJobStep, reason: str) -> bool:
+        max_retries = int(getattr(settings, "AI_SEO_STEP_MAX_RETRIES", 3))
+        config = job.config or {}
+        retry_counts = config.get("step_retry_counts", {})
+        step_key = str(step.id)
+        attempts = int(retry_counts.get(step_key, 0))
+        if attempts >= max_retries:
+            return False
+
+        steps = list(job.steps.filter(deleted_at__isnull=True).order_by("step_order"))
+        target = next((item for item in steps if item.id == step.id), step)
+        for item in steps:
+            if item.step_order >= target.step_order:
+                item.status = StepStatus.PENDING
+                item.error_message = ""
+                item.started_at = None
+                item.finished_at = None
+                item.save(update_fields=["status", "error_message", "started_at", "finished_at", "updated_at"])
+
+        if target.step_type in {"ai_seo.ai", "ai_seo.design", "ai_seo.page"}:
+            config.pop("generated_page_id", None)
+            config.pop("generated_page_title", None)
+        if target.step_type in {"ai_seo.ai", "ai_seo.design"}:
+            config.pop("design_ready", None)
+        if target.step_type == "ai_seo.ai":
+            config.pop("gemini_payload", None)
+
+        retry_counts[step_key] = attempts + 1
+        config["step_retry_counts"] = retry_counts
+        target.status = StepStatus.RUNNING
+        target.error_message = f"Auto retry {attempts + 1}/{max_retries}: {reason[:500]}"
+        target.started_at = None
+        target.finished_at = None
+        target.save(update_fields=["status", "error_message", "started_at", "finished_at", "updated_at"])
+
+        completed_before = len([item for item in steps if item.step_order < target.step_order and item.status == StepStatus.COMPLETED])
+        job.config = config
+        job.status = JobStatus.RUNNING
+        job.error_message = ""
+        job.finished_at = None
+        job.current_step_index = completed_before
+        job.progress_percent = int((completed_before / len(steps)) * 100) if steps else 0
+        job.save(
+            update_fields=[
+                "config",
+                "status",
+                "error_message",
+                "finished_at",
+                "current_step_index",
+                "progress_percent",
+                "updated_at",
+            ]
+        )
+        AutomationLogService.log(
+            job,
+            f"Auto retry {attempts + 1}/{max_retries} scheduled for step: {target.name}",
+            level="warning",
+        )
+        return True
 
     @classmethod
     def _create_page_from_payload(cls, job: AutomationJob, payload: dict) -> Page:

@@ -15,6 +15,88 @@ function splitLines(value: string): string[] {
     .filter(Boolean);
 }
 
+function textValue(config: Record<string, unknown>, key: string): string {
+  const value = config[key];
+  return typeof value === "string" ? value : "";
+}
+
+function plainPreview(value: string): string {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-slate-950 to-slate-900 text-white shadow-inner">
+      <div className="border-b border-white/10 p-5">
+        <p className="text-xs uppercase tracking-[0.3em] text-sky-300">Preview לפני פרודקשן</p>
+        <h3 className="mt-2 text-2xl font-bold">{page.title}</h3>
+        {page.meta_description && <p className="mt-2 max-w-3xl text-sm text-slate-300">{page.meta_description}</p>}
+      </div>
+      <div className="space-y-4 p-5">
+        {page.blocks.length === 0 ? (
+          <p className="text-sm text-slate-300">אין blocks להצגה בטיוטה הזו.</p>
+        ) : (
+          page.blocks.map((block) => {
+            const config = block.config || {};
+            if (block.type === "hero") {
+              return (
+                <section key={block.id} className="rounded-2xl bg-sky-500/15 p-5">
+                  <h4 className="text-xl font-semibold">{textValue(config, "headline") || page.title}</h4>
+                  <p className="mt-2 text-sm text-slate-200">{textValue(config, "subheadline")}</p>
+                  {textValue(config, "cta") && (
+                    <span className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950">
+                      {textValue(config, "cta")}
+                    </span>
+                  )}
+                </section>
+              );
+            }
+            if (block.type === "faq") {
+              const items = Array.isArray(config["items"]) ? config["items"] : [];
+              return (
+                <section key={block.id} className="rounded-2xl bg-white/5 p-5">
+                  <h4 className="font-semibold">שאלות נפוצות</h4>
+                  <div className="mt-3 space-y-3">
+                    {items.map((item, index) => {
+                      const row = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+                      return (
+                        <div key={`${block.id}-${index}`} className="rounded-xl bg-black/20 p-3">
+                          <p className="font-medium">{textValue(row, "question")}</p>
+                          <p className="mt-1 text-sm text-slate-300">{textValue(row, "answer")}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            }
+            if (block.type === "cta") {
+              return (
+                <section key={block.id} className="rounded-2xl border border-sky-300/30 bg-sky-300/10 p-5">
+                  <h4 className="text-lg font-semibold">{textValue(config, "headline")}</h4>
+                  {textValue(config, "button") && (
+                    <span className="mt-3 inline-flex rounded-full bg-sky-400 px-4 py-2 text-sm font-medium text-slate-950">
+                      {textValue(config, "button")}
+                    </span>
+                  )}
+                </section>
+              );
+            }
+            const html = textValue(config, "html");
+            return (
+              <section key={block.id} className="rounded-2xl bg-white/5 p-5">
+                <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">
+                  {plainPreview(html) || textValue(config, "text") || textValue(config, "body")}
+                </p>
+              </section>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function WorkspacePage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("ai_seo.view");
@@ -69,7 +151,7 @@ export default function WorkspacePage() {
         page_id: page.id,
         feedback: feedbackByPage[page.id] || "",
         keywords: splitLines(keywordsText),
-        domain: selectedRows.map((d) => d.label).join(", "),
+        domain: selectedRows.map((d) => d.label).join(", ") || page.title,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
@@ -90,7 +172,18 @@ export default function WorkspacePage() {
 
   const runSelectedJob = useMutation({
     mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+    onSuccess: (job) => {
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      if (["completed", "failed", "cancelled"].includes(job.status)) {
+        setQueueRunning(false);
+        return;
+      }
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 600);
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 1200);
+    },
   });
 
   const retryStep = useMutation({
@@ -137,16 +230,16 @@ export default function WorkspacePage() {
   }
 
   function startSelectedJob() {
-    if (selectedJobId) {
-      runSelectedJob.mutate(selectedJobId);
-      return;
-    }
     setQueueRunning(true);
     setQueueTick((tick) => tick + 1);
   }
 
   useEffect(() => {
-    if (queueRunning && !runNextStep.isPending) {
+    if (queueRunning && !runNextStep.isPending && !runSelectedJob.isPending) {
+      if (selectedJobId) {
+        runSelectedJob.mutate(selectedJobId);
+        return;
+      }
       runNextStep.mutate();
     }
   }, [queueRunning, queueTick]);
@@ -371,11 +464,11 @@ export default function WorkspacePage() {
                 {(selectedJob.steps.length
                   ? selectedJob.steps
                   : [
-                      { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null, started_at: null, is_stale: false },
-                      { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null, started_at: null, is_stale: false },
-                      { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null, started_at: null, is_stale: false },
-                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null, started_at: null, is_stale: false },
-                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null, started_at: null, is_stale: false },
+                      { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
                     ]
                 ).map((step) => (
                   <li
@@ -392,6 +485,7 @@ export default function WorkspacePage() {
                   >
                     <p className="font-medium">{step.name}</p>
                     <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
+                    {step.retry_count > 0 && <p className="mt-1 text-amber-500">auto retry {step.retry_count}/{step.max_retries}</p>}
                     {step.error_message && <p className="mt-1 text-red-500">{step.error_message}</p>}
                     {step.is_stale && <p className="mt-1 text-amber-500">תקוע מעל זמן ההמתנה</p>}
                     {(step.status === "failed" || step.is_stale) && canManage && (
@@ -470,12 +564,14 @@ export default function WorkspacePage() {
                     )}
                   </div>
                 </div>
+                <DraftPreview page={page} />
                 <label className="mt-3 block text-sm">
-                  <span className="mb-1 block font-medium">הערות ליצירה חוזרת</span>
+                  <span className="mb-1 block font-medium">Reject / הערות ליצירה חוזרת</span>
                   <textarea
                     className="min-h-20 w-full rounded-md border border-[var(--border)] bg-transparent p-2"
                     value={feedbackByPage[page.id] || ""}
                     onChange={(e) => setFeedbackByPage((prev) => ({ ...prev, [page.id]: e.target.value }))}
+                    placeholder="כתוב מה לשנות: כותרת, טון, CTA, מבנה, קהל יעד..."
                   />
                 </label>
                 {canManage && (
@@ -487,7 +583,7 @@ export default function WorkspacePage() {
                     disabled={regenerate.isPending || !(feedbackByPage[page.id] || "").trim()}
                     onClick={() => regenerate.mutate(page)}
                   >
-                    שלח פרומפט ליצירה חוזרת
+                    בצע יצירה חוזרת עם ההערות
                   </Button>
                 )}
               </li>

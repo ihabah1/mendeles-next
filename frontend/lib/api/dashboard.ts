@@ -696,6 +696,8 @@ export type AiSeoWorkspaceJob = {
     error_message: string | null;
     started_at: string | null;
     is_stale: boolean;
+    retry_count: number;
+    max_retries: number;
   }>;
   logs: Array<{
     id: string;
@@ -710,8 +712,15 @@ export type AiSeoWorkspaceDraft = {
   page_type: string;
   status: string;
   full_path: string;
+  meta_title: string;
+  meta_description: string;
   updated_at: string | null;
   test_url: string;
+  blocks: Array<{
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+  }>;
 };
 export type AiSeoWorkspace = {
   domains: AiSeoWorkspaceDomain[];
