@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import urllib.error
 import urllib.request
 
@@ -43,8 +44,11 @@ class GeminiService:
             except GeminiError:
                 raise
             except Exception as exc:
+                if cls._is_timeout_error(exc):
+                    errors.append(f"{model}: timeout {exc}")
+                    continue
                 raise GeminiError(f"Gemini request failed using {model}: {exc}") from exc
-        raise GeminiError("No configured Gemini model supports generateContent. Tried: " + " | ".join(errors))
+        raise GeminiError("No Gemini model completed generateContent. Tried: " + " | ".join(errors))
 
     @classmethod
     def _candidate_models(cls) -> list[str]:
@@ -52,6 +56,14 @@ class GeminiService:
         models = [configured] if configured else []
         models.extend(cls.FALLBACK_MODELS)
         return list(dict.fromkeys([m for m in models if m]))
+
+    @staticmethod
+    def _is_timeout_error(exc: Exception) -> bool:
+        if isinstance(exc, (TimeoutError, socket.timeout)):
+            return True
+        if isinstance(exc, urllib.error.URLError):
+            return isinstance(exc.reason, (TimeoutError, socket.timeout))
+        return "timed out" in str(exc).lower()
 
     @classmethod
     def _generate_json_with_model(cls, api_key: str, model: str, prompt: str) -> dict:
