@@ -43,7 +43,7 @@ def test_ai_seo_workspace_generate_creates_batch_job(owner_client, settings):
     jobs = response.json()["jobs"]
     assert len(jobs) == 2
     assert {job["job_type"] for job in jobs} == {"generate_blog_article", "generate_landing_page"}
-    assert [step["name"] for step in jobs[0]["steps"]] == ["דאטה", "AI", "עיצוב", "הקמת דף", "סיום"]
+    assert [step["name"] for step in jobs[0]["steps"]] == ["דאטה", "AI", "עיצוב", "הקמת דף", "סיום", "העלאה לפרודקשן"]
 
 
 @pytest.mark.django_db
@@ -70,15 +70,23 @@ def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkey
     job_id = create.json()["jobs"][0]["id"]
 
     response = None
-    for _ in range(5):
+    for _ in range(6):
         response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
 
     assert response is not None
     assert response.status_code == 200, response.content
     body = response.json()
+    assert body["status"] == "waiting_approval"
+    publish_step = next(step for step in body["steps"] if step["step_type"] == "ai_seo.publish")
+    assert publish_step["status"] == "waiting_approval"
+    assert body["generated_page_id"]
+
+    publish = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/publish/")
+
+    assert publish.status_code == 200, publish.content
+    body = publish.json()
     assert body["status"] == "completed"
     assert body["progress_percent"] == 100
-    assert body["generated_page_id"]
     assert all(step["status"] == "completed" for step in body["steps"])
     assert body["logs"]
 
@@ -111,7 +119,7 @@ def test_ai_seo_workspace_auto_publishes_generated_page(owner_client, settings, 
     )
     job_id = create.json()["jobs"][0]["id"]
     response = None
-    for _ in range(5):
+    for _ in range(6):
         response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
 
     page = Page.objects.get(id=response.json()["generated_page_id"])
@@ -141,12 +149,13 @@ def test_ai_seo_workspace_schedules_next_recurring_job(owner_client, settings, m
             "output_types": ["landing_page"],
             "keywords": ["עורך דין"],
             "recurrence_interval": "hourly",
+            "auto_publish_enabled": True,
         },
         format="json",
     )
     job_id = create.json()["jobs"][0]["id"]
     response = None
-    for _ in range(5):
+    for _ in range(6):
         response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
 
     next_job_id = response.json()["config"]["next_recurring_job_id"]
@@ -214,7 +223,7 @@ def test_ai_seo_workspace_regenerate_reuses_original_keywords(owner_client, sett
 
     first_step = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{regenerated_job['id']}/run/")
     assert first_step.status_code == 200, first_step.content
-    assert first_step.json()["progress_percent"] == 20
+    assert first_step.json()["progress_percent"] == 16
 
 
 @pytest.mark.django_db
@@ -245,11 +254,11 @@ def test_ai_seo_workspace_run_next_processes_one_step_at_a_time(owner_client, se
 
     assert first.status_code == 200, first.content
     assert first.json()["job"]["id"] == job_id
-    assert first.json()["job"]["progress_percent"] == 20
+    assert first.json()["job"]["progress_percent"] == 16
     first_ai_step = next(step for step in first.json()["job"]["steps"] if step["step_type"] == "ai_seo.ai")
     assert first_ai_step["status"] == "running"
     assert first_ai_step["started_at"] is None
-    assert second.json()["job"]["progress_percent"] == 40
+    assert second.json()["job"]["progress_percent"] == 33
 
 
 @pytest.mark.django_db
@@ -328,7 +337,7 @@ def test_ai_seo_workspace_marks_stale_running_step_failed(owner_client, settings
     job_step.started_at = timezone.now() - timedelta(seconds=5)
     job_step.save(update_fields=["status", "started_at", "updated_at"])
     job_step.job.status = JobStatus.RUNNING
-    job_step.job.progress_percent = 20
+    job_step.job.progress_percent = 16
     job_step.job.save(update_fields=["status", "progress_percent", "updated_at"])
 
     response = owner_client.get("/api/v1/ai-seo/workspace/")

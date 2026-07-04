@@ -647,6 +647,11 @@ export const aiSeoApi = {
       headers: authHeaders(),
       json: { page_id },
     }),
+  publishWorkspaceJob: (jobId: string) =>
+    apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/publish/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
   deleteWorkspacePage: (pageId: string) =>
     apiFetch<void>(`/api/v1/ai-seo/workspace/pages/${pageId}/delete/`, {
       method: "DELETE",
@@ -724,6 +729,7 @@ export type AiSeoWorkspaceDraft = {
   published_at: string | null;
   updated_at: string | null;
   test_url: string;
+  source_job_id: string | null;
   blocks: Array<{
     id: string;
     type: string;

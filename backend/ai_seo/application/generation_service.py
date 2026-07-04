@@ -46,6 +46,7 @@ GENERATION_STEPS = [
     ("ai_seo.design", "עיצוב"),
     ("ai_seo.page", "הקמת דף"),
     ("ai_seo.finish", "סיום"),
+    ("ai_seo.publish", "העלאה לפרודקשן"),
 ]
 
 
@@ -99,6 +100,7 @@ class AiSeoGenerationService:
             "error_message": job.error_message or None,
             "config": job.config,
             "generated_page_id": (job.config or {}).get("generated_page_id"),
+            "published_page_id": (job.config or {}).get("auto_published_page_id") or (job.config or {}).get("published_page_id"),
             "function": current_step.step_type if current_step else job.job_type,
             "current_step_name": current_step.name if current_step else "",
             "user": job.created_by.email if job.created_by_id else "QSYS",
@@ -193,6 +195,7 @@ class AiSeoGenerationService:
             "published_at": page.published_at.isoformat() if page.published_at else None,
             "updated_at": page.updated_at.isoformat() if page.updated_at else None,
             "test_url": f"/dashboard/content?highlight={page.id}",
+            "source_job_id": str(source_job.id) if (source_job := AiSeoGenerationService._source_job_for_page(page)) else None,
             "blocks": [
                 {
                     "id": str(block.id),
@@ -387,24 +390,41 @@ class AiSeoGenerationService:
 
         if step_type == "ai_seo.finish":
             page_title = (job.config or {}).get("generated_page_title", "")
-            if job.auto_publish_enabled or (job.config or {}).get("auto_publish_enabled"):
-                cls._auto_publish_generated_page(job, execution=execution)
-            cls._schedule_next_recurring_job(job, execution=execution)
             AutomationLogService.log(job, f"סיום: התוצר מוכן לבדיקה{f' — {page_title}' if page_title else ''}", execution=execution)
+            return None
+
+        if step_type == "ai_seo.publish":
+            if job.auto_publish_enabled or config.get("auto_publish_enabled") or config.get("manual_publish_requested"):
+                page = cls._auto_publish_generated_page(job, execution=execution)
+                config = job.config or {}
+                config.pop("manual_publish_requested", None)
+                job.config = config
+                job.save(update_fields=["config", "updated_at"])
+                cls._schedule_next_recurring_job(job, execution=execution)
+                AutomationLogService.log(job, f"העלאה לפרודקשן הושלמה: {page.full_path or page.title}", execution=execution)
+                return page
+
+            step.status = StepStatus.WAITING_APPROVAL
+            step.error_message = "ממתין לאישור העלאה לפרודקשן"
+            step.save(update_fields=["status", "error_message", "updated_at"])
+            job.status = JobStatus.WAITING_APPROVAL
+            job.error_message = "ממתין לאישור העלאה לפרודקשן"
+            job.save(update_fields=["status", "error_message", "updated_at"])
+            AutomationLogService.log(job, "העלאה לפרודקשן ממתינה ללחיצת משתמש", execution=execution)
             return None
 
         raise RuntimeError(f"Unknown AI SEO generation step: {step_type}")
 
     @staticmethod
-    def _auto_publish_generated_page(job: AutomationJob, *, execution=None) -> None:
+    def _auto_publish_generated_page(job: AutomationJob, *, execution=None) -> Page:
         page_id = (job.config or {}).get("generated_page_id")
         if not page_id:
             AutomationLogService.log(job, "Auto publish skipped: no generated page id", level="warning", execution=execution)
-            return
+            raise RuntimeError("No generated page id found for production upload.")
         page = PageService.get_page(job.tenant_id, page_id)
         if page.status == PageStatus.PUBLISHED:
             AutomationLogService.log(job, f"Auto publish skipped: already published — {page.title}", execution=execution)
-            return
+            return page
         page = PublishService.transition(
             job.tenant_id,
             page_id,
@@ -412,9 +432,15 @@ class AiSeoGenerationService:
             PageStatus.PUBLISHED,
             change_summary="Auto published from AI SEO Workspace",
         )
-        job.config = {**(job.config or {}), "auto_published_page_id": str(page.id), "auto_published_at": timezone.now().isoformat()}
+        job.config = {
+            **(job.config or {}),
+            "auto_published_page_id": str(page.id),
+            "published_page_id": str(page.id),
+            "auto_published_at": timezone.now().isoformat(),
+        }
         job.save(update_fields=["config", "updated_at"])
         AutomationLogService.log(job, f"Auto published to production: {page.full_path or page.title}", execution=execution)
+        return page
 
     @staticmethod
     def _schedule_next_recurring_job(job: AutomationJob, *, execution=None) -> None:
@@ -680,7 +706,12 @@ Locale: {locale}.
 
     @staticmethod
     def _source_config_for_page(page: Page) -> dict:
-        source_job = (
+        source_job = AiSeoGenerationService._source_job_for_page(page)
+        return source_job.config if source_job and isinstance(source_job.config, dict) else {}
+
+    @staticmethod
+    def _source_job_for_page(page: Page) -> AutomationJob | None:
+        return (
             AutomationJob.objects.filter(
                 tenant_id=page.tenant_id,
                 job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
@@ -690,10 +721,15 @@ Locale: {locale}.
             .order_by("-created_at")
             .first()
         )
-        return source_job.config if source_job and isinstance(source_job.config, dict) else {}
 
     @staticmethod
     def publish_page(tenant_id, user, page_id: str) -> Page:
+        page = PageService.get_page(tenant_id, page_id)
+        source_job = AiSeoGenerationService._source_job_for_page(page)
+        if source_job:
+            AiSeoGenerationService.publish_job(tenant_id, user, source_job.id)
+            page.refresh_from_db()
+            return page
         return PublishService.transition(
             tenant_id,
             page_id,
@@ -701,6 +737,41 @@ Locale: {locale}.
             PageStatus.PUBLISHED,
             change_summary="Approved from AI SEO Workspace",
         )
+
+    @staticmethod
+    def publish_job(tenant_id, user, job_id: str) -> AutomationJob:
+        from automation.application.executor import JobExecutor
+
+        job = JobService.get_job(tenant_id, job_id)
+        publish_step = job.steps.filter(step_type="ai_seo.publish", deleted_at__isnull=True).order_by("step_order").first()
+        if not publish_step:
+            page_id = (job.config or {}).get("generated_page_id")
+            if page_id:
+                PublishService.transition(
+                    tenant_id,
+                    page_id,
+                    user,
+                    PageStatus.PUBLISHED,
+                    change_summary="Approved from AI SEO Workspace",
+                )
+            return job
+
+        config = job.config or {}
+        config["manual_publish_requested"] = True
+        job.config = config
+        job.error_message = ""
+        if job.status == JobStatus.WAITING_APPROVAL:
+            job.status = JobStatus.RUNNING
+        job.save(update_fields=["config", "status", "error_message", "updated_at"])
+        publish_step.status = StepStatus.RUNNING
+        publish_step.error_message = ""
+        publish_step.started_at = None
+        publish_step.finished_at = None
+        publish_step.save(update_fields=["status", "error_message", "started_at", "finished_at", "updated_at"])
+        AutomationLogService.log(job, "Manual production upload requested")
+        JobExecutor.run_next_step(job)
+        job.refresh_from_db()
+        return job
 
     @staticmethod
     def delete_page(tenant_id, page_id: str) -> None:

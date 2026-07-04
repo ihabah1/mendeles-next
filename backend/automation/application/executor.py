@@ -123,6 +123,16 @@ class JobExecutor:
                 AutomationLogService.log(job, f"Step execution resumed: {next_step.name}", execution=execution)
 
             JobExecutor._execute_step(job, next_step, execution)
+            next_step.refresh_from_db()
+            job.refresh_from_db()
+            if next_step.status == StepStatus.WAITING_APPROVAL or job.status == JobStatus.WAITING_APPROVAL:
+                execution.status = JobStatus.WAITING_APPROVAL
+                execution.finished_at = timezone.now()
+                execution.duration_ms = JobExecutor._duration_ms(execution)
+                execution.result = {"ok": True, "waiting_approval": True}
+                execution.save()
+                AutomationLogService.log(job, f"Step waiting for approval: {next_step.name}", execution=execution)
+                return execution
 
             next_step.status = StepStatus.COMPLETED
             next_step.finished_at = timezone.now()
@@ -198,7 +208,7 @@ class JobExecutor:
 
     @staticmethod
     def _mark_step_execution_complete(job: AutomationJob, execution: AutomationExecution) -> None:
-        execution.status = job.status if job.status in {JobStatus.COMPLETED, JobStatus.FAILED} else JobStatus.RUNNING
+        execution.status = job.status if job.status in {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.WAITING_APPROVAL} else JobStatus.RUNNING
         execution.finished_at = timezone.now()
         execution.duration_ms = JobExecutor._duration_ms(execution)
         execution.result = {"ok": execution.status != JobStatus.FAILED}

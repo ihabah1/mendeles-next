@@ -146,8 +146,14 @@ export default function WorkspacePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
-  const publish = useMutation({
-    mutationFn: (pageId: string) => aiSeoApi.publishWorkspacePage(pageId),
+  const publish = useMutation<unknown, Error, AiSeoWorkspaceDraft>({
+    mutationFn: (page: AiSeoWorkspaceDraft) =>
+      page.source_job_id ? aiSeoApi.publishWorkspaceJob(page.source_job_id) : aiSeoApi.publishWorkspacePage(page.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+  });
+
+  const publishJob = useMutation({
+    mutationFn: (jobId: string) => aiSeoApi.publishWorkspaceJob(jobId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
@@ -170,7 +176,7 @@ export default function WorkspacePage() {
     onSuccess: (data) => {
       qc.setQueryData(["ai-seo-workspace"], data.workspace);
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
-      if (!data.job || data.job.status === "failed") {
+      if (!data.job || ["failed", "waiting_approval"].includes(data.job.status)) {
         setQueueRunning(false);
         return;
       }
@@ -183,7 +189,7 @@ export default function WorkspacePage() {
     mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
-      if (["completed", "failed", "cancelled"].includes(job.status)) {
+      if (["completed", "failed", "cancelled", "waiting_approval"].includes(job.status)) {
         setQueueRunning(false);
         return;
       }
@@ -519,17 +525,20 @@ export default function WorkspacePage() {
                   <Button type="button" variant="outline" size="sm">פתח ג׳וב</Button>
                 </Link>
               </div>
-              <ol className="mt-4 grid gap-2 sm:grid-cols-5">
+              <ol className="mt-4 grid gap-2 sm:grid-cols-6">
                 {(selectedJob.steps.length
                   ? selectedJob.steps
                   : [
                       { id: `${selectedJob.id}-data`, name: "דאטה", status: selectedJob.progress_percent >= 20 ? "completed" : "pending", step_type: "ai_seo.data", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
                       { id: `${selectedJob.id}-ai`, name: "AI", status: selectedJob.progress_percent >= 40 ? "completed" : "pending", step_type: "ai_seo.ai", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
                       { id: `${selectedJob.id}-design`, name: "עיצוב", status: selectedJob.progress_percent >= 60 ? "completed" : "pending", step_type: "ai_seo.design", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
-                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 80 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
-                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-page`, name: "הקמת דף", status: selectedJob.progress_percent >= 66 ? "completed" : "pending", step_type: "ai_seo.page", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-finish`, name: "סיום", status: selectedJob.progress_percent >= 83 ? "completed" : "pending", step_type: "ai_seo.finish", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
+                      { id: `${selectedJob.id}-publish`, name: "העלאה לפרודקשן", status: selectedJob.progress_percent >= 100 ? "completed" : "pending", step_type: "ai_seo.publish", error_message: null, started_at: null, is_stale: false, retry_count: 0, max_retries: 3 },
                     ]
-                ).map((step) => (
+                ).map((step) => {
+                  const isPublishStep = step.step_type === "ai_seo.publish";
+                  return (
                   <li
                     key={step.id}
                     className={`rounded-lg border p-3 text-center text-xs ${
@@ -544,6 +553,18 @@ export default function WorkspacePage() {
                   >
                     <p className="font-medium">{step.name}</p>
                     <p className="mt-1 text-[var(--muted-fg)]">{step.status}</p>
+                    {isPublishStep && step.status !== "completed" && canPublish && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        disabled={publishJob.isPending}
+                        onClick={() => publishJob.mutate(selectedJob.id)}
+                      >
+                        העלאה לפרודקשן
+                      </Button>
+                    )}
                     {step.retry_count > 0 && <p className="mt-1 text-amber-500">auto retry {step.retry_count}/{step.max_retries}</p>}
                     {step.error_message && <p className="mt-1 text-red-500">{step.error_message}</p>}
                     {step.is_stale && <p className="mt-1 text-amber-500">תקוע מעל זמן ההמתנה</p>}
@@ -559,7 +580,7 @@ export default function WorkspacePage() {
                         Retry שלב
                       </Button>
                     )}
-                    {step.status === "running" && !step.is_stale && canManage && (
+                    {step.status === "running" && !step.is_stale && !isPublishStep && canManage && (
                       <Button
                         type="button"
                         variant="outline"
@@ -572,7 +593,8 @@ export default function WorkspacePage() {
                       </Button>
                     )}
                   </li>
-                ))}
+                  );
+                })}
               </ol>
               {selectedJob.error_message && <p className="mt-3 text-sm text-red-500">{selectedJob.error_message}</p>}
             </div>
@@ -647,7 +669,7 @@ export default function WorkspacePage() {
                       <Button type="button" variant="outline" size="sm">פתח באזור טסט</Button>
                     </Link>
                     {canPublish && page.status !== "published" && (
-                      <Button type="button" size="sm" onClick={() => publish.mutate(page.id)} disabled={publish.isPending}>
+                      <Button type="button" size="sm" onClick={() => publish.mutate(page)} disabled={publish.isPending}>
                         אשר העלאה לפרודקשן
                       </Button>
                     )}
