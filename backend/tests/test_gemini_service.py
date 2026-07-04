@@ -19,7 +19,7 @@ def test_gemini_service_falls_back_after_timeout(settings, monkeypatch):
     result = GeminiService.generate_json("prompt")
 
     assert result["title"] == "ok"
-    assert calls == ["gemini-2.5-flash", "gemini-2.0-flash"]
+    assert calls == ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
 
 
 def test_gemini_service_reports_all_timeout_failures(settings, monkeypatch):

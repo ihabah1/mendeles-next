@@ -153,8 +153,8 @@ INTEGRATIONS_ENCRYPTION_KEY = os.environ.get("INTEGRATIONS_ENCRYPTION_KEY", "")
 
 # AI content generation (flag only until Phase 7)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "10"))
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "30"))
 AI_SEO_STEP_TIMEOUT_SECONDS = int(os.environ.get("AI_SEO_STEP_TIMEOUT_SECONDS", "10"))
 AI_SEO_STEP_MAX_RETRIES = int(os.environ.get("AI_SEO_STEP_MAX_RETRIES", "3"))
 
