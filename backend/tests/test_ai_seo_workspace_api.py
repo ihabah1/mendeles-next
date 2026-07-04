@@ -82,6 +82,48 @@ def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkey
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_regenerate_reuses_original_keywords(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+
+    def fake_generate_json(prompt):
+        return {
+            "title": "דף בדיקה",
+            "meta_title": "דף בדיקה",
+            "meta_description": "תיאור בדיקה",
+            "blocks": [{"type": "hero", "config": {"headline": "כותרת", "cta": "דברו איתנו"}}],
+        }
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        fake_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {"domains": ["law"], "output_types": ["landing_page"], "keywords": ["עורך דין"]},
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+    generated = None
+    for _ in range(5):
+        generated = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+
+    page_id = generated.json()["generated_page_id"]
+    regenerate = owner_client.post(
+        "/api/v1/ai-seo/workspace/regenerate/",
+        {"page_id": page_id, "feedback": "שפר את הכותרת"},
+        format="json",
+    )
+
+    assert regenerate.status_code == 201, regenerate.content
+    regenerated_job = regenerate.json()
+    assert regenerated_job["config"]["keywords"] == ["עורך דין"]
+
+    first_step = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{regenerated_job['id']}/run/")
+    assert first_step.status_code == 200, first_step.content
+    assert first_step.json()["progress_percent"] == 20
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_run_next_processes_one_step_at_a_time(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 

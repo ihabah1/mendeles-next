@@ -146,13 +146,16 @@ export default function WorkspacePage() {
   });
 
   const regenerate = useMutation({
-    mutationFn: (page: AiSeoWorkspaceDraft) =>
-      aiSeoApi.regenerateWorkspacePage({
+    mutationFn: (page: AiSeoWorkspaceDraft) => {
+      const keywords = splitLines(keywordsText);
+      const domain = selectedRows.map((d) => d.label).join(", ");
+      return aiSeoApi.regenerateWorkspacePage({
         page_id: page.id,
         feedback: feedbackByPage[page.id] || "",
-        keywords: splitLines(keywordsText),
-        domain: selectedRows.map((d) => d.label).join(", ") || page.title,
-      }),
+        keywords: keywords.length ? keywords : undefined,
+        domain: domain || undefined,
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 

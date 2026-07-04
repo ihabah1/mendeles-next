@@ -561,12 +561,18 @@ Locale: {locale}.
     @classmethod
     def regenerate(cls, tenant_id, user, data: dict, *, request=None) -> AutomationJob:
         page = PageService.get_page(tenant_id, data["page_id"])
+        source_config = cls._source_config_for_page(page)
+        selected_keywords = data.get("keywords") or source_config.get("keywords") or []
+        domain = data.get("domain") or source_config.get("domain") or {"label": page.title, "value": "custom"}
+        if isinstance(domain, str):
+            domain = {"label": domain, "value": "custom"}
         config = {
-            "domain": {"label": data.get("domain", page.title), "value": "custom"},
-            "keywords": data.get("keywords") or [],
-            "output_type": "landing_page" if page.page_type == PageType.LANDING_PAGE else "blog",
+            "domain": domain,
+            "keywords": selected_keywords,
+            "output_type": source_config.get("output_type") or ("landing_page" if page.page_type == PageType.LANDING_PAGE else "blog"),
             "feedback": data.get("feedback", ""),
             "locale": page.locale,
+            "prompt": source_config.get("prompt", ""),
         }
         job = JobService.create_job(
             tenant_id,
@@ -585,6 +591,20 @@ Locale: {locale}.
             request=request,
         )
         return JobService.queue_job(tenant_id, user, job.id, request=request)
+
+    @staticmethod
+    def _source_config_for_page(page: Page) -> dict:
+        source_job = (
+            AutomationJob.objects.filter(
+                tenant_id=page.tenant_id,
+                job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+                config__generated_page_id=str(page.id),
+                deleted_at__isnull=True,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        return source_job.config if source_job and isinstance(source_job.config, dict) else {}
 
     @staticmethod
     def publish_page(tenant_id, user, page_id: str) -> Page:
