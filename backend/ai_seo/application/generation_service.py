@@ -33,6 +33,13 @@ OUTPUT_TO_PAGE_TYPE = {
     "landing_page": PageType.LANDING_PAGE,
 }
 
+RECURRENCE_INTERVALS = {
+    "hourly": timedelta(hours=1),
+    "every_6_hours": timedelta(hours=6),
+    "every_24_hours": timedelta(hours=24),
+    "every_2_days": timedelta(days=2),
+}
+
 GENERATION_STEPS = [
     ("ai_seo.data", "דאטה"),
     ("ai_seo.ai", "AI"),
@@ -183,6 +190,7 @@ class AiSeoGenerationService:
             "full_path": page.full_path,
             "meta_title": page.meta_title,
             "meta_description": page.meta_description,
+            "published_at": page.published_at.isoformat() if page.published_at else None,
             "updated_at": page.updated_at.isoformat() if page.updated_at else None,
             "test_url": f"/dashboard/content?highlight={page.id}",
             "blocks": [
@@ -211,6 +219,8 @@ class AiSeoGenerationService:
         selected_keywords = data.get("keywords") or []
         manual_prompt = data.get("prompt") or ""
         scheduled_at = _parse_scheduled_at(data.get("scheduled_at"))
+        recurrence_interval = data.get("recurrence_interval") or ""
+        auto_publish_enabled = bool(data.get("auto_publish_enabled", False))
         jobs = []
         AutomationQueue.objects.get_or_create(
             tenant_id=tenant_id,
@@ -234,9 +244,11 @@ class AiSeoGenerationService:
                             "output_type": output_type,
                             "prompt": manual_prompt,
                             "locale": data.get("locale", "he"),
+                            "recurrence_interval": recurrence_interval,
+                            "auto_publish_enabled": auto_publish_enabled,
                         },
-                        "requires_approval": True,
-                        "auto_publish_enabled": False,
+                        "requires_approval": not auto_publish_enabled,
+                        "auto_publish_enabled": auto_publish_enabled,
                         "scheduled_at": scheduled_at,
                         "steps": [
                             {"name": name, "step_type": step_type, "config": {"output_type": output_type}}
@@ -375,10 +387,84 @@ class AiSeoGenerationService:
 
         if step_type == "ai_seo.finish":
             page_title = (job.config or {}).get("generated_page_title", "")
+            if job.auto_publish_enabled or (job.config or {}).get("auto_publish_enabled"):
+                cls._auto_publish_generated_page(job, execution=execution)
+            cls._schedule_next_recurring_job(job, execution=execution)
             AutomationLogService.log(job, f"סיום: התוצר מוכן לבדיקה{f' — {page_title}' if page_title else ''}", execution=execution)
             return None
 
         raise RuntimeError(f"Unknown AI SEO generation step: {step_type}")
+
+    @staticmethod
+    def _auto_publish_generated_page(job: AutomationJob, *, execution=None) -> None:
+        page_id = (job.config or {}).get("generated_page_id")
+        if not page_id:
+            AutomationLogService.log(job, "Auto publish skipped: no generated page id", level="warning", execution=execution)
+            return
+        page = PageService.get_page(job.tenant_id, page_id)
+        if page.status == PageStatus.PUBLISHED:
+            AutomationLogService.log(job, f"Auto publish skipped: already published — {page.title}", execution=execution)
+            return
+        page = PublishService.transition(
+            job.tenant_id,
+            page_id,
+            job.created_by,
+            PageStatus.PUBLISHED,
+            change_summary="Auto published from AI SEO Workspace",
+        )
+        job.config = {**(job.config or {}), "auto_published_page_id": str(page.id), "auto_published_at": timezone.now().isoformat()}
+        job.save(update_fields=["config", "updated_at"])
+        AutomationLogService.log(job, f"Auto published to production: {page.full_path or page.title}", execution=execution)
+
+    @staticmethod
+    def _schedule_next_recurring_job(job: AutomationJob, *, execution=None) -> None:
+        config = job.config or {}
+        recurrence_interval = config.get("recurrence_interval") or ""
+        interval = RECURRENCE_INTERVALS.get(recurrence_interval)
+        if not interval or config.get("next_recurring_job_id"):
+            return
+
+        next_config = {
+            key: value
+            for key, value in config.items()
+            if key
+            not in {
+                "data_ready",
+                "data_summary",
+                "gemini_payload",
+                "design_ready",
+                "generated_page_id",
+                "generated_page_title",
+                "auto_published_page_id",
+                "auto_published_at",
+                "step_retry_counts",
+                "next_recurring_job_id",
+            }
+        }
+        next_run_at = timezone.now() + interval
+        next_job = JobService.create_job(
+            job.tenant_id,
+            job.created_by,
+            {
+                "name": job.name,
+                "job_type": job.job_type,
+                "queue_id": str(job.queue_id),
+                "config": next_config,
+                "requires_approval": job.requires_approval,
+                "auto_publish_enabled": job.auto_publish_enabled,
+                "scheduled_at": next_run_at,
+                "parent_job_id": str(job.id),
+                "steps": [
+                    {"name": name, "step_type": step_type, "config": {"output_type": next_config.get("output_type")}}
+                    for step_type, name in GENERATION_STEPS
+                ],
+            },
+        )
+        next_job.status = JobStatus.SCHEDULED
+        next_job.save(update_fields=["status", "updated_at"])
+        job.config = {**config, "next_recurring_job_id": str(next_job.id), "next_recurring_run_at": next_run_at.isoformat()}
+        job.save(update_fields=["config", "updated_at"])
+        AutomationLogService.log(job, f"Next recurring run scheduled at {next_run_at.isoformat()}", execution=execution)
 
     @staticmethod
     def reset_step_for_retry(job: AutomationJob, step_id: str) -> AutomationJob:
@@ -615,3 +701,7 @@ Locale: {locale}.
             PageStatus.PUBLISHED,
             change_summary="Approved from AI SEO Workspace",
         )
+
+    @staticmethod
+    def delete_page(tenant_id, page_id: str) -> None:
+        PageService.soft_delete(tenant_id, page_id)

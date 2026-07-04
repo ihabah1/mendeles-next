@@ -14,6 +14,7 @@ const NAV = [
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
   { href: "/dashboard/workspace", labelKey: "workspace", permission: "ai_seo.view" },
+  { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
   { href: "/dashboard/ai-seo", labelKey: "aiSeo", permission: "ai_seo.view" },
   { href: "/dashboard/automation", labelKey: "automation", permission: "automation.view" },
   { href: "/dashboard/roles", labelKey: "roles", permission: "roles.view" },

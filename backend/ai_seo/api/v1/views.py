@@ -160,6 +160,16 @@ class AiSeoWorkspacePublishView(APIView):
         return Response(AiSeoGenerationService.serialize_page(page))
 
 
+class AiSeoWorkspaceDeletePageView(APIView):
+    def delete(self, request, page_id):
+        _check(request, self, "ai_seo.manage")
+        try:
+            AiSeoGenerationService.delete_page(request.user.default_tenant_id, page_id)
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(status=204)
+
+
 class AiSeoWorkspaceRunJobView(APIView):
     def post(self, request, job_id):
         _check(request, self, "ai_seo.manage")

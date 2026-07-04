@@ -3,7 +3,9 @@ from datetime import timedelta
 from django.utils import timezone
 
 from automation.domain.enums import JobStatus, StepStatus
-from automation.infrastructure.models import AutomationJobStep
+from automation.infrastructure.models import AutomationJob, AutomationJobStep
+from content.domain.status import PageStatus
+from content.infrastructure.models import Page
 
 
 @pytest.mark.django_db
@@ -79,6 +81,98 @@ def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkey
     assert body["generated_page_id"]
     assert all(step["status"] == "completed" for step in body["steps"])
     assert body["logs"]
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_auto_publishes_generated_page(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+
+    def fake_generate_json(prompt):
+        return {
+            "title": "דף פרסום אוטומטי",
+            "meta_title": "דף פרסום אוטומטי",
+            "meta_description": "תיאור",
+            "blocks": [{"type": "hero", "config": {"headline": "כותרת"}}],
+        }
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        fake_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": ["law"],
+            "output_types": ["landing_page"],
+            "keywords": ["עורך דין"],
+            "auto_publish_enabled": True,
+        },
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+    response = None
+    for _ in range(5):
+        response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+
+    page = Page.objects.get(id=response.json()["generated_page_id"])
+    assert page.status == PageStatus.PUBLISHED
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_schedules_next_recurring_job(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+
+    def fake_generate_json(prompt):
+        return {
+            "title": "דף מחזורי",
+            "meta_title": "דף מחזורי",
+            "meta_description": "תיאור",
+            "blocks": [{"type": "hero", "config": {"headline": "כותרת"}}],
+        }
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        fake_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": ["law"],
+            "output_types": ["landing_page"],
+            "keywords": ["עורך דין"],
+            "recurrence_interval": "hourly",
+        },
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+    response = None
+    for _ in range(5):
+        response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+
+    next_job_id = response.json()["config"]["next_recurring_job_id"]
+    next_job = AutomationJob.objects.get(id=next_job_id)
+    assert next_job.status == JobStatus.SCHEDULED
+    assert next_job.scheduled_at is not None
+    assert next_job.parent_job_id == AutomationJob.objects.get(id=job_id).id
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_delete_page(owner_client, tenant, owner_user):
+    page = Page.objects.create(
+        tenant=tenant,
+        title="למחיקה",
+        slug="delete-me",
+        full_path="/delete-me",
+        page_type="landing_page",
+        locale="he",
+        created_by=owner_user,
+    )
+
+    response = owner_client.delete(f"/api/v1/ai-seo/workspace/pages/{page.id}/delete/")
+    page.refresh_from_db()
+
+    assert response.status_code == 204
+    assert page.deleted_at is not None
 
 
 @pytest.mark.django_db

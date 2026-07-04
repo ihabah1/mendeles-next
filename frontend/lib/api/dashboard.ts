@@ -626,6 +626,8 @@ export const aiSeoApi = {
     output_types: string[];
     prompt?: string;
     scheduled_at?: string;
+    recurrence_interval?: string;
+    auto_publish_enabled?: boolean;
     locale?: string;
   }) =>
     apiFetch<{ jobs: AiSeoWorkspaceJob[]; workspace: AiSeoWorkspace }>("/api/v1/ai-seo/workspace/generate/", {
@@ -644,6 +646,11 @@ export const aiSeoApi = {
       method: "POST",
       headers: authHeaders(),
       json: { page_id },
+    }),
+  deleteWorkspacePage: (pageId: string) =>
+    apiFetch<void>(`/api/v1/ai-seo/workspace/pages/${pageId}/delete/`, {
+      method: "DELETE",
+      headers: authHeaders(),
     }),
   runWorkspaceJob: (jobId: string) =>
     apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/run/`, {
@@ -714,6 +721,7 @@ export type AiSeoWorkspaceDraft = {
   full_path: string;
   meta_title: string;
   meta_description: string;
+  published_at: string | null;
   updated_at: string | null;
   test_url: string;
   blocks: Array<{

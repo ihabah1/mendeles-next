@@ -109,10 +109,14 @@ export default function WorkspacePage() {
   const [outputTypes, setOutputTypes] = useState<string[]>(["blog", "landing_page"]);
   const [prompt, setPrompt] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [recurrenceInterval, setRecurrenceInterval] = useState("");
+  const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [expandedPreviewIds, setExpandedPreviewIds] = useState<string[]>([]);
+  const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
   const workspace = useQuery({
     queryKey: ["ai-seo-workspace"],
@@ -135,6 +139,8 @@ export default function WorkspacePage() {
         output_types: outputTypes,
         prompt,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        recurrence_interval: recurrenceInterval || undefined,
+        auto_publish_enabled: autoPublishEnabled,
         locale: "he",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
@@ -204,6 +210,14 @@ export default function WorkspacePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
   });
 
+  const deletePages = useMutation({
+    mutationFn: (pageIds: string[]) => Promise.all(pageIds.map((pageId) => aiSeoApi.deleteWorkspacePage(pageId))),
+    onSuccess: () => {
+      setSelectedPageIds([]);
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+    },
+  });
+
   if (!canView) {
     return (
       <Card>
@@ -235,6 +249,21 @@ export default function WorkspacePage() {
   function startSelectedJob() {
     setQueueRunning(true);
     setQueueTick((tick) => tick + 1);
+  }
+
+  function togglePreview(pageId: string) {
+    setExpandedPreviewIds((prev) => (prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId]));
+  }
+
+  function togglePageSelection(pageId: string) {
+    setSelectedPageIds((prev) => (prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId]));
+  }
+
+  function confirmDeleteSelectedPages() {
+    if (!selectedPageIds.length) return;
+    if (window.confirm(`למחוק ${selectedPageIds.length} פאנלים/תוצרים מסומנים?`)) {
+      deletePages.mutate(selectedPageIds);
+    }
   }
 
   useEffect(() => {
@@ -332,6 +361,33 @@ export default function WorkspacePage() {
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
             />
+          </label>
+          <label className="mt-4 block text-sm">
+            <span className="mb-1 block font-medium">ריצה מחזורית</span>
+            <select
+              className="w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+              value={recurrenceInterval}
+              onChange={(e) => setRecurrenceInterval(e.target.value)}
+            >
+              <option value="">חד פעמי</option>
+              <option value="hourly">כל שעה</option>
+              <option value="every_6_hours">כל 6 שעות</option>
+              <option value="every_24_hours">כל 24 שעות</option>
+              <option value="every_2_days">כל יומיים</option>
+            </select>
+          </label>
+          <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={autoPublishEnabled}
+              onChange={(e) => setAutoPublishEnabled(e.target.checked)}
+            />
+            <span>
+              <span className="block font-medium">העלאה לפרודקשן ללא אישור</span>
+              <span className="mt-1 block text-xs text-[var(--muted-fg)]">
+                בסיום יצירת הדף/מאמר הוא יפורסם אוטומטית ללא שאלת אישור.
+              </span>
+            </span>
           </label>
           {canManage && (
             <Button
@@ -542,21 +598,51 @@ export default function WorkspacePage() {
       </Card>
 
       <Card>
-        <h2 className="font-semibold">אזור טסטים ותוצרים</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">אזור טסטים ותוצרים</h2>
+            <p className="mt-1 text-xs text-[var(--muted-fg)]">סימולציה נפתחת רק אחרי לחיצה על + הגדל פאנל.</p>
+          </div>
+          {canManage && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selectedPageIds.length === 0 || deletePages.isPending}
+              onClick={confirmDeleteSelectedPages}
+            >
+              מחק מסומנים ({selectedPageIds.length})
+            </Button>
+          )}
+        </div>
         {drafts.length === 0 ? (
           <p className="mt-4 text-sm text-[var(--muted-fg)]">בסיום generation יופיעו כאן לינקים לטיוטות.</p>
         ) : (
           <ul className="mt-4 space-y-4">
-            {drafts.map((page) => (
+            {drafts.map((page) => {
+              const previewExpanded = expandedPreviewIds.includes(page.id);
+              return (
               <li key={page.id} className="rounded-lg border border-[var(--border)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{page.title}</p>
-                    <p className="text-xs text-[var(--muted-fg)]">
-                      {page.page_type} · {page.status} · {page.full_path || "ללא path"}
-                    </p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={selectedPageIds.includes(page.id)}
+                      onChange={() => togglePageSelection(page.id)}
+                      aria-label={`בחר ${page.title} למחיקה`}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold">{page.title}</p>
+                      <p className="text-xs text-[var(--muted-fg)]">
+                        {page.page_type} · {page.status} · {page.full_path || "ללא path"}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => togglePreview(page.id)}>
+                      {previewExpanded ? "− סגור פאנל" : "+ הגדל פאנל"}
+                    </Button>
                     <Link href={page.test_url}>
                       <Button type="button" variant="outline" size="sm">פתח באזור טסט</Button>
                     </Link>
@@ -567,7 +653,7 @@ export default function WorkspacePage() {
                     )}
                   </div>
                 </div>
-                <DraftPreview page={page} />
+                {previewExpanded && <DraftPreview page={page} />}
                 <label className="mt-3 block text-sm">
                   <span className="mb-1 block font-medium">Reject / הערות ליצירה חוזרת</span>
                   <textarea
@@ -590,7 +676,8 @@ export default function WorkspacePage() {
                   </Button>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </Card>
