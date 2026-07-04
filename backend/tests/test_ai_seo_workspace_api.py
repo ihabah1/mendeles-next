@@ -47,6 +47,32 @@ def test_ai_seo_workspace_generate_creates_batch_job(owner_client, settings):
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_random_topics_and_history(owner_client, settings):
+    settings.GEMINI_API_KEY = "test-key"
+    response = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": [],
+            "output_types": ["blog"],
+            "random_topics_enabled": True,
+            "random_topic_count": 2,
+            "auto_publish_enabled": True,
+            "publish_at": (timezone.now() + timedelta(days=1)).isoformat(),
+        },
+        format="json",
+    )
+    assert response.status_code == 201, response.content
+    jobs = response.json()["jobs"]
+    assert len(jobs) == 2
+    assert all(job["config"]["random_topics_enabled"] for job in jobs)
+    assert all(job["config"]["publish_at"] for job in jobs)
+
+    workspace = owner_client.get("/api/v1/ai-seo/workspace/")
+    assert workspace.status_code == 200
+    assert workspace.json()["history"]
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 

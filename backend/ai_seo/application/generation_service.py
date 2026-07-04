@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from datetime import timedelta
 
 from django.conf import settings
@@ -15,8 +16,9 @@ from automation.infrastructure.models import AutomationJob, AutomationJobStep, A
 from content.application.block_service import BlockService
 from content.application.page_service import PageService
 from content.application.publish_service import PublishService
+from content.application.taxonomy_service import TaxonomyService
 from content.domain.status import PageStatus, PageType
-from content.infrastructure.models import Page
+from content.infrastructure.models import Page, Taxonomy, TaxonomyTerm
 from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, selected_domain_rows
 from ai_seo.application.gemini_service import GeminiService
 
@@ -49,6 +51,40 @@ GENERATION_STEPS = [
     ("ai_seo.publish", "העלאה לפרודקשן"),
 ]
 
+FREE_STOCK_IMAGES = [
+    {
+        "url": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+        "alt": "Modern business workspace",
+        "source": "Unsplash",
+        "license": "Unsplash License - free for commercial use",
+    },
+    {
+        "url": "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1600&q=80",
+        "alt": "Business team planning growth",
+        "source": "Unsplash",
+        "license": "Unsplash License - free for commercial use",
+    },
+    {
+        "url": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80",
+        "alt": "Digital marketing and product team",
+        "source": "Unsplash",
+        "license": "Unsplash License - free for commercial use",
+    },
+    {
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=80",
+        "alt": "Professional consultation meeting",
+        "source": "Unsplash",
+        "license": "Unsplash License - free for commercial use",
+    },
+]
+
+LANDING_THEMES = [
+    {"slug": "cyan-growth", "label": "Growth Cyan", "accent": "cyan"},
+    {"slug": "emerald-trust", "label": "Trust Emerald", "accent": "emerald"},
+    {"slug": "violet-premium", "label": "Premium Violet", "accent": "violet"},
+    {"slug": "amber-conversion", "label": "Conversion Amber", "accent": "amber"},
+]
+
 
 def _parse_scheduled_at(value):
     if not value:
@@ -60,6 +96,27 @@ def _parse_scheduled_at(value):
 
 
 class AiSeoGenerationService:
+    @staticmethod
+    def _select_domains_for_run(values: list[str], *, random_topics_enabled: bool, random_topic_count: int) -> list[dict]:
+        pool = selected_domain_rows(values) if values else DOMAIN_OPTIONS
+        if not random_topics_enabled:
+            return selected_domain_rows(values)
+        count = min(random_topic_count, len(pool))
+        return random.sample(pool, count) if count else []
+
+    @staticmethod
+    def _select_keywords_for_run(domain: dict, selected_keywords: list[str], *, random_topics_enabled: bool) -> list[str]:
+        if selected_keywords and not random_topics_enabled:
+            return selected_keywords
+        keywords = list(domain.get("keywords") or selected_keywords or [])
+        if random_topics_enabled and len(keywords) > 1:
+            return random.sample(keywords, min(3, len(keywords)))
+        return keywords
+
+    @staticmethod
+    def _random_visual_asset() -> dict:
+        return random.choice(FREE_STOCK_IMAGES)
+
     @staticmethod
     def workspace_state(tenant_id) -> dict:
         AiSeoGenerationService.recover_stale_jobs(tenant_id)
@@ -78,7 +135,52 @@ class AiSeoGenerationService:
             "gemini_configured": GeminiService.configured(),
             "jobs": [AiSeoGenerationService.serialize_job(job) for job in jobs],
             "drafts": [AiSeoGenerationService.serialize_page(page) for page in pages],
+            "history": AiSeoGenerationService.run_history(tenant_id),
         }
+
+    @staticmethod
+    def run_history(tenant_id, *, limit=12) -> list[dict]:
+        jobs = AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+            deleted_at__isnull=True,
+        ).order_by("-created_at")[:80]
+        seen = set()
+        history = []
+        for job in jobs:
+            config = job.config or {}
+            domain = config.get("domain") or {}
+            key = (
+                domain.get("value", ""),
+                tuple(config.get("keywords") or []),
+                config.get("output_type", ""),
+                config.get("recurrence_interval", ""),
+                bool(config.get("auto_publish_enabled")),
+                bool(config.get("random_topics_enabled")),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            history.append(
+                {
+                    "id": str(job.id),
+                    "label": f"{domain.get('label', 'נושא')} · {config.get('output_type', 'תוצר')} · {job.created_at.strftime('%d/%m %H:%M') if job.created_at else ''}",
+                    "domains": config.get("source_domain_values") or ([domain.get("value")] if domain.get("value") else []),
+                    "keywords": config.get("keywords") or [],
+                    "output_types": [config.get("output_type")] if config.get("output_type") else [],
+                    "prompt": config.get("prompt", ""),
+                    "recurrence_interval": config.get("recurrence_interval", ""),
+                    "auto_publish_enabled": bool(config.get("auto_publish_enabled")),
+                    "random_topics_enabled": bool(config.get("random_topics_enabled")),
+                    "random_topic_count": int(config.get("random_topic_count") or 1),
+                    "landing_design_enabled": bool(config.get("landing_design_enabled", True)),
+                    "free_image_enabled": bool(config.get("free_image_enabled", True)),
+                    "publish_at": config.get("publish_at") or "",
+                }
+            )
+            if len(history) >= limit:
+                break
+        return history
 
     @staticmethod
     def serialize_job(job: AutomationJob) -> dict:
@@ -193,9 +295,12 @@ class AiSeoGenerationService:
             "meta_title": page.meta_title,
             "meta_description": page.meta_description,
             "published_at": page.published_at.isoformat() if page.published_at else None,
+            "scheduled_at": page.scheduled_at.isoformat() if page.scheduled_at else None,
             "updated_at": page.updated_at.isoformat() if page.updated_at else None,
             "test_url": f"/dashboard/content?highlight={page.id}",
             "source_job_id": str(source_job.id) if (source_job := AiSeoGenerationService._source_job_for_page(page)) else None,
+            "category": AiSeoGenerationService._page_category(page),
+            "image": AiSeoGenerationService._page_image(page),
             "blocks": [
                 {
                     "id": str(block.id),
@@ -211,9 +316,16 @@ class AiSeoGenerationService:
         if not GeminiService.configured():
             raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-        domains = selected_domain_rows(data.get("domains") or [])
+        requested_domain_values = data.get("domains") or []
+        random_topics_enabled = bool(data.get("random_topics_enabled", False))
+        random_topic_count = max(1, min(int(data.get("random_topic_count") or 1), 6))
+        domains = cls._select_domains_for_run(
+            requested_domain_values,
+            random_topics_enabled=random_topics_enabled,
+            random_topic_count=random_topic_count,
+        )
         if not domains:
-            raise RuntimeError("Select at least one domain.")
+            raise RuntimeError("Select at least one domain or enable random topics.")
 
         output_types = [o for o in (data.get("output_types") or []) if o in OUTPUT_TO_JOB]
         if not output_types:
@@ -222,8 +334,11 @@ class AiSeoGenerationService:
         selected_keywords = data.get("keywords") or []
         manual_prompt = data.get("prompt") or ""
         scheduled_at = _parse_scheduled_at(data.get("scheduled_at"))
+        publish_at = _parse_scheduled_at(data.get("publish_at"))
         recurrence_interval = data.get("recurrence_interval") or ""
         auto_publish_enabled = bool(data.get("auto_publish_enabled", False))
+        landing_design_enabled = bool(data.get("landing_design_enabled", True))
+        free_image_enabled = bool(data.get("free_image_enabled", True))
         jobs = []
         AutomationQueue.objects.get_or_create(
             tenant_id=tenant_id,
@@ -232,9 +347,11 @@ class AiSeoGenerationService:
         )
 
         for domain in domains:
-            keywords = selected_keywords or domain["keywords"]
+            keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
             for output_type in output_types:
                 job_type = OUTPUT_TO_JOB[output_type]
+                visual_asset = cls._random_visual_asset() if free_image_enabled else None
+                landing_theme = random.choice(LANDING_THEMES) if landing_design_enabled else None
                 job = JobService.create_job(
                     tenant_id,
                     user,
@@ -249,6 +366,14 @@ class AiSeoGenerationService:
                             "locale": data.get("locale", "he"),
                             "recurrence_interval": recurrence_interval,
                             "auto_publish_enabled": auto_publish_enabled,
+                            "publish_at": publish_at.isoformat() if publish_at else "",
+                            "source_domain_values": requested_domain_values,
+                            "random_topics_enabled": random_topics_enabled,
+                            "random_topic_count": random_topic_count,
+                            "landing_design_enabled": landing_design_enabled,
+                            "free_image_enabled": free_image_enabled,
+                            "visual_asset": visual_asset,
+                            "landing_theme": landing_theme,
                         },
                         "requires_approval": not auto_publish_enabled,
                         "auto_publish_enabled": auto_publish_enabled,
@@ -272,7 +397,6 @@ class AiSeoGenerationService:
     def execute_generation_job(cls, job: AutomationJob) -> Page:
         config = job.config or {}
         output_type = config.get("output_type", "blog")
-        page_type = OUTPUT_TO_PAGE_TYPE.get(output_type, PageType.BLOG)
         domain = config.get("domain") or {}
         keywords = config.get("keywords") or []
         prompt = cls._build_prompt(
@@ -284,29 +408,7 @@ class AiSeoGenerationService:
             user_prompt=config.get("prompt", ""),
         )
         result = GeminiService.generate_json(prompt)
-        page = PageService.create_page(
-            job.tenant_id,
-            job.created_by,
-            {
-                "title": result.get("title") or f"{domain.get('label', 'AI')} — {output_type}",
-                "page_type": page_type,
-                "locale": config.get("locale", "he"),
-                "meta_title": result.get("meta_title", ""),
-                "meta_description": result.get("meta_description", ""),
-            },
-        )
-        for index, block in enumerate(result.get("blocks") or [], start=1):
-            BlockService.create_block(
-                page,
-                {
-                    "block_type": block.get("type", "rich_text"),
-                    "sort_order": index,
-                    "config": block.get("config", {}),
-                },
-            )
-        job.config = {**config, "generated_page_id": str(page.id), "generated_page_title": page.title}
-        job.save(update_fields=["config", "updated_at"])
-        return page
+        return cls._create_page_from_payload(job, result)
 
     @classmethod
     def execute_generation_step(cls, job: AutomationJob, step: AutomationJobStep, *, execution=None) -> Page | None:
@@ -462,11 +564,30 @@ class AiSeoGenerationService:
                 "generated_page_id",
                 "generated_page_title",
                 "auto_published_page_id",
+                "published_page_id",
                 "auto_published_at",
                 "step_retry_counts",
                 "next_recurring_job_id",
             }
         }
+        if next_config.get("random_topics_enabled"):
+            domains = AiSeoGenerationService._select_domains_for_run(
+                next_config.get("source_domain_values") or [],
+                random_topics_enabled=True,
+                random_topic_count=int(next_config.get("random_topic_count") or 1),
+            )
+            if domains:
+                domain = domains[0]
+                next_config["domain"] = domain
+                next_config["keywords"] = AiSeoGenerationService._select_keywords_for_run(
+                    domain,
+                    [],
+                    random_topics_enabled=True,
+                )
+                if next_config.get("free_image_enabled", True):
+                    next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset()
+                if next_config.get("landing_design_enabled", True):
+                    next_config["landing_theme"] = random.choice(LANDING_THEMES)
         next_run_at = timezone.now() + interval
         next_job = JobService.create_job(
             job.tenant_id,
@@ -612,6 +733,7 @@ class AiSeoGenerationService:
         output_type = config.get("output_type", "blog")
         page_type = OUTPUT_TO_PAGE_TYPE.get(output_type, PageType.BLOG)
         domain = config.get("domain") or {}
+        publish_at = _parse_scheduled_at(config.get("publish_at"))
         page = PageService.create_page(
             job.tenant_id,
             job.created_by,
@@ -623,15 +745,39 @@ class AiSeoGenerationService:
                 "meta_description": payload.get("meta_description", ""),
             },
         )
+        if publish_at:
+            page.scheduled_at = publish_at
+            page.save(update_fields=["scheduled_at", "updated_at"])
+
+        visual_asset = config.get("visual_asset") if config.get("free_image_enabled", True) else None
+        landing_theme = config.get("landing_theme") if config.get("landing_design_enabled", True) else None
+        if visual_asset:
+            BlockService.create_block(
+                page,
+                {
+                    "block_type": "image",
+                    "sort_order": 0,
+                    "config": {
+                        **visual_asset,
+                        "caption": f"תמונה חינמית לשימוש מסחרי · {visual_asset.get('source', '')}",
+                        "theme": landing_theme,
+                    },
+                },
+            )
+
         for index, block in enumerate(payload.get("blocks") or [], start=1):
+            block_config = block.get("config", {})
+            if landing_theme and block.get("type") == "hero":
+                block_config = {**block_config, "theme": landing_theme}
             BlockService.create_block(
                 page,
                 {
                     "block_type": block.get("type", "rich_text"),
                     "sort_order": index,
-                    "config": block.get("config", {}),
+                    "config": block_config,
                 },
             )
+        cls._assign_generation_category(page, domain)
         job.config = {**config, "generated_page_id": str(page.id), "generated_page_title": page.title}
         job.save(update_fields=["config", "updated_at"])
         return page
@@ -646,6 +792,52 @@ class AiSeoGenerationService:
         return normalized
 
     @staticmethod
+    def _assign_generation_category(page: Page, domain: dict) -> None:
+        if not domain.get("label"):
+            return
+        taxonomy, _ = Taxonomy.objects.get_or_create(
+            tenant_id=page.tenant_id,
+            slug="ai-seo-categories",
+            defaults={
+                "name": "AI SEO Categories",
+                "kind": "category",
+                "is_hierarchical": True,
+                "allow_multiple": False,
+            },
+        )
+        term, _ = TaxonomyTerm.objects.get_or_create(
+            tenant_id=page.tenant_id,
+            taxonomy=taxonomy,
+            slug=domain.get("value") or "general",
+            defaults={
+                "name": domain.get("label") or "כללי",
+                "full_path": domain.get("value") or "general",
+            },
+        )
+        TaxonomyService.assign_term(page, str(term.id))
+
+    @staticmethod
+    def _page_category(page: Page) -> dict | None:
+        page_term = (
+            page.page_terms.select_related("term", "term__taxonomy")
+            .filter(deleted_at__isnull=True, term__taxonomy__kind="category")
+            .order_by("created_at")
+            .first()
+        )
+        if not page_term:
+            return None
+        return {
+            "id": str(page_term.term_id),
+            "name": page_term.term.name,
+            "slug": page_term.term.slug,
+        }
+
+    @staticmethod
+    def _page_image(page: Page) -> dict | None:
+        image = page.blocks.filter(block_type="image", deleted_at__isnull=True, is_visible=True).order_by("sort_order").first()
+        return image.config if image else None
+
+    @staticmethod
     def _build_prompt(*, output_type: str, domain_label: str, keywords: list[str], locale: str, feedback: str, user_prompt: str) -> str:
         asset = "SEO landing page" if output_type == "landing_page" else "SEO blog article"
         return f"""
@@ -653,6 +845,8 @@ Create a production-ready {asset} in Hebrew for the business domain: {domain_lab
 Use only the following real user-selected keywords: {", ".join(keywords)}.
 Additional user instructions: {user_prompt or "none"}.
 Revision feedback: {feedback or "none"}.
+For blog articles include a clear intro, practical sections, and a summary.
+For landing pages use a distinct visual style, persuasive headline, and conversion-focused CTA.
 
 Return strict JSON only:
 {{

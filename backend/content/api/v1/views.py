@@ -1,5 +1,6 @@
 import os
 
+from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -63,6 +64,53 @@ class PublicPageResolveView(APIView):
         if not page:
             return Response({"error": {"code": "not_found", "message": "Page not found"}}, status=404)
         return Response(PageService.serialize_page_detail(page))
+
+
+class PublicPageListView(APIView):
+    """Public list of published pages for blog/feed views."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tenant_id = _resolve_public_tenant_id()
+        if not tenant_id:
+            return Response({"results": [], "categories": []})
+
+        locale = request.query_params.get("locale") or "he"
+        page_type = request.query_params.get("page_type") or "blog"
+        query = (request.query_params.get("q") or "").strip()
+        category = (request.query_params.get("category") or "").strip()
+        qs = (
+            Page.objects.filter(
+                tenant_id=tenant_id,
+                locale=locale,
+                page_type=page_type,
+                status=PageStatus.PUBLISHED,
+                deleted_at__isnull=True,
+            )
+            .prefetch_related("page_terms__term", "blocks")
+            .order_by("-published_at", "-created_at")
+        )
+        if query:
+            qs = qs.filter(Q(title__icontains=query) | Q(meta_description__icontains=query))
+        if category:
+            qs = qs.filter(page_terms__term__slug=category, page_terms__deleted_at__isnull=True)
+
+        pages = list(qs.distinct()[:50])
+        categories = {}
+        for page in pages:
+            for page_term in page.page_terms.filter(deleted_at__isnull=True):
+                categories[page_term.term.slug] = {
+                    "slug": page_term.term.slug,
+                    "name": page_term.term.name,
+                }
+
+        return Response(
+            {
+                "results": [PageService.serialize_page_detail(page) for page in pages],
+                "categories": sorted(categories.values(), key=lambda item: item["name"]),
+            }
+        )
 
 
 class PageListView(APIView):

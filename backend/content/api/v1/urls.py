@@ -13,6 +13,7 @@ from content.api.v1.views import (
     PageTermView,
     PageVersionDetailView,
     PageVersionListView,
+    PublicPageListView,
     PublicPageResolveView,
     TaxonomyListView,
     TaxonomyTermListView,
@@ -20,6 +21,7 @@ from content.api.v1.views import (
 )
 
 urlpatterns = [
+    path("public/pages/", PublicPageListView.as_view(), name="content-public-pages"),
     path("public/pages/resolve/", PublicPageResolveView.as_view(), name="content-public-page-resolve"),
     path("pages/", PageListView.as_view(), name="content-pages"),
     path("pages/<uuid:page_id>/", PageDetailView.as_view(), name="content-page-detail"),

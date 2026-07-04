@@ -1,6 +1,7 @@
 export const MAIN_NAV = [
   { href: "/solutions", labelKey: "navSolutions" },
   { href: "/industries", labelKey: "navIndustries" },
+  { href: "/blog", labelKey: "navBlog" },
   { href: "/company", labelKey: "navCompany" },
 ] as const;
 

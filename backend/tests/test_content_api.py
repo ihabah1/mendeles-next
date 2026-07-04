@@ -161,3 +161,26 @@ def test_public_page_resolve_serves_only_published_pages(api_client, tenant, own
     assert live.status_code == 200
     assert live.json()["title"] == "Live Promo"
     assert live.json()["blocks"][0]["config"]["headline"] == "Live headline"
+
+
+@pytest.mark.django_db
+def test_public_page_list_filters_published_blog_pages(api_client, tenant, owner_user):
+    blog = PageService.create_page(
+        tenant.id,
+        owner_user,
+        {"title": "AI Growth", "slug": "ai-growth", "page_type": "blog", "meta_description": "Growth guide"},
+    )
+    BlockService.create_block(blog, {"block_type": "rich_text", "config": {"html": "<p>Body</p>"}})
+    PublishService.publish(tenant.id, blog.id, owner_user)
+    draft = PageService.create_page(
+        tenant.id,
+        owner_user,
+        {"title": "Draft Blog", "slug": "draft-blog", "page_type": "blog"},
+    )
+
+    response = api_client.get("/api/v1/content/public/pages/?page_type=blog&locale=he&q=growth")
+
+    assert response.status_code == 200
+    titles = [item["title"] for item in response.json()["results"]]
+    assert "AI Growth" in titles
+    assert draft.title not in titles

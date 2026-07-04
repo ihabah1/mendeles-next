@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
-import { aiSeoApi, type AiSeoWorkspaceDraft } from "@/lib/api/dashboard";
+import { aiSeoApi, type AiSeoWorkspaceDraft, type AiSeoWorkspaceHistory } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,14 @@ function plainPreview(value: string): string {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function toLocalInputValue(value: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
 function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-slate-950 to-slate-900 text-white shadow-inner">
@@ -31,6 +39,14 @@ function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
         <p className="text-xs uppercase tracking-[0.3em] text-sky-300">Preview לפני פרודקשן</p>
         <h3 className="mt-2 text-2xl font-bold">{page.title}</h3>
         {page.meta_description && <p className="mt-2 max-w-3xl text-sm text-slate-300">{page.meta_description}</p>}
+        {page.image && typeof page.image.url === "string" && (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+            <img src={page.image.url} alt={typeof page.image.alt === "string" ? page.image.alt : page.title} className="h-56 w-full object-cover" />
+            <p className="bg-black/30 px-3 py-2 text-xs text-slate-300">
+              {typeof page.image.license === "string" ? page.image.license : "Free stock image"}
+            </p>
+          </div>
+        )}
       </div>
       <div className="space-y-4 p-5">
         {page.blocks.length === 0 ? (
@@ -109,8 +125,14 @@ export default function WorkspacePage() {
   const [outputTypes, setOutputTypes] = useState<string[]>(["blog", "landing_page"]);
   const [prompt, setPrompt] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [publishAt, setPublishAt] = useState("");
   const [recurrenceInterval, setRecurrenceInterval] = useState("");
   const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
+  const [randomTopicsEnabled, setRandomTopicsEnabled] = useState(false);
+  const [randomTopicCount, setRandomTopicCount] = useState(2);
+  const [landingDesignEnabled, setLandingDesignEnabled] = useState(true);
+  const [freeImageEnabled, setFreeImageEnabled] = useState(true);
+  const [selectedHistoryId, setSelectedHistoryId] = useState("");
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
@@ -139,8 +161,13 @@ export default function WorkspacePage() {
         output_types: outputTypes,
         prompt,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        publish_at: publishAt ? new Date(publishAt).toISOString() : undefined,
         recurrence_interval: recurrenceInterval || undefined,
         auto_publish_enabled: autoPublishEnabled,
+        random_topics_enabled: randomTopicsEnabled,
+        random_topic_count: randomTopicCount,
+        landing_design_enabled: landingDesignEnabled,
+        free_image_enabled: freeImageEnabled,
         locale: "he",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
@@ -272,6 +299,20 @@ export default function WorkspacePage() {
     }
   }
 
+  function applyHistoryPreset(preset: AiSeoWorkspaceHistory) {
+    setSelectedDomains(preset.domains || []);
+    setKeywordsText((preset.keywords || []).join("\n"));
+    setOutputTypes((preset.output_types || []).filter(Boolean));
+    setPrompt(preset.prompt || "");
+    setRecurrenceInterval(preset.recurrence_interval || "");
+    setAutoPublishEnabled(Boolean(preset.auto_publish_enabled));
+    setRandomTopicsEnabled(Boolean(preset.random_topics_enabled));
+    setRandomTopicCount(preset.random_topic_count || 1);
+    setLandingDesignEnabled(preset.landing_design_enabled !== false);
+    setFreeImageEnabled(preset.free_image_enabled !== false);
+    setPublishAt(toLocalInputValue(preset.publish_at || ""));
+  }
+
   useEffect(() => {
     if (queueRunning && !runNextStep.isPending && !runSelectedJob.isPending) {
       if (selectedJobId) {
@@ -284,6 +325,7 @@ export default function WorkspacePage() {
 
   const jobs = workspace.data?.jobs ?? [];
   const drafts = workspace.data?.drafts ?? [];
+  const history = workspace.data?.history ?? [];
   const geminiReady = workspace.data?.gemini_configured;
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
 
@@ -308,9 +350,58 @@ export default function WorkspacePage() {
         </Card>
       )}
 
+      <Card>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">בחירה אוטומטית מהיסטוריית ריצות</span>
+            <select
+              className="w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+              value={selectedHistoryId}
+              onChange={(e) => {
+                const preset = history.find((item) => item.id === e.target.value);
+                setSelectedHistoryId(e.target.value);
+                if (preset) applyHistoryPreset(preset);
+              }}
+            >
+              <option value="">בחר preset מריצה קודמת...</option>
+              {history.map((item) => (
+                <option key={item.id} value={item.id}>{item.label}</option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs text-[var(--muted-fg)]">
+            כל אוטומציה שיצרת נשמרת כהיסטוריית בחירה מתוך ה-jobs הקיימים.
+          </p>
+        </div>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <h2 className="font-semibold">1. בחירת תחומים ומילות מפתח</h2>
+          <label className="mt-4 flex items-start gap-2 rounded-lg border border-sky-400/40 bg-sky-500/10 p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={randomTopicsEnabled}
+              onChange={(e) => setRandomTopicsEnabled(e.target.checked)}
+            />
+            <span>
+              <span className="block font-medium">בחירת נושאים אקראית לאוטומציה</span>
+              <span className="mt-1 block text-xs text-[var(--muted-fg)]">
+                אם לא נבחרו תחומים, המערכת תבחר מהקטלוג כולו. אם נבחרו תחומים, האקראיות תהיה מתוך הבחירה.
+              </span>
+            </span>
+          </label>
+          <label className="mt-3 block text-sm">
+            <span className="mb-1 block font-medium">כמה נושאים אקראיים ליצור בכל batch</span>
+            <input
+              type="number"
+              min={1}
+              max={6}
+              className="w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+              value={randomTopicCount}
+              onChange={(e) => setRandomTopicCount(Number(e.target.value) || 1)}
+            />
+          </label>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {domains.map((domain) => (
               <label key={domain.value} className="flex cursor-pointer items-center gap-2 rounded border border-[var(--border)] p-2 text-sm">
@@ -369,6 +460,18 @@ export default function WorkspacePage() {
             />
           </label>
           <label className="mt-4 block text-sm">
+            <span className="mb-1 block font-medium">תאריך ושעה לפרסום התוצר</span>
+            <input
+              type="datetime-local"
+              className="w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+              value={publishAt}
+              onChange={(e) => setPublishAt(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-[var(--muted-fg)]">
+              אם נבחר תאריך עתידי והעלאה אוטומטית פעילה, הדף יישמר כ-scheduled עד מועד הפרסום.
+            </span>
+          </label>
+          <label className="mt-4 block text-sm">
             <span className="mb-1 block font-medium">ריצה מחזורית</span>
             <select
               className="w-full rounded-md border border-[var(--border)] bg-transparent p-2"
@@ -395,11 +498,29 @@ export default function WorkspacePage() {
               </span>
             </span>
           </label>
+          <div className="mt-4 grid gap-2 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={landingDesignEnabled}
+                onChange={(e) => setLandingDesignEnabled(e.target.checked)}
+              />
+              <span>עיצוב מותאם ואקראי לדפי נחיתה</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={freeImageEnabled}
+                onChange={(e) => setFreeImageEnabled(e.target.checked)}
+              />
+              <span>הוסף תמונת סטוק אקראית עם רישיון פרסום חופשי</span>
+            </label>
+          </div>
           {canManage && (
             <Button
               type="button"
               className="mt-4 w-full"
-              disabled={!geminiReady || generate.isPending || selectedDomains.length === 0 || outputTypes.length === 0}
+              disabled={!geminiReady || generate.isPending || (!randomTopicsEnabled && selectedDomains.length === 0) || outputTypes.length === 0}
               onClick={() => generate.mutate()}
             >
               {generate.isPending ? "יוצר batch..." : "Generate via Gemini AI"}
@@ -659,6 +780,13 @@ export default function WorkspacePage() {
                       <p className="text-xs text-[var(--muted-fg)]">
                         {page.page_type} · {page.status} · {page.full_path || "ללא path"}
                       </p>
+                      {(page.category || page.scheduled_at) && (
+                        <p className="mt-1 text-xs text-[var(--muted-fg)]">
+                          {page.category ? `קטגוריה: ${page.category.name}` : ""}
+                          {page.category && page.scheduled_at ? " · " : ""}
+                          {page.scheduled_at ? `מתוזמן לפרסום: ${new Date(page.scheduled_at).toLocaleString("he-IL")}` : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">

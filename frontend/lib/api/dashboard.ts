@@ -626,8 +626,13 @@ export const aiSeoApi = {
     output_types: string[];
     prompt?: string;
     scheduled_at?: string;
+    publish_at?: string;
     recurrence_interval?: string;
     auto_publish_enabled?: boolean;
+    random_topics_enabled?: boolean;
+    random_topic_count?: number;
+    landing_design_enabled?: boolean;
+    free_image_enabled?: boolean;
     locale?: string;
   }) =>
     apiFetch<{ jobs: AiSeoWorkspaceJob[]; workspace: AiSeoWorkspace }>("/api/v1/ai-seo/workspace/generate/", {
@@ -685,6 +690,21 @@ export const aiSeoApi = {
 };
 
 export type AiSeoWorkspaceDomain = { value: string; label: string; keywords: string[] };
+export type AiSeoWorkspaceHistory = {
+  id: string;
+  label: string;
+  domains: string[];
+  keywords: string[];
+  output_types: string[];
+  prompt: string;
+  recurrence_interval: string;
+  auto_publish_enabled: boolean;
+  random_topics_enabled: boolean;
+  random_topic_count: number;
+  landing_design_enabled: boolean;
+  free_image_enabled: boolean;
+  publish_at: string;
+};
 export type AiSeoWorkspaceJob = {
   id: string;
   name: string;
@@ -727,9 +747,12 @@ export type AiSeoWorkspaceDraft = {
   meta_title: string;
   meta_description: string;
   published_at: string | null;
+  scheduled_at: string | null;
   updated_at: string | null;
   test_url: string;
   source_job_id: string | null;
+  category: { id: string; name: string; slug: string } | null;
+  image: Record<string, unknown> | null;
   blocks: Array<{
     id: string;
     type: string;
@@ -741,4 +764,5 @@ export type AiSeoWorkspace = {
   gemini_configured: boolean;
   jobs: AiSeoWorkspaceJob[];
   drafts: AiSeoWorkspaceDraft[];
+  history: AiSeoWorkspaceHistory[];
 };

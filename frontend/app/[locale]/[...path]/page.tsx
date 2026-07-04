@@ -53,6 +53,13 @@ function stripHtml(value: unknown): string {
     .trim();
 }
 
+function accentClasses(accent: string): string {
+  if (accent === "emerald") return "border-emerald-400/20 bg-emerald-400/10 shadow-emerald-950/20";
+  if (accent === "violet") return "border-violet-400/20 bg-violet-400/10 shadow-violet-950/20";
+  if (accent === "amber") return "border-amber-400/20 bg-amber-400/10 shadow-amber-950/20";
+  return "border-cyan-400/20 bg-cyan-400/10 shadow-cyan-950/20";
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, path } = await params;
   const page = await fetchPublicPage(locale, path);
@@ -67,8 +74,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 function HeroBlock({ config }: { config: Record<string, unknown> }) {
+  const theme = config.theme && typeof config.theme === "object" ? (config.theme as Record<string, unknown>) : {};
+  const accent = textValue(theme.accent) || "cyan";
   return (
-    <section className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 px-6 py-14 text-center shadow-2xl shadow-cyan-950/20 sm:px-10">
+    <section className={`rounded-[2rem] border px-6 py-14 text-center shadow-2xl sm:px-10 ${accentClasses(accent)}`}>
       <p className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-200">Mendeles AI</p>
       <h1 className="mt-5 text-3xl font-bold text-white sm:text-5xl">
         {textValue(config.headline) || textValue(config.title)}
@@ -82,6 +91,19 @@ function HeroBlock({ config }: { config: Record<string, unknown> }) {
         </span>
       )}
     </section>
+  );
+}
+
+function ImageBlock({ config }: { config: Record<string, unknown> }) {
+  const url = textValue(config.url);
+  if (!url) return null;
+  return (
+    <figure className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]">
+      <img src={url} alt={textValue(config.alt) || "Public page image"} className="h-72 w-full object-cover sm:h-96" />
+      <figcaption className="px-5 py-3 text-xs text-slate-400">
+        {textValue(config.license) || "Free stock image"}
+      </figcaption>
+    </figure>
   );
 }
 
@@ -139,6 +161,7 @@ function CtaBlock({ config }: { config: Record<string, unknown> }) {
 function PublicBlock({ block }: { block: PublicContentBlock }) {
   if (!block.is_visible) return null;
 
+  if (block.block_type === "image") return <ImageBlock config={block.config} />;
   if (block.block_type === "hero") return <HeroBlock config={block.config} />;
   if (block.block_type === "faq") return <FaqBlock config={block.config} />;
   if (block.block_type === "cta") return <CtaBlock config={block.config} />;
