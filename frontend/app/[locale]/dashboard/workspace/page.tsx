@@ -39,7 +39,7 @@ function StudioPanel({ title, children, className = "" }: { title: string; child
   return (
     <section className={`rounded-2xl border border-white/10 bg-[#12182a]/80 p-5 backdrop-blur-sm ${className}`}>
       <h2 className="text-base font-semibold text-white">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <div className="mt-4 flex flex-col">{children}</div>
     </section>
   );
 }
@@ -520,9 +520,9 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_1.15fr]">
-          {/* Left column */}
-          <div className="space-y-5">
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr] xl:items-start">
+          {/* Content + scheduling column (visual right in RTL) */}
+          <div className="flex flex-col gap-5">
             <StudioPanel title="מקור SEO">
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
@@ -666,10 +666,27 @@ export default function WorkspacePage() {
                   </label>
                 </div>
               )}
-            </StudioPanel>
+              {canManage && (
+                <Button
+                  type="button"
+                  className="mt-5 w-full bg-gradient-to-r from-violet-600 to-indigo-600 py-5 text-base font-semibold hover:from-violet-500 hover:to-indigo-500"
+                  disabled={
+                    !geminiReady ||
+                    generate.isPending ||
+                    !canStartGeneration ||
+                    outputTypes.length === 0 ||
+                    (scheduleEnabled && scheduleEveryMinutes < 3) ||
+                    (scheduleEnabled && !scheduleStartNow && !scheduleStartAt)
+                  }
+                  onClick={() => generate.mutate()}
+                >
+                  {generate.isPending ? "יוצר batch..." : "✨ Generate via Gemini AI"}
+                </Button>
+              )}
 
-            <StudioPanel title="תזמון עבודות">
-              <div className="space-y-3 text-sm">
+              <div className="mt-6 border-t border-white/10 pt-6">
+                <h3 className="text-sm font-semibold text-violet-200">תזמון עבודות</h3>
+                <div className="mt-4 space-y-3 text-sm">
                 <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
                   <input
                     type="checkbox"
@@ -708,9 +725,8 @@ export default function WorkspacePage() {
                     <span className="mt-1 block text-xs text-slate-400">פרסום ישיר לפרודקשן בסיום היצירה</span>
                   </span>
                 </label>
-              </div>
 
-              <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
+              <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
                 <label className="flex items-center gap-2 text-sm font-medium text-white">
                   <input type="checkbox" checked={scheduleEnabled} onChange={(e) => setScheduleEnabled(e.target.checked)} />
                   הפעל תזמון מחזורי
@@ -804,28 +820,12 @@ export default function WorkspacePage() {
                   />
                 </label>
               )}
-
-              {canManage && (
-                <Button
-                  type="button"
-                  className="mt-5 w-full bg-gradient-to-r from-violet-600 to-indigo-600 py-6 text-base font-semibold hover:from-violet-500 hover:to-indigo-500"
-                  disabled={
-                    !geminiReady ||
-                    generate.isPending ||
-                    !canStartGeneration ||
-                    outputTypes.length === 0 ||
-                    (scheduleEnabled && scheduleEveryMinutes < 3) ||
-                    (scheduleEnabled && !scheduleStartNow && !scheduleStartAt)
-                  }
-                  onClick={() => generate.mutate()}
-                >
-                  {generate.isPending ? "יוצר batch..." : "✨ Generate via Gemini AI"}
-                </Button>
-              )}
+                </div>
+              </div>
             </StudioPanel>
           </div>
 
-          {/* Right column */}
+          {/* Domains column (visual left in RTL) */}
           <div className="space-y-5">
             <StudioPanel title="בחירת תחומים ומילות מפתח">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
