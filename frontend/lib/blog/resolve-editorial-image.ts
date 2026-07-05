@@ -2,6 +2,7 @@ import { hashSeed, pickCuratedPhoto, searchQueriesForCategory } from "@/lib/blog
 
 const GENERIC_FALLBACKS = new Set([
   "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1559526324-cb2f9661f44e?auto=format&fit=crop&w=1600&q=80",
 ]);
 
 type PhotoResult = { url: string };

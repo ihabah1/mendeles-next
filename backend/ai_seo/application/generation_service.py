@@ -175,11 +175,17 @@ DOMAIN_STOCK_IMAGES = {
     ],
     "economy": [
         {
-            "url": "https://images.unsplash.com/photo-1559526324-cb2f9661f44e?auto=format&fit=crop&w=1600&q=80",
+            "url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80",
             "alt": "Stock market charts for economy content",
             "source": "Unsplash",
             "license": "Unsplash License - free for commercial use",
-        }
+        },
+        {
+            "url": "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Financial trading desk for economy content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        },
     ],
     "current_affairs": [
         {

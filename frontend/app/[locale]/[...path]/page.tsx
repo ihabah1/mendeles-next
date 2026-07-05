@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { PublicArticleImage } from "@/components/blog/public-article-image";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { resolvePublicImageUrl } from "@/lib/blog/public-image";
 import { backendBase } from "@/lib/api/backend-url";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
@@ -97,13 +99,15 @@ function HeroBlock({ config }: { config: Record<string, unknown> }) {
 function ImageBlock({ config }: { config: Record<string, unknown> }) {
   const url = textValue(config.url);
   if (!url) return null;
+  const matchedDomain = textValue(config.matched_domain);
+  const resolvedUrl = resolvePublicImageUrl(url, { matched_domain: matchedDomain, seed: url });
   return (
-    <figure className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]">
-      <img src={url} alt={textValue(config.alt) || "Public page image"} className="h-72 w-full object-cover sm:h-96" />
-      <figcaption className="px-5 py-3 text-xs text-slate-400">
-        {textValue(config.license) || "Free stock image"}
-      </figcaption>
-    </figure>
+    <PublicArticleImage
+      src={resolvedUrl}
+      alt={textValue(config.alt) || "Public page image"}
+      caption={textValue(config.license) || textValue(config.caption) || "Free stock image"}
+      matchedDomain={matchedDomain}
+    />
   );
 }
 
