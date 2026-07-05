@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import random
 from datetime import timedelta
 
@@ -164,6 +165,38 @@ DOMAIN_STOCK_IMAGES = {
             "license": "Unsplash License - free for commercial use",
         }
     ],
+    "sports": [
+        {
+            "url": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Sports stadium for athletics content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "economy": [
+        {
+            "url": "https://images.unsplash.com/photo-1559526324-cb2f9661f44e?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Stock market charts for economy content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "current_affairs": [
+        {
+            "url": "https://images.unsplash.com/photo-1504711434967-e33886168f5c?auto=format&fit=crop&w=1600&q=80",
+            "alt": "News desk for current affairs content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
+    "world_news": [
+        {
+            "url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Globe for world news content",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        }
+    ],
 }
 
 IMAGE_CONTEXT_ALIASES = {
@@ -190,6 +223,19 @@ IMAGE_CONTEXT_ALIASES = {
     "finance": ["finance", "financial", "הלוואות", "השקעות", "פיננסי"],
     "home_services": ["plumber", "electrician", "repair", "אינסטלטור", "חשמלאי", "שיפוצים"],
     "automotive": ["car", "vehicle", "automotive", "רכב", "מוסך", "טסט לרכב"],
+    "sports": ["sport", "football", "soccer", "basketball", "olympic", "ספורט", "כדורגל", "כדורסל", "ליגה", "משחק"],
+    "economy": ["economy", "market", "stock", "inflation", "כלכלה", "בורסה", "שוק", "אינפלציה", "ריבית"],
+    "current_affairs": ["news", "breaking", "politic", "אקטואליה", "חדשות", "פוליטיקה", "מבזק", "ישראל"],
+    "world_news": ["world", "global", "international", "בעולם", "בינלאומי", "גיאופוליטיקה", "ארה\"ב", "אירופה"],
+}
+
+NEWS_DOMAIN_VALUES = frozenset({"sports", "economy", "current_affairs", "world_news"})
+
+NEWS_DOMAIN_HINTS = {
+    "sports": ["ספורט", "כדורגל", "כדורסל", "טניס", "אולימפ", "ליגה", "משחק", "sport", "football", "nba"],
+    "economy": ["כלכלה", "בורסה", "שוק", "אינפלציה", "ריבית", "דולר", "שקל", "economy", "market", "finance"],
+    "current_affairs": ["אקטואליה", "פוליט", "ממשלה", "כנסת", "ישראל", "חדשות", "news", "breaking", "מבזק"],
+    "world_news": ["בעולם", "בינלאומי", "ארה\"ב", "אירופה", "סין", "אוקראינה", "world", "global", "international"],
 }
 
 LANDING_THEMES = [
@@ -198,6 +244,8 @@ LANDING_THEMES = [
     {"slug": "violet-premium", "label": "Premium Violet", "accent": "violet"},
     {"slug": "amber-conversion", "label": "Conversion Amber", "accent": "amber"},
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_scheduled_at(value):
@@ -396,6 +444,104 @@ class AiSeoGenerationService:
             domain_terms = [domain["label"], domain["value"], *(domain.get("keywords") or [])]
             if any((term or "").lower() in value or value in (term or "").lower() for term in domain_terms):
                 return domain
+        return None
+
+    @staticmethod
+    def _matches_news_domain(topic: str, domain_value: str) -> bool:
+        text = (topic or "").lower()
+        if not text:
+            return False
+        hints = NEWS_DOMAIN_HINTS.get(domain_value) or []
+        if any(hint in text for hint in hints):
+            return True
+        matched = AiSeoGenerationService._category_for_keyword(topic)
+        return bool(matched and matched.get("value") == domain_value)
+
+    @staticmethod
+    def _resolve_news_event(tenant_id, domain: dict, keywords: list[str]) -> dict | None:
+        domain_value = (domain or {}).get("value", "")
+        if domain_value not in NEWS_DOMAIN_VALUES:
+            return None
+
+        sync = AiSeoGenerationService._latest_integration_sync(tenant_id, GoogleServiceType.TRENDS)
+        processed = (sync.processed_data if sync else {}) or {}
+        if not processed.get("trending_searches"):
+            seed_keywords = [kw for kw in (keywords or []) if kw] or list((domain or {}).get("keywords") or [])[:3]
+            if seed_keywords:
+                try:
+                    TrendsService.sync(
+                        tenant_id,
+                        keywords=seed_keywords[:5],
+                        country=TrendsCountry.ISRAEL,
+                        date_range=TrendsDateRange.HOURS_24,
+                        language="he",
+                    )
+                except Exception:
+                    logger.warning("Trends sync failed while resolving news event", exc_info=True)
+                sync = AiSeoGenerationService._latest_integration_sync(tenant_id, GoogleServiceType.TRENDS)
+                processed = (sync.processed_data if sync else {}) or {}
+
+        candidates: list[str] = []
+        for row in processed.get("trending_searches") or []:
+            if isinstance(row, dict):
+                title = str(row.get("title") or row.get("query") or "").strip()
+            elif isinstance(row, (list, tuple)) and row:
+                title = str(row[0]).strip()
+            else:
+                title = str(row).strip()
+            if title:
+                candidates.append(title)
+
+        related_queries = processed.get("related_queries") or {}
+        if isinstance(related_queries, dict):
+            for query_groups in related_queries.values():
+                groups = query_groups if isinstance(query_groups, dict) else {"top": query_groups}
+                for group_rows in groups.values():
+                    for item in group_rows or []:
+                        if isinstance(item, dict):
+                            title = str(item.get("query") or item.get("title") or "").strip()
+                        else:
+                            title = str(item).strip()
+                        if title and title not in candidates:
+                            candidates.append(title)
+
+        for topic in candidates:
+            if AiSeoGenerationService._matches_news_domain(topic, domain_value):
+                retrieved = sync.retrieved_at if sync else None
+                return {
+                    "topic": topic,
+                    "headline": topic,
+                    "source": "google_trends",
+                    "date": retrieved.isoformat() if retrieved else "",
+                    "domain": domain_value,
+                }
+
+        keyword_candidates = []
+        for kw in keywords:
+            kw = (kw or "").strip()
+            if kw and kw not in keyword_candidates:
+                keyword_candidates.append(kw)
+        for topic in keyword_candidates:
+            if AiSeoGenerationService._matches_news_domain(topic, domain_value):
+                retrieved = sync.retrieved_at if sync else None
+                return {
+                    "topic": topic,
+                    "headline": topic,
+                    "source": "keywords",
+                    "date": retrieved.isoformat() if retrieved else "",
+                    "domain": domain_value,
+                }
+
+        fallback = (candidates[0] if candidates else "") or (keywords[0] if keywords else "") or (domain or {}).get("label", "")
+        if fallback:
+            retrieved = sync.retrieved_at if sync else None
+            return {
+                "topic": fallback,
+                "headline": fallback,
+                "source": "keywords",
+                "date": retrieved.isoformat() if retrieved else "",
+                "domain": domain_value,
+            }
         return None
 
     @staticmethod
@@ -608,6 +754,11 @@ class AiSeoGenerationService:
 
         for domain in domains:
             keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
+            news_event = cls._resolve_news_event(tenant_id, domain, keywords)
+            if news_event:
+                topic = news_event.get("topic", "").strip()
+                if topic and topic not in keywords:
+                    keywords = [topic, *keywords]
             for output_type in output_types:
                 job_type = OUTPUT_TO_JOB[output_type]
                 visual_asset = (
@@ -636,6 +787,7 @@ class AiSeoGenerationService:
                             "free_image_enabled": free_image_enabled,
                             "visual_asset": visual_asset,
                             "landing_theme": landing_theme,
+                            "news_event": news_event,
                         },
                         "requires_approval": not auto_publish_enabled,
                         "auto_publish_enabled": auto_publish_enabled,
@@ -668,6 +820,7 @@ class AiSeoGenerationService:
             locale=config.get("locale", "he"),
             feedback=config.get("feedback", ""),
             user_prompt=config.get("prompt", ""),
+            news_event=config.get("news_event"),
         )
         result = GeminiService.generate_json(prompt)
         return cls._create_page_from_payload(job, result)
@@ -680,6 +833,7 @@ class AiSeoGenerationService:
         if step_type == "ai_seo.data":
             keywords = config.get("keywords") or []
             domain = config.get("domain") or {}
+            news_event = config.get("news_event")
             if not keywords:
                 raise RuntimeError("No keywords selected for generation.")
             job.config = {
@@ -689,12 +843,16 @@ class AiSeoGenerationService:
                     "domain": domain.get("label", ""),
                     "keywords_count": len(keywords),
                     "keywords": keywords,
+                    "news_event": news_event,
                 },
             }
             job.save(update_fields=["config", "updated_at"])
+            log_message = f"דאטה מוכן: {len(keywords)} keywords עבור {domain.get('label', '')}"
+            if news_event:
+                log_message += f" · אירוע חדשותי: {news_event.get('topic', '')}"
             AutomationLogService.log(
                 job,
-                f"דאטה מוכן: {len(keywords)} keywords עבור {domain.get('label', '')}",
+                log_message,
                 execution=execution,
             )
             return None
@@ -703,9 +861,11 @@ class AiSeoGenerationService:
             output_type = config.get("output_type", "blog")
             domain = config.get("domain") or {}
             keywords = config.get("keywords") or []
+            news_event = config.get("news_event")
             AutomationLogService.log(
                 job,
-                f"AI request starting: output={output_type}, domain={domain.get('label', '')}, keywords={len(keywords)}",
+                f"AI request starting: output={output_type}, domain={domain.get('label', '')}, keywords={len(keywords)}"
+                + (f", news_event={news_event.get('topic', '')}" if news_event else ""),
                 execution=execution,
             )
             prompt = cls._build_prompt(
@@ -715,6 +875,7 @@ class AiSeoGenerationService:
                 locale=config.get("locale", "he"),
                 feedback=config.get("feedback", ""),
                 user_prompt=config.get("prompt", ""),
+                news_event=news_event,
             )
             result = GeminiService.generate_json(prompt)
             job.config = {**config, "gemini_payload": result}
@@ -1104,11 +1265,33 @@ class AiSeoGenerationService:
         return image.config if image else None
 
     @staticmethod
-    def _build_prompt(*, output_type: str, domain_label: str, keywords: list[str], locale: str, feedback: str, user_prompt: str) -> str:
+    def _build_prompt(
+        *,
+        output_type: str,
+        domain_label: str,
+        keywords: list[str],
+        locale: str,
+        feedback: str,
+        user_prompt: str,
+        news_event: dict | None = None,
+    ) -> str:
         asset = "SEO landing page" if output_type == "landing_page" else "SEO blog article"
+        news_block = ""
+        if news_event and news_event.get("topic"):
+            news_block = f"""
+This is a news-driven piece. Base the entire {asset} on today's trending news event:
+- Headline/topic: {news_event.get("headline") or news_event.get("topic")}
+- Category: {domain_label}
+- Source signal: {news_event.get("source", "trends")}
+Write in a neutral journalistic tone. Explain what happened, why it matters, and context for Israeli readers.
+Do not invent quotes, interviews, statistics, or named officials unless they are generic and clearly non-fictional.
+For blog articles: news-style intro, timeline/context sections, implications, and balanced summary.
+For landing pages: tie the hero and sections to the event with a clear informational angle and soft CTA.
+"""
         return f"""
 Create a production-ready {asset} in Hebrew for the business domain: {domain_label}.
 Use only the following real user-selected keywords: {", ".join(keywords)}.
+{news_block}
 Additional user instructions: {user_prompt or "none"}.
 Revision feedback: {feedback or "none"}.
 For blog articles include a clear intro, practical sections, and a summary.

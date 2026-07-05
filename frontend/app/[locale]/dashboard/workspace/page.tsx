@@ -32,6 +32,7 @@ function plainPreview(value: string): string {
 
 const AUTO_RUN_STORAGE_KEY = "ai-seo-auto-run-jobs";
 const LEGACY_DISABLE_AUTO_RUN_KEY = "ai-seo-disable-auto-run";
+const NEWS_DOMAIN_VALUES = new Set(["sports", "economy", "current_affairs", "world_news"]);
 
 function isRunnableJob(job: Pick<AiSeoWorkspaceJob, "status">): boolean {
   return job.status === "queued" || job.status === "running";
@@ -234,6 +235,18 @@ export default function WorkspacePage() {
   const selectedRows = useMemo(
     () => domains.filter((d) => selectedDomains.includes(d.value)),
     [domains, selectedDomains],
+  );
+  const newsDomains = useMemo(
+    () => domains.filter((d) => NEWS_DOMAIN_VALUES.has(d.value)),
+    [domains],
+  );
+  const businessDomains = useMemo(
+    () => domains.filter((d) => !NEWS_DOMAIN_VALUES.has(d.value)),
+    [domains],
+  );
+  const hasNewsDomainsSelected = useMemo(
+    () => selectedDomains.some((value) => NEWS_DOMAIN_VALUES.has(value)),
+    [selectedDomains],
   );
 
   const generate = useMutation({
@@ -700,7 +713,7 @@ export default function WorkspacePage() {
             />
           </label>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {domains.map((domain) => (
+            {businessDomains.map((domain) => (
               <label key={domain.value} className="flex cursor-pointer items-center gap-2 rounded border border-[var(--border)] p-2 text-sm">
                 <input
                   type="checkbox"
@@ -711,6 +724,36 @@ export default function WorkspacePage() {
               </label>
             ))}
           </div>
+
+          {newsDomains.length > 0 && (
+            <>
+              <p className="mt-5 text-sm font-medium">חדשות מהיום</p>
+              <p className="mt-1 text-xs text-[var(--muted-fg)]">
+                עבור קטגוריות ספורט, כלכלה, אקטואליה ובעולם — Gemini ייקח אירוע חדשותי טרנדי מהיום (Google Trends) ויבנה ממנו מאמר בלוג או דף נחיתה.
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {newsDomains.map((domain) => (
+                  <label
+                    key={domain.value}
+                    className="flex cursor-pointer items-center gap-2 rounded border border-amber-400/40 bg-amber-500/5 p-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDomains.includes(domain.value)}
+                      onChange={() => toggleDomain(domain.value)}
+                    />
+                    <span>{domain.label}</span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          {hasNewsDomainsSelected && (
+            <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-xs text-[var(--muted-fg)]">
+              נבחרו קטגוריות חדשות — ביצירה עם Gemini המערכת תאתר אירוע עדכני ותכתוב תוכן עיתונאי סביבו.
+            </p>
+          )}
 
           <label className="mt-4 block text-sm">
             <span className="mb-1 block font-medium">מילות מפתח שנבחרו / נוספות</span>

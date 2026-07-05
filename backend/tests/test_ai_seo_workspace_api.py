@@ -23,6 +23,70 @@ def test_ai_seo_workspace_lists_domains(owner_client):
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_lists_news_domains(owner_client):
+    response = owner_client.get("/api/v1/ai-seo/workspace/")
+    assert response.status_code == 200
+    domains = {item["value"]: item["label"] for item in response.json()["domains"]}
+    assert domains.get("sports") == "ספורט"
+    assert domains.get("economy") == "כלכלה"
+    assert domains.get("current_affairs") == "אקטואליה"
+    assert domains.get("world_news") == "בעולם"
+
+
+@pytest.mark.django_db
+def test_ai_seo_resolve_news_event_from_trends(tenant):
+    IntegrationSyncRecord.objects.create(
+        tenant=tenant,
+        service_type=GoogleServiceType.TRENDS,
+        source="pytrends",
+        language="he",
+        country="IL",
+        retrieved_at=timezone.now(),
+        sync_status=SyncStatus.SUCCESS,
+        processed_data={
+            "trending_searches": [["כדורגל ליגת העל"], ["בורסה תל אביב"]],
+            "related_queries": {},
+        },
+    )
+    event = AiSeoGenerationService._resolve_news_event(
+        tenant.id,
+        {"value": "sports", "label": "ספורט", "keywords": ["ספורט"]},
+        ["ספורט"],
+    )
+    assert event is not None
+    assert "כדורגל" in event["topic"]
+    assert event["source"] == "google_trends"
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_generate_news_domain_stores_event(owner_client, settings, tenant):
+    settings.GEMINI_API_KEY = "test-key"
+    IntegrationSyncRecord.objects.create(
+        tenant=tenant,
+        service_type=GoogleServiceType.TRENDS,
+        source="pytrends",
+        language="he",
+        country="IL",
+        retrieved_at=timezone.now(),
+        sync_status=SyncStatus.SUCCESS,
+        processed_data={
+            "trending_searches": [["אינפלציה בישראל"]],
+            "related_queries": {},
+        },
+    )
+    response = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {"domains": ["economy"], "output_types": ["blog"], "keywords": ["כלכלה"]},
+        format="json",
+    )
+    assert response.status_code == 201, response.content
+    job = response.json()["jobs"][0]
+    assert job["config"]["news_event"]["topic"]
+    assert job["config"]["news_event"]["domain"] == "economy"
+    assert "אינפלציה" in job["config"]["keywords"][0]
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_generate_requires_gemini(owner_client, settings):
     settings.GEMINI_API_KEY = ""
     response = owner_client.post(

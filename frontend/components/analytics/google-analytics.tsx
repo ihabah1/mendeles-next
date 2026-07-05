@@ -1,6 +1,9 @@
+import { connection } from "next/server";
 import { resolveGaMeasurementId } from "@/lib/analytics/gtag";
 
-export function GoogleAnalytics() {
+export async function GoogleAnalytics() {
+  // Read GA_MEASUREMENT_ID at request time (Railway runtime env), not at build/SSG time.
+  await connection();
   const measurementId = resolveGaMeasurementId();
   if (process.env.NODE_ENV !== "production" || !measurementId) return null;
 
