@@ -722,6 +722,8 @@
       },
       "selectProperty": "Select property",
       "chooseProperty": "Choose a property…",
+      "propertyRequiredTitle": "Connected to Google — select a property",
+      "propertyRequiredBody": "After connecting your account, choose your Search Console site or GA4 property from the list below, then click Sync now.",
       "recentSyncs": "Recent syncs",
       "noSyncs": "No sync records yet. Connect an OAuth service or run a Trends sync.",
       "services": {

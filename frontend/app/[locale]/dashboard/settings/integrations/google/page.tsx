@@ -39,6 +39,7 @@ export default function GoogleIntegrationsPage() {
     queryFn: integrationsApi.googleDashboard,
     enabled: canView,
   });
+  const data = dashboard.data as GoogleIntegrationDashboard | undefined;
 
   const loadProperties = useCallback(async (service_type: ServiceKey) => {
     const res = await integrationsApi.googleProperties(service_type);
@@ -89,6 +90,16 @@ export default function GoogleIntegrationsPage() {
     }
   }, [searchParams, qc, loadProperties]);
 
+  useEffect(() => {
+    if (!data?.services) return;
+    for (const svc of data.services) {
+      if (svc.service_type === "trends") continue;
+      if (svc.connected_account && (svc.status === "waiting_authorization" || svc.status === "connected")) {
+        loadProperties(svc.service_type as ServiceKey);
+      }
+    }
+  }, [data?.services, loadProperties]);
+
   if (!canView) {
     return (
       <Card>
@@ -96,8 +107,6 @@ export default function GoogleIntegrationsPage() {
       </Card>
     );
   }
-
-  const data = dashboard.data as GoogleIntegrationDashboard | undefined;
 
   return (
     <div className="space-y-6">
@@ -285,6 +294,13 @@ export default function GoogleIntegrationsPage() {
                   </select>
                 </label>
                 <p className="text-xs text-[var(--muted-fg)] sm:col-span-2">{t("google.trendsHint")}</p>
+              </div>
+            )}
+
+            {isOAuth && svc.status === "waiting_authorization" && (
+              <div className="mt-4 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium">{t("google.propertyRequiredTitle")}</p>
+                <p className="mt-1 text-xs text-[var(--muted-fg)]">{t("google.propertyRequiredBody")}</p>
               </div>
             )}
 

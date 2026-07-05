@@ -685,6 +685,8 @@
       },
       "selectProperty": "בחירת property",
       "chooseProperty": "בחרו property…",
+      "propertyRequiredTitle": "מחובר ל-Google — נדרש לבחור property",
+      "propertyRequiredBody": "לאחר חיבור החשבון, בחרו את האתר ב-Search Console או את ה-GA4 property מהרשימה למטה, ואז לחצו «סנכרון עכשיו».",
       "recentSyncs": "סנכרונים אחרונים",
       "noSyncs": "אין רשומות סנכרון עדיין. חברו שירות OAuth או הריצו סנכרון Trends.",
       "services": {

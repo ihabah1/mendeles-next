@@ -33,6 +33,26 @@ class TrendsService:
         return "iw" if language == "he" else "en"
 
     @staticmethod
+    def _json_safe(value):
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return {key: TrendsService._json_safe(nested) for key, nested in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [TrendsService._json_safe(item) for item in value]
+        if hasattr(value, "isoformat"):
+            try:
+                return value.isoformat()
+            except (TypeError, ValueError):
+                pass
+        if hasattr(value, "item"):
+            try:
+                return value.item()
+            except (TypeError, ValueError):
+                pass
+        return value
+
+    @staticmethod
     def _to_records(value):
         if value is None:
             return []
@@ -94,22 +114,26 @@ class TrendsService:
             trending_rows = []
 
         raw = {
-            "interest_over_time": interest.reset_index().to_dict(orient="records") if not interest.empty else [],
+            "interest_over_time": TrendsService._json_safe(
+                interest.reset_index().to_dict(orient="records") if not interest.empty else []
+            ),
             "related_queries": cls._to_records(related_queries or {}),
             "related_topics": cls._to_records(related_topics or {}),
             "trending_searches": trending_rows,
         }
-        processed = {
-            "keywords": keywords[:5],
-            "language": language,
-            "country": country,
-            "date_range": date_range,
-            "market": market,
-            "interest_over_time": raw["interest_over_time"],
-            "related_queries": raw["related_queries"],
-            "related_topics": raw["related_topics"],
-            "trending_searches": raw["trending_searches"],
-        }
+        processed = TrendsService._json_safe(
+            {
+                "keywords": keywords[:5],
+                "language": language,
+                "country": country,
+                "date_range": date_range,
+                "market": market,
+                "interest_over_time": raw["interest_over_time"],
+                "related_queries": raw["related_queries"],
+                "related_topics": raw["related_topics"],
+                "trending_searches": raw["trending_searches"],
+            }
+        )
 
         now = timezone.now()
         return IntegrationSyncRecord.objects.create(
