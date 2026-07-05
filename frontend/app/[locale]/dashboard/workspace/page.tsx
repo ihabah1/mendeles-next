@@ -91,6 +91,8 @@ export default function WorkspacePage() {
   const [randomTopicsEnabled, setRandomTopicsEnabled] = useState(false);
   const [randomTopicCount, setRandomTopicCount] = useState(2);
   const [newsHotTopicsEnabled, setNewsHotTopicsEnabled] = useState(false);
+  const [contentLocales, setContentLocales] = useState<"both" | "he" | "en">("both");
+  const [sportsTranslationEnabled, setSportsTranslationEnabled] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleEveryMinutes, setScheduleEveryMinutes] = useState(180);
   const [scheduleStartNow, setScheduleStartNow] = useState(true);
@@ -146,6 +148,7 @@ export default function WorkspacePage() {
   );
   const newsDomains = useMemo(() => domains.filter((d) => NEWS_DOMAIN_VALUES.has(d.value)), [domains]);
   const businessDomains = useMemo(() => domains.filter((d) => !NEWS_DOMAIN_VALUES.has(d.value)), [domains]);
+  const hasSportsSelected = useMemo(() => selectedDomains.includes("sports"), [selectedDomains]);
   const hasNewsDomainsSelected = useMemo(
     () => selectedDomains.some((value) => NEWS_DOMAIN_VALUES.has(value)),
     [selectedDomains],
@@ -175,7 +178,8 @@ export default function WorkspacePage() {
         news_hot_topics_enabled: newsHotTopicsEnabled,
         landing_design_enabled: landingDesignEnabled,
         free_image_enabled: freeImageEnabled,
-        locale: "he",
+        content_locales: contentLocales,
+        sports_translation_enabled: sportsTranslationEnabled,
       }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
@@ -210,7 +214,8 @@ export default function WorkspacePage() {
         prompt: effectivePrompt || "Generate from SEO research selected phrases.",
         scheduled_at: scheduleDate.toISOString(),
         auto_publish_enabled: autoPublishEnabled,
-        locale: "he",
+        content_locales: contentLocales,
+        sports_translation_enabled: sportsTranslationEnabled,
       });
     },
     onSuccess: (data) => {
@@ -750,7 +755,19 @@ export default function WorkspacePage() {
                   placeholder="לדוגמה: להתמקד בלידים לעסקים קטנים, טון מקצועי, CTA ברור..."
                 />
               </label>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="block text-sm">
+                  <span className="mb-1 block text-slate-400">שפות תוכן</span>
+                  <select
+                    className={selectClass}
+                    value={contentLocales}
+                    onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}
+                  >
+                    <option value="both">עברית + אנגלית</option>
+                    <option value="he">עברית בלבד</option>
+                    <option value="en">אנגלית בלבד</option>
+                  </select>
+                </label>
                 <label className="block text-sm">
                   <span className="mb-1 block text-slate-400">רמת כתיבה</span>
                   <select className={selectClass} value={writingTone} onChange={(e) => setWritingTone(e.target.value)}>
@@ -768,6 +785,22 @@ export default function WorkspacePage() {
                   </select>
                 </label>
               </div>
+              {hasSportsSelected && (
+                <label className="mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={sportsTranslationEnabled}
+                    onChange={(e) => setSportsTranslationEnabled(e.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium text-red-100">תרגום כתבת ספורט מחו״ל (כדורגל)</span>
+                    <span className="mt-1 block text-xs text-red-100/80">
+                      יוצר כתבה עיתונאית מתורגמת עם תמונת סטוק חופשית למדור ספורט — בעברית ובאנגלית לפי בחירת השפות
+                    </span>
+                  </span>
+                </label>
+              )}
               <button
                 type="button"
                 className="mt-3 text-xs text-violet-300 hover:underline"

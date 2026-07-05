@@ -11,12 +11,15 @@ import { HeroArticle } from "@/components/blog/hero-article";
 import { NewsletterCard } from "@/components/blog/newsletter-card";
 import { PopularArticles } from "@/components/blog/popular-articles";
 import { SearchToolbar } from "@/components/blog/search-toolbar";
+import { SportsSection } from "@/components/blog/sports-section";
 import { TrendingSidebar } from "@/components/blog/trending-sidebar";
 import {
   filterDemoPosts,
   getEditorialDemoCategories,
   getEditorialDemoPosts,
+  getSportsDemoPosts,
 } from "@/lib/blog/demo-articles";
+import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { resolveEditorialImage } from "@/lib/blog/resolve-editorial-image";
 import type { BlogCardPost, BlogCategory, BlogSort } from "@/lib/blog/types";
 import { BLOG_PAGE_SIZE, blogHref, sortPosts } from "@/lib/blog/utils";
@@ -112,25 +115,30 @@ async function fetchBlogFeed(locale: string, q = "", category = ""): Promise<Blo
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
+  const copy = editorialCopy(locale);
   return buildPageMetadata({
     locale,
     path: "/blog",
-    title: "Mendeles Insights — בלוג",
-    description: "תובנות, מדריכים ומחקר לצמיחה דיגיטלית — בלוג Mendeles Insights.",
+    title: copy.metaTitle,
+    description: copy.metaDescription,
   });
 }
 
 export default async function BlogPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const { q = "", category = "", page = "1", sort = "newest" } = await searchParams;
+  const copy = editorialCopy(locale);
   const feed = await fetchBlogFeed(locale, q, category);
   const usingDemo = feed.results.length === 0;
 
   const cardPosts = usingDemo
-    ? filterDemoPosts(getEditorialDemoPosts(), { q, category })
+    ? filterDemoPosts(getEditorialDemoPosts(locale), { q, category })
     : await Promise.all(feed.results.map(toCardPost));
 
-  const sortedPosts = sortPosts(cardPosts, (sort as BlogSort) || "newest");
+  const sortedPosts = sortPosts(cardPosts, (sort as BlogSort) || "newest", locale);
+  const sportsPosts = usingDemo
+    ? getSportsDemoPosts(locale)
+    : sortedPosts.filter((post) => post.category_slug === "sports");
   const featured = sortedPosts[0];
   const secondaryFeatured = sortedPosts.slice(1, 4);
   const usedIds = new Set([featured?.id, ...secondaryFeatured.map((post) => post.id)].filter(Boolean));
@@ -140,43 +148,50 @@ export default async function BlogPage({ params, searchParams }: Props) {
   const gridPosts = postsForGrid.slice((currentPage - 1) * BLOG_PAGE_SIZE, currentPage * BLOG_PAGE_SIZE);
 
   const categoryCounts: BlogCategory[] = usingDemo
-    ? getEditorialDemoCategories()
+    ? getEditorialDemoCategories(locale)
     : feed.categories.map((item) => ({
         ...item,
         count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
       }));
 
   return (
-    <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts() : []}>
+    <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale}>
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        {usingDemo ? <DemoNotice /> : null}
+        {usingDemo ? <DemoNotice locale={locale} /> : null}
 
-        <EditorialMasthead articleCount={sortedPosts.length} categoryCount={categoryCounts.length} />
+        <EditorialMasthead articleCount={sortedPosts.length} categoryCount={categoryCounts.length} locale={locale} />
 
         <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
           <div className="min-w-0 space-y-10">
-            {featured ? <HeroArticle post={featured} /> : null}
-            {secondaryFeatured.length > 0 ? <FeaturedStrip posts={secondaryFeatured} /> : null}
+            {featured ? <HeroArticle post={featured} locale={locale} /> : null}
+            {secondaryFeatured.length > 0 ? <FeaturedStrip posts={secondaryFeatured} locale={locale} /> : null}
+            {category !== "sports" && sportsPosts.length > 0 ? (
+              <SportsSection posts={sportsPosts} locale={locale} />
+            ) : null}
 
             <section className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                <h2 className="text-2xl font-extrabold text-slate-900">כל המאמרים</h2>
-                <span className="rounded-full bg-[#F7F8FC] px-3 py-1 text-sm font-semibold text-slate-500">
-                  {sortedPosts.length} במאגר
+              <div
+                className={`flex flex-wrap items-center justify-between gap-3 border-b-4 border-slate-900/10 pb-4 ${
+                  locale === "en" ? "text-left" : "text-right"
+                }`}
+              >
+                <h2 className="text-2xl font-extrabold text-slate-900">{copy.allArticles}</h2>
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-500 shadow-sm">
+                  {sortedPosts.length} {copy.inArchive}
                 </span>
               </div>
 
-              <SearchToolbar categories={categoryCounts} query={q} activeCategory={category} sort={sort} />
-              <CategoryFilter categories={categoryCounts} activeCategory={category} query={q} sort={sort} />
+              <SearchToolbar categories={categoryCounts} query={q} activeCategory={category} sort={sort} locale={locale} />
+              <CategoryFilter categories={categoryCounts} activeCategory={category} query={q} sort={sort} locale={locale} />
 
               {gridPosts.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-12 text-center text-slate-500 shadow-sm">
-                  לא נמצאו מאמרים עבור הסינון הנוכחי.
+                  {copy.noResults}
                 </div>
               ) : (
                 <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
                   {gridPosts.map((post) => (
-                    <ArticleCard key={post.id} post={post} />
+                    <ArticleCard key={post.id} post={post} locale={locale} />
                   ))}
                 </div>
               )}
@@ -185,9 +200,9 @@ export default async function BlogPage({ params, searchParams }: Props) {
                 <div className="pt-4 text-center">
                   <Link
                     href={blogHref({ page: currentPage + 1, category, q, sort })}
-                    className="inline-flex w-full max-w-lg items-center justify-center rounded-2xl border-2 border-[#6F42F5]/25 bg-white px-6 py-4 text-sm font-bold text-[#6F42F5] transition hover:border-[#6F42F5] hover:bg-[#6F42F5]/5"
+                    className="inline-flex w-full max-w-lg items-center justify-center rounded-2xl border-2 border-slate-900/15 bg-white px-6 py-4 text-sm font-bold text-slate-900 transition hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                   >
-                    טען עוד מאמרים
+                    {copy.loadMore}
                   </Link>
                 </div>
               ) : null}
@@ -195,14 +210,14 @@ export default async function BlogPage({ params, searchParams }: Props) {
           </div>
 
           <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
-            <TrendingSidebar categories={categoryCounts} activeCategory={category} />
-            <NewsletterCard />
-            <PopularArticles posts={sortedPosts} />
+            <TrendingSidebar categories={categoryCounts} activeCategory={category} locale={locale} />
+            <NewsletterCard locale={locale} />
+            <PopularArticles posts={sortedPosts} locale={locale} />
           </aside>
         </div>
       </div>
 
-      <BlogFeaturesSection />
+      <BlogFeaturesSection locale={locale} />
     </BlogShell>
   );
 }

@@ -8,9 +8,10 @@ import type { BlogCardPost } from "@/lib/blog/types";
 
 type Props = {
   posts: BlogCardPost[];
+  locale?: string;
 };
 
-export function PopularArticles({ posts }: Props) {
+export function PopularArticles({ posts, locale = "he" }: Props) {
   const [ranked, setRanked] = useState<BlogCardPost[]>(posts.slice(0, 5));
 
   useEffect(() => {
@@ -27,10 +28,10 @@ export function PopularArticles({ posts }: Props) {
 
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
-      <h2 className="text-lg font-bold text-slate-900">מאמרים פופולריים</h2>
+      <h2 className="text-lg font-bold text-slate-900">{locale === "en" ? "Popular articles" : "מאמרים פופולריים"}</h2>
       <div className="mt-5 space-y-4">
         {!ranked.length ? (
-          <p className="text-sm text-slate-500">אין עדיין מאמרים.</p>
+          <p className="text-sm text-slate-500">{locale === "en" ? "No articles yet." : "אין עדיין מאמרים."}</p>
         ) : (
           ranked.map((post, index) => (
             <BlogReadLink

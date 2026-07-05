@@ -1,4 +1,5 @@
 import type { BlogCardPost, BlogSort } from "@/lib/blog/types";
+import { dateLocale, sortLocale } from "@/lib/blog/editorial-copy";
 
 export const BLOG_ACCENT = "#6F42F5";
 export const BLOG_PAGE_SIZE = 9;
@@ -23,16 +24,16 @@ export function blogHref({
   return query ? `/blog?${query}` : "/blog";
 }
 
-export function formatPublishDate(value: string | null, locale = "he-IL"): string {
-  if (!value) return "ללא תאריך";
-  return new Date(value).toLocaleDateString(locale, {
+export function formatPublishDate(value: string | null, locale = "he"): string {
+  if (!value) return locale === "en" ? "No date" : "ללא תאריך";
+  return new Date(value).toLocaleDateString(dateLocale(locale), {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
 
-export function sortPosts(posts: BlogCardPost[], sort: BlogSort): BlogCardPost[] {
+export function sortPosts(posts: BlogCardPost[], sort: BlogSort, locale = "he"): BlogCardPost[] {
   const copy = [...posts];
   if (sort === "oldest") {
     return copy.sort((a, b) => {
@@ -42,7 +43,7 @@ export function sortPosts(posts: BlogCardPost[], sort: BlogSort): BlogCardPost[]
     });
   }
   if (sort === "title") {
-    return copy.sort((a, b) => a.title.localeCompare(b.title, "he"));
+    return copy.sort((a, b) => a.title.localeCompare(b.title, sortLocale(locale)));
   }
   return copy.sort((a, b) => {
     const dateA = a.published_at ? new Date(a.published_at).getTime() : 0;

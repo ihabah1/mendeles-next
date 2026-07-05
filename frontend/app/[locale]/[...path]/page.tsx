@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { PublicArticleImage } from "@/components/blog/public-article-image";
+import { PublicContactFormBlock } from "@/components/leads/public-contact-form-block";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { resolvePublicImageUrl } from "@/lib/blog/public-image";
 import { backendBase } from "@/lib/api/backend-url";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -55,6 +57,10 @@ function stripHtml(value: unknown): string {
     .trim();
 }
 
+function blockHref(config: Record<string, unknown>, fallback: string): string {
+  return textValue(config.cta_href) || textValue(config.button_href) || fallback;
+}
+
 function accentClasses(accent: string): string {
   if (accent === "emerald") return "border-emerald-400/20 bg-emerald-400/10 shadow-emerald-950/20";
   if (accent === "violet") return "border-violet-400/20 bg-violet-400/10 shadow-violet-950/20";
@@ -75,9 +81,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-function HeroBlock({ config }: { config: Record<string, unknown> }) {
+function HeroBlock({
+  config,
+  isLandingPage,
+}: {
+  config: Record<string, unknown>;
+  isLandingPage: boolean;
+}) {
   const theme = config.theme && typeof config.theme === "object" ? (config.theme as Record<string, unknown>) : {};
   const accent = textValue(theme.accent) || "cyan";
+  const cta = textValue(config.cta);
+  const href = isLandingPage ? blockHref(config, "#contact") : "";
+
   return (
     <section className={`rounded-[2rem] border px-6 py-14 text-center shadow-2xl sm:px-10 ${accentClasses(accent)}`}>
       <p className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-200">Mendeles AI</p>
@@ -87,11 +102,17 @@ function HeroBlock({ config }: { config: Record<string, unknown> }) {
       <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-200">
         {textValue(config.subheadline) || textValue(config.description)}
       </p>
-      {textValue(config.cta) && (
-        <span className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950">
-          {textValue(config.cta)}
-        </span>
-      )}
+      {cta &&
+        (href ? (
+          <a
+            href={href}
+            className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+          >
+            {cta}
+          </a>
+        ) : (
+          <span className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950">{cta}</span>
+        ))}
     </section>
   );
 }
@@ -111,30 +132,43 @@ function ImageBlock({ config }: { config: Record<string, unknown> }) {
   );
 }
 
-function RichTextBlock({ config }: { config: Record<string, unknown> }) {
+function RichTextBlock({ config, isBlog }: { config: Record<string, unknown>; isBlog: boolean }) {
   const content = stripHtml(config.html || config.body || config.text);
   if (!content) return null;
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-      <p className="whitespace-pre-line text-lg leading-9 text-slate-200">{content}</p>
+    <section
+      className={
+        isBlog
+          ? "border-s border-slate-900/10 py-2 ps-5"
+          : "rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8"
+      }
+    >
+      <p
+        className={
+          isBlog
+            ? "whitespace-pre-line text-lg leading-9 text-slate-800"
+            : "whitespace-pre-line text-lg leading-9 text-slate-200"
+        }
+      >
+        {content}
+      </p>
     </section>
   );
 }
 
-function FaqBlock({ config }: { config: Record<string, unknown> }) {
+function FaqBlock({ config, locale }: { config: Record<string, unknown>; locale: string }) {
   const items = Array.isArray(config.items) ? config.items : [];
   if (!items.length) return null;
+  const copy = editorialCopy(locale);
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-white">שאלות נפוצות</h2>
+      <h2 className="text-2xl font-bold text-white">{copy.faq}</h2>
       <div className="mt-6 space-y-4">
         {items.map((item, index) => {
           const row = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
           return (
             <details key={index} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-              <summary className="cursor-pointer font-semibold text-white">
-                {textValue(row.question)}
-              </summary>
+              <summary className="cursor-pointer font-semibold text-white">{textValue(row.question)}</summary>
               <p className="mt-3 leading-7 text-slate-300">{textValue(row.answer)}</p>
             </details>
           );
@@ -144,7 +178,15 @@ function FaqBlock({ config }: { config: Record<string, unknown> }) {
   );
 }
 
-function CtaBlock({ config }: { config: Record<string, unknown> }) {
+function CtaBlock({
+  config,
+  isLandingPage,
+}: {
+  config: Record<string, unknown>;
+  isLandingPage: boolean;
+}) {
+  const button = textValue(config.button);
+  const href = isLandingPage ? blockHref(config, "#contact") : "";
   return (
     <section className="rounded-[2rem] bg-gradient-to-br from-cyan-300 to-blue-500 p-8 text-center text-slate-950">
       <h2 className="text-3xl font-bold">{textValue(config.headline) || textValue(config.title)}</h2>
@@ -153,23 +195,83 @@ function CtaBlock({ config }: { config: Record<string, unknown> }) {
           {textValue(config.text) || textValue(config.description)}
         </p>
       )}
-      {textValue(config.button) && (
-        <span className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white">
-          {textValue(config.button)}
-        </span>
-      )}
+      {button &&
+        (href ? (
+          <a
+            href={href}
+            className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+          >
+            {button}
+          </a>
+        ) : (
+          <span className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white">{button}</span>
+        ))}
     </section>
   );
 }
 
-function PublicBlock({ block }: { block: PublicContentBlock }) {
+function PublicBlock({
+  block,
+  page,
+  locale,
+}: {
+  block: PublicContentBlock;
+  page: PublicContentPage;
+  locale: string;
+}) {
   if (!block.is_visible) return null;
 
+  const isLandingPage = page.page_type === "landing_page";
+  const isBlog = page.page_type === "blog";
+
   if (block.block_type === "image") return <ImageBlock config={block.config} />;
-  if (block.block_type === "hero") return <HeroBlock config={block.config} />;
-  if (block.block_type === "faq") return <FaqBlock config={block.config} />;
-  if (block.block_type === "cta") return <CtaBlock config={block.config} />;
-  return <RichTextBlock config={block.config} />;
+  if (block.block_type === "hero") return <HeroBlock config={block.config} isLandingPage={isLandingPage} />;
+  if (block.block_type === "faq") return <FaqBlock config={block.config} locale={locale} />;
+  if (block.block_type === "cta") return <CtaBlock config={block.config} isLandingPage={isLandingPage} />;
+  if (block.block_type === "contact_form" || block.block_type === "form") {
+    const formId = textValue(block.config.formId);
+    if (!formId) return null;
+    return (
+      <PublicContactFormBlock
+        formId={formId}
+        pageId={page.id}
+        pageUrl={page.full_path}
+        headline={textValue(block.config.headline) || editorialCopy(locale).contact}
+        anchorId={textValue(block.config.anchorId) || "contact"}
+      />
+    );
+  }
+  return <RichTextBlock config={block.config} isBlog={isBlog} />;
+}
+
+function BlogArticleLayout({
+  page,
+  locale,
+  visibleBlocks,
+}: {
+  page: PublicContentPage;
+  locale: string;
+  visibleBlocks: PublicContentBlock[];
+}) {
+  const copy = editorialCopy(locale);
+  return (
+    <article className="mx-auto max-w-3xl px-6 py-12">
+      <header className="border-b-4 border-slate-900 pb-8 text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.35em] text-red-600">{copy.breaking}</p>
+        <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+          {page.title}
+        </h1>
+        {page.meta_description ? (
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">{page.meta_description}</p>
+        ) : null}
+      </header>
+      <div className="mt-10 space-y-8">
+        {visibleBlocks.map((block) => (
+          <PublicBlock key={block.id} block={block} page={page} locale={locale} />
+        ))}
+      </div>
+    </article>
+  );
 }
 
 export default async function PublicContentPage({ params }: Props) {
@@ -180,16 +282,26 @@ export default async function PublicContentPage({ params }: Props) {
   if (!page) notFound();
 
   const visibleBlocks = page.blocks.filter((block) => block.is_visible);
+  const copy = editorialCopy(locale);
+  const isBlog = page.page_type === "blog";
+
+  if (isBlog) {
+    return (
+      <div className="min-h-screen bg-[#F4F5F8] text-slate-900">
+        <BlogArticleLayout page={page} locale={locale} visibleBlocks={visibleBlocks} />
+      </div>
+    );
+  }
 
   return (
     <MarketingShell>
       <article className="mx-auto max-w-5xl space-y-8 px-6 py-16">
         {visibleBlocks.length ? (
-          visibleBlocks.map((block) => <PublicBlock key={block.id} block={block} />)
+          visibleBlocks.map((block) => <PublicBlock key={block.id} block={block} page={page} locale={locale} />)
         ) : (
           <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
             <h1 className="text-3xl font-bold text-white">{page.title}</h1>
-            <p className="mt-4 text-slate-300">הדף פורסם, אך עדיין אין בו בלוקים להצגה.</p>
+            <p className="mt-4 text-slate-300">{copy.emptyPage}</p>
           </section>
         )}
       </article>

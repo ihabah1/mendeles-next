@@ -1,13 +1,16 @@
 import Image from "next/image";
 import { BlogReadLink } from "@/components/blog/blog-read-link";
+import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCardPost } from "@/lib/blog/types";
 import { formatPublishDate } from "@/lib/blog/utils";
 
 type Props = {
   posts: BlogCardPost[];
+  locale?: string;
 };
 
-export function FeaturedStrip({ posts }: Props) {
+export function FeaturedStrip({ posts, locale = "he" }: Props) {
+  const copy = editorialCopy(locale);
   const items = posts.slice(0, 3);
   if (!items.length) return null;
 
@@ -29,16 +32,22 @@ export function FeaturedStrip({ posts }: Props) {
                 className="object-cover transition duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-              <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-[#6F42F5]">
+              <span
+                className={`absolute bottom-3 rounded-full px-2.5 py-1 text-[11px] font-bold shadow ${
+                  post.category_slug === "sports"
+                    ? "right-3 bg-red-600 text-white"
+                    : "right-3 bg-white/95 text-slate-900"
+                }`}
+              >
                 {post.category}
               </span>
             </div>
-            <div className="p-4 text-right">
-              <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900 group-hover:text-[#6F42F5]">
+            <div className={`p-4 ${locale === "en" ? "text-left" : "text-right"}`}>
+              <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900 group-hover:text-red-600">
                 {post.title}
               </h3>
               <p className="mt-2 text-xs text-slate-500">
-                {formatPublishDate(post.published_at)} · {post.reading_minutes} דק׳
+                {formatPublishDate(post.published_at, locale)} · {post.reading_minutes} {copy.minShort}
               </p>
             </div>
           </BlogReadLink>

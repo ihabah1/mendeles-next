@@ -20,7 +20,8 @@ from content.application.publish_service import PublishService
 from content.application.taxonomy_service import TaxonomyService
 from content.domain.status import PageStatus, PageType
 from content.infrastructure.models import Page, Taxonomy, TaxonomyTerm
-from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, selected_domain_rows
+from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, batch_locales, localize_domain, selected_domain_rows
+from leads.infrastructure.models import FormDefinition
 from ai_seo.application.gemini_service import GeminiService
 from integrations.application.trends_service import TrendsService
 from integrations.domain.enums import GoogleServiceType, TrendsCountry, TrendsDateRange
@@ -884,6 +885,9 @@ class AiSeoGenerationService:
             defaults={"name": "Default", "is_default": True},
         )
 
+        locales = batch_locales(data)
+        sports_translation_enabled = bool(data.get("sports_translation_enabled", False))
+
         for domain in domains:
             if prepared_news and domain.get("value") == prepared_news[0].get("value"):
                 domain, keywords, news_event = prepared_news
@@ -894,54 +898,72 @@ class AiSeoGenerationService:
                     topic = news_event.get("topic", "").strip()
                     if topic and topic not in keywords:
                         keywords = [topic, *keywords]
-            for output_type in output_types:
-                job_type = OUTPUT_TO_JOB[output_type]
-                visual_asset = (
-                    cls._random_visual_asset(domain, keywords=keywords, prompt=manual_prompt) if free_image_enabled else None
+            for locale in locales:
+                localized_domain = localize_domain(domain, locale)
+                localized_keywords = (
+                    cls._select_keywords_for_run(
+                        localized_domain,
+                        selected_keywords,
+                        random_topics_enabled=random_topics_enabled,
+                    )
+                    if locale != "he"
+                    else keywords
                 )
-                landing_theme = random.choice(LANDING_THEMES) if landing_design_enabled else None
-                job = JobService.create_job(
-                    tenant_id,
-                    user,
-                    {
-                        "name": f"Generate {output_type} — {domain['label']}",
-                        "job_type": job_type.value,
-                        "config": {
-                            "domain": domain,
-                            "keywords": keywords,
-                            "output_type": output_type,
-                            "prompt": manual_prompt,
-                            "locale": data.get("locale", "he"),
-                            "recurrence_interval": recurrence_interval,
-                            "recurrence_minutes": recurrence_minutes,
+                for output_type in output_types:
+                    job_type = OUTPUT_TO_JOB[output_type]
+                    visual_asset = (
+                        cls._random_visual_asset(
+                            localized_domain,
+                            keywords=localized_keywords,
+                            prompt=manual_prompt,
+                        )
+                        if free_image_enabled
+                        else None
+                    )
+                    landing_theme = random.choice(LANDING_THEMES) if landing_design_enabled else None
+                    job = JobService.create_job(
+                        tenant_id,
+                        user,
+                        {
+                            "name": f"Generate {output_type} — {localized_domain['label']} ({locale})",
+                            "job_type": job_type.value,
+                            "config": {
+                                "domain": localized_domain,
+                                "keywords": localized_keywords,
+                                "output_type": output_type,
+                                "prompt": manual_prompt,
+                                "locale": locale,
+                                "recurrence_interval": recurrence_interval,
+                                "recurrence_minutes": recurrence_minutes,
+                                "auto_publish_enabled": auto_publish_enabled,
+                                "publish_at": publish_at.isoformat() if publish_at else "",
+                                "source_domain_values": requested_domain_values,
+                                "random_topics_enabled": random_topics_enabled,
+                                "random_topic_count": random_topic_count,
+                                "news_hot_topics_enabled": news_hot_topics_enabled,
+                                "landing_design_enabled": landing_design_enabled,
+                                "free_image_enabled": free_image_enabled,
+                                "visual_asset": visual_asset,
+                                "landing_theme": landing_theme,
+                                "news_event": news_event,
+                                "sports_translation_enabled": sports_translation_enabled,
+                            },
+                            "requires_approval": not auto_publish_enabled,
                             "auto_publish_enabled": auto_publish_enabled,
-                            "publish_at": publish_at.isoformat() if publish_at else "",
-                            "source_domain_values": requested_domain_values,
-                            "random_topics_enabled": random_topics_enabled,
-                            "random_topic_count": random_topic_count,
-                            "news_hot_topics_enabled": news_hot_topics_enabled,
-                            "landing_design_enabled": landing_design_enabled,
-                            "free_image_enabled": free_image_enabled,
-                            "visual_asset": visual_asset,
-                            "landing_theme": landing_theme,
-                            "news_event": news_event,
+                            "scheduled_at": scheduled_at,
+                            "steps": [
+                                {"name": name, "step_type": step_type, "config": {"output_type": output_type}}
+                                for step_type, name in GENERATION_STEPS
+                            ],
                         },
-                        "requires_approval": not auto_publish_enabled,
-                        "auto_publish_enabled": auto_publish_enabled,
-                        "scheduled_at": scheduled_at,
-                        "steps": [
-                            {"name": name, "step_type": step_type, "config": {"output_type": output_type}}
-                            for step_type, name in GENERATION_STEPS
-                        ],
-                    },
-                    request=request,
-                )
-                if scheduled_at and scheduled_at > timezone.now():
-                    job.status = JobStatus.SCHEDULED
-                    job.save(update_fields=["status", "updated_at"])
-                else:
-                    job = JobService.queue_job(tenant_id, user, job.id, request=request)
-                jobs.append(job)
+                        request=request,
+                    )
+                    if scheduled_at and scheduled_at > timezone.now():
+                        job.status = JobStatus.SCHEDULED
+                        job.save(update_fields=["status", "updated_at"])
+                    else:
+                        job = JobService.queue_job(tenant_id, user, job.id, request=request)
+                    jobs.append(job)
         return jobs
 
     @classmethod
@@ -952,12 +974,13 @@ class AiSeoGenerationService:
         keywords = config.get("keywords") or []
         prompt = cls._build_prompt(
             output_type=output_type,
-            domain_label=domain.get("label", ""),
+            domain=domain,
             keywords=keywords,
             locale=config.get("locale", "he"),
             feedback=config.get("feedback", ""),
             user_prompt=config.get("prompt", ""),
             news_event=config.get("news_event"),
+            sports_translation_enabled=bool(config.get("sports_translation_enabled")),
         )
         result = GeminiService.generate_json(prompt)
         return cls._create_page_from_payload(job, result)
@@ -1007,12 +1030,13 @@ class AiSeoGenerationService:
             )
             prompt = cls._build_prompt(
                 output_type=output_type,
-                domain_label=domain.get("label", ""),
+                domain=domain,
                 keywords=keywords,
                 locale=config.get("locale", "he"),
                 feedback=config.get("feedback", ""),
                 user_prompt=config.get("prompt", ""),
                 news_event=news_event,
+                sports_translation_enabled=bool(config.get("sports_translation_enabled")),
             )
             result = GeminiService.generate_json(prompt)
             job.config = {**config, "gemini_payload": result}
@@ -1310,6 +1334,7 @@ class AiSeoGenerationService:
         output_type = config.get("output_type", "blog")
         page_type = OUTPUT_TO_PAGE_TYPE.get(output_type, PageType.BLOG)
         domain = config.get("domain") or {}
+        locale = config.get("locale", "he")
         publish_at = _parse_scheduled_at(config.get("publish_at"))
         page = PageService.create_page(
             job.tenant_id,
@@ -1317,7 +1342,7 @@ class AiSeoGenerationService:
             {
                 "title": payload.get("title") or f"{domain.get('label', 'AI')} — {output_type}",
                 "page_type": page_type,
-                "locale": config.get("locale", "he"),
+                "locale": locale,
                 "meta_title": payload.get("meta_title", ""),
                 "meta_description": payload.get("meta_description", ""),
             },
@@ -1328,6 +1353,11 @@ class AiSeoGenerationService:
 
         visual_asset = config.get("visual_asset") if config.get("free_image_enabled", True) else None
         landing_theme = config.get("landing_theme") if config.get("landing_design_enabled", True) else None
+        image_caption = (
+            f"Free stock image for commercial use · {visual_asset.get('source', '')}"
+            if locale == "en"
+            else f"תמונה חינמית לשימוש מסחרי · {visual_asset.get('source', '')}"
+        ) if visual_asset else ""
         if visual_asset:
             BlockService.create_block(
                 page,
@@ -1336,16 +1366,19 @@ class AiSeoGenerationService:
                     "sort_order": 0,
                     "config": {
                         **visual_asset,
-                        "caption": f"תמונה חינמית לשימוש מסחרי · {visual_asset.get('source', '')}",
+                        "caption": image_caption,
                         "theme": landing_theme,
                     },
                 },
             )
 
-        for index, block in enumerate(payload.get("blocks") or [], start=1):
+        blocks = payload.get("blocks") or []
+        for index, block in enumerate(blocks, start=1):
             block_config = block.get("config", {})
             if landing_theme and block.get("type") == "hero":
                 block_config = {**block_config, "theme": landing_theme}
+            if page_type == PageType.LANDING_PAGE and block.get("type") in {"hero", "cta"}:
+                block_config = {**block_config, "cta_href": "#contact", "button_href": "#contact"}
             BlockService.create_block(
                 page,
                 {
@@ -1354,7 +1387,28 @@ class AiSeoGenerationService:
                     "config": block_config,
                 },
             )
-        cls._assign_generation_category(page, domain)
+
+        if page_type == PageType.LANDING_PAGE:
+            contact_form = FormDefinition.objects.filter(
+                tenant_id=job.tenant_id,
+                slug="contact",
+                deleted_at__isnull=True,
+            ).first()
+            if contact_form:
+                BlockService.create_block(
+                    page,
+                    {
+                        "block_type": "contact_form",
+                        "sort_order": len(blocks) + 1,
+                        "config": {
+                            "formId": str(contact_form.id),
+                            "anchorId": "contact",
+                            "headline": "Contact us" if locale == "en" else "יצירת קשר",
+                            "submitLabel": "Send message" if locale == "en" else "שלחו הודעה",
+                        },
+                    },
+                )
+        cls._assign_generation_category(page, domain, locale=locale)
         job.config = {**config, "generated_page_id": str(page.id), "generated_page_title": page.title}
         job.save(update_fields=["config", "updated_at"])
         return page
@@ -1369,9 +1423,10 @@ class AiSeoGenerationService:
         return normalized
 
     @staticmethod
-    def _assign_generation_category(page: Page, domain: dict) -> None:
+    def _assign_generation_category(page: Page, domain: dict, *, locale: str = "he") -> None:
         if not domain.get("label"):
             return
+        localized = localize_domain(domain, locale)
         taxonomy, _ = Taxonomy.objects.get_or_create(
             tenant_id=page.tenant_id,
             slug="ai-seo-categories",
@@ -1387,10 +1442,13 @@ class AiSeoGenerationService:
             taxonomy=taxonomy,
             slug=domain.get("value") or "general",
             defaults={
-                "name": domain.get("label") or "כללי",
+                "name": localized.get("label") or "כללי",
                 "full_path": domain.get("value") or "general",
             },
         )
+        if term.name != localized.get("label"):
+            term.name = localized.get("label") or term.name
+            term.save(update_fields=["name", "updated_at"])
         TaxonomyService.assign_term(page, str(term.id))
 
     @staticmethod
@@ -1418,14 +1476,24 @@ class AiSeoGenerationService:
     def _build_prompt(
         *,
         output_type: str,
-        domain_label: str,
+        domain: dict,
         keywords: list[str],
         locale: str,
         feedback: str,
         user_prompt: str,
         news_event: dict | None = None,
+        sports_translation_enabled: bool = False,
     ) -> str:
+        domain_label = domain.get("label", "")
+        domain_value = domain.get("value", "")
         asset = "SEO landing page" if output_type == "landing_page" else "SEO blog article"
+        if locale == "en":
+            language_instruction = "Write in fluent, professional English."
+            audience = "international readers"
+        else:
+            language_instruction = "Write in fluent, professional Hebrew."
+            audience = "Israeli readers"
+
         news_block = ""
         if news_event and news_event.get("topic"):
             news_block = f"""
@@ -1433,19 +1501,39 @@ This is a news-driven piece. Base the entire {asset} on today's trending news ev
 - Headline/topic: {news_event.get("headline") or news_event.get("topic")}
 - Category: {domain_label}
 - Source signal: {news_event.get("source", "trends")}
-Write in a neutral journalistic tone. Explain what happened, why it matters, and context for Israeli readers.
+Write in a neutral journalistic tone. Explain what happened, why it matters, and context for {audience}.
 Do not invent quotes, interviews, statistics, or named officials unless they are generic and clearly non-fictional.
 For blog articles: news-style intro, timeline/context sections, implications, and balanced summary.
-For landing pages: tie the hero and sections to the event with a clear informational angle and soft CTA.
+For landing pages: tie the hero and sections to the event with a clear informational angle and soft CTA linking to contact.
 """
+
+        sports_block = ""
+        if domain_value == "sports" and sports_translation_enabled:
+            sports_block = """
+This is a translated sports desk article adapted from foreign football coverage.
+Write like a sports reporter: match context, key moments, standings impact, and quotes paraphrased in neutral language.
+Do not invent a specific foreign newspaper name. Mention that the story reflects international match reporting.
+Use a stadium atmosphere and competitive tension. Include a strong headline and subhead suitable for a sports section.
+"""
+
+        landing_cta_note = ""
+        if output_type == "landing_page":
+            landing_cta_note = (
+                "All hero and CTA buttons must invite the reader to contact the business (labels only; links are added automatically)."
+                if locale == "en"
+                else "כל כפתורי ה-hero וה-CTA צריכים להזמין ליצירת קשר (טקסט בלבד; הקישורים יתווספו אוטומטית)."
+            )
+
         return f"""
-Create a production-ready {asset} in Hebrew for the business domain: {domain_label}.
+Create a production-ready {asset}. {language_instruction}
+Business/news domain: {domain_label}.
 Use only the following real user-selected keywords: {", ".join(keywords)}.
-{news_block}
+{news_block}{sports_block}
+{landing_cta_note}
 Additional user instructions: {user_prompt or "none"}.
 Revision feedback: {feedback or "none"}.
 For blog articles include a clear intro, practical sections, and a summary.
-For landing pages use a distinct visual style, persuasive headline, and conversion-focused CTA.
+For landing pages use a distinct visual style, persuasive headline, and conversion-focused CTA text.
 
 Return strict JSON only:
 {{

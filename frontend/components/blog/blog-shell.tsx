@@ -16,18 +16,19 @@ type Props = {
   children: ReactNode;
   categories: BlogCategory[];
   previewPosts?: BlogCardPost[];
+  locale?: string;
 };
 
-export function BlogShell({ children, categories, previewPosts = [] }: Props) {
+export function BlogShell({ children, categories, previewPosts = [], locale = "he" }: Props) {
   return (
-    <div className={`${heebo.variable} blog-editorial min-h-screen bg-[#F7F8FC] font-[family-name:var(--font-blog)] text-slate-900`}>
-      <BlogHeader categories={categories} />
+    <div className={`${heebo.variable} blog-editorial min-h-screen bg-[#F4F5F8] font-[family-name:var(--font-blog)] text-slate-900`}>
+      <BlogHeader categories={categories} locale={locale} />
       <main id="main-content" tabIndex={-1} className="outline-none">
         {children}
       </main>
       <BlogFooter />
       <Suspense fallback={null}>
-        <ArticlePreviewDrawer posts={previewPosts} />
+        <ArticlePreviewDrawer posts={previewPosts} locale={locale} />
       </Suspense>
     </div>
   );

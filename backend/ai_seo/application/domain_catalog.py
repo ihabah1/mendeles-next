@@ -1,3 +1,57 @@
+DOMAIN_EN: dict[str, dict] = {
+    "law": {"label": "Law", "keywords": ["lawyer", "legal advice", "civil lawsuit"]},
+    "real_estate": {"label": "Real Estate", "keywords": ["homes for sale", "real estate investing", "mortgage"]},
+    "insurance": {"label": "Insurance", "keywords": ["car insurance", "health insurance", "business insurance"]},
+    "finance": {"label": "Finance", "keywords": ["loans", "financial planning", "investments"]},
+    "medical": {"label": "Private Medicine", "keywords": ["specialist doctor", "private clinic", "doctor appointment"]},
+    "dentistry": {"label": "Dentistry", "keywords": ["dentist", "orthodontics", "dental implants"]},
+    "beauty": {"label": "Beauty & Aesthetics", "keywords": ["facial treatments", "laser hair removal", "medical aesthetics"]},
+    "fitness": {"label": "Fitness & Health", "keywords": ["personal trainer", "workout plan", "weight loss"]},
+    "home_services": {"label": "Home Services", "keywords": ["plumber", "electrician", "home renovation"]},
+    "automotive": {"label": "Automotive", "keywords": ["auto repair", "vehicle inspection", "car insurance"]},
+    "education": {"label": "Education & Courses", "keywords": ["online course", "certification program", "private lessons"]},
+    "tourism": {"label": "Tourism & Travel", "keywords": ["vacation packages", "boutique hotel", "family travel"]},
+    "restaurants": {"label": "Restaurants & Food", "keywords": ["recommended restaurant", "catering", "food delivery"]},
+    "ecommerce": {"label": "E-commerce", "keywords": ["online shopping", "promotions", "online store"]},
+    "b2b": {"label": "B2B & Business Services", "keywords": ["business consulting", "CRM system", "B2B services"]},
+    "cyber": {"label": "Cyber & Technology", "keywords": ["information security", "IT services", "cybersecurity for business"]},
+    "marketing": {"label": "Digital Marketing", "keywords": ["SEO", "Google Ads", "business marketing"]},
+    "events": {"label": "Events", "keywords": ["event venue", "event production", "event photographer"]},
+    "nonprofits": {"label": "Nonprofits", "keywords": ["donations", "nonprofit", "volunteering"]},
+    "local_business": {"label": "Local Business", "keywords": ["local business", "service near me", "tradespeople"]},
+    "sports": {
+        "label": "Sports",
+        "keywords": ["football", "Premier League", "Champions League", "soccer", "match report", "transfer news"],
+    },
+    "economy": {"label": "Economy", "keywords": ["economy", "stock market", "inflation", "interest rates"]},
+    "current_affairs": {"label": "Current Affairs", "keywords": ["breaking news", "politics", "headlines"]},
+    "world_news": {"label": "World News", "keywords": ["international news", "geopolitics", "Europe", "United States"]},
+}
+
+
+def localize_domain(domain: dict, locale: str) -> dict:
+    if locale != "en":
+        return domain
+    en = DOMAIN_EN.get(domain.get("value", ""), {})
+    return {
+        **domain,
+        "label": en.get("label") or domain.get("label", ""),
+        "keywords": en.get("keywords") or domain.get("keywords", []),
+    }
+
+
+def batch_locales(data: dict) -> list[str]:
+    locales = data.get("locales")
+    if isinstance(locales, list) and locales:
+        return [locale for locale in locales if locale in ("he", "en")]
+    mode = data.get("content_locales", "both")
+    if mode == "he":
+        return ["he"]
+    if mode == "en":
+        return ["en"]
+    return ["he", "en"]
+
+
 DOMAIN_OPTIONS = [
     {"value": "law", "label": "עריכת דין", "keywords": ["עורך דין", "ייעוץ משפטי", "תביעה אזרחית"]},
     {"value": "real_estate", "label": "נדל\"ן", "keywords": ["דירות למכירה", "השקעות נדלן", "משכנתא"]},

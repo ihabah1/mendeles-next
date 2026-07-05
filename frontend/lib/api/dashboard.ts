@@ -643,6 +643,8 @@ export const aiSeoApi = {
     news_hot_topics_enabled?: boolean;
     landing_design_enabled?: boolean;
     free_image_enabled?: boolean;
+    content_locales?: "both" | "he" | "en";
+    sports_translation_enabled?: boolean;
     locale?: string;
   }) =>
     apiFetch<{ jobs: AiSeoWorkspaceJob[]; workspace: AiSeoWorkspace }>("/api/v1/ai-seo/workspace/generate/", {

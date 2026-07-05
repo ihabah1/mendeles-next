@@ -37,6 +37,11 @@ export const CURATED_EDITORIAL_PHOTOS: Record<string, string[]> = {
     "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1600&h=900&q=80",
     "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1600&h=900&q=80",
   ],
+  sports: [
+    "https://images.unsplash.com/photo-1522778119026-d4a9106a5fa2?auto=format&fit=crop&w=1600&h=900&q=80",
+    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&h=900&q=80",
+    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1600&h=900&q=80",
+  ],
   default: [
     "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&h=900&q=80",
     "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&h=900&q=80",
@@ -56,6 +61,7 @@ export const CATEGORY_SEARCH_QUERIES: Record<string, string[]> = {
   cyber: ["software developer", "laptop workspace", "cybersecurity office"],
   business: ["office meeting", "startup team", "business workspace"],
   b2b: ["office meeting", "business team", "corporate office"],
+  sports: ["football stadium", "soccer match", "premier league", "sports reporter"],
   default: ["professional office", "business workspace", "laptop desk"],
 };
 
@@ -71,7 +77,7 @@ const SLUG_ALIASES: Record<string, string> = {
   cyber: "technology",
   b2b: "business",
   economy: "finance",
-  sports: "news",
+  sports: "sports",
   current_affairs: "news",
   "current-affairs": "news",
   world_news: "news",
@@ -94,7 +100,8 @@ const LABEL_ALIASES: Record<string, string> = {
   "b2b ושירותים לעסקים": "business",
   עסקים: "business",
   אקטואליה: "news",
-  ספורט: "news",
+  ספורט: "sports",
+  sports: "sports",
 };
 
 export function normalizeCategoryKey(category: string, slug = ""): string {
@@ -108,6 +115,7 @@ export function normalizeCategoryKey(category: string, slug = ""): string {
   if (lower.includes("פיננס") || lower.includes("כלכ") || lower.includes("ביטוח")) return "finance";
   if (lower.includes("טכנ") || lower.includes("סייבר")) return "technology";
   if (lower.includes("עסק") || lower.includes("b2b")) return "business";
+  if (lower.includes("ספורט") || lower.includes("sport") || lower.includes("football")) return "sports";
   return "default";
 }
 

@@ -42,7 +42,7 @@ const FEATURES = [
   },
 ] as const;
 
-export function BlogFeaturesSection() {
+export function BlogFeaturesSection({ locale = "he" }: { locale?: string }) {
   return (
     <section className="border-t border-slate-200 bg-white px-4 py-14 sm:px-6">
       <div className="mx-auto max-w-7xl">
