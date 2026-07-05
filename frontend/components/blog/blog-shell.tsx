@@ -1,19 +1,21 @@
 import type { ReactNode } from "react";
 import { BlogHeader } from "@/components/blog/blog-header";
-import { BlogLightFooter } from "@/components/blog/blog-light-footer";
+import { BlogFooter } from "@/components/blog/footer";
+import type { BlogCategory } from "@/lib/blog/types";
 
 type Props = {
   children: ReactNode;
+  categories: BlogCategory[];
 };
 
-export function BlogShell({ children }: Props) {
+export function BlogShell({ children, categories }: Props) {
   return (
-    <div className="blog-light min-h-screen bg-[#f8f9fa] text-slate-900">
-      <BlogHeader />
+    <div className="blog-editorial min-h-screen bg-[#F7F8FC] text-slate-900">
+      <BlogHeader categories={categories} />
       <main id="main-content" tabIndex={-1} className="outline-none">
         {children}
       </main>
-      <BlogLightFooter />
+      <BlogFooter />
     </div>
   );
 }
