@@ -4,11 +4,19 @@ import { ArticleCard } from "@/components/blog/article-card";
 import { BlogFeaturesSection } from "@/components/blog/features-section";
 import { BlogShell } from "@/components/blog/blog-shell";
 import { CategoryFilter } from "@/components/blog/category-filter";
+import { DemoNotice } from "@/components/blog/demo-notice";
+import { EditorialMasthead } from "@/components/blog/editorial-masthead";
+import { FeaturedStrip } from "@/components/blog/featured-strip";
 import { HeroArticle } from "@/components/blog/hero-article";
 import { NewsletterCard } from "@/components/blog/newsletter-card";
 import { PopularArticles } from "@/components/blog/popular-articles";
 import { SearchToolbar } from "@/components/blog/search-toolbar";
 import { TrendingSidebar } from "@/components/blog/trending-sidebar";
+import {
+  filterDemoPosts,
+  getEditorialDemoCategories,
+  getEditorialDemoPosts,
+} from "@/lib/blog/demo-articles";
 import { resolveEditorialImage } from "@/lib/blog/resolve-editorial-image";
 import type { BlogCardPost, BlogCategory, BlogSort } from "@/lib/blog/types";
 import { BLOG_PAGE_SIZE, blogHref, sortPosts } from "@/lib/blog/utils";
@@ -116,58 +124,57 @@ export default async function BlogPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const { q = "", category = "", page = "1", sort = "newest" } = await searchParams;
   const feed = await fetchBlogFeed(locale, q, category);
-  const cardPosts = await Promise.all(feed.results.map(toCardPost));
+  const usingDemo = feed.results.length === 0;
+
+  const cardPosts = usingDemo
+    ? filterDemoPosts(getEditorialDemoPosts(), { q, category })
+    : await Promise.all(feed.results.map(toCardPost));
+
   const sortedPosts = sortPosts(cardPosts, (sort as BlogSort) || "newest");
   const featured = sortedPosts[0];
-  const postsForGrid = featured ? sortedPosts.slice(1) : sortedPosts;
+  const secondaryFeatured = sortedPosts.slice(1, 4);
+  const usedIds = new Set([featured?.id, ...secondaryFeatured.map((post) => post.id)].filter(Boolean));
+  const postsForGrid = sortedPosts.filter((post) => !usedIds.has(post.id));
   const currentPage = Math.max(1, Number(page) || 1);
   const totalPages = Math.max(1, Math.ceil(postsForGrid.length / BLOG_PAGE_SIZE));
   const gridPosts = postsForGrid.slice((currentPage - 1) * BLOG_PAGE_SIZE, currentPage * BLOG_PAGE_SIZE);
-  const categoryCounts: BlogCategory[] = feed.categories.map((item) => ({
-    ...item,
-    count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
-  }));
+
+  const categoryCounts: BlogCategory[] = usingDemo
+    ? getEditorialDemoCategories()
+    : feed.categories.map((item) => ({
+        ...item,
+        count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
+      }));
 
   return (
-    <BlogShell categories={categoryCounts}>
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts() : []}>
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        {usingDemo ? <DemoNotice /> : null}
+
+        <EditorialMasthead articleCount={sortedPosts.length} categoryCount={categoryCounts.length} />
+
         <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
           <div className="min-w-0 space-y-10">
-            {featured ? (
-              <HeroArticle post={featured} />
-            ) : (
-              <section className="rounded-2xl border border-slate-200/80 bg-white p-14 text-center shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
-                <h2 className="text-3xl font-extrabold text-slate-900">Mendeles Insights</h2>
-                <p className="mt-3 text-slate-500">אין עדיין מאמרים מפורסמים להצגה.</p>
-              </section>
-            )}
+            {featured ? <HeroArticle post={featured} /> : null}
+            {secondaryFeatured.length > 0 ? <FeaturedStrip posts={secondaryFeatured} /> : null}
 
             <section className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <h2 className="text-2xl font-extrabold text-slate-900">כל המאמרים</h2>
-                <span className="text-sm text-slate-500">{sortedPosts.length} במאגר</span>
+                <span className="rounded-full bg-[#F7F8FC] px-3 py-1 text-sm font-semibold text-slate-500">
+                  {sortedPosts.length} במאגר
+                </span>
               </div>
 
-              <SearchToolbar
-                categories={categoryCounts}
-                query={q}
-                activeCategory={category}
-                sort={sort}
-              />
-
-              <CategoryFilter
-                categories={categoryCounts}
-                activeCategory={category}
-                query={q}
-                sort={sort}
-              />
+              <SearchToolbar categories={categoryCounts} query={q} activeCategory={category} sort={sort} />
+              <CategoryFilter categories={categoryCounts} activeCategory={category} query={q} sort={sort} />
 
               {gridPosts.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-12 text-center text-slate-500 shadow-sm">
                   לא נמצאו מאמרים עבור הסינון הנוכחי.
                 </div>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
                   {gridPosts.map((post) => (
                     <ArticleCard key={post.id} post={post} />
                   ))}

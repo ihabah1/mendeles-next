@@ -9,36 +9,40 @@ type Props = {
 
 export function HeroArticle({ post }: Props) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-      <div className="grid md:grid-cols-[3fr_2fr]">
-        <div className="relative min-h-[280px] md:min-h-[420px]">
+    <article className="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="grid lg:grid-cols-[3fr_2fr]">
+        <div className="relative min-h-[320px] lg:min-h-[480px]">
           <Image
             src={post.image_url}
             alt={post.title}
             fill
             priority
-            sizes="(max-width: 768px) 100vw, 60vw"
+            sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-cover"
           />
+          <div className="absolute inset-0 bg-gradient-to-l from-black/10 via-transparent to-transparent" />
+          <span className="absolute left-4 top-4 rounded-full bg-[#6F42F5] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-lg">
+            מומלץ
+          </span>
         </div>
 
-        <div className="flex flex-col justify-center p-8 text-right md:p-10">
-          <span className="mb-4 inline-flex w-fit self-end rounded-full bg-[#6F42F5]/10 px-3 py-1 text-xs font-bold text-[#6F42F5]">
+        <div className="flex flex-col justify-center p-8 text-right lg:p-10">
+          <span className="mb-4 inline-flex w-fit self-end rounded-full border border-[#6F42F5]/20 bg-[#6F42F5]/8 px-4 py-1.5 text-xs font-bold text-[#6F42F5]">
             {post.category}
           </span>
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-4xl lg:text-[2.6rem]">
+          <h2 className="text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 lg:text-[2.75rem]">
             {post.title}
-          </h1>
-          <p className="mt-5 text-base leading-8 text-slate-600 md:text-lg">{post.meta_description}</p>
+          </h2>
+          <p className="mt-5 text-base leading-8 text-slate-600 lg:text-lg">{post.meta_description}</p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-end gap-4 text-sm text-slate-500">
+          <div className="mt-7 flex flex-wrap items-center justify-end gap-4 border-t border-slate-100 pt-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F8FC] text-sm font-bold text-[#6F42F5]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#6F42F5] text-sm font-bold text-white">
                 M
               </span>
-              <div className="text-right">
-                <p className="font-semibold text-slate-800">מערכת Mendeles</p>
-                <p>
+              <div className="text-right text-sm">
+                <p className="font-bold text-slate-900">צוות Mendeles</p>
+                <p className="text-slate-500">
                   {formatPublishDate(post.published_at)} · {post.reading_minutes} דקות קריאה
                 </p>
               </div>
@@ -48,7 +52,7 @@ export function HeroArticle({ post }: Props) {
           <BlogReadLink
             href={post.full_path}
             postId={post.id}
-            className="mt-8 inline-flex w-fit self-end rounded-xl bg-[#6F42F5] px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#5a32d4]"
+            className="mt-8 inline-flex w-fit self-end rounded-2xl bg-[#6F42F5] px-7 py-3.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(111,66,245,0.35)] transition hover:bg-[#5a32d4]"
           >
             קרא את המאמר
           </BlogReadLink>

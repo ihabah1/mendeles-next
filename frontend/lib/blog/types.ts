@@ -8,6 +8,8 @@ export type BlogCardPost = {
   category: string;
   category_slug: string;
   reading_minutes: number;
+  is_preview?: boolean;
+  preview_body?: string;
 };
 
 export type BlogCategory = {
