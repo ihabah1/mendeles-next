@@ -16,6 +16,8 @@ import {
   buildEffectivePrompt,
   DOMAIN_ICONS,
   DraftPreview,
+  jobHasScheduledRun,
+  jobNextRunLabel,
   jobStatusLabel,
   jobStatusTone,
   matchesJobTab,
@@ -528,6 +530,10 @@ export default function WorkspacePage() {
     if (!q) return true;
     return [job.name, job.user, job.id, job.current_step_name].some((part) => part.toLowerCase().includes(q));
   });
+  const showNextRunColumn = useMemo(() => jobs.some(jobHasScheduledRun), [jobs]);
+  const batchJobsGridClass = showNextRunColumn
+    ? "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_1fr_0.8fr_0.8fr]"
+    : "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.8fr_0.8fr]";
   const researchCurrentPage = Math.min(researchPage, pageCount(sourceFilteredResearch.length));
   const jobsCurrentPage = Math.min(jobsPage, pageCount(filteredJobs.length));
   const draftsCurrentPage = Math.min(draftsPage, pageCount(drafts.length));
@@ -1184,13 +1190,14 @@ export default function WorkspacePage() {
             <p className="mt-4 text-sm text-slate-400">אין jobs בטאב זה.</p>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-xl border border-white/10">
-              <div className="min-w-[900px]">
-                <div className="grid grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.8fr_0.8fr] bg-white/5 px-3 py-2 text-xs font-medium text-slate-400">
+              <div className={showNextRunColumn ? "min-w-[1000px]" : "min-w-[900px]"}>
+                <div className={`grid ${batchJobsGridClass} bg-white/5 px-3 py-2 text-xs font-medium text-slate-400`}>
                   <span>משימה</span>
                   <span>סוג תוכן</span>
                   <span>נושאים</span>
                   <span>סטטוס</span>
                   <span>התקדמות</span>
+                  {showNextRunColumn && <span>זמן ריצה עתידי</span>}
                   <span>נוצר</span>
                   <span>פעולות</span>
                 </div>
@@ -1206,7 +1213,7 @@ export default function WorkspacePage() {
                   return (
                     <div
                       key={job.id}
-                      className={`grid grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.8fr_0.8fr] items-center border-t border-white/10 px-3 py-3 text-sm ${
+                      className={`grid ${batchJobsGridClass} items-center border-t border-white/10 px-3 py-3 text-sm ${
                         isSelected ? "bg-violet-500/10" : "hover:bg-white/5"
                       }`}
                     >
@@ -1225,6 +1232,9 @@ export default function WorkspacePage() {
                           <span className="block h-1.5 rounded-full bg-violet-500" style={{ width: `${job.progress_percent}%` }} />
                         </span>
                       </div>
+                      {showNextRunColumn && (
+                        <span className="text-xs text-slate-400">{jobNextRunLabel(job)}</span>
+                      )}
                       <span className="text-xs text-slate-500">
                         {job.created_at ? new Date(job.created_at).toLocaleString("he-IL") : "—"}
                       </span>

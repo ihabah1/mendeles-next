@@ -1,6 +1,6 @@
 "use client";
 
-import type { AiSeoWorkspaceDraft } from "@/lib/api/dashboard";
+import type { AiSeoWorkspaceDraft, AiSeoWorkspaceJob } from "@/lib/api/dashboard";
 import { Button } from "@/components/ui/button";
 
 export const NEWS_DOMAIN_VALUES = new Set(["sports", "economy", "current_affairs", "world_news"]);
@@ -91,6 +91,35 @@ export function jobStatusTone(status: string): string {
   if (status === "failed" || status === "cancelled") return "bg-red-500/20 text-red-300 border-red-500/30";
   if (status === "running") return "bg-sky-500/20 text-sky-300 border-sky-500/30";
   return "bg-amber-500/20 text-amber-300 border-amber-500/30";
+}
+
+export type JobScheduleFields = Pick<AiSeoWorkspaceJob, "status" | "scheduled_at" | "config">;
+
+function parseJobDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function jobNextRunAt(job: JobScheduleFields): Date | null {
+  const config = job.config || {};
+  const nextRecurring = parseJobDate(textValue(config, "next_recurring_run_at"));
+  if (nextRecurring) return nextRecurring;
+
+  const scheduled = parseJobDate(job.scheduled_at);
+  if (!scheduled) return null;
+  if (job.status === "scheduled") return scheduled;
+  if (scheduled.getTime() > Date.now()) return scheduled;
+  return null;
+}
+
+export function jobNextRunLabel(job: JobScheduleFields): string {
+  const nextRun = jobNextRunAt(job);
+  return nextRun ? nextRun.toLocaleString("he-IL") : "—";
+}
+
+export function jobHasScheduledRun(job: JobScheduleFields): boolean {
+  return jobNextRunAt(job) !== null;
 }
 
 export type JobTab = "all" | "active" | "waiting" | "completed" | "failed";
