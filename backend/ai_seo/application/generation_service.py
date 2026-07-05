@@ -118,7 +118,19 @@ DOMAIN_STOCK_IMAGES = {
             "alt": "Medical clinic equipment for healthcare content",
             "source": "Unsplash",
             "license": "Unsplash License - free for commercial use",
-        }
+        },
+        {
+            "url": "https://images.unsplash.com/photo-1580281657521-1e9f33f2492f?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Private clinic doctor consulting a patient",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        },
+        {
+            "url": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1600&q=80",
+            "alt": "Modern healthcare clinic room",
+            "source": "Unsplash",
+            "license": "Unsplash License - free for commercial use",
+        },
     ],
     "dentistry": [
         {
@@ -152,6 +164,32 @@ DOMAIN_STOCK_IMAGES = {
             "license": "Unsplash License - free for commercial use",
         }
     ],
+}
+
+IMAGE_CONTEXT_ALIASES = {
+    "medical": [
+        "medical",
+        "healthcare",
+        "clinic",
+        "doctor",
+        "patient",
+        "קליניקה",
+        "רופא",
+        "רופאה",
+        "מטופל",
+        "מטופלת",
+        "תור לרופא",
+        "קביעת תור",
+        "רפואה",
+        "בריאות",
+    ],
+    "dentistry": ["dentist", "dental", "שיניים", "רופא שיניים", "השתלות שיניים", "יישור שיניים"],
+    "law": ["law", "legal", "lawyer", "עורך דין", "משפטי", "תביעה"],
+    "real_estate": ["real estate", "property", "נדלן", "נדל\"ן", "דירות", "משכנתא"],
+    "insurance": ["insurance", "ביטוח", "פוליסה"],
+    "finance": ["finance", "financial", "הלוואות", "השקעות", "פיננסי"],
+    "home_services": ["plumber", "electrician", "repair", "אינסטלטור", "חשמלאי", "שיפוצים"],
+    "automotive": ["car", "vehicle", "automotive", "רכב", "מוסך", "טסט לרכב"],
 }
 
 LANDING_THEMES = [
@@ -190,11 +228,40 @@ class AiSeoGenerationService:
         return keywords
 
     @staticmethod
-    def _random_visual_asset(domain: dict | None = None) -> dict:
+    def _visual_asset_context_key(
+        domain: dict | None = None,
+        *,
+        keywords: list[str] | None = None,
+        prompt: str = "",
+    ) -> str:
         domain_value = (domain or {}).get("value", "")
-        pool = DOMAIN_STOCK_IMAGES.get(domain_value) or FREE_STOCK_IMAGES
+        if domain_value in DOMAIN_STOCK_IMAGES:
+            return domain_value
+
+        context_parts = [
+            domain_value,
+            (domain or {}).get("label", ""),
+            prompt,
+            *[str(keyword) for keyword in (domain or {}).get("keywords", [])],
+            *[str(keyword) for keyword in (keywords or [])],
+        ]
+        context = " ".join(context_parts).lower()
+        for image_key, aliases in IMAGE_CONTEXT_ALIASES.items():
+            if any(alias.lower() in context for alias in aliases):
+                return image_key
+        return "general"
+
+    @staticmethod
+    def _random_visual_asset(
+        domain: dict | None = None,
+        *,
+        keywords: list[str] | None = None,
+        prompt: str = "",
+    ) -> dict:
+        context_key = AiSeoGenerationService._visual_asset_context_key(domain, keywords=keywords, prompt=prompt)
+        pool = DOMAIN_STOCK_IMAGES.get(context_key) or FREE_STOCK_IMAGES
         asset = dict(random.choice(pool))
-        asset["matched_domain"] = domain_value or "general"
+        asset["matched_domain"] = context_key
         return asset
 
     @staticmethod
@@ -543,7 +610,9 @@ class AiSeoGenerationService:
             keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
             for output_type in output_types:
                 job_type = OUTPUT_TO_JOB[output_type]
-                visual_asset = cls._random_visual_asset(domain) if free_image_enabled else None
+                visual_asset = (
+                    cls._random_visual_asset(domain, keywords=keywords, prompt=manual_prompt) if free_image_enabled else None
+                )
                 landing_theme = random.choice(LANDING_THEMES) if landing_design_enabled else None
                 job = JobService.create_job(
                     tenant_id,
@@ -778,7 +847,11 @@ class AiSeoGenerationService:
                     random_topics_enabled=True,
                 )
                 if next_config.get("free_image_enabled", True):
-                    next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset(domain)
+                    next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset(
+                        domain,
+                        keywords=next_config.get("keywords") or [],
+                        prompt=next_config.get("prompt") or "",
+                    )
                 if next_config.get("landing_design_enabled", True):
                     next_config["landing_theme"] = random.choice(LANDING_THEMES)
         next_run_at = timezone.now() + interval

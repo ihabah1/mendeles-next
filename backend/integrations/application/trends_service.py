@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
 
 from integrations.domain.enums import (
@@ -30,6 +31,18 @@ class TrendsService:
     @staticmethod
     def _hl(language: str) -> str:
         return "iw" if language == "he" else "en"
+
+    @staticmethod
+    def _to_records(value):
+        if value is None:
+            return []
+        if isinstance(value, dict):
+            return {key: TrendsService._to_records(nested) for key, nested in value.items()}
+        if isinstance(value, list):
+            return value
+        if hasattr(value, "empty") and hasattr(value, "to_dict"):
+            return value.to_dict(orient="records") if not value.empty else []
+        return value
 
     @classmethod
     def normalize_countries(cls, *, country: str = "IL", countries: list[str] | None = None) -> list[str]:
@@ -62,7 +75,8 @@ class TrendsService:
         geo = market["geo"]
         pn = market["pn"]
 
-        pytrends = TrendReq(hl=hl, tz=360)
+        timeout_seconds = int(getattr(settings, "GOOGLE_TRENDS_TIMEOUT_SECONDS", 12))
+        pytrends = TrendReq(hl=hl, tz=360, timeout=(timeout_seconds, timeout_seconds), retries=1, backoff_factor=0.2)
         pytrends.build_payload(keywords[:5], timeframe=cls._timeframe(date_range), geo=geo)
 
         interest = pytrends.interest_over_time()
@@ -75,14 +89,8 @@ class TrendsService:
 
         raw = {
             "interest_over_time": interest.reset_index().to_dict(orient="records") if not interest.empty else [],
-            "related_queries": {
-                k: (v.to_dict(orient="records") if v is not None and not v.empty else [])
-                for k, v in (related_queries or {}).items()
-            },
-            "related_topics": {
-                k: (v.to_dict(orient="records") if v is not None and not v.empty else [])
-                for k, v in (related_topics or {}).items()
-            },
+            "related_queries": cls._to_records(related_queries or {}),
+            "related_topics": cls._to_records(related_topics or {}),
             "trending_searches": (
                 trending.head(25).values.tolist() if trending is not None and not trending.empty else []
             ),

@@ -40,6 +40,15 @@ def test_ai_seo_visual_asset_matches_domain():
     assert "car" in asset["alt"].lower() or "driver" in asset["alt"].lower() or "vehicle" in asset["alt"].lower()
 
 
+def test_ai_seo_visual_asset_matches_keyword_context():
+    asset = AiSeoGenerationService._random_visual_asset(
+        {"value": "custom", "label": "נושא חופשי"},
+        keywords=["קליניקה פרטית", "קביעת תור לרופא"],
+    )
+    assert asset["matched_domain"] == "medical"
+    assert "clinic" in asset["alt"].lower() or "medical" in asset["alt"].lower() or "healthcare" in asset["alt"].lower()
+
+
 @pytest.mark.django_db
 def test_ai_seo_workspace_research_lists_trends_phrases(owner_client, tenant):
     IntegrationSyncRecord.objects.create(

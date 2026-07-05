@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
-import { aiSeoApi, type AiSeoResearchRow, type AiSeoWorkspaceDraft, type AiSeoWorkspaceHistory } from "@/lib/api/dashboard";
+import {
+  aiSeoApi,
+  type AiSeoResearchRow,
+  type AiSeoWorkspaceDraft,
+  type AiSeoWorkspaceHistory,
+  type AiSeoWorkspaceJob,
+} from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +28,12 @@ function textValue(config: Record<string, unknown>, key: string): string {
 
 function plainPreview(value: string): string {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+const DISABLE_AUTO_RUN_STORAGE_KEY = "ai-seo-disable-auto-run";
+
+function isRunnableJob(job: Pick<AiSeoWorkspaceJob, "status">): boolean {
+  return job.status === "queued" || job.status === "running";
 }
 
 function toLocalInputValue(value: string): string {
@@ -190,6 +202,10 @@ export default function WorkspacePage() {
   const [jobsPage, setJobsPage] = useState(1);
   const [draftsPage, setDraftsPage] = useState(1);
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
+  const [disableAutoRunJobs, setDisableAutoRunJobs] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DISABLE_AUTO_RUN_STORAGE_KEY) === "1";
+  });
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -233,7 +249,12 @@ export default function WorkspacePage() {
         free_image_enabled: freeImageEnabled,
         locale: "he",
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      if (data.jobs.some(isRunnableJob)) {
+        autoStartQueueIfEnabled();
+      }
+    },
   });
 
   const refreshResearch = useMutation({
@@ -263,9 +284,12 @@ export default function WorkspacePage() {
         locale: "he",
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
       setSelectedResearchIds([]);
+      if (data.jobs.some(isRunnableJob)) {
+        autoStartQueueIfEnabled();
+      }
     },
   });
 
@@ -291,7 +315,12 @@ export default function WorkspacePage() {
         domain: domain || undefined,
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] }),
+    onSuccess: (job) => {
+      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      if (isRunnableJob(job)) {
+        autoStartQueueIfEnabled(job.id);
+      }
+    },
   });
 
   const runNextStep = useMutation({
@@ -380,6 +409,12 @@ export default function WorkspacePage() {
     setQueueTick((tick) => tick + 1);
   }
 
+  function autoStartQueueIfEnabled(jobId?: string) {
+    if (disableAutoRunJobs) return;
+    if (jobId) setSelectedJobId(jobId);
+    startSelectedJob();
+  }
+
   function togglePreview(pageId: string) {
     setExpandedPreviewIds((prev) => (prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId]));
   }
@@ -418,6 +453,10 @@ export default function WorkspacePage() {
     setFreeImageEnabled(preset.free_image_enabled !== false);
     setPublishAt(toLocalInputValue(preset.publish_at || ""));
   }
+
+  useEffect(() => {
+    window.localStorage.setItem(DISABLE_AUTO_RUN_STORAGE_KEY, disableAutoRunJobs ? "1" : "0");
+  }, [disableAutoRunJobs]);
 
   useEffect(() => {
     if (queueRunning && !runNextStep.isPending && !runSelectedJob.isPending) {
@@ -489,6 +528,11 @@ export default function WorkspacePage() {
         {research.data?.refresh_error && (
           <p className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-600">
             Google Trends לא החזיר רענון חדש: {research.data.refresh_error}
+          </p>
+        )}
+        {refreshResearch.isError && (
+          <p className="mt-3 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-500">
+            רענון מחקר SEO נכשל: {refreshResearch.error instanceof Error ? refreshResearch.error.message : "שגיאה לא ידועה"}
           </p>
         )}
 
@@ -762,6 +806,19 @@ export default function WorkspacePage() {
             <p className="text-xs text-[var(--muted-fg)]">
               בחר שורת job ואז הפעל פעולה. התור מריץ job אחד בכל פעם, שלב אחד בכל pulse.
             </p>
+            <label className="mt-2 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={disableAutoRunJobs}
+                onChange={(e) => setDisableAutoRunJobs(e.target.checked)}
+              />
+              <span>
+                <span className="block font-medium">אל תפעיל אוטומטית כל ג&apos;וב</span>
+                <span className="mt-1 block text-xs text-[var(--muted-fg)]">
+                  כשלא מסומן, ג&apos;ובים חדשים ייכנסו לתור ויתחילו לרוץ אוטומטית לאחר יצירה.
+                </span>
+              </span>
+            </label>
           </div>
           <div className="flex flex-wrap gap-2">
             {canManage && (

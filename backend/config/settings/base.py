@@ -157,6 +157,7 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
 GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "30"))
 AI_SEO_STEP_TIMEOUT_SECONDS = int(os.environ.get("AI_SEO_STEP_TIMEOUT_SECONDS", "10"))
 AI_SEO_STEP_MAX_RETRIES = int(os.environ.get("AI_SEO_STEP_MAX_RETRIES", "3"))
+GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECONDS", "12"))
 
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
