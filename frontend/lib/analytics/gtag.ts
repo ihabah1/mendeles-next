@@ -1,19 +1,36 @@
 /** Google Analytics 4 — production only, no hardcoded measurement ID. */
 
+export function resolveGaMeasurementId(): string {
+  if (typeof window !== "undefined" && window.__GA_MEASUREMENT_ID__) {
+    return window.__GA_MEASUREMENT_ID__;
+  }
+  return (
+    process.env.GA_MEASUREMENT_ID?.trim() ||
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() ||
+    ""
+  );
+}
+
+/** @deprecated Use resolveGaMeasurementId() */
 export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
 
 export function isGaEnabled(): boolean {
-  return process.env.NODE_ENV === "production" && GA_MEASUREMENT_ID.length > 0;
+  if (process.env.NODE_ENV !== "production") return false;
+  return resolveGaMeasurementId().length > 0;
 }
 
 export function pageview(url: string): void {
-  if (!isGaEnabled() || typeof window === "undefined" || !window.gtag) return;
-  window.gtag("config", GA_MEASUREMENT_ID, { page_path: url });
+  if (typeof window === "undefined" || !window.gtag) return;
+  const measurementId = resolveGaMeasurementId();
+  if (!measurementId) return;
+  window.gtag("config", measurementId, { page_path: url });
 }
 
 export type GaEventParams = Record<string, string | number | boolean | undefined>;
 
 export function trackEvent(eventName: string, params?: GaEventParams): void {
-  if (!isGaEnabled() || typeof window === "undefined" || !window.gtag) return;
+  if (typeof window === "undefined" || !window.gtag) return;
+  const measurementId = resolveGaMeasurementId();
+  if (!measurementId) return;
   window.gtag("event", eventName, params);
 }

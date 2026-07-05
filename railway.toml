@@ -19,3 +19,4 @@ healthcheckTimeout = 120
 # Private network (preferred — no TLS between services):
 API_URL = "http://${{eloquent-perfection.RAILWAY_PRIVATE_DOMAIN}}:${{eloquent-perfection.PORT}}"
 BACKEND_PUBLIC_HOST = "${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}"
+# GA4 runtime ID (no rebuild required): set GA_MEASUREMENT_ID=G-XXXXXXXXXX in Railway Variables

@@ -75,8 +75,9 @@ class TrendsService:
         geo = market["geo"]
         pn = market["pn"]
 
-        timeout_seconds = int(getattr(settings, "GOOGLE_TRENDS_TIMEOUT_SECONDS", 12))
-        pytrends = TrendReq(hl=hl, tz=360, timeout=(timeout_seconds, timeout_seconds), retries=1, backoff_factor=0.2)
+        timeout_seconds = int(getattr(settings, "GOOGLE_TRENDS_TIMEOUT_SECONDS", 20))
+        # Do not pass retries/backoff_factor — incompatible with urllib3 2.x in pytrends 4.9.
+        pytrends = TrendReq(hl=hl, tz=360, timeout=(timeout_seconds, timeout_seconds))
         pytrends.build_payload(keywords[:5], timeframe=cls._timeframe(date_range), geo=geo)
 
         interest = pytrends.interest_over_time()
@@ -85,15 +86,18 @@ class TrendsService:
 
         related_queries = pytrends.related_queries()
         related_topics = pytrends.related_topics()
-        trending = pytrends.trending_searches(pn=pn)
+        trending_rows: list = []
+        try:
+            trending = pytrends.trending_searches(pn=pn)
+            trending_rows = trending.head(25).values.tolist() if trending is not None and not trending.empty else []
+        except Exception:
+            trending_rows = []
 
         raw = {
             "interest_over_time": interest.reset_index().to_dict(orient="records") if not interest.empty else [],
             "related_queries": cls._to_records(related_queries or {}),
             "related_topics": cls._to_records(related_topics or {}),
-            "trending_searches": (
-                trending.head(25).values.tolist() if trending is not None and not trending.empty else []
-            ),
+            "trending_searches": trending_rows,
         }
         processed = {
             "keywords": keywords[:5],

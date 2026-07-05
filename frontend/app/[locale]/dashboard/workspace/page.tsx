@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
 import {
@@ -30,7 +30,8 @@ function plainPreview(value: string): string {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-const DISABLE_AUTO_RUN_STORAGE_KEY = "ai-seo-disable-auto-run";
+const AUTO_RUN_STORAGE_KEY = "ai-seo-auto-run-jobs";
+const LEGACY_DISABLE_AUTO_RUN_KEY = "ai-seo-disable-auto-run";
 
 function isRunnableJob(job: Pick<AiSeoWorkspaceJob, "status">): boolean {
   return job.status === "queued" || job.status === "running";
@@ -202,12 +203,15 @@ export default function WorkspacePage() {
   const [jobsPage, setJobsPage] = useState(1);
   const [draftsPage, setDraftsPage] = useState(1);
   const [feedbackByPage, setFeedbackByPage] = useState<Record<string, string>>({});
-  const [disableAutoRunJobs, setDisableAutoRunJobs] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(DISABLE_AUTO_RUN_STORAGE_KEY) === "1";
+  const [autoRunJobsEnabled, setAutoRunJobsEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = window.localStorage.getItem(AUTO_RUN_STORAGE_KEY);
+    if (stored !== null) return stored === "1";
+    return true;
   });
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
+  const queueAutoStartedRef = useRef(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [expandedPreviewIds, setExpandedPreviewIds] = useState<string[]>([]);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
@@ -252,6 +256,7 @@ export default function WorkspacePage() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
       if (data.jobs.some(isRunnableJob)) {
+        queueAutoStartedRef.current = false;
         autoStartQueueIfEnabled();
       }
     },
@@ -288,6 +293,7 @@ export default function WorkspacePage() {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
       setSelectedResearchIds([]);
       if (data.jobs.some(isRunnableJob)) {
+        queueAutoStartedRef.current = false;
         autoStartQueueIfEnabled();
       }
     },
@@ -318,6 +324,7 @@ export default function WorkspacePage() {
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
       if (isRunnableJob(job)) {
+        queueAutoStartedRef.current = false;
         autoStartQueueIfEnabled(job.id);
       }
     },
@@ -410,9 +417,20 @@ export default function WorkspacePage() {
   }
 
   function autoStartQueueIfEnabled(jobId?: string) {
-    if (disableAutoRunJobs) return;
+    if (!autoRunJobsEnabled) return;
     if (jobId) setSelectedJobId(jobId);
     startSelectedJob();
+  }
+
+  function handleAutoRunToggle(enabled: boolean) {
+    setAutoRunJobsEnabled(enabled);
+    if (enabled) {
+      queueAutoStartedRef.current = false;
+      const hasRunnable = (workspace.data?.jobs ?? []).some(isRunnableJob);
+      if (hasRunnable) startSelectedJob();
+      return;
+    }
+    setQueueRunning(false);
   }
 
   function togglePreview(pageId: string) {
@@ -455,8 +473,17 @@ export default function WorkspacePage() {
   }
 
   useEffect(() => {
-    window.localStorage.setItem(DISABLE_AUTO_RUN_STORAGE_KEY, disableAutoRunJobs ? "1" : "0");
-  }, [disableAutoRunJobs]);
+    window.localStorage.setItem(AUTO_RUN_STORAGE_KEY, autoRunJobsEnabled ? "1" : "0");
+    window.localStorage.removeItem(LEGACY_DISABLE_AUTO_RUN_KEY);
+  }, [autoRunJobsEnabled]);
+
+  useEffect(() => {
+    if (!canManage || !autoRunJobsEnabled || queueRunning || queueAutoStartedRef.current) return;
+    const hasRunnable = (workspace.data?.jobs ?? []).some(isRunnableJob);
+    if (!hasRunnable) return;
+    queueAutoStartedRef.current = true;
+    startSelectedJob();
+  }, [workspace.data?.jobs, autoRunJobsEnabled, canManage, queueRunning]);
 
   useEffect(() => {
     if (queueRunning && !runNextStep.isPending && !runSelectedJob.isPending) {
@@ -809,16 +836,19 @@ export default function WorkspacePage() {
             <label className="mt-2 flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={disableAutoRunJobs}
-                onChange={(e) => setDisableAutoRunJobs(e.target.checked)}
+                checked={autoRunJobsEnabled}
+                onChange={(e) => handleAutoRunToggle(e.target.checked)}
               />
               <span>
-                <span className="block font-medium">אל תפעיל אוטומטית כל ג&apos;וב</span>
+                <span className="block font-medium">הפעל אוטומטית ג&apos;ובים בתור</span>
                 <span className="mt-1 block text-xs text-[var(--muted-fg)]">
-                  כשלא מסומן, ג&apos;ובים חדשים ייכנסו לתור ויתחילו לרוץ אוטומטית לאחר יצירה.
+                  כשמסומן, ג&apos;ובים חדשים וג&apos;ובים ממתינים (queued) יתחילו לרוץ אוטומטית.
                 </span>
               </span>
             </label>
+            {autoRunJobsEnabled && queueRunning && (
+              <p className="mt-2 text-xs font-medium text-emerald-500">התור רץ כעת אוטומטית</p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {canManage && (

@@ -117,14 +117,24 @@ class AiSeoWorkspaceResearchView(APIView):
 
     def post(self, request):
         _check(request, self, "ai_seo.manage")
-        return Response(
-            AiSeoGenerationService.seo_research(
+        try:
+            payload = AiSeoGenerationService.seo_research(
                 request.user.default_tenant_id,
                 refresh=bool(request.data.get("refresh", True)),
                 domains=request.data.get("domains") or [],
                 keywords=request.data.get("keywords") or [],
             )
-        )
+        except Exception as exc:
+            return Response(
+                {
+                    "available": False,
+                    "last_sync_at": None,
+                    "refresh_error": str(exc),
+                    "items": [],
+                    "note": "Google Trends returns relative scores, not absolute monthly search volume. Search Console rows use real impressions.",
+                }
+            )
+        return Response(payload)
 
 
 class AiSeoWorkspaceGenerateView(APIView):

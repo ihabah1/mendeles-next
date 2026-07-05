@@ -54,3 +54,44 @@ def test_to_records_handles_nested_pytrends_frames():
             "rising": [],
         }
     }
+
+
+@pytest.mark.django_db
+def test_sync_market_uses_trendreq_without_retries_kwarg(monkeypatch, tenant):
+    captured: dict = {}
+
+    class FakeTrendReq:
+        def __init__(self, *args, **kwargs):
+            captured.update(kwargs)
+
+        def build_payload(self, *args, **kwargs):
+            return None
+
+        def interest_over_time(self):
+            import pandas as pd
+
+            return pd.DataFrame()
+
+        def related_queries(self):
+            return {}
+
+        def related_topics(self):
+            return {}
+
+        def trending_searches(self, pn):
+            import pandas as pd
+
+            return pd.DataFrame()
+
+    monkeypatch.setattr("pytrends.request.TrendReq", FakeTrendReq)
+
+    TrendsService._sync_market(
+        tenant.id,
+        keywords=["lawyer"],
+        country="IL",
+        language="he",
+        date_range="now 1-d",
+    )
+
+    assert "retries" not in captured
+    assert "backoff_factor" not in captured
