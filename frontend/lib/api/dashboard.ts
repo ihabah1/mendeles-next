@@ -636,9 +636,11 @@ export const aiSeoApi = {
     scheduled_at?: string;
     publish_at?: string;
     recurrence_interval?: string;
+    recurrence_minutes?: number;
     auto_publish_enabled?: boolean;
     random_topics_enabled?: boolean;
     random_topic_count?: number;
+    news_hot_topics_enabled?: boolean;
     landing_design_enabled?: boolean;
     free_image_enabled?: boolean;
     locale?: string;

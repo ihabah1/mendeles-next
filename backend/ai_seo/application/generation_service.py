@@ -259,7 +259,46 @@ def _parse_scheduled_at(value):
 
 class AiSeoGenerationService:
     @staticmethod
-    def _select_domains_for_run(values: list[str], *, random_topics_enabled: bool, random_topic_count: int) -> list[dict]:
+    def _recurrence_timedelta(config: dict) -> timedelta | None:
+        recurrence_minutes = int(config.get("recurrence_minutes") or 0)
+        if recurrence_minutes > 0:
+            return timedelta(minutes=recurrence_minutes)
+        recurrence_interval = config.get("recurrence_interval") or ""
+        return RECURRENCE_INTERVALS.get(recurrence_interval)
+
+    @staticmethod
+    def _news_domain_pool(requested_values: list[str] | None = None) -> list[dict]:
+        pool = [domain for domain in DOMAIN_OPTIONS if domain["value"] in NEWS_DOMAIN_VALUES]
+        if requested_values:
+            selected = [domain for domain in selected_domain_rows(requested_values) if domain["value"] in NEWS_DOMAIN_VALUES]
+            if selected:
+                return selected
+        return pool
+
+    @classmethod
+    def _prepare_news_domain_run(cls, tenant_id, *, requested_values: list[str] | None = None) -> tuple[dict, list[str], dict | None]:
+        pool = cls._news_domain_pool(requested_values)
+        if not pool:
+            raise RuntimeError("No news domains configured.")
+        domain = random.choice(pool)
+        keywords = cls._select_keywords_for_run(domain, [], random_topics_enabled=True)
+        news_event = cls._resolve_news_event(tenant_id, domain, keywords)
+        if news_event:
+            topic = news_event.get("topic", "").strip()
+            if topic and topic not in keywords:
+                keywords = [topic, *keywords]
+        return domain, keywords, news_event
+
+    @staticmethod
+    def _select_domains_for_run(
+        values: list[str],
+        *,
+        random_topics_enabled: bool,
+        random_topic_count: int,
+        news_hot_topics_enabled: bool = False,
+    ) -> list[dict]:
+        if news_hot_topics_enabled:
+            return []
         pool = selected_domain_rows(values) if values else DOMAIN_OPTIONS
         if not random_topics_enabled:
             return selected_domain_rows(values)
@@ -724,16 +763,32 @@ class AiSeoGenerationService:
 
         requested_domain_values = data.get("domains") or []
         random_topics_enabled = bool(data.get("random_topics_enabled", False))
+        news_hot_topics_enabled = bool(data.get("news_hot_topics_enabled", False))
         random_topic_count = max(1, min(int(data.get("random_topic_count") or 1), 6))
+        recurrence_minutes = max(0, min(int(data.get("recurrence_minutes") or 0), 10_080))
         domains = cls._select_domains_for_run(
             requested_domain_values,
             random_topics_enabled=random_topics_enabled,
             random_topic_count=random_topic_count,
+            news_hot_topics_enabled=news_hot_topics_enabled,
         )
-        if not domains:
-            raise RuntimeError("Select at least one domain or enable random topics.")
+        prepared_news = None
+        if news_hot_topics_enabled:
+            prepared_news = cls._prepare_news_domain_run(tenant_id, requested_values=requested_domain_values)
+            domains = [prepared_news[0]]
+        elif not domains:
+            if random_topics_enabled:
+                domains = cls._select_domains_for_run(
+                    [],
+                    random_topics_enabled=True,
+                    random_topic_count=random_topic_count,
+                )
+            if not domains:
+                raise RuntimeError("Select at least one domain or enable random/news scheduling.")
 
         output_types = [o for o in (data.get("output_types") or []) if o in OUTPUT_TO_JOB]
+        if news_hot_topics_enabled and not output_types:
+            output_types = ["blog", "landing_page"]
         if not output_types:
             raise RuntimeError("Select blog/article and/or landing_page.")
 
@@ -753,12 +808,15 @@ class AiSeoGenerationService:
         )
 
         for domain in domains:
-            keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
-            news_event = cls._resolve_news_event(tenant_id, domain, keywords)
-            if news_event:
-                topic = news_event.get("topic", "").strip()
-                if topic and topic not in keywords:
-                    keywords = [topic, *keywords]
+            if prepared_news and domain.get("value") == prepared_news[0].get("value"):
+                domain, keywords, news_event = prepared_news
+            else:
+                keywords = cls._select_keywords_for_run(domain, selected_keywords, random_topics_enabled=random_topics_enabled)
+                news_event = cls._resolve_news_event(tenant_id, domain, keywords)
+                if news_event:
+                    topic = news_event.get("topic", "").strip()
+                    if topic and topic not in keywords:
+                        keywords = [topic, *keywords]
             for output_type in output_types:
                 job_type = OUTPUT_TO_JOB[output_type]
                 visual_asset = (
@@ -778,11 +836,13 @@ class AiSeoGenerationService:
                             "prompt": manual_prompt,
                             "locale": data.get("locale", "he"),
                             "recurrence_interval": recurrence_interval,
+                            "recurrence_minutes": recurrence_minutes,
                             "auto_publish_enabled": auto_publish_enabled,
                             "publish_at": publish_at.isoformat() if publish_at else "",
                             "source_domain_values": requested_domain_values,
                             "random_topics_enabled": random_topics_enabled,
                             "random_topic_count": random_topic_count,
+                            "news_hot_topics_enabled": news_hot_topics_enabled,
                             "landing_design_enabled": landing_design_enabled,
                             "free_image_enabled": free_image_enabled,
                             "visual_asset": visual_asset,
@@ -970,8 +1030,7 @@ class AiSeoGenerationService:
     @staticmethod
     def _schedule_next_recurring_job(job: AutomationJob, *, execution=None) -> None:
         config = job.config or {}
-        recurrence_interval = config.get("recurrence_interval") or ""
-        interval = RECURRENCE_INTERVALS.get(recurrence_interval)
+        interval = AiSeoGenerationService._recurrence_timedelta(config)
         if not interval or config.get("next_recurring_job_id"):
             return
 
@@ -1015,6 +1074,20 @@ class AiSeoGenerationService:
                     )
                 if next_config.get("landing_design_enabled", True):
                     next_config["landing_theme"] = random.choice(LANDING_THEMES)
+        if next_config.get("news_hot_topics_enabled"):
+            domain, keywords, news_event = AiSeoGenerationService._prepare_news_domain_run(
+                job.tenant_id,
+                requested_values=next_config.get("source_domain_values") or [],
+            )
+            next_config["domain"] = domain
+            next_config["keywords"] = keywords
+            next_config["news_event"] = news_event
+            if next_config.get("free_image_enabled", True):
+                next_config["visual_asset"] = AiSeoGenerationService._random_visual_asset(
+                    domain,
+                    keywords=keywords,
+                    prompt=next_config.get("prompt") or "",
+                )
         next_run_at = timezone.now() + interval
         next_job = JobService.create_job(
             job.tenant_id,

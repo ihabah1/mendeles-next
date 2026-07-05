@@ -87,6 +87,41 @@ def test_ai_seo_workspace_generate_news_domain_stores_event(owner_client, settin
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_generate_news_hot_topics_batch(owner_client, settings, tenant):
+    settings.GEMINI_API_KEY = "test-key"
+    IntegrationSyncRecord.objects.create(
+        tenant=tenant,
+        service_type=GoogleServiceType.TRENDS,
+        source="pytrends",
+        language="he",
+        country="IL",
+        retrieved_at=timezone.now(),
+        sync_status=SyncStatus.SUCCESS,
+        processed_data={
+            "trending_searches": [["מבזק חדשות הלילה"]],
+            "related_queries": {},
+        },
+    )
+    response = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": [],
+            "output_types": ["blog", "landing_page"],
+            "news_hot_topics_enabled": True,
+            "recurrence_minutes": 180,
+            "auto_publish_enabled": True,
+        },
+        format="json",
+    )
+    assert response.status_code == 201, response.content
+    jobs = response.json()["jobs"]
+    assert len(jobs) == 2
+    assert all(job["config"]["news_hot_topics_enabled"] for job in jobs)
+    assert jobs[0]["config"]["news_event"]["topic"]
+    assert jobs[0]["config"]["recurrence_minutes"] == 180
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_generate_requires_gemini(owner_client, settings):
     settings.GEMINI_API_KEY = ""
     response = owner_client.post(

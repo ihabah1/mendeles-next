@@ -63,6 +63,11 @@ export default function WorkspacePage() {
   const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
   const [randomTopicsEnabled, setRandomTopicsEnabled] = useState(false);
   const [randomTopicCount, setRandomTopicCount] = useState(2);
+  const [newsHotTopicsEnabled, setNewsHotTopicsEnabled] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleEveryMinutes, setScheduleEveryMinutes] = useState(180);
+  const [scheduleStartNow, setScheduleStartNow] = useState(true);
+  const [scheduleStartAt, setScheduleStartAt] = useState("");
   const [landingDesignEnabled, setLandingDesignEnabled] = useState(true);
   const [freeImageEnabled, setFreeImageEnabled] = useState(true);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
@@ -129,12 +134,17 @@ export default function WorkspacePage() {
         keywords: splitLines(keywordsText),
         output_types: outputTypes,
         prompt: effectivePrompt,
-        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        scheduled_at:
+          scheduleEnabled && !scheduleStartNow && scheduleStartAt
+            ? new Date(scheduleStartAt).toISOString()
+            : undefined,
         publish_at: publishAt ? new Date(publishAt).toISOString() : undefined,
         recurrence_interval: recurrenceInterval || undefined,
+        recurrence_minutes: scheduleEnabled ? scheduleEveryMinutes : undefined,
         auto_publish_enabled: autoPublishEnabled,
         random_topics_enabled: randomTopicsEnabled,
         random_topic_count: randomTopicCount,
+        news_hot_topics_enabled: newsHotTopicsEnabled,
         landing_design_enabled: landingDesignEnabled,
         free_image_enabled: freeImageEnabled,
         locale: "he",
@@ -391,6 +401,12 @@ export default function WorkspacePage() {
     setJobsPage(1);
   }, [jobTab, jobSearch]);
 
+  useEffect(() => {
+    if (newsHotTopicsEnabled) {
+      setOutputTypes(["blog", "landing_page"]);
+    }
+  }, [newsHotTopicsEnabled]);
+
   if (!canView) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#12182a] p-6 text-sm text-slate-400">
@@ -424,6 +440,8 @@ export default function WorkspacePage() {
   const geminiReady = workspace.data?.gemini_configured;
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
   const allDomainsSelected = domains.length > 0 && selectedDomains.length === domains.length;
+  const canStartGeneration =
+    randomTopicsEnabled || newsHotTopicsEnabled || selectedDomains.length > 0;
   const inputClass = "w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-500/50";
   const selectClass = inputClass;
 
@@ -581,17 +599,7 @@ export default function WorkspacePage() {
             </StudioPanel>
 
             <StudioPanel title="סוג תוכן והגדרות">
-              <div className="flex flex-wrap gap-4 text-sm">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={outputTypes.includes("blog")} onChange={() => toggleOutput("blog")} />
-                  <span>מאמר / בלוג</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={outputTypes.includes("landing_page")} onChange={() => toggleOutput("landing_page")} />
-                  <span>דף נחיתה</span>
-                </label>
-              </div>
-              <label className="mt-4 block text-sm">
+              <label className="block text-sm">
                 <span className="mb-1 block text-slate-400">הנחיות ל-Gemini</span>
                 <textarea
                   className={`${inputClass} min-h-24`}
@@ -618,47 +626,18 @@ export default function WorkspacePage() {
                   </select>
                 </label>
               </div>
-              <label className="mt-4 flex items-start gap-2 text-sm">
-                <input type="checkbox" checked={autoPublishEnabled} onChange={(e) => setAutoPublishEnabled(e.target.checked)} />
-                <span>
-                  <span className="block font-medium">העלאה לפרודקשן ללא אישור</span>
-                  <span className="text-xs text-slate-400">הדף יפורסם אוטומטית בסיום היצירה</span>
-                </span>
-              </label>
               <button
                 type="button"
                 className="mt-3 text-xs text-violet-300 hover:underline"
                 onClick={() => setShowAdvanced((v) => !v)}
               >
-                {showAdvanced ? "הסתר הגדרות מתקדמות" : "הגדרות מתקדמות (תזמון, אקראי, תמונות)"}
+                {showAdvanced ? "הסתר הגדרות מתקדמות" : "הגדרות מתקדמות (תמונות, פרסום, היסטוריה)"}
               </button>
               {showAdvanced && (
                 <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
-                  <label className="flex items-start gap-2">
-                    <input type="checkbox" checked={randomTopicsEnabled} onChange={(e) => setRandomTopicsEnabled(e.target.checked)} />
-                    <span>בחירת נושאים אקראית</span>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-slate-400">כמה נושאים אקראיים</span>
-                    <input type="number" min={1} max={6} className={inputClass} value={randomTopicCount} onChange={(e) => setRandomTopicCount(Number(e.target.value) || 1)} />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-slate-400">תזמון batch</span>
-                    <input type="datetime-local" className={inputClass} value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-                  </label>
                   <label className="block">
                     <span className="mb-1 block text-slate-400">תאריך פרסום</span>
                     <input type="datetime-local" className={inputClass} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-slate-400">ריצה מחזורית</span>
-                    <select className={selectClass} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(e.target.value)}>
-                      <option value="">חד פעמי</option>
-                      <option value="hourly">כל שעה</option>
-                      <option value="every_6_hours">כל 6 שעות</option>
-                      <option value="every_24_hours">כל 24 שעות</option>
-                      <option value="every_2_days">כל יומיים</option>
-                    </select>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" checked={landingDesignEnabled} onChange={(e) => setLandingDesignEnabled(e.target.checked)} />
@@ -687,11 +666,157 @@ export default function WorkspacePage() {
                   </label>
                 </div>
               )}
+            </StudioPanel>
+
+            <StudioPanel title="תזמון עבודות">
+              <div className="space-y-3 text-sm">
+                <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={randomTopicsEnabled}
+                    onChange={(e) => setRandomTopicsEnabled(e.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium text-white">בחירה לפי נושאים חמים אקראית</span>
+                    <span className="mt-1 block text-xs text-slate-400">בוחר תחומים ומילות מפתח טרנדיות מהקטלוג בכל ריצה</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={newsHotTopicsEnabled}
+                    onChange={(e) => setNewsHotTopicsEnabled(e.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium text-amber-100">עניין חדשותי — אירוע חם מ-24 שעות</span>
+                    <span className="mt-1 block text-xs text-amber-100/80">
+                      לוקח נושא חדשותי טרנדי ויוצר מאמר בלוג ודף נחיתה קשורים (מומלץ: שניהם)
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={autoPublishEnabled}
+                    onChange={(e) => setAutoPublishEnabled(e.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium text-white">תעלה ללא אישור אוטומטית</span>
+                    <span className="mt-1 block text-xs text-slate-400">פרסום ישיר לפרודקשן בסיום היצירה</span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-white">
+                  <input type="checkbox" checked={scheduleEnabled} onChange={(e) => setScheduleEnabled(e.target.checked)} />
+                  הפעל תזמון מחזורי
+                </label>
+                {scheduleEnabled && (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm sm:col-span-2">
+                      <span className="mb-1 block text-slate-300">כל כמה דקות</span>
+                      <input
+                        type="number"
+                        min={3}
+                        max={10080}
+                        className={inputClass}
+                        value={scheduleEveryMinutes}
+                        onChange={(e) => setScheduleEveryMinutes(Math.max(3, Number(e.target.value) || 3))}
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                      <input
+                        type="radio"
+                        name="schedule-start"
+                        checked={scheduleStartNow}
+                        onChange={() => setScheduleStartNow(true)}
+                      />
+                      התחל עכשיו
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="schedule-start"
+                        checked={!scheduleStartNow}
+                        onChange={() => setScheduleStartNow(false)}
+                      />
+                      התחל בשעה
+                    </label>
+                    {!scheduleStartNow && (
+                      <input
+                        type="datetime-local"
+                        className={inputClass}
+                        value={scheduleStartAt}
+                        onChange={(e) => setScheduleStartAt(e.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-slate-300">סוג תוצר</p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={outputTypes.includes("blog")}
+                      onChange={() => toggleOutput("blog")}
+                      disabled={newsHotTopicsEnabled}
+                    />
+                    <span>בלוג / מאמר</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={outputTypes.includes("landing_page")}
+                      onChange={() => toggleOutput("landing_page")}
+                      disabled={newsHotTopicsEnabled}
+                    />
+                    <span>דף נחיתה</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={outputTypes.includes("blog") && outputTypes.includes("landing_page")}
+                      onChange={() => setOutputTypes(["blog", "landing_page"])}
+                      disabled={newsHotTopicsEnabled}
+                    />
+                    <span>שניהם</span>
+                  </label>
+                </div>
+              </div>
+
+              {randomTopicsEnabled && (
+                <label className="mt-3 block text-sm">
+                  <span className="mb-1 block text-slate-400">כמה נושאים אקראיים בכל batch</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    className={inputClass}
+                    value={randomTopicCount}
+                    onChange={(e) => setRandomTopicCount(Number(e.target.value) || 1)}
+                  />
+                </label>
+              )}
+
               {canManage && (
                 <Button
                   type="button"
                   className="mt-5 w-full bg-gradient-to-r from-violet-600 to-indigo-600 py-6 text-base font-semibold hover:from-violet-500 hover:to-indigo-500"
-                  disabled={!geminiReady || generate.isPending || (!randomTopicsEnabled && selectedDomains.length === 0) || outputTypes.length === 0}
+                  disabled={
+                    !geminiReady ||
+                    generate.isPending ||
+                    !canStartGeneration ||
+                    outputTypes.length === 0 ||
+                    (scheduleEnabled && scheduleEveryMinutes < 3) ||
+                    (scheduleEnabled && !scheduleStartNow && !scheduleStartAt)
+                  }
                   onClick={() => generate.mutate()}
                 >
                   {generate.isPending ? "יוצר batch..." : "✨ Generate via Gemini AI"}
