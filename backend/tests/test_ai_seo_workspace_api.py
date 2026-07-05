@@ -340,6 +340,59 @@ def test_ai_seo_workspace_schedules_next_recurring_job(owner_client, settings, m
     assert next_job.scheduled_at is not None
     assert next_job.parent_job_id == AutomationJob.objects.get(id=job_id).id
 
+    workspace = owner_client.get("/api/v1/ai-seo/workspace/")
+    assert workspace.status_code == 200
+    automation = workspace.json()["scheduled_automation"]
+    assert automation is not None
+    assert automation["active"] is True
+    assert automation["recurrence_interval"] == "hourly"
+    assert next_job_id in automation["job_ids"]
+
+    disable = owner_client.post("/api/v1/ai-seo/workspace/scheduled-automation/disable/")
+    assert disable.status_code == 200
+    body = disable.json()
+    assert next_job_id in body["cancelled_job_ids"]
+    assert body["scheduled_automation"] is None
+    next_job.refresh_from_db()
+    assert next_job.status == JobStatus.CANCELLED
+    parent = AutomationJob.objects.get(id=job_id)
+    assert parent.config.get("recurrence_interval") == ""
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_scheduled_automation_for_pending_recurring_batch(owner_client, settings, tenant):
+    settings.GEMINI_API_KEY = "test-key"
+    IntegrationSyncRecord.objects.create(
+        tenant=tenant,
+        service_type=GoogleServiceType.TRENDS,
+        source="pytrends",
+        language="he",
+        country="IL",
+        retrieved_at=timezone.now(),
+        sync_status=SyncStatus.SUCCESS,
+        processed_data={
+            "trending_searches": [["מבזק חדשות הלילה"]],
+            "related_queries": {},
+        },
+    )
+    owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": [],
+            "output_types": ["blog", "landing_page"],
+            "news_hot_topics_enabled": True,
+            "recurrence_minutes": 180,
+            "auto_publish_enabled": True,
+        },
+        format="json",
+    )
+    workspace = owner_client.get("/api/v1/ai-seo/workspace/")
+    automation = workspace.json()["scheduled_automation"]
+    assert automation is not None
+    assert automation["news_hot_topics_enabled"] is True
+    assert automation["recurrence_minutes"] == 180
+    assert automation["pending_jobs_count"] >= 1
+
 
 @pytest.mark.django_db
 def test_ai_seo_workspace_delete_page(owner_client, tenant, owner_user):

@@ -63,10 +63,10 @@ export function BlogRating({ postId, size = "sm" }: { postId: string; size?: "sm
     setRating(value);
   }
 
-  const starSize = size === "md" ? "text-lg" : "text-sm";
+  const starSize = size === "md" ? "text-base" : "text-sm";
 
   return (
-    <div className="flex items-center gap-1" role="group" aria-label="דרג מאמר">
+    <div className="flex items-center gap-0.5" role="group" aria-label="דרג מאמר">
       {Array.from({ length: 5 }).map((_, index) => {
         const value = index + 1;
         const active = value <= (hover || rating);
@@ -74,7 +74,7 @@ export function BlogRating({ postId, size = "sm" }: { postId: string; size?: "sm
           <button
             key={value}
             type="button"
-            className={`${starSize} transition hover:scale-110 ${active ? "text-amber-400" : "text-white/20"}`}
+            className={`${starSize} transition hover:scale-110 ${active ? "text-amber-400" : "text-slate-300"}`}
             onMouseEnter={() => setHover(value)}
             onMouseLeave={() => setHover(0)}
             onClick={() => saveRating(value)}
@@ -84,24 +84,19 @@ export function BlogRating({ postId, size = "sm" }: { postId: string; size?: "sm
           </button>
         );
       })}
-      {rating > 0 && <span className="ms-1 text-xs text-slate-400">{rating.toFixed(1)}</span>}
     </div>
   );
 }
 
 export function BlogReadLink({ post, children, className }: { post: BlogCardPost; children: ReactNode; className?: string }) {
   return (
-    <Link
-      href={post.full_path}
-      className={className}
-      onClick={() => trackBlogRead(post.id)}
-    >
+    <Link href={post.full_path} className={className} onClick={() => trackBlogRead(post.id)}>
       {children}
     </Link>
   );
 }
 
-export function BlogMostReadPanel({ posts }: { posts: BlogCardPost[] }) {
+export function BlogTopArticlesPanel({ posts }: { posts: BlogCardPost[] }) {
   const [ranked, setRanked] = useState<BlogCardPost[]>(posts.slice(0, 5));
 
   useEffect(() => {
@@ -120,7 +115,7 @@ export function BlogMostReadPanel({ posts }: { posts: BlogCardPost[] }) {
   }, [posts]);
 
   if (!ranked.length) {
-    return <p className="text-sm text-slate-400">אין עדיין מאמרים לדירוג.</p>;
+    return <p className="text-sm text-slate-500">אין עדיין מאמרים.</p>;
   }
 
   return (
@@ -129,73 +124,85 @@ export function BlogMostReadPanel({ posts }: { posts: BlogCardPost[] }) {
         <BlogReadLink
           key={post.id}
           post={post}
-          className="group flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3 transition hover:border-violet-400/30 hover:bg-white/[0.06]"
+          className="group flex items-center gap-3 rounded-xl border border-transparent p-2 transition hover:border-slate-200 hover:bg-slate-50"
         >
           <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
               index === 0
-                ? "bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950"
+                ? "bg-[#5e35b1] text-white"
                 : index === 1
-                  ? "bg-gradient-to-br from-slate-300 to-slate-400 text-slate-900"
+                  ? "bg-slate-700 text-white"
                   : index === 2
-                    ? "bg-gradient-to-br from-amber-700 to-amber-900 text-amber-100"
-                    : "bg-white/10 text-violet-300"
+                    ? "bg-slate-500 text-white"
+                    : "bg-slate-100 text-slate-600"
             }`}
           >
             {index + 1}
           </span>
-          <img src={post.image_url} alt="" className="h-14 w-16 shrink-0 rounded-xl object-cover" />
-          <div className="min-w-0 flex-1 text-right">
-            <p className="line-clamp-2 text-sm font-bold leading-5 text-white group-hover:text-violet-200">{post.title}</p>
-            <p className="mt-1 text-xs text-slate-500">{post.reading_minutes} דק׳ · {post.category}</p>
-          </div>
+          <img src={post.image_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+          <p className="min-w-0 flex-1 text-right text-sm font-semibold leading-5 text-slate-800 group-hover:text-[#5e35b1]">
+            {post.title}
+          </p>
         </BlogReadLink>
       ))}
     </div>
   );
 }
 
-export function BlogArticleCard({ post, featured = false }: { post: BlogCardPost; featured?: boolean }) {
-  const [reads, setReads] = useState(0);
-
-  useEffect(() => {
-    setReads(readCounts()[post.id] || 0);
-  }, [post.id]);
-
+export function BlogArticleCard({ post }: { post: BlogCardPost }) {
   return (
-    <article
-      className={`group overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-violet-400/40 ${
-        featured ? "md:col-span-2 md:row-span-2" : ""
-      }`}
-    >
+    <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <BlogReadLink post={post} className="block">
         <div className="relative overflow-hidden">
           <img
             src={post.image_url}
             alt={post.title}
-            className={`w-full object-cover transition duration-500 group-hover:scale-105 ${featured ? "h-64 md:h-80" : "h-48"}`}
+            className="h-44 w-full object-cover transition duration-500 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a] via-transparent to-transparent" />
-          <span className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+          <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-[#5e35b1] shadow-sm">
             {post.category}
           </span>
-          {reads > 0 && (
-            <span className="absolute left-4 top-4 rounded-full bg-violet-500/90 px-3 py-1 text-xs font-bold text-white">
-              {reads} קריאות
-            </span>
-          )}
         </div>
-        <div className="p-5 text-right">
-          <h3 className={`font-black leading-tight text-white ${featured ? "text-2xl md:text-3xl" : "text-lg"}`}>{post.title}</h3>
-          <p className={`mt-2 text-slate-400 ${featured ? "line-clamp-3 text-sm" : "line-clamp-2 text-sm"}`}>{post.meta_description}</p>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <BlogRating postId={post.id} />
-            <span className="text-xs text-slate-500">
-              {post.published_at ? new Date(post.published_at).toLocaleDateString("he-IL") : "ללא תאריך"} · {post.reading_minutes} דק׳
+        <div className="p-4 text-right">
+          <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900 group-hover:text-[#5e35b1]">{post.title}</h3>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{post.meta_description}</p>
+          <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+            <span>
+              {post.published_at ? new Date(post.published_at).toLocaleDateString("he-IL") : "ללא תאריך"} · {post.reading_minutes} דקות קריאה
+            </span>
+            <span className="text-slate-400" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </span>
           </div>
         </div>
       </BlogReadLink>
     </article>
+  );
+}
+
+export function BlogNewsletterCard() {
+  return (
+    <section id="newsletter" className="rounded-xl border border-[#5e35b1]/15 bg-[#f3f0ff] p-5 text-center">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#5e35b1]/10 text-[#5e35b1]">
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M4 4h16v16H4z" strokeLinejoin="round" />
+          <path d="M4 7l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <h2 className="mt-3 text-base font-bold text-slate-900">קבלו עדכונים חדשים</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">מדריכים, טיפים וכלים לצמיחת האתר — ישירות לתיבה.</p>
+      <form className="mt-4 space-y-2">
+        <input
+          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5e35b1]/50"
+          placeholder="הכניסו את האימייל שלכם"
+          type="email"
+        />
+        <button className="w-full rounded-lg bg-[#5e35b1] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#4a2a9c]" type="button">
+          הרשמו עכשיו
+        </button>
+      </form>
+    </section>
   );
 }

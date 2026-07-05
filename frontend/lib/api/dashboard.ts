@@ -692,6 +692,15 @@ export const aiSeoApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  disableWorkspaceScheduledAutomation: () =>
+    apiFetch<{
+      cancelled_job_ids: string[];
+      scheduled_automation: AiSeoScheduledAutomation | null;
+      workspace: AiSeoWorkspace;
+    }>("/api/v1/ai-seo/workspace/scheduled-automation/disable/", {
+      method: "POST",
+      headers: authHeaders(),
+    }),
   deleteWorkspaceJob: (jobId: string) =>
     apiFetch<void>(`/api/v1/ai-seo/workspace/jobs/${jobId}/delete/`, {
       method: "DELETE",
@@ -785,10 +794,23 @@ export type AiSeoWorkspaceDraft = {
     config: Record<string, unknown>;
   }>;
 };
+export type AiSeoScheduledAutomation = {
+  active: true;
+  job_ids: string[];
+  scheduled_jobs_count: number;
+  pending_jobs_count: number;
+  next_run_at: string | null;
+  recurrence_minutes: number;
+  recurrence_interval: string;
+  random_topics_enabled: boolean;
+  news_hot_topics_enabled: boolean;
+  auto_publish_enabled: boolean;
+};
 export type AiSeoWorkspace = {
   domains: AiSeoWorkspaceDomain[];
   gemini_configured: boolean;
   jobs: AiSeoWorkspaceJob[];
   drafts: AiSeoWorkspaceDraft[];
   history: AiSeoWorkspaceHistory[];
+  scheduled_automation: AiSeoScheduledAutomation | null;
 };

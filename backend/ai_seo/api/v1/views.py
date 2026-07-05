@@ -281,6 +281,20 @@ class AiSeoWorkspaceCancelJobView(APIView):
         return Response(AiSeoGenerationService.serialize_job(job))
 
 
+class AiSeoWorkspaceDisableScheduledAutomationView(APIView):
+    def post(self, request):
+        _check(request, self, "ai_seo.manage")
+        try:
+            payload = AiSeoGenerationService.disable_scheduled_automation(
+                request.user.default_tenant_id,
+                request.user,
+                request=request,
+            )
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(payload)
+
+
 class AiSeoWorkspaceDeleteJobView(APIView):
     def delete(self, request, job_id):
         _check(request, self, "ai_seo.manage")

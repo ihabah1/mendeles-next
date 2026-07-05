@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Link } from "@/lib/i18n/navigation";
-import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { BlogShell } from "@/components/blog/blog-shell";
+import { BlogFeaturesSection } from "@/components/blog/blog-features-section";
+import { BlogHeroCarousel } from "@/components/blog/blog-hero-carousel";
 import {
   BlogArticleCard,
-  BlogMostReadPanel,
-  BlogRating,
-  BlogReadLink,
+  BlogNewsletterCard,
+  BlogTopArticlesPanel,
   type BlogCardPost,
 } from "@/components/blog/blog-interactive";
 import { backendBase } from "@/lib/api/backend-url";
@@ -37,7 +38,7 @@ type BlogFeed = {
   categories: Array<{ slug: string; name: string }>;
 };
 
-const BLOG_PAGE_SIZE = 6;
+const BLOG_PAGE_SIZE = 9;
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1600&q=80";
 
 function textValue(value: unknown): string {
@@ -53,7 +54,7 @@ function imageUrl(page: PublicBlogPage): string {
 }
 
 function categoryName(page: PublicBlogPage): string {
-  return page.terms.find((term) => term.taxonomy === "ai-seo-categories")?.name || "אסטרטגיית SEO";
+  return page.terms.find((term) => term.taxonomy === "ai-seo-categories")?.name || "SEO";
 }
 
 function readingMinutes(page: PublicBlogPage): number {
@@ -105,8 +106,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildPageMetadata({
     locale,
     path: "/blog",
-    title: "בלוג Mendeles",
-    description: "תובנות, מדריכים וכלים לצמיחה דיגיטלית — בלוג Mendeles.",
+    title: "Mendeles Insights — בלוג",
+    description: "תובנות, מדריכים וכלים לצמיחה דיגיטלית — בלוג Mendeles Insights.",
   });
 }
 
@@ -117,243 +118,164 @@ export default async function BlogPage({ params, searchParams }: Props) {
   const cardPosts = feed.results.map(toCardPost);
   const currentPage = Math.max(1, Number(page) || 1);
   const totalPages = Math.max(1, Math.ceil(cardPosts.length / BLOG_PAGE_SIZE));
-  const visiblePosts = cardPosts.slice((currentPage - 1) * BLOG_PAGE_SIZE, currentPage * BLOG_PAGE_SIZE);
-  const featured = cardPosts[0];
+  const gridPosts = cardPosts.slice((currentPage - 1) * BLOG_PAGE_SIZE, currentPage * BLOG_PAGE_SIZE);
   const categoryCounts = feed.categories.map((item) => ({
     ...item,
     count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
   }));
 
   return (
-    <MarketingShell>
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-24 top-0 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
-          <div className="absolute -left-24 top-40 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
-          <div className="absolute bottom-0 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-indigo-500/10 blur-3xl" />
-        </div>
-
-        <section className="relative mx-auto max-w-7xl px-6 pb-6 pt-14">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div className="max-w-3xl text-right">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-violet-300">Mendeles Insights</p>
-              <h1 className="mt-3 text-4xl font-black leading-tight text-white md:text-6xl">
-                בלוג לצמיחה
-                <span className="block bg-gradient-to-l from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
-                  חכמה, SEO ואוטומציה
-                </span>
-              </h1>
-              <p className="mt-4 text-base leading-8 text-slate-400 md:text-lg">
-                מאמרים מעשיים על שיווק דיגיטלי, בינה מלאכותית ואסטרטגיות צמיחה — עם דירוג קוראים והמלצות מובילות.
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{cardPosts.length}</p>
-                <p className="text-xs text-slate-400">מאמרים</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{feed.categories.length}</p>
-                <p className="text-xs text-slate-400">קטגוריות</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">★</p>
-                <p className="text-xs text-slate-400">דרג ודורג</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="relative mx-auto grid max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_320px]">
-          <section className="min-w-0 space-y-8">
-            {featured ? (
-              <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-violet-500/10 via-white/[0.04] to-cyan-500/5 p-1 shadow-2xl shadow-violet-900/20">
-                <div className="grid gap-0 md:grid-cols-[1.1fr_0.9fr]">
-                  <div className="relative min-h-[280px] overflow-hidden rounded-[1.85rem] md:min-h-full">
-                    <img src={featured.image_url} alt={featured.title} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a] via-[#0a0e1a]/20 to-transparent md:bg-gradient-to-l" />
-                  </div>
-                  <div className="flex flex-col justify-center p-6 text-right md:p-8">
-                    <span className="mb-4 w-fit self-end rounded-full border border-violet-400/30 bg-violet-500/20 px-4 py-1 text-xs font-bold text-violet-200">
-                      מאמר מומלץ
-                    </span>
-                    <h2 className="text-3xl font-black leading-tight text-white md:text-4xl">{featured.title}</h2>
-                    <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-300">{featured.meta_description}</p>
-                    <div className="mt-5 flex flex-wrap items-center justify-end gap-4">
-                      <BlogRating postId={featured.id} size="md" />
-                      <span className="text-xs text-slate-500">
-                        {featured.published_at ? new Date(featured.published_at).toLocaleDateString("he-IL") : "ללא תאריך"} · {featured.reading_minutes} דק׳
-                      </span>
-                    </div>
-                    <BlogReadLink
-                      post={featured}
-                      className="mt-6 inline-flex w-fit self-end rounded-xl bg-gradient-to-l from-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/30 transition hover:opacity-90"
-                    >
-                      קרא עכשיו ←
-                    </BlogReadLink>
-                  </div>
-                </div>
-              </article>
+    <BlogShell>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+          <div className="min-w-0 space-y-8">
+            {cardPosts.length > 0 ? (
+              <BlogHeroCarousel posts={cardPosts} />
             ) : (
-              <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-12 text-center">
-                <h2 className="text-3xl font-black text-white">בלוג Mendeles</h2>
-                <p className="mt-3 text-slate-400">אין עדיין מאמרים מפורסמים להצגה.</p>
+              <section className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+                <h2 className="text-2xl font-bold text-slate-900">Mendeles Insights</h2>
+                <p className="mt-3 text-slate-500">אין עדיין מאמרים מפורסמים להצגה.</p>
               </section>
             )}
 
-            <section className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 backdrop-blur">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-black text-white">הכי נקראים</h2>
-                <span className="rounded-full bg-amber-400/15 px-3 py-1 text-xs font-bold text-amber-300">דירוג חי</span>
+            <section className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-bold text-slate-900">כל המאמרים</h2>
+                <span className="text-sm text-slate-500">{cardPosts.length} במאגר</span>
               </div>
-              <BlogMostReadPanel posts={cardPosts} />
-            </section>
 
-            <form className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur md:grid-cols-[1fr_180px_auto]">
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="חיפוש מאמרים, נושאים, מילות מפתח..."
-                className="rounded-xl border border-white/10 bg-[#0a0e1a]/60 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
-              />
-              <select
-                name="category"
-                defaultValue={category}
-                className="rounded-xl border border-white/10 bg-[#0a0e1a]/60 px-4 py-3 text-sm text-white outline-none"
-              >
-                <option value="">כל הקטגוריות</option>
-                {feed.categories.map((item) => (
-                  <option key={item.slug} value={item.slug}>{item.name}</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="rounded-xl bg-gradient-to-l from-violet-500 to-indigo-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20"
-              >
-                חפש
-              </button>
-            </form>
+              <form id="blog-search" className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <button
+                  type="submit"
+                  className="order-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-[#5e35b1]/30 hover:text-[#5e35b1] lg:order-1"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+                  </svg>
+                  סינון מתקדם
+                </button>
+                <select
+                  name="category"
+                  defaultValue={category}
+                  className="order-2 min-w-[160px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-[#5e35b1]/40 lg:max-w-[200px]"
+                >
+                  <option value="">כל הקטגוריות</option>
+                  {feed.categories.map((item) => (
+                    <option key={item.slug} value={item.slug}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="relative order-1 min-w-[200px] flex-1 lg:order-3">
+                  <input
+                    name="q"
+                    defaultValue={q}
+                    placeholder="חיפוש מאמרים..."
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pe-10 ps-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5e35b1]/40"
+                  />
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  className="order-4 rounded-lg bg-[#5e35b1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4a2a9c]"
+                >
+                  חפש
+                </button>
+              </form>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/blog"
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  !category ? "bg-white text-slate-950" : "border border-white/10 text-slate-300 hover:border-violet-400/40 hover:text-white"
-                }`}
-              >
-                הכל
-              </Link>
-              {feed.categories.slice(0, 6).map((item) => (
+              <div className="flex flex-wrap items-center gap-2">
                 <Link
-                  key={item.slug}
-                  href={blogHref({ category: item.slug, q })}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    category === item.slug
-                      ? "bg-white text-slate-950"
-                      : "border border-white/10 text-slate-300 hover:border-violet-400/40 hover:text-white"
+                  href={blogHref({ q })}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    !category ? "bg-[#5e35b1] text-white" : "border border-slate-200 bg-white text-slate-600 hover:border-[#5e35b1]/30"
                   }`}
                 >
-                  {item.name}
+                  הכל
                 </Link>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-black text-white">כל המאמרים</h2>
-              <span className="text-sm text-slate-500">{cardPosts.length} במאגר</span>
-            </div>
-
-            {visiblePosts.length === 0 ? (
-              <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-10 text-center text-slate-400">
-                לא נמצאו מאמרים עבור הסינון הנוכחי.
-              </div>
-            ) : (
-              <div className="grid gap-5 md:grid-cols-2">
-                {visiblePosts.map((post, index) => (
-                  <BlogArticleCard key={post.id} post={post} featured={index === 0 && currentPage === 1 && !q && !category} />
+                {feed.categories.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={blogHref({ category: item.slug, q })}
+                    className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                      category === item.slug
+                        ? "bg-[#5e35b1] text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-[#5e35b1]/30"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
                 ))}
               </div>
-            )}
 
-            {totalPages > 1 && (
-              <nav className="flex items-center justify-center gap-2">
-                <Link
-                  href={blogHref({ page: Math.max(1, currentPage - 1), category, q })}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white"
-                >
-                  הקודם
-                </Link>
-                {Array.from({ length: totalPages }).slice(0, 6).map((_, index) => {
-                  const pageNumber = index + 1;
-                  return (
-                    <Link
-                      key={pageNumber}
-                      href={blogHref({ page: pageNumber, category, q })}
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold ${
-                        pageNumber === currentPage
-                          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
-                          : "border border-white/10 text-slate-300 hover:text-white"
-                      }`}
-                    >
-                      {pageNumber}
-                    </Link>
-                  );
-                })}
-                <Link
-                  href={blogHref({ page: Math.min(totalPages, currentPage + 1), category, q })}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white"
-                >
-                  הבא
-                </Link>
-              </nav>
-            )}
-          </section>
+              {gridPosts.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                  לא נמצאו מאמרים עבור הסינון הנוכחי.
+                </div>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {gridPosts.map((post) => (
+                    <BlogArticleCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
+
+              {currentPage < totalPages ? (
+                <div className="pt-2 text-center">
+                  <Link
+                    href={blogHref({ page: currentPage + 1, category, q })}
+                    className="inline-flex w-full max-w-md items-center justify-center rounded-xl border-2 border-[#5e35b1]/30 bg-white px-6 py-3 text-sm font-bold text-[#5e35b1] transition hover:border-[#5e35b1] hover:bg-[#5e35b1]/5"
+                  >
+                    טען עוד מאמרים
+                  </Link>
+                </div>
+              ) : null}
+            </section>
+          </div>
 
           <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-            <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur">
-              <h2 className="text-lg font-black text-white">קטגוריות</h2>
-              <div className="mt-5 space-y-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-bold text-slate-900">נושאים פופולריים</h2>
+              <div className="mt-4 space-y-1">
                 {categoryCounts.length === 0 ? (
-                  <p className="text-sm text-slate-400">אין קטגוריות עדיין.</p>
+                  <p className="text-sm text-slate-500">אין קטגוריות עדיין.</p>
                 ) : (
-                  categoryCounts.map((item) => (
+                  categoryCounts.slice(0, 8).map((item) => (
                     <Link
                       key={item.slug}
                       href={blogHref({ category: item.slug })}
-                      className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-violet-400/20 hover:bg-white/[0.04] hover:text-white"
+                      className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-[#5e35b1]"
                     >
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{item.count}</span>
                       <span>{item.name}</span>
-                      <span className="rounded-lg bg-white/10 px-2 py-1 text-xs text-slate-400">{item.count}</span>
                     </Link>
                   ))
                 )}
               </div>
+              {categoryCounts.length > 0 ? (
+                <Link href="/blog" className="mt-3 block text-center text-sm font-medium text-[#5e35b1] hover:underline">
+                  הצג את כל הנושאים
+                </Link>
+              ) : null}
             </section>
 
-            <section className="overflow-hidden rounded-[2rem] border border-violet-400/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 p-6 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl">✦</div>
-              <h2 className="mt-4 text-lg font-black text-white">קבלו עדכונים חדשים</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">מדריכים, טיפים וכלים לצמיחת האתר שלכם — ישירות לתיבה.</p>
-              <form className="mt-4 space-y-3">
-                <input
-                  className="w-full rounded-xl border border-white/10 bg-[#0a0e1a]/50 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
-                  placeholder="כתובת האימייל שלכם"
-                />
-                <button className="w-full rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-950" type="button">
-                  הרשמו
-                </button>
-              </form>
-            </section>
+            <BlogNewsletterCard />
 
-            <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur">
-              <h2 className="text-lg font-black text-white">למה לדרג?</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                הדירוג שלכם משפיע על רשימת &quot;הכי נקראים&quot; ועוזר לנו להציג את התוכן הכי רלוונטי קודם.
-              </p>
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-bold text-slate-900">המאמרים המובילים</h2>
+              <div className="mt-4">
+                <BlogTopArticlesPanel posts={cardPosts} />
+              </div>
             </section>
           </aside>
         </div>
       </div>
-    </MarketingShell>
+
+      <BlogFeaturesSection />
+    </BlogShell>
   );
 }

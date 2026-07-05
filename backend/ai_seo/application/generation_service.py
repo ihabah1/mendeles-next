@@ -351,6 +351,76 @@ class AiSeoGenerationService:
         asset["matched_domain"] = context_key
         return asset
 
+    @classmethod
+    def _scheduled_automation_state(cls, tenant_id) -> dict | None:
+        jobs = AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+            deleted_at__isnull=True,
+            status__in=[JobStatus.SCHEDULED, JobStatus.QUEUED, JobStatus.RUNNING],
+        )
+        active_jobs: list[AutomationJob] = []
+        for job in jobs:
+            config = job.config or {}
+            if job.status == JobStatus.SCHEDULED or cls._recurrence_timedelta(config):
+                active_jobs.append(job)
+        if not active_jobs:
+            return None
+
+        scheduled_jobs = [job for job in active_jobs if job.status == JobStatus.SCHEDULED]
+        representative = scheduled_jobs[0] if scheduled_jobs else active_jobs[0]
+        config = representative.config or {}
+        next_run_at = None
+        scheduled_times = [job.scheduled_at for job in scheduled_jobs if job.scheduled_at]
+        if scheduled_times:
+            next_run_at = min(scheduled_times).isoformat()
+
+        return {
+            "active": True,
+            "job_ids": [str(job.id) for job in active_jobs],
+            "scheduled_jobs_count": len(scheduled_jobs),
+            "pending_jobs_count": len(active_jobs),
+            "next_run_at": next_run_at,
+            "recurrence_minutes": int(config.get("recurrence_minutes") or 0),
+            "recurrence_interval": config.get("recurrence_interval") or "",
+            "random_topics_enabled": bool(config.get("random_topics_enabled")),
+            "news_hot_topics_enabled": bool(config.get("news_hot_topics_enabled")),
+            "auto_publish_enabled": bool(config.get("auto_publish_enabled") or representative.auto_publish_enabled),
+        }
+
+    @classmethod
+    def disable_scheduled_automation(cls, tenant_id, user, *, request=None) -> dict:
+        jobs = AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+            deleted_at__isnull=True,
+        )
+        cancelled_ids: list[str] = []
+        for job in jobs.filter(status=JobStatus.SCHEDULED):
+            JobService.cancel_job(tenant_id, user, job.id, request=request)
+            cancelled_ids.append(str(job.id))
+
+        for job in jobs.exclude(status__in={JobStatus.CANCELLED, JobStatus.FAILED, JobStatus.SCHEDULED}):
+            config = job.config or {}
+            if not cls._recurrence_timedelta(config) and not config.get("next_recurring_job_id"):
+                continue
+            new_config = {
+                key: value
+                for key, value in config.items()
+                if key not in {"next_recurring_job_id", "next_recurring_run_at"}
+            }
+            new_config["recurrence_minutes"] = 0
+            new_config["recurrence_interval"] = ""
+            job.config = new_config
+            job.save(update_fields=["config", "updated_at"])
+            AutomationLogService.log(job, "Recurring schedule disabled")
+
+        return {
+            "cancelled_job_ids": cancelled_ids,
+            "scheduled_automation": cls._scheduled_automation_state(tenant_id),
+            "workspace": cls.workspace_state(tenant_id),
+        }
+
     @staticmethod
     def workspace_state(tenant_id) -> dict:
         AiSeoGenerationService.recover_stale_jobs(tenant_id)
@@ -370,6 +440,7 @@ class AiSeoGenerationService:
             "jobs": [AiSeoGenerationService.serialize_job(job) for job in jobs],
             "drafts": [AiSeoGenerationService.serialize_page(page) for page in pages],
             "history": AiSeoGenerationService.run_history(tenant_id),
+            "scheduled_automation": AiSeoGenerationService._scheduled_automation_state(tenant_id),
         }
 
     @classmethod
