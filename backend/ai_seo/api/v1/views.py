@@ -214,12 +214,14 @@ class AiSeoWorkspaceDeletePageView(APIView):
 class AiSeoWorkspaceRunJobView(APIView):
     def post(self, request, job_id):
         _check(request, self, "ai_seo.manage")
+        tenant_id = request.user.default_tenant_id
         try:
-            job = JobService.get_job(request.user.default_tenant_id, job_id)
+            AiSeoGenerationService.recover_stale_jobs(tenant_id)
+            job = JobService.get_job(tenant_id, job_id)
             if job.status not in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.SCHEDULED, JobStatus.FAILED}:
                 return Response({"error": f"Job cannot run while status is {job.status}."}, status=400)
             if job.status in {JobStatus.SCHEDULED, JobStatus.FAILED}:
-                job = JobService.queue_job(request.user.default_tenant_id, request.user, job.id, request=request)
+                job = JobService.queue_job(tenant_id, request.user, job.id, request=request)
             JobExecutor.run_next_step(job)
             job.refresh_from_db()
         except Exception as exc:
@@ -232,6 +234,7 @@ class AiSeoWorkspaceRunNextView(APIView):
         _check(request, self, "ai_seo.manage")
         tenant_id = request.user.default_tenant_id
         try:
+            AiSeoGenerationService.recover_stale_jobs(tenant_id)
             job = (
                 AutomationJob.objects.filter(
                     tenant_id=tenant_id,

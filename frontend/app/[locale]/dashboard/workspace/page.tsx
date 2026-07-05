@@ -118,6 +118,7 @@ export default function WorkspacePage() {
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
   const queueAutoStartedRef = useRef(false);
+  const queueRunModeRef = useRef<"queue" | "selected">("queue");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [expandedPreviewIds, setExpandedPreviewIds] = useState<string[]>([]);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
@@ -255,29 +256,67 @@ export default function WorkspacePage() {
     mutationFn: aiSeoApi.runNextWorkspaceQueueStep,
     onSuccess: (data) => {
       qc.setQueryData(["ai-seo-workspace"], data.workspace);
-      qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
-      if (!data.job || ["failed", "waiting_approval"].includes(data.job.status)) {
-        setQueueRunning(false);
+      const jobs = data.workspace?.jobs ?? [];
+      const hasRunnable = jobs.some(isRunnableJob);
+
+      if (!data.job) {
+        if (!hasRunnable) {
+          setQueueRunning(false);
+          queueAutoStartedRef.current = false;
+        } else {
+          window.setTimeout(() => setQueueTick((tick) => tick + 1), 1000);
+        }
         return;
       }
-      window.setTimeout(() => setQueueTick((tick) => tick + 1), 600);
+
+      if (data.job.status === "failed" || data.job.status === "waiting_approval") {
+        setQueueRunning(false);
+        queueAutoStartedRef.current = false;
+        return;
+      }
+
+      if (!hasRunnable) {
+        setQueueRunning(false);
+        queueAutoStartedRef.current = false;
+        return;
+      }
+
+      if (data.job?.status === "completed") {
+        queueRunModeRef.current = "queue";
+      }
+
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 400);
     },
-    onError: () => setQueueRunning(false),
+    onError: () => {
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 1200);
+    },
   });
 
   const runSelectedJob = useMutation({
     mutationFn: (jobId: string) => aiSeoApi.runWorkspaceJob(jobId),
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
-      if (["completed", "failed", "cancelled", "waiting_approval"].includes(job.status)) {
+      if (["failed", "cancelled", "waiting_approval"].includes(job.status)) {
         setQueueRunning(false);
+        queueAutoStartedRef.current = false;
         return;
       }
-      window.setTimeout(() => setQueueTick((tick) => tick + 1), 600);
+      if (job.status === "completed") {
+        if (autoRunJobsEnabled) {
+          queueRunModeRef.current = "queue";
+          window.setTimeout(() => setQueueTick((tick) => tick + 1), 400);
+          return;
+        }
+        setQueueRunning(false);
+        queueAutoStartedRef.current = false;
+        return;
+      }
+      window.setTimeout(() => setQueueTick((tick) => tick + 1), 400);
     },
     onError: () => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
-      window.setTimeout(() => setQueueTick((tick) => tick + 1), 1200);
+      setQueueRunning(false);
+      queueAutoStartedRef.current = false;
     },
   });
 
@@ -341,15 +380,21 @@ export default function WorkspacePage() {
     }
   }
 
-  function startSelectedJob() {
+  function startQueueProcessor(mode: "queue" | "selected" = "queue") {
+    queueRunModeRef.current = mode;
     setQueueRunning(true);
     setQueueTick((tick) => tick + 1);
+  }
+
+  function startSelectedJob() {
+    startQueueProcessor(selectedJobId ? "selected" : "queue");
   }
 
   function autoStartQueueIfEnabled(jobId?: string) {
     if (!autoRunJobsEnabled) return;
     if (jobId) setSelectedJobId(jobId);
-    startSelectedJob();
+    queueAutoStartedRef.current = true;
+    startQueueProcessor("queue");
   }
 
   function handleAutoRunToggle(enabled: boolean) {
@@ -357,10 +402,11 @@ export default function WorkspacePage() {
     if (enabled) {
       queueAutoStartedRef.current = false;
       const hasRunnable = (workspace.data?.jobs ?? []).some(isRunnableJob);
-      if (hasRunnable) startSelectedJob();
+      if (hasRunnable) startQueueProcessor("queue");
       return;
     }
     setQueueRunning(false);
+    queueAutoStartedRef.current = false;
   }
 
   function togglePreview(pageId: string) {
@@ -408,22 +454,44 @@ export default function WorkspacePage() {
   }, [autoRunJobsEnabled]);
 
   useEffect(() => {
-    if (!canManage || !autoRunJobsEnabled || queueRunning || queueAutoStartedRef.current) return;
+    if (!canManage || !autoRunJobsEnabled || queueRunning) return;
     const hasRunnable = (workspace.data?.jobs ?? []).some(isRunnableJob);
-    if (!hasRunnable) return;
+    if (!hasRunnable) {
+      queueAutoStartedRef.current = false;
+      return;
+    }
+    if (queueAutoStartedRef.current) return;
     queueAutoStartedRef.current = true;
-    startSelectedJob();
+    startQueueProcessor("queue");
   }, [workspace.data?.jobs, autoRunJobsEnabled, canManage, queueRunning]);
 
   useEffect(() => {
-    if (queueRunning && !runNextStep.isPending && !runSelectedJob.isPending) {
-      if (selectedJobId) {
-        runSelectedJob.mutate(selectedJobId);
-        return;
-      }
-      runNextStep.mutate();
+    if (!autoRunJobsEnabled || !canManage) return;
+    const interval = window.setInterval(() => {
+      const jobs = workspace.data?.jobs ?? [];
+      if (!jobs.some(isRunnableJob)) return;
+      if (queueRunning || runNextStep.isPending || runSelectedJob.isPending) return;
+      queueAutoStartedRef.current = false;
+      startQueueProcessor("queue");
+    }, 8000);
+    return () => window.clearInterval(interval);
+  }, [
+    autoRunJobsEnabled,
+    canManage,
+    workspace.data?.jobs,
+    queueRunning,
+    runNextStep.isPending,
+    runSelectedJob.isPending,
+  ]);
+
+  useEffect(() => {
+    if (!queueRunning || runNextStep.isPending || runSelectedJob.isPending) return;
+    if (queueRunModeRef.current === "selected" && selectedJobId) {
+      runSelectedJob.mutate(selectedJobId);
+      return;
     }
-  }, [queueRunning, queueTick]);
+    runNextStep.mutate();
+  }, [queueRunning, queueTick, selectedJobId]);
 
   useEffect(() => {
     setResearchPage(1);
