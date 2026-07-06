@@ -119,7 +119,9 @@ export function jobNextRunAt(job: JobScheduleFields): Date | null {
 
 export function jobNextRunLabel(job: JobScheduleFields): string {
   const nextRun = jobNextRunAt(job);
-  return nextRun ? nextRun.toLocaleString("he-IL") : "—";
+  if (nextRun) return nextRun.toLocaleString("he-IL");
+  if (job.status === "queued" || job.status === "running" || job.status === "scheduled") return "מיידי";
+  return "—";
 }
 
 export function jobHasScheduledRun(job: JobScheduleFields): boolean {

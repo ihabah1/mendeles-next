@@ -390,7 +390,14 @@ export default function WorkspacePage() {
   }
 
   function startSelectedJob() {
-    startQueueProcessor(selectedJobId ? "selected" : "queue");
+    if (!selectedJobId) return;
+    startQueueProcessor("selected");
+  }
+
+  function runAllJobs() {
+    setSelectedJobId(null);
+    queueAutoStartedRef.current = true;
+    startQueueProcessor("queue");
   }
 
   function autoStartQueueIfEnabled(jobId?: string) {
@@ -531,10 +538,8 @@ export default function WorkspacePage() {
     if (!q) return true;
     return [job.name, job.user, job.id, job.current_step_name].some((part) => part.toLowerCase().includes(q));
   });
-  const showNextRunColumn = useMemo(() => jobs.some(jobHasScheduledRun), [jobs]);
-  const batchJobsGridClass = showNextRunColumn
-    ? "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_1fr_0.8fr_0.8fr]"
-    : "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_0.8fr_0.8fr]";
+  const runnableJobsCount = useMemo(() => jobs.filter(isRunnableJob).length, [jobs]);
+  const batchJobsGridClass = "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_1fr_0.8fr_0.8fr]";
   const researchCurrentPage = Math.min(researchPage, pageCount(sourceFilteredResearch.length));
   const jobsCurrentPage = Math.min(jobsPage, pageCount(filteredJobs.length));
   const draftsCurrentPage = Math.min(draftsPage, pageCount(drafts.length));
@@ -1191,8 +1196,24 @@ export default function WorkspacePage() {
           </label>
           {canManage && (
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" size="sm" disabled={runSelectedJob.isPending || runNextStep.isPending} onClick={startSelectedJob} className="bg-[#6F42F5] hover:bg-[#5a32d4]">
-                התחל
+              <Button
+                type="button"
+                size="sm"
+                disabled={runnableJobsCount === 0 || runSelectedJob.isPending || runNextStep.isPending || queueRunning}
+                onClick={runAllJobs}
+                className="bg-[#6F42F5] hover:bg-[#5a32d4]"
+              >
+                הרץ הכל{runnableJobsCount > 0 ? ` (${runnableJobsCount})` : ""}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!selectedJobId || runSelectedJob.isPending || runNextStep.isPending}
+                onClick={startSelectedJob}
+                className="border-white/10 bg-white/5"
+              >
+                הרץ נבחר
               </Button>
               <Button type="button" variant="outline" size="sm" disabled={!queueRunning} onClick={() => setQueueRunning(false)} className="border-white/10 bg-white/5">
                 עצור
@@ -1212,14 +1233,14 @@ export default function WorkspacePage() {
             <p className="mt-4 text-sm text-slate-400">אין jobs בטאב זה.</p>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-xl border border-white/10">
-              <div className={showNextRunColumn ? "min-w-[1000px]" : "min-w-[900px]"}>
+              <div className="min-w-[1060px]">
                 <div className={`grid ${batchJobsGridClass} bg-white/5 px-3 py-2 text-xs font-medium text-slate-400`}>
                   <span>משימה</span>
                   <span>סוג תוכן</span>
                   <span>נושאים</span>
                   <span>סטטוס</span>
                   <span>התקדמות</span>
-                  {showNextRunColumn && <span>זמן ריצה עתידי</span>}
+                  <span>זמן ריצה עתידי</span>
                   <span>נוצר</span>
                   <span>פעולות</span>
                 </div>
@@ -1254,9 +1275,18 @@ export default function WorkspacePage() {
                           <span className="block h-1.5 rounded-full bg-[#6F42F5]" style={{ width: `${job.progress_percent}%` }} />
                         </span>
                       </div>
-                      {showNextRunColumn && (
-                        <span className="text-xs text-slate-400">{jobNextRunLabel(job)}</span>
-                      )}
+                      {(() => {
+                        const nextRun = jobNextRunLabel(job);
+                        const isImmediate = nextRun === "מיידי";
+                        return (
+                          <span
+                            className={`text-xs ${isImmediate ? "font-medium text-emerald-300" : "text-slate-400"}`}
+                            title={isImmediate ? "ממתין להרצה בתור" : undefined}
+                          >
+                            {nextRun}
+                          </span>
+                        );
+                      })()}
                       <span className="text-xs text-slate-500">
                         {job.created_at ? new Date(job.created_at).toLocaleString("he-IL") : "—"}
                       </span>
