@@ -28,7 +28,7 @@ export function SearchToolbar({
           name="q"
           defaultValue={query}
           placeholder={copy.searchPlaceholder}
-          className="w-full rounded-xl border border-slate-200 bg-[#F7F8FC] py-3 pe-11 ps-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900/30 focus:bg-white"
+          className="w-full rounded-xl border border-slate-200 bg-[#F7F8FC] py-3 pe-11 ps-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#6F42F5]/40 focus:bg-white"
         />
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -41,7 +41,7 @@ export function SearchToolbar({
       <select
         name="category"
         defaultValue={activeCategory}
-        className="min-w-[180px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-900/30"
+        className="min-w-[180px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#6F42F5]/40"
       >
         <option value="">{copy.allCategories}</option>
         {categories.map((item) => (
@@ -54,7 +54,7 @@ export function SearchToolbar({
       <select
         name="sort"
         defaultValue={sort}
-        className="min-w-[160px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-900/30"
+        className="min-w-[160px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#6F42F5]/40"
       >
         <option value="newest">{copy.sortNewest}</option>
         <option value="oldest">{copy.sortOldest}</option>
@@ -63,7 +63,7 @@ export function SearchToolbar({
 
       <button
         type="submit"
-        className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+        className="rounded-xl bg-[#6F42F5] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#5a32d4]"
       >
         {copy.searchButton}
       </button>

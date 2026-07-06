@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import {
+  allAdminAuditPaths,
+  allPublicAuditPaths,
+  localizedAuditPaths,
+  localizePath,
+} from "@/lib/a11y/audit-routes";
 
 const email = process.env.E2E_EMAIL || "admin@admin.com";
 const password = process.env.E2E_PASSWORD || "admin";
@@ -12,52 +18,63 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.waitForURL("**/dashboard**", { timeout: 15000 });
 }
 
-const PAGES = ["/", "/accessibility", "/login", "/company"];
+async function expectNoSeriousViolations(page: import("@playwright/test").Page) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+    .analyze();
 
-for (const path of PAGES) {
-  test.describe(`axe: ${path}`, () => {
+  const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
+  expect(blocking, formatViolations(blocking)).toEqual([]);
+}
+
+async function expectAccessibilityShell(page: import("@playwright/test").Page) {
+  await expect(page.locator('[data-a11y-widget="toggle"]')).toBeVisible();
+  await expect(page.locator('a.skip-link[href="#main-content"]')).toBeAttached();
+  await expect(page.locator("main#main-content")).toBeVisible();
+}
+
+const PUBLIC_PATHS_HE = localizedAuditPaths("he", allPublicAuditPaths());
+const PUBLIC_PATHS_EN = localizedAuditPaths("en", allPublicAuditPaths());
+
+for (const path of PUBLIC_PATHS_HE) {
+  test.describe(`axe HE public: ${path}`, () => {
     test("has no serious or critical violations", async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
+      await expectNoSeriousViolations(page);
+    });
 
-      const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
-        .analyze();
-
-      const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
-      expect(blocking, formatViolations(blocking)).toEqual([]);
+    test("includes accessibility widget and landmarks", async ({ page }) => {
+      await page.goto(path);
+      await page.waitForLoadState("domcontentloaded");
+      await expectAccessibilityShell(page);
     });
   });
 }
 
-test.describe("axe: dashboard leads", () => {
-  test("has no serious or critical violations", async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto("/dashboard/leads");
-    await page.waitForLoadState("networkidle");
-
-    const results = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
-      .analyze();
-
-    const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
-    expect(blocking, formatViolations(blocking)).toEqual([]);
+for (const path of PUBLIC_PATHS_EN) {
+  test.describe(`axe EN public: ${path}`, () => {
+    test("includes accessibility widget and landmarks", async ({ page }) => {
+      await page.goto(path);
+      await page.waitForLoadState("domcontentloaded");
+      await expectAccessibilityShell(page);
+    });
   });
-});
+}
 
-test.describe("axe: dashboard automation", () => {
-  test("has no serious or critical violations", async ({ page }) => {
+test.describe("axe: dashboard admin pages", () => {
+  test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto("/dashboard/automation");
-    await page.waitForLoadState("networkidle");
-
-    const results = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
-      .analyze();
-
-    const blocking = results.violations.filter((v) => ["serious", "critical"].includes(v.impact || ""));
-    expect(blocking, formatViolations(blocking)).toEqual([]);
   });
+
+  for (const adminPath of allAdminAuditPaths()) {
+    test(`admin page ${adminPath} is accessible`, async ({ page }) => {
+      await page.goto(adminPath);
+      await page.waitForLoadState("networkidle");
+      await expectAccessibilityShell(page);
+      await expectNoSeriousViolations(page);
+    });
+  }
 });
 
 test.describe("keyboard navigation", () => {
@@ -85,8 +102,8 @@ test.describe("keyboard navigation", () => {
     await page.goto("/login");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
-    const email = page.getByLabel(/email|אימייל/i);
-    await expect(email).toBeFocused();
+    const emailField = page.getByLabel(/email|אימייל/i);
+    await expect(emailField).toBeFocused();
   });
 });
 
@@ -120,6 +137,13 @@ test.describe("screen reader semantics", () => {
     const videos = page.locator("video[aria-labelledby][aria-describedby]");
     await expect(videos.first()).toBeVisible();
     expect(await videos.count()).toBeGreaterThanOrEqual(1);
+  });
+});
+
+test.describe("localized EN homepage", () => {
+  test("English homepage includes accessibility shell", async ({ page }) => {
+    await page.goto(localizePath("/", "en"));
+    await expectAccessibilityShell(page);
   });
 });
 

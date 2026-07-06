@@ -256,8 +256,8 @@ function BlogArticleLayout({
   const copy = editorialCopy(locale);
   return (
     <article className="mx-auto max-w-3xl px-6 py-12">
-      <header className="border-b-4 border-slate-900 pb-8 text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.35em] text-red-600">{copy.breaking}</p>
+      <header className="border-b-4 border-[#6F42F5] pb-8 text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#6F42F5]">{copy.breaking}</p>
         <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
           {page.title}
         </h1>

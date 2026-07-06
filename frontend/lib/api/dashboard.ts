@@ -781,6 +781,7 @@ export type AiSeoWorkspaceDraft = {
   page_type: string;
   status: string;
   full_path: string;
+  locale: string;
   meta_title: string;
   meta_description: string;
   published_at: string | null;

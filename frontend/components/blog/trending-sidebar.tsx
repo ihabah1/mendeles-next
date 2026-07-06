@@ -26,8 +26,8 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
               href={blogHref({ category: item.slug })}
               className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition ${
                 activeCategory === item.slug
-                  ? "bg-red-50 font-semibold text-red-700"
-                  : "text-slate-600 hover:bg-[#F7F8FC] hover:text-slate-900"
+                  ? "bg-[#6F42F5]/10 font-semibold text-[#6F42F5]"
+                  : "text-slate-600 hover:bg-[#F7F8FC] hover:text-[#6F42F5]"
               }`}
             >
               <span className="rounded-md bg-[#F7F8FC] px-2 py-0.5 text-xs font-medium text-slate-500">{item.count}</span>
@@ -46,10 +46,8 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
               href={blogHref({ category: item.slug })}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeCategory === item.slug
-                  ? item.slug === "sports"
-                    ? "bg-red-600 text-white"
-                    : "bg-slate-900 text-white"
-                  : "border border-slate-200 bg-[#F7F8FC] text-slate-600 hover:border-slate-900/30"
+                  ? "bg-[#6F42F5] text-white"
+                  : "border border-slate-200 bg-[#F7F8FC] text-slate-600 hover:border-[#6F42F5]/30"
               }`}
             >
               {item.name}

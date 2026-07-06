@@ -11,8 +11,13 @@ STATIC_PAGES = [
     {"path": "/solutions", "changefreq": "weekly", "priority": 0.9},
     {"path": "/industries", "changefreq": "weekly", "priority": 0.9},
     {"path": "/company", "changefreq": "monthly", "priority": 0.7},
+    {"path": "/blog", "changefreq": "weekly", "priority": 0.8},
+    {"path": "/accessibility", "changefreq": "monthly", "priority": 0.5},
     {"path": "/login", "changefreq": "yearly", "priority": 0.3},
     {"path": "/register", "changefreq": "yearly", "priority": 0.3},
+    {"path": "/forgot-password", "changefreq": "yearly", "priority": 0.2},
+    {"path": "/reset-password", "changefreq": "yearly", "priority": 0.2},
+    {"path": "/verify-email", "changefreq": "yearly", "priority": 0.2},
 ]
 
 SOLUTION_SLUGS = [

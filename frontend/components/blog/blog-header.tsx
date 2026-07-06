@@ -33,15 +33,12 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
   const navCategories = categories.length > 0 ? categories : fallbackNav(locale);
 
   return (
-    <header className="sticky top-0 z-50 border-b-4 border-red-600 bg-slate-950 text-white shadow-lg">
-      <div className="border-b border-white/10 bg-red-600/90 px-4 py-1 text-center text-[11px] font-bold uppercase tracking-[0.3em] text-white">
-        {copy.breaking} · Mendeles Insights
-      </div>
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="#blog-search"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 text-slate-300 transition hover:border-red-400 hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-[#6F42F5]/30 hover:text-[#6F42F5]"
             aria-label={copy.search}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -49,21 +46,21 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
               <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
             </svg>
           </Link>
-          <MarketingLocaleSwitcher className="rounded-xl border border-white/15 text-slate-300 hover:border-red-400 hover:bg-white/5 hover:text-white" />
+          <MarketingLocaleSwitcher className="rounded-xl border border-slate-200 text-slate-600 hover:border-[#6F42F5]/30 hover:bg-[#F7F8FC] hover:text-[#6F42F5]" />
           <Link
             href="/blog#newsletter"
-            className="hidden rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-red-500 md:inline-flex"
+            className="hidden rounded-xl bg-[#6F42F5] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(111,66,245,0.28)] transition hover:bg-[#5a32d4] md:inline-flex"
           >
             {copy.newsletter}
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-7 text-sm font-semibold text-slate-300 xl:flex" aria-label={copy.navLabel}>
+        <nav className="hidden items-center gap-7 text-sm font-semibold text-slate-600 xl:flex" aria-label={copy.navLabel}>
           {navCategories.slice(0, 6).map((item) => (
             <Link
               key={item.slug}
               href={`/blog?category=${item.slug}`}
-              className={`transition hover:text-white ${item.slug === "sports" ? "text-red-300 hover:text-red-200" : ""}`}
+              className="transition hover:text-[#6F42F5]"
             >
               {item.name}
             </Link>

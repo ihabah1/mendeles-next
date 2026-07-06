@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
 import { aiSeoApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
+import { pageLocale } from "@/components/workspace/workspace-helpers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -77,7 +78,8 @@ export default function TrafficTrackingPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{page.title}</p>
                   <p className="mt-1 text-xs text-[var(--muted-fg)]">
-                    {page.page_type} · פורסם {page.published_at ? new Date(page.published_at).toLocaleString("he-IL") : "ללא תאריך פרסום"}
+                    {page.page_type} · {page.locale === "en" ? "אנגלית" : "עברית"} · פורסם{" "}
+                    {page.published_at ? new Date(page.published_at).toLocaleString("he-IL") : "ללא תאריך פרסום"}
                   </p>
                   <code className="mt-2 block truncate rounded bg-[var(--muted)] px-2 py-1 text-xs">
                     {page.full_path || "ללא path"}
@@ -88,7 +90,7 @@ export default function TrafficTrackingPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {page.full_path && (
-                    <Link href={page.full_path}>
+                    <Link href={page.full_path} locale={pageLocale(page.locale)}>
                       <Button type="button" size="sm">פתח דף חי</Button>
                     </Link>
                   )}

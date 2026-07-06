@@ -171,7 +171,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
 
             <section className="space-y-6">
               <div
-                className={`flex flex-wrap items-center justify-between gap-3 border-b-4 border-slate-900/10 pb-4 ${
+                className={`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 ${
                   locale === "en" ? "text-left" : "text-right"
                 }`}
               >
@@ -200,7 +200,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
                 <div className="pt-4 text-center">
                   <Link
                     href={blogHref({ page: currentPage + 1, category, q, sort })}
-                    className="inline-flex w-full max-w-lg items-center justify-center rounded-2xl border-2 border-slate-900/15 bg-white px-6 py-4 text-sm font-bold text-slate-900 transition hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+                    className="inline-flex w-full max-w-lg items-center justify-center rounded-2xl border-2 border-[#6F42F5]/25 bg-white px-6 py-4 text-sm font-bold text-[#6F42F5] transition hover:border-[#6F42F5] hover:bg-[#6F42F5]/5"
                   >
                     {copy.loadMore}
                   </Link>

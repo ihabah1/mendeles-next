@@ -32,6 +32,10 @@ export const DOMAIN_ICONS: Record<string, string> = {
   world_news: "🌍",
 };
 
+export function pageLocale(locale?: string): "he" | "en" {
+  return locale === "en" ? "en" : "he";
+}
+
 export const TABLE_PAGE_SIZE = 4;
 
 export function splitLines(value: string): string[] {

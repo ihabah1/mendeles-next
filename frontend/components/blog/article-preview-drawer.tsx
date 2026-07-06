@@ -49,12 +49,12 @@ export function ArticlePreviewDrawer({ posts, locale = "he" }: Props) {
           >
             {copy.close}
           </button>
-          <span className="absolute bottom-4 right-4 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">
+          <span className="absolute bottom-4 right-4 rounded-full bg-[#6F42F5] px-3 py-1 text-xs font-bold text-white">
             {post.category}
           </span>
         </div>
         <div className={`space-y-4 p-6 sm:p-8 ${locale === "en" ? "text-left" : "text-right"}`}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-600">{copy.previewLabel}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F42F5]">{copy.previewLabel}</p>
           <h2 id="article-preview-title" className="text-3xl font-extrabold leading-tight text-slate-900">
             {post.title}
           </h2>
@@ -63,7 +63,7 @@ export function ArticlePreviewDrawer({ posts, locale = "he" }: Props) {
           </p>
           <p className="text-base leading-8 text-slate-600">{post.meta_description}</p>
           {post.preview_body ? <p className="text-base leading-8 text-slate-700">{post.preview_body}</p> : null}
-          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 text-sm leading-7 text-slate-600">
+          <div className="rounded-2xl border border-[#6F42F5]/15 bg-[#F7F8FC] p-4 text-sm leading-7 text-slate-600">
             {copy.previewFooter}
             <Link href="/dashboard/workspace" className="font-semibold text-[#6F42F5] hover:underline">
               {" "}

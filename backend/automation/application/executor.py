@@ -50,7 +50,8 @@ class JobExecutor:
             execution.status = JobStatus.COMPLETED
             execution.finished_at = timezone.now()
             execution.duration_ms = JobExecutor._duration_ms(execution)
-            execution.result = {"ok": True}
+            if not execution.result:
+                execution.result = {"ok": True}
             execution.save()
 
             AutomationLogService.log(job, "Job completed successfully", execution=execution)
@@ -290,6 +291,13 @@ class JobExecutor:
             return
         if job_type == JobType.HEALTH_CHECK:
             AutomationLogService.log(job, "Running platform health check", execution=execution)
+            return
+        if job_type == JobType.ACCESSIBILITY_AUDIT.value:
+            from automation.application.accessibility_audit_service import AccessibilityAuditService
+
+            result = AccessibilityAuditService.run(job, execution)
+            execution.result = result
+            execution.save(update_fields=["result", "updated_at"])
             return
         if job_type == JobType.CLEANUP:
             AutomationLogService.log(job, "Running log cleanup (no-op placeholder handler)", execution=execution)

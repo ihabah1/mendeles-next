@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { automationApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
+import {
+  AccessibilityAuditReport,
+  isAccessibilityAuditReport,
+} from "@/components/automation/accessibility-audit-report";
+import { AccessibilityIcon } from "@/components/a11y/accessibility-icon";
+
+const ACCESSIBILITY_AUDIT = "accessibility_audit";
 
 export default function AutomationJobDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,13 +66,23 @@ export default function AutomationJobDetailPage() {
   }
 
   const data = job.data;
+  const auditReport = isAccessibilityAuditReport(data.config?.accessibility_audit)
+    ? data.config.accessibility_audit
+    : null;
 
   return (
     <div className="space-y-4">
       <Link href="/dashboard/automation" className="text-sm text-[var(--muted-fg)] hover:underline">
         {t("back")}
       </Link>
-      <h1 className="text-2xl font-bold">{data.name}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        {data.job_type === ACCESSIBILITY_AUDIT && (
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white">
+            <AccessibilityIcon className="h-6 w-6" />
+          </span>
+        )}
+        <h1 className="text-2xl font-bold">{data.name}</h1>
+      </div>
       <p className="text-sm text-[var(--muted-fg)]">
         {t(`statuses.${data.status}` as "statuses.queued")} · {data.progress_percent}%
       </p>
@@ -97,6 +114,8 @@ export default function AutomationJobDetailPage() {
           </Button>
         )}
       </div>
+
+      {auditReport && <AccessibilityAuditReport report={auditReport} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
 import { automationApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
+import { AccessibilityIcon } from "@/components/a11y/accessibility-icon";
+
+const ACCESSIBILITY_AUDIT = "accessibility_audit";
 
 export default function AutomationPage() {
   const t = useTranslations("automation");
@@ -33,7 +36,11 @@ export default function AutomationPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => automationApi.create({ name: name || "Health Check", job_type: jobType }),
+    mutationFn: (payload?: { name?: string; job_type?: string }) =>
+      automationApi.create({
+        name: payload?.name || name || t("accessibilityAudit.defaultName"),
+        job_type: payload?.job_type || jobType,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["automation-dashboard"] });
       setName("");
@@ -73,6 +80,31 @@ export default function AutomationPage() {
             <StatCard label={t("waitingApproval")} value={stats.waiting_approval} />
             <StatCard label={t("workers")} value={stats.workers_total} />
           </div>
+
+          {canCreate && (
+            <Card>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">{t("accessibilityAudit.quickCreateTitle")}</h2>
+                  <p className="mt-1 text-sm text-[var(--muted-fg)]">{t("accessibilityAudit.quickCreateDesc")}</p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() =>
+                    createMutation.mutate({
+                      name: t("accessibilityAudit.defaultName"),
+                      job_type: ACCESSIBILITY_AUDIT,
+                    })
+                  }
+                  disabled={createMutation.isPending}
+                  className="gap-2"
+                >
+                  <AccessibilityIcon className="h-5 w-5" />
+                  {t("accessibilityAudit.runNow")}
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {canCreate && (
             <Card>
@@ -136,7 +168,18 @@ export default function AutomationPage() {
                             {job.name}
                           </Link>
                         </td>
-                        <td className="p-2">{job.job_type}</td>
+                        <td className="p-2">
+                          <span className="inline-flex items-center gap-2">
+                            {job.job_type === ACCESSIBILITY_AUDIT && (
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white">
+                                <AccessibilityIcon className="h-4 w-4" />
+                              </span>
+                            )}
+                            {job.job_type === ACCESSIBILITY_AUDIT
+                              ? t("accessibilityAudit.jobTypeLabel")
+                              : job.job_type}
+                          </span>
+                        </td>
                         <td className="p-2">{t(`statuses.${job.status}` as "statuses.queued")}</td>
                         <td className="p-2">{job.progress_percent}%</td>
                       </tr>

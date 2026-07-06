@@ -11,24 +11,18 @@ import { formatPublishDate } from "@/lib/blog/utils";
 type Props = {
   post: BlogCardPost;
   locale?: string;
-  variant?: "default" | "sports";
 };
 
-export function ArticleCard({ post, locale = "he", variant = "default" }: Props) {
+export function ArticleCard({ post, locale = "he" }: Props) {
   const [bookmarked, setBookmarked] = useState(false);
   const copy = editorialCopy(locale);
-  const isSports = variant === "sports" || post.category_slug === "sports";
 
   useEffect(() => {
     setBookmarked(bookmarkedIds().has(post.id));
   }, [post.id]);
 
   return (
-    <article
-      className={`group overflow-hidden rounded-[1.35rem] border bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.12)] ${
-        isSports ? "border-red-200/80" : "border-slate-200/80"
-      }`}
-    >
+    <article className="group overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.12)]">
       <BlogReadLink href={post.full_path} postId={post.id} className="block">
         <div className="relative aspect-video overflow-hidden bg-slate-100">
           <Image
@@ -40,11 +34,7 @@ export function ArticleCard({ post, locale = "he", variant = "default" }: Props)
             className="object-cover transition duration-700 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
-          <span
-            className={`absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide shadow ${
-              isSports ? "bg-red-600 text-white" : "bg-white text-[#6F42F5]"
-            }`}
-          >
+          <span className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#6F42F5] shadow">
             {post.category}
           </span>
         </div>

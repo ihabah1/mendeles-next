@@ -815,6 +815,7 @@ class AiSeoGenerationService:
             "page_type": page.page_type,
             "status": page.status,
             "full_path": page.full_path,
+            "locale": page.locale,
             "meta_title": page.meta_title,
             "meta_description": page.meta_description,
             "published_at": page.published_at.isoformat() if page.published_at else None,

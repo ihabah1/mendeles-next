@@ -62,6 +62,7 @@ class JobType(models.TextChoices):
     GENERATE_REPORTS = "generate_reports", "Generate Reports"
     BROKEN_LINK_SCAN = "broken_link_scan", "Broken Link Scan"
     SEO_AUDIT = "seo_audit", "SEO Audit"
+    ACCESSIBILITY_AUDIT = "accessibility_audit", "Accessibility Audit"
     # Marketing
     EMAIL_CAMPAIGN = "email_campaign", "Email Campaign"
     WHATSAPP_CAMPAIGN = "whatsapp_campaign", "WhatsApp Campaign"
@@ -89,6 +90,7 @@ IMPLEMENTED_JOB_TYPES = {
     JobType.REFRESH_METRICS,
     JobType.GENERATE_BLOG_ARTICLE,
     JobType.GENERATE_LANDING_PAGE,
+    JobType.ACCESSIBILITY_AUDIT,
 }
 
 

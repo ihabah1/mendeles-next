@@ -26,8 +26,8 @@ export function CategoryFilter({
         href={blogHref({ q: query, sort })}
         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
           !activeCategory
-            ? "bg-slate-900 text-white shadow-sm"
-            : "border border-slate-200 bg-white text-slate-600 hover:border-slate-900/30 hover:text-slate-900"
+            ? "bg-[#6F42F5] text-white shadow-sm"
+            : "border border-slate-200 bg-white text-slate-600 hover:border-[#6F42F5]/30 hover:text-[#6F42F5]"
         }`}
       >
         {copy.filterAll}
@@ -38,10 +38,8 @@ export function CategoryFilter({
           href={blogHref({ category: item.slug, q: query, sort })}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
             activeCategory === item.slug
-              ? item.slug === "sports"
-                ? "bg-red-600 text-white shadow-sm"
-                : "bg-slate-900 text-white shadow-sm"
-              : "border border-slate-200 bg-white text-slate-600 hover:border-slate-900/30 hover:text-slate-900"
+              ? "bg-[#6F42F5] text-white shadow-sm"
+              : "border border-slate-200 bg-white text-slate-600 hover:border-[#6F42F5]/30 hover:text-[#6F42F5]"
           }`}
         >
           {item.name}

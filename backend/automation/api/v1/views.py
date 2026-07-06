@@ -74,6 +74,7 @@ def _serialize_job(job: AutomationJob, *, detail: bool = False) -> dict:
                 "finished_at": e.finished_at.isoformat() if e.finished_at else None,
                 "duration_ms": e.duration_ms,
                 "error_message": e.error_message,
+                "result": e.result,
             }
             for e in job.executions.order_by("-execution_number")[:20]
         ]

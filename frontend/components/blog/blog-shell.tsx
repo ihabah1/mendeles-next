@@ -21,7 +21,7 @@ type Props = {
 
 export function BlogShell({ children, categories, previewPosts = [], locale = "he" }: Props) {
   return (
-    <div className={`${heebo.variable} blog-editorial min-h-screen bg-[#F4F5F8] font-[family-name:var(--font-blog)] text-slate-900`}>
+    <div className={`${heebo.variable} blog-editorial min-h-screen bg-[#F7F8FC] font-[family-name:var(--font-blog)] text-slate-900`}>
       <BlogHeader categories={categories} locale={locale} />
       <main id="main-content" tabIndex={-1} className="outline-none">
         {children}
