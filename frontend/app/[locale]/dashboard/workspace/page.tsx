@@ -16,7 +16,6 @@ import {
   buildEffectivePrompt,
   DOMAIN_ICONS,
   DraftPreview,
-  jobHasScheduledRun,
   jobNextRunLabel,
   jobStatusLabel,
   jobStatusTone,
