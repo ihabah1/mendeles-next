@@ -9,6 +9,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getAuthErrorMessage } from "@/lib/auth/auth-context";
 
+const FIELDS = [
+  { key: "tenant_name", type: "text", autoComplete: "organization" },
+  { key: "first_name", type: "text", autoComplete: "given-name" },
+  { key: "last_name", type: "text", autoComplete: "family-name" },
+  { key: "email", type: "email", autoComplete: "email" },
+  { key: "password", type: "password", autoComplete: "new-password" },
+] as const;
+
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
@@ -28,10 +36,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       const res = await authApi.register(form);
       setMessage(res.message);
-      setTimeout(() => router.push("/login"), 2000);
+      if (res.verification_email_sent !== false) {
+        setTimeout(() => router.push("/login"), 2500);
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err, tc("unexpectedError")));
     } finally {
@@ -39,35 +50,43 @@ export default function RegisterPage() {
     }
   }
 
+  const labels: Record<(typeof FIELDS)[number]["key"], string> = {
+    tenant_name: t("tenantName"),
+    first_name: t("firstName"),
+    last_name: t("lastName"),
+    email: t("email"),
+    password: t("password"),
+  };
+
   return (
     <div className="mx-auto flex min-h-screen max-w-md items-center p-6">
       <Card className="w-full">
-        <h1 className="mb-6 text-2xl font-bold">{t("register")}</h1>
+        <h1 className="mb-2 text-2xl font-bold">{t("register")}</h1>
+        <p className="mb-6 text-sm text-slate-500">{t("registerHint")}</p>
         <form onSubmit={onSubmit} className="space-y-4">
-          {(
-            [
-              ["tenant_name", t("tenantName")],
-              ["first_name", t("firstName")],
-              ["last_name", t("lastName")],
-              ["email", t("email")],
-              ["password", t("password")],
-            ] as const
-          ).map(([key, label]) => (
+          {FIELDS.map(({ key, type, autoComplete }) => (
             <div key={key}>
-              <label className="mb-1 block text-sm">{label}</label>
+              <label htmlFor={`register-${key}`} className="mb-1 block text-sm">
+                {labels[key]}
+              </label>
               <Input
-                type={key === "password" ? "password" : key === "email" ? "email" : "text"}
+                id={`register-${key}`}
+                type={type}
+                autoComplete={autoComplete}
                 value={form[key]}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 required
                 minLength={key === "password" ? 10 : undefined}
               />
+              {key === "password" && (
+                <p className="mt-1 text-xs text-slate-500">{t("passwordHint")}</p>
+              )}
             </div>
           ))}
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {message && <p className="text-sm text-green-700">{message}</p>}
+          {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+          {message && <p className="text-sm text-green-700" role="status">{message}</p>}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "…" : t("register")}
+            {loading ? tc("loading") : t("register")}
           </Button>
         </form>
         <p className="mt-4 text-sm">

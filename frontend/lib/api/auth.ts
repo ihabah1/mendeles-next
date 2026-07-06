@@ -33,7 +33,10 @@ export const authApi = {
     first_name: string;
     last_name: string;
     tenant_name: string;
-  }) => apiFetch<{ message: string; user_id: string }>("/api/v1/auth/register/", { method: "POST", json: body }),
+  }) => apiFetch<{ message: string; user_id: string; verification_email_sent?: boolean }>(
+    "/api/v1/auth/register/",
+    { method: "POST", json: body },
+  ),
 
   login: (body: { email: string; password: string }) =>
     apiFetch<{ access: string; expires_in: number; user: AuthUser }>("/api/v1/auth/login/", {

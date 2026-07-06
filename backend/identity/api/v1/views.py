@@ -24,11 +24,17 @@ class RegisterView(APIView):
             return blocked
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = AuthService.register(request=request, **serializer.validated_data)
+        user, verification_email_sent = AuthService.register(request=request, **serializer.validated_data)
+        message = (
+            "ההרשמה הצליחה. נשלח אליך אימייל לאימות הכתובת."
+            if verification_email_sent
+            else "ההרשמה הצליחה. לא הצלחנו לשלוח אימייל אימות כרגע — פנו לתמיכה או נסו שוב מאוחר יותר."
+        )
         return Response(
             {
-                "message": "ההרשמה הצליחה. נשלח אליך אימייל לאימות הכתובת.",
+                "message": message,
                 "user_id": str(user.id),
+                "verification_email_sent": verification_email_sent,
             },
             status=status.HTTP_201_CREATED,
         )

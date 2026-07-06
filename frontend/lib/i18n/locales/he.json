@@ -277,6 +277,8 @@
     "forgotPassword": "שכחת סיסמה?",
     "noAccount": "אין לך חשבון?",
     "hasAccount": "כבר יש לך חשבון?",
+    "registerHint": "צרו חשבון עסקי חדש. לאחר ההרשמה תקבלו אימייל לאימות לפני ההתחברות.",
+    "passwordHint": "לפחות 10 תווים",
     "verifyTitle": "אימות אימייל",
     "verifySuccess": "האימייל אומת בהצלחה",
     "resetTitle": "איפוס סיסמה",

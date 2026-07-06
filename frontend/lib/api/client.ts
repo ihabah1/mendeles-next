@@ -52,6 +52,9 @@ export async function apiFetch<T>(
     if (payload?.error) {
       throw new ApiError(payload.error);
     }
+    if (res.status === 502) {
+      throw new Error("השרת אינו זמין כרגע. ודאו שה-Backend פועל או נסו שוב בעוד רגע.");
+    }
     throw new Error(payload?.message || `Server error (${res.status})`);
   }
   return data as T;

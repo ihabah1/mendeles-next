@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from django.conf import settings
@@ -16,6 +17,7 @@ from tenancy.domain.services import slugify_tenant_name
 from tenancy.infrastructure.models import Tenant
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _client_meta(request) -> tuple[str | None, str]:
@@ -26,6 +28,14 @@ def _client_meta(request) -> tuple[str | None, str]:
         ip = None
     ua = request.META.get("HTTP_USER_AGENT", "")
     return ip, ua
+
+
+def _ensure_system_roles_seeded() -> None:
+    if Role.objects.filter(slug="business_owner", tenant__isnull=True, is_system=True).exists():
+        return
+    from rbac.management.commands.seed_rbac import Command as SeedRbacCommand
+
+    SeedRbacCommand().handle()
 
 
 class AuthService:
@@ -39,7 +49,7 @@ class AuthService:
         last_name: str,
         tenant_name: str,
         request,
-    ) -> User:
+    ) -> tuple[User, bool]:
         email = email.strip().lower()
         if User.objects.filter(email=email, deleted_at__isnull=True).exists():
             raise ConflictError("כתובת האימייל כבר רשומה במערכת")
@@ -58,6 +68,7 @@ class AuthService:
             default_tenant=tenant,
         )
 
+        _ensure_system_roles_seeded()
         owner_role = Role.objects.get(slug="business_owner", tenant__isnull=True, is_system=True)
         UserRole.objects.create(user=user, role=owner_role, tenant=tenant)
 
@@ -68,7 +79,12 @@ class AuthService:
             expires_at=timezone.now() + settings.EMAIL_VERIFICATION_TTL,
         )
         verify_url = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
-        EmailService.send_verification_email(to_email=user.email, verify_url=verify_url)
+        verification_email_sent = True
+        try:
+            EmailService.send_verification_email(to_email=user.email, verify_url=verify_url)
+        except Exception:
+            verification_email_sent = False
+            logger.exception("verification_email_failed", extra={"user_id": str(user.id), "email": user.email})
 
         ip, ua = _client_meta(request)
         AuditService.log(
@@ -79,8 +95,9 @@ class AuthService:
             resource_id=user.id,
             ip_address=ip,
             user_agent=ua,
+            metadata={"verification_email_sent": verification_email_sent},
         )
-        return user
+        return user, verification_email_sent
 
     @staticmethod
     def login(*, email: str, password: str, request) -> dict:

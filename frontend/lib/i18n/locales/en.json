@@ -314,6 +314,8 @@
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
+    "registerHint": "Create a new business account. You will receive a verification email before you can sign in.",
+    "passwordHint": "At least 10 characters",
     "verifyTitle": "Email verification",
     "verifySuccess": "Email verified successfully",
     "resetTitle": "Reset password",

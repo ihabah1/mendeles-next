@@ -114,3 +114,32 @@ def test_unverified_user_cannot_login(api_client, seeded):
         format="json",
     )
     assert login.status_code in (401, 403)
+
+
+@pytest.mark.django_db
+def test_register_without_rbac_seed_auto_seeds(api_client):
+    reg = api_client.post("/api/v1/auth/register/", _register_payload("fresh@test.com"), format="json")
+    assert reg.status_code == 201, reg.content
+    body = reg.json()
+    assert body["user_id"]
+    assert body.get("verification_email_sent") is True
+
+
+@pytest.mark.django_db
+def test_register_survives_email_failure(api_client, seeded, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("smtp unavailable")
+
+    monkeypatch.setattr("identity.application.auth_service.EmailService.send_verification_email", boom)
+    reg = api_client.post(
+        "/api/v1/auth/register/",
+        _register_payload("mailfail@test.com"),
+        format="json",
+    )
+    assert reg.status_code == 201, reg.content
+    body = reg.json()
+    assert body["verification_email_sent"] is False
+    assert "user_id" in body
+
+    User = get_user_model()
+    assert User.objects.filter(email="mailfail@test.com").exists()

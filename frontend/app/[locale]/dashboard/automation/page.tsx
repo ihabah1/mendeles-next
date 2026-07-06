@@ -113,7 +113,7 @@ export default function AutomationPage() {
                 className="mt-3 flex flex-wrap gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  createMutation.mutate();
+                  createMutation.mutate({});
                 }}
               >
                 <Input
