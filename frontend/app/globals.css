@@ -181,3 +181,22 @@ html.a11y-high-contrast video {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* AI SEO workspace studio */
+.workspace-studio {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(111, 66, 245, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(16, 185, 129, 0.08), transparent),
+    #080c16;
+}
+
+.workspace-studio input:focus,
+.workspace-studio select:focus,
+.workspace-studio textarea:focus {
+  border-color: rgba(111, 66, 245, 0.55);
+  box-shadow: 0 0 0 3px rgba(111, 66, 245, 0.15);
+}
+
+.workspace-stepper-line {
+  background: linear-gradient(90deg, #6f42f5 0%, rgba(111, 66, 245, 0.15) 100%);
+}

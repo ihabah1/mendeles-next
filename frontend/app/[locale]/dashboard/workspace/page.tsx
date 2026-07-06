@@ -30,6 +30,13 @@ import {
   toLocalInputValue,
   type JobTab,
 } from "@/components/workspace/workspace-helpers";
+import {
+  DomainTile,
+  ModeSegment,
+  OptionCard,
+  OutputPill,
+  StudioPanel,
+} from "@/components/workspace/workspace-studio-ui";
 
 const AUTO_RUN_STORAGE_KEY = "ai-seo-auto-run-jobs";
 const LEGACY_DISABLE_AUTO_RUN_KEY = "ai-seo-disable-auto-run";
@@ -61,15 +68,6 @@ function formatScheduledAutomationSummary(
 
 function isRunnableJob(job: Pick<AiSeoWorkspaceJob, "status">): boolean {
   return job.status === "queued" || job.status === "running";
-}
-
-function StudioPanel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`rounded-2xl border border-white/10 bg-[#12182a]/80 p-5 backdrop-blur-sm ${className}`}>
-      <h2 className="text-base font-semibold text-white">{title}</h2>
-      <div className="mt-4 flex flex-col">{children}</div>
-    </section>
-  );
 }
 
 export default function WorkspacePage() {
@@ -379,10 +377,6 @@ export default function WorkspacePage() {
     setKeywordsText(Array.from(new Set(domains.flatMap((d) => d.keywords))).join("\n"));
   }
 
-  function toggleOutput(value: string) {
-    setOutputTypes((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
-  }
-
   function confirmDeleteJob(jobId: string) {
     if (window.confirm("למחוק את ה-job? אם הוא עדיין פעיל או בתור, הוא יבוטל אוטומטית לפני המחיקה.")) {
       deleteJob.mutate(jobId);
@@ -556,7 +550,8 @@ export default function WorkspacePage() {
   const allDomainsSelected = domains.length > 0 && selectedDomains.length === domains.length;
   const canStartGeneration =
     randomTopicsEnabled || newsHotTopicsEnabled || selectedDomains.length > 0;
-  const inputClass = "w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-500/50";
+  const inputClass =
+    "w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600";
   const selectClass = inputClass;
 
   const STEPS = [
@@ -605,14 +600,16 @@ export default function WorkspacePage() {
         ) : null}
 
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-white/10 bg-[#12182a]/60 p-5 backdrop-blur-sm">
           <div>
-            <Link href="/dashboard" className="text-sm text-slate-400 hover:text-violet-300">
+            <Link href="/dashboard" className="text-sm text-slate-400 transition hover:text-[#c4b5fd]">
               ← חזרה לדשבורד
             </Link>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">ממשק עבודה וניהול</h1>
+            <h1 className="mt-2 bg-gradient-to-l from-white to-slate-300 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl">
+              ממשק עבודה וניהול
+            </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-400">
-              מחולל תוכן חכם ומתקדם עם AI, מחקר ומעקב טרנדים בזמן אמת
+              מחולל תוכן חכם עם AI · מחקר SEO · אוטומציה חוזרת
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -621,12 +618,12 @@ export default function WorkspacePage() {
               variant="outline"
               size="sm"
               onClick={() => setShowGuide((v) => !v)}
-              className="border-violet-500/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
+              className="border-[#6F42F5]/40 bg-[#6F42F5]/10 text-[#ddd6fe] hover:bg-[#6F42F5]/20"
             >
-              מדריך מהיר
+              {showGuide ? "הסתר מדריך" : "מדריך מהיר"}
             </Button>
             <Link href="/dashboard/automation">
-              <Button type="button" variant="outline" size="sm" className="border-white/10 bg-white/5 text-slate-200">
+              <Button type="button" variant="outline" size="sm" className="border-white/10 bg-white/5 text-slate-200 hover:bg-white/10">
                 פאנל ג׳ובים
               </Button>
             </Link>
@@ -634,24 +631,32 @@ export default function WorkspacePage() {
         </div>
 
         {/* Stepper */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-0">
           {STEPS.map((step, index) => (
-            <div key={step.id} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                  step.active ? "bg-violet-600 text-white" : "border border-white/15 bg-white/5 text-slate-400"
-                }`}
-              >
-                {step.id}
+            <div key={step.id} className="flex items-center">
+              <div className="flex items-center gap-2 px-1 sm:px-2">
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition ${
+                    step.active
+                      ? "bg-[#6F42F5] text-white shadow-lg shadow-[#6F42F5]/40"
+                      : "border border-white/15 bg-white/5 text-slate-500"
+                  }`}
+                >
+                  {step.id}
+                </div>
+                <span className={`hidden text-sm sm:inline ${step.active ? "font-semibold text-white" : "text-slate-500"}`}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`text-sm ${step.active ? "font-medium text-white" : "text-slate-500"}`}>{step.label}</span>
-              {index < STEPS.length - 1 && <span className="hidden text-slate-600 sm:inline">—</span>}
+              {index < STEPS.length - 1 && (
+                <div className="mx-1 hidden h-px w-8 workspace-stepper-line sm:block lg:w-14" />
+              )}
             </div>
           ))}
         </div>
 
         {showGuide && (
-          <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-4 text-sm text-slate-200">
+          <div className="rounded-2xl border border-[#6F42F5]/30 bg-[#6F42F5]/10 p-4 text-sm text-slate-200">
             <p className="font-medium">מדריך מהיר</p>
             <ol className="mt-2 list-decimal space-y-1 ps-5 text-slate-300">
               <li><strong>ריצה עכשיו:</strong> בחר תחומים / מילים / רנדומלי → «צור תוכן עכשיו»</li>
@@ -669,23 +674,256 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr] xl:items-start">
-          {/* Content + scheduling column (visual right in RTL) */}
+        {/* Action hero — mode + CTA */}
+        {canManage && (
+          <StudioPanel
+            title="יצירת תוכן"
+            subtitle="בחרו מצב, הגדירו תוצר, ולחצו להפעלה"
+            accent={runMode === "now" ? "purple" : "emerald"}
+            className="border-2"
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ModeSegment
+                active={runMode === "now"}
+                tone="now"
+                icon="▶"
+                title="ריצה עכשיו"
+                description="יצירה חד-פעמית לפי תחומים, מילות מפתח או נושאים אקראיים"
+                onClick={() => {
+                  setRunMode("now");
+                  setScheduleEnabled(false);
+                }}
+              />
+              <ModeSegment
+                active={runMode === "automation"}
+                tone="automation"
+                icon="🔄"
+                title="אוטומציה חוזרת"
+                description="ריצות אוטומטיות כל X דקות — בלי לחיצה חוזרת"
+                onClick={() => {
+                  setRunMode("automation");
+                  setScheduleEnabled(true);
+                }}
+              />
+            </div>
+
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">סוג תוצר</p>
+              <div className="flex flex-wrap gap-2">
+                <OutputPill
+                  label="בלוג / מאמר"
+                  active={outputTypes.includes("blog") && !outputTypes.includes("landing_page")}
+                  disabled={newsHotTopicsEnabled}
+                  onClick={() => setOutputTypes(["blog"])}
+                />
+                <OutputPill
+                  label="דף נחיתה"
+                  active={outputTypes.includes("landing_page") && !outputTypes.includes("blog")}
+                  disabled={newsHotTopicsEnabled}
+                  onClick={() => setOutputTypes(["landing_page"])}
+                />
+                <OutputPill
+                  label="שניהם"
+                  active={outputTypes.includes("blog") && outputTypes.includes("landing_page")}
+                  disabled={newsHotTopicsEnabled}
+                  onClick={() => setOutputTypes(["blog", "landing_page"])}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <OptionCard
+                checked={randomTopicsEnabled}
+                onChange={setRandomTopicsEnabled}
+                tone="purple"
+                title="נושאים אקראיים"
+                description="המערכת בוחרת תחומים ומילים חמות — בלי לבחור ידנית"
+              />
+              <OptionCard
+                checked={newsHotTopicsEnabled}
+                onChange={setNewsHotTopicsEnabled}
+                tone="amber"
+                title="חדשות חמות"
+                description="אירוע מ-24 שעות → מאמר + דף נחיתה"
+              />
+              <OptionCard
+                checked={autoPublishEnabled}
+                onChange={setAutoPublishEnabled}
+                title="פרסום אוטומטי"
+                description="העלאה לפרודקשן ללא אישור ידני"
+              />
+            </div>
+
+            {randomTopicsEnabled && (
+              <label className="mt-3 block max-w-xs text-sm">
+                <span className="mb-1 block text-slate-400">נושאים אקראיים בכל batch</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={6}
+                  className={inputClass}
+                  value={randomTopicCount}
+                  onChange={(e) => setRandomTopicCount(Number(e.target.value) || 1)}
+                />
+              </label>
+            )}
+
+            {runMode === "automation" && (
+              <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                <p className="text-sm font-medium text-emerald-100">תזמון חוזר</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm sm:col-span-2">
+                    <span className="mb-1 block text-slate-300">כל כמה דקות</span>
+                    <input
+                      type="number"
+                      min={3}
+                      max={10080}
+                      className={inputClass}
+                      value={scheduleEveryMinutes}
+                      onChange={(e) => setScheduleEveryMinutes(Math.max(3, Number(e.target.value) || 3))}
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="radio" name="schedule-start" checked={scheduleStartNow} onChange={() => setScheduleStartNow(true)} className="accent-emerald-500" />
+                    התחל עכשיו
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="radio" name="schedule-start" checked={!scheduleStartNow} onChange={() => setScheduleStartNow(false)} className="accent-emerald-500" />
+                    התחל בשעה
+                  </label>
+                  {!scheduleStartNow && (
+                    <input type="datetime-local" className={`${inputClass} sm:col-span-2`} value={scheduleStartAt} onChange={(e) => setScheduleStartAt(e.target.value)} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              className={`mt-5 w-full py-6 text-lg font-bold shadow-xl transition hover:scale-[1.01] active:scale-[0.99] ${
+                runMode === "now"
+                  ? "bg-[#6F42F5] text-white shadow-[#6F42F5]/40 hover:bg-[#5a32d4]"
+                  : "bg-emerald-600 text-white shadow-emerald-600/40 hover:bg-emerald-500"
+              }`}
+              disabled={
+                !geminiReady ||
+                generate.isPending ||
+                !canStartGeneration ||
+                outputTypes.length === 0 ||
+                (runMode === "automation" && scheduleEveryMinutes < 3) ||
+                (runMode === "automation" && !scheduleStartNow && !scheduleStartAt)
+              }
+              onClick={() => generate.mutate(runMode)}
+            >
+              {generate.isPending ? "יוצר batch..." : runMode === "now" ? "▶ צור תוכן עכשיו" : "🔄 הפעל אוטומציה חוזרת"}
+            </Button>
+            {!canStartGeneration && (
+              <p className="mt-2 text-center text-xs text-amber-300">
+                בחרו תחום, או סמנו «נושאים אקראיים» / «חדשות חמות»
+              </p>
+            )}
+          </StudioPanel>
+        )}
+
+        <div className="grid gap-6 xl:grid-cols-[1fr_1.1fr] xl:items-start">
+          {/* Domains — step 1 */}
+          <div className="space-y-5">
+            <StudioPanel title="תחומים ומילות מפתח" subtitle="שלב 1 — בחרו נושאים או הוסיפו מילים מהמחקר" step={1} accent="purple">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {businessDomains.map((domain) => (
+                  <DomainTile
+                    key={domain.value}
+                    selected={selectedDomains.includes(domain.value)}
+                    onClick={() => toggleDomain(domain.value)}
+                    icon={DOMAIN_ICONS[domain.value] || "📌"}
+                    label={domain.label}
+                  />
+                ))}
+              </div>
+              {newsDomains.length > 0 && (
+                <>
+                  <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-amber-300">חדשות מהיום</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {newsDomains.map((domain) => (
+                      <DomainTile
+                        key={domain.value}
+                        variant="news"
+                        selected={selectedDomains.includes(domain.value)}
+                        onClick={() => toggleDomain(domain.value)}
+                        icon={DOMAIN_ICONS[domain.value] || "📰"}
+                        label={domain.label}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+              {hasNewsDomainsSelected && (
+                <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-100">
+                  Gemini יבנה מאמר ודף נחיתה סביב אירוע חדשותי טרנדי.
+                </p>
+              )}
+              <label className="mt-4 block text-sm">
+                <span className="mb-1 block font-medium text-slate-300">מילות מפתח</span>
+                <p className="mb-2 text-xs text-slate-500">
+                  מטבלת המחקר למטה → «הוסף למילות מפתח», או הקלידו כאן.
+                </p>
+                {selectedResearchRows.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mb-2 border-[#6F42F5]/50 bg-[#6F42F5]/15 text-[#ddd6fe] hover:bg-[#6F42F5]/25"
+                    onClick={() => addResearchToKeywords(selectedResearchRows)}
+                  >
+                    ↓ הוסף {selectedResearchRows.length} ביטויים מהמחקר
+                  </Button>
+                )}
+                <textarea className={`${inputClass} min-h-28 font-mono text-xs`} value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} placeholder="מילה אחת בכל שורה, או מופרדות בפסיק..." />
+              </label>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="accent-[#6F42F5]" checked={allDomainsSelected} onChange={toggleAllDomains} />
+                  <span>בחר הכל</span>
+                </label>
+                <span className="rounded-full bg-[#6F42F5]/20 px-2.5 py-0.5 text-xs font-medium text-[#ddd6fe]">
+                  {selectedDomains.length} תחומים
+                </span>
+              </div>
+            </StudioPanel>
+
+            <StudioPanel title="מה כולל המחקר?" accent="sky" className="hidden lg:block">
+              <ul className="space-y-2 text-sm text-slate-300">
+                {["זיהוי טרנדים עדכניים", "מילות מפתח בנפח גבוה", "ניתוח כוונת חיפוש", "הצעות כותרות ו-meta"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <span className="text-[#6F42F5]">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs text-sky-200">ניתוח מתחרים</span>
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">User Intent</span>
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-200">כותרות / Meta</span>
+              </div>
+            </StudioPanel>
+          </div>
+
+          {/* SEO + settings — step 2–3 */}
           <div className="flex flex-col gap-5">
-            <StudioPanel title="מקור SEO">
+            <StudioPanel title="מקור SEO" subtitle="הפעילו מחקר לפני יצירת תוכן" step={2} accent="sky">
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setSeoSource("trends")}
                   className={`rounded-xl border p-4 text-start transition ${
                     seoSource === "trends"
-                      ? "border-violet-500 bg-violet-500/15 ring-1 ring-violet-500/40"
+                      ? "border-[#6F42F5] bg-[#6F42F5]/15 ring-1 ring-[#6F42F5]/40"
                       : "border-white/10 bg-white/5 hover:border-white/20"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">Google Trends</span>
-                    <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] text-white">מומלץ</span>
+                    <span className="rounded-full bg-[#6F42F5] px-2 py-0.5 text-[10px] font-bold text-white">מומלץ</span>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">טרנדים, related queries, נפח יחסי</p>
                 </button>
@@ -694,7 +932,7 @@ export default function WorkspacePage() {
                   onClick={() => setSeoSource("search_console")}
                   className={`rounded-xl border p-4 text-start transition ${
                     seoSource === "search_console"
-                      ? "border-violet-500 bg-violet-500/15 ring-1 ring-violet-500/40"
+                      ? "border-[#6F42F5] bg-[#6F42F5]/15 ring-1 ring-[#6F42F5]/40"
                       : "border-white/10 bg-white/5 hover:border-white/20"
                   }`}
                 >
@@ -729,11 +967,11 @@ export default function WorkspacePage() {
               {canManage && (
                 <Button
                   type="button"
-                  className="mt-4 w-full bg-violet-600 hover:bg-violet-500"
+                  className="mt-4 w-full bg-[#6F42F5] hover:bg-[#5a32d4]"
                   disabled={refreshResearch.isPending}
                   onClick={() => refreshResearch.mutate()}
                 >
-                  {refreshResearch.isPending ? "מריץ מחקר..." : "הפעל מחקר"}
+                  {refreshResearch.isPending ? "מריץ מחקר..." : "הפעל מחקר SEO"}
                 </Button>
               )}
               <p className="mt-2 text-xs text-emerald-400">
@@ -747,61 +985,7 @@ export default function WorkspacePage() {
               )}
             </StudioPanel>
 
-            <StudioPanel title="מה תרצו לעשות?">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRunMode("now");
-                    setScheduleEnabled(false);
-                  }}
-                  className={`rounded-xl border p-4 text-start transition ${
-                    runMode === "now"
-                      ? "border-violet-500 bg-violet-500/20 ring-1 ring-violet-500/40"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
-                  }`}
-                >
-                  <span className="text-lg">▶</span>
-                  <span className="mt-2 block font-semibold text-white">ריצה עכשיו</span>
-                  <span className="mt-1 block text-xs text-slate-400">
-                    יצירת תוכן חד-פעמי לפי תחומים, מילות מפתח או נושאים אקראיים
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRunMode("automation");
-                    setScheduleEnabled(true);
-                  }}
-                  className={`rounded-xl border p-4 text-start transition ${
-                    runMode === "automation"
-                      ? "border-emerald-500 bg-emerald-500/20 ring-1 ring-emerald-500/40"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
-                  }`}
-                >
-                  <span className="text-lg">🔄</span>
-                  <span className="mt-2 block font-semibold text-white">אוטומציה חוזרת</span>
-                  <span className="mt-1 block text-xs text-slate-400">
-                    המערכת תריץ יצירת תוכן אוטומטית כל X דקות — ללא לחיצה חוזרת
-                  </span>
-                </button>
-              </div>
-              <p className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-slate-300">
-                {runMode === "now" ? (
-                  <>
-                    <strong className="text-white">ריצה עכשיו:</strong> בחרו תחומים (או סמנו «נושאים אקראיים»), הוסיפו מילים
-                    מהמחקר, ולחצו «צור תוכן עכשיו». הג׳ובים ייווצרו מיד וירוצו אם «הפעל אוטומטית ג׳ובים בתור» מסומן.
-                  </>
-                ) : (
-                  <>
-                    <strong className="text-white">אוטומציה:</strong> הגדירו מרווח זמן, אפשרויות רנדומליות/חדשות, ולחצו «הפעל אוטומציה».
-                    הריצה הראשונה תתחיל מיד (או בשעה שתבחרו).
-                  </>
-                )}
-              </p>
-            </StudioPanel>
-
-            <StudioPanel title="סוג תוכן והגדרות">
+            <StudioPanel title="הגדרות תוכן" subtitle="הנחיות, שפות וסגנון כתיבה" step={3}>
               <label className="block text-sm">
                 <span className="mb-1 block text-slate-400">הנחיות ל-Gemini</span>
                 <textarea
@@ -814,11 +998,7 @@ export default function WorkspacePage() {
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-sm">
                   <span className="mb-1 block text-slate-400">שפות תוכן</span>
-                  <select
-                    className={selectClass}
-                    value={contentLocales}
-                    onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}
-                  >
+                  <select className={selectClass} value={contentLocales} onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}>
                     <option value="both">עברית + אנגלית</option>
                     <option value="he">עברית בלבד</option>
                     <option value="en">אנגלית בלבד</option>
@@ -842,24 +1022,17 @@ export default function WorkspacePage() {
                 </label>
               </div>
               {hasSportsSelected && (
-                <label className="mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={sportsTranslationEnabled}
-                    onChange={(e) => setSportsTranslationEnabled(e.target.checked)}
-                  />
-                  <span>
-                    <span className="block font-medium text-red-100">תרגום כתבת ספורט מחו״ל (כדורגל)</span>
-                    <span className="mt-1 block text-xs text-red-100/80">
-                      יוצר כתבה עיתונאית מתורגמת עם תמונת סטוק חופשית למדור ספורט — בעברית ובאנגלית לפי בחירת השפות
-                    </span>
-                  </span>
-                </label>
+                <OptionCard
+                  checked={sportsTranslationEnabled}
+                  onChange={setSportsTranslationEnabled}
+                  tone="purple"
+                  title="תרגום כתבת ספורט (כדורגל)"
+                  description="כתבה עיתונאית מתורגמת עם תמונת סטוק — בעברית ובאנגלית"
+                />
               )}
               <button
                 type="button"
-                className="mt-3 text-xs text-violet-300 hover:underline"
+                className="mt-3 text-xs text-[#c4b5fd] hover:underline"
                 onClick={() => setShowAdvanced((v) => !v)}
               >
                 {showAdvanced ? "הסתר הגדרות מתקדמות" : "הגדרות מתקדמות (תמונות, פרסום, היסטוריה)"}
@@ -871,11 +1044,11 @@ export default function WorkspacePage() {
                     <input type="datetime-local" className={inputClass} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
                   </label>
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={landingDesignEnabled} onChange={(e) => setLandingDesignEnabled(e.target.checked)} />
+                    <input type="checkbox" className="accent-[#6F42F5]" checked={landingDesignEnabled} onChange={(e) => setLandingDesignEnabled(e.target.checked)} />
                     <span>עיצוב אקראי לדפי נחיתה</span>
                   </label>
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={freeImageEnabled} onChange={(e) => setFreeImageEnabled(e.target.checked)} />
+                    <input type="checkbox" className="accent-[#6F42F5]" checked={freeImageEnabled} onChange={(e) => setFreeImageEnabled(e.target.checked)} />
                     <span>תמונת סטוק חופשית</span>
                   </label>
                   <label className="block">
@@ -897,278 +1070,12 @@ export default function WorkspacePage() {
                   </label>
                 </div>
               )}
-              {canManage && (
-                <>
-                  <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-sm font-medium text-white">סוג תוצר</p>
-                    <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={outputTypes.includes("blog")}
-                          onChange={() => toggleOutput("blog")}
-                          disabled={newsHotTopicsEnabled}
-                        />
-                        <span>בלוג / מאמר</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={outputTypes.includes("landing_page")}
-                          onChange={() => toggleOutput("landing_page")}
-                          disabled={newsHotTopicsEnabled}
-                        />
-                        <span>דף נחיתה</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={outputTypes.includes("blog") && outputTypes.includes("landing_page")}
-                          onChange={() => setOutputTypes(["blog", "landing_page"])}
-                          disabled={newsHotTopicsEnabled}
-                        />
-                        <span>שניהם</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3 text-sm">
-                    <p className="font-medium text-violet-200">איך לבחור נושאים?</p>
-                    <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={randomTopicsEnabled}
-                        onChange={(e) => setRandomTopicsEnabled(e.target.checked)}
-                      />
-                      <span>
-                        <span className="block font-medium text-white">נושאים אקראיים מהקטלוג</span>
-                        <span className="mt-1 block text-xs text-slate-400">
-                          לא צריך לבחור תחומים — המערכת תבחר תחומים ומילות מפתח חמות לבד בכל ריצה
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={newsHotTopicsEnabled}
-                        onChange={(e) => setNewsHotTopicsEnabled(e.target.checked)}
-                      />
-                      <span>
-                        <span className="block font-medium text-amber-100">חדשות חמות מ-24 שעות</span>
-                        <span className="mt-1 block text-xs text-amber-100/80">
-                          אירוע חדשותי טרנדי → מאמר בלוג + דף נחיתה (מומלץ: שניהם)
-                        </span>
-                      </span>
-                    </label>
-                    {randomTopicsEnabled && (
-                      <label className="block text-sm">
-                        <span className="mb-1 block text-slate-400">כמה נושאים אקראיים בכל batch</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={6}
-                          className={inputClass}
-                          value={randomTopicCount}
-                          onChange={(e) => setRandomTopicCount(Number(e.target.value) || 1)}
-                        />
-                      </label>
-                    )}
-                    <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={autoPublishEnabled}
-                        onChange={(e) => setAutoPublishEnabled(e.target.checked)}
-                      />
-                      <span>
-                        <span className="block font-medium text-white">פרסום אוטומטי לפרודקשן</span>
-                        <span className="mt-1 block text-xs text-slate-400">ללא אישור ידני בסיום היצירה</span>
-                      </span>
-                    </label>
-                  </div>
-
-                  {runMode === "automation" && (
-                    <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-                      <p className="text-sm font-medium text-emerald-100">תזמון חוזר</p>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <label className="block text-sm sm:col-span-2">
-                          <span className="mb-1 block text-slate-300">כל כמה דקות</span>
-                          <input
-                            type="number"
-                            min={3}
-                            max={10080}
-                            className={inputClass}
-                            value={scheduleEveryMinutes}
-                            onChange={(e) => setScheduleEveryMinutes(Math.max(3, Number(e.target.value) || 3))}
-                          />
-                        </label>
-                        <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                          <input
-                            type="radio"
-                            name="schedule-start"
-                            checked={scheduleStartNow}
-                            onChange={() => setScheduleStartNow(true)}
-                          />
-                          התחל עכשיו
-                        </label>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="radio"
-                            name="schedule-start"
-                            checked={!scheduleStartNow}
-                            onChange={() => setScheduleStartNow(false)}
-                          />
-                          התחל בשעה
-                        </label>
-                        {!scheduleStartNow && (
-                          <input
-                            type="datetime-local"
-                            className={inputClass}
-                            value={scheduleStartAt}
-                            onChange={(e) => setScheduleStartAt(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    className={`mt-5 w-full py-5 text-base font-semibold ${
-                      runMode === "now"
-                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
-                    }`}
-                    disabled={
-                      !geminiReady ||
-                      generate.isPending ||
-                      !canStartGeneration ||
-                      outputTypes.length === 0 ||
-                      (runMode === "automation" && scheduleEveryMinutes < 3) ||
-                      (runMode === "automation" && !scheduleStartNow && !scheduleStartAt)
-                    }
-                    onClick={() => generate.mutate(runMode)}
-                  >
-                    {generate.isPending
-                      ? "יוצר batch..."
-                      : runMode === "now"
-                        ? "▶ צור תוכן עכשיו"
-                        : "🔄 הפעל אוטומציה חוזרת"}
-                  </Button>
-                  {!canStartGeneration && (
-                    <p className="mt-2 text-xs text-amber-300">
-                      בחרו לפחות תחום אחד, או סמנו «נושאים אקראיים» / «חדשות חמות».
-                    </p>
-                  )}
-                </>
-              )}
-            </StudioPanel>
-          </div>
-
-          {/* Domains column (visual left in RTL) */}
-          <div className="space-y-5">
-            <StudioPanel title="בחירת תחומים ומילות מפתח">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {businessDomains.map((domain) => {
-                  const selected = selectedDomains.includes(domain.value);
-                  return (
-                    <button
-                      key={domain.value}
-                      type="button"
-                      onClick={() => toggleDomain(domain.value)}
-                      className={`rounded-xl border p-3 text-start text-sm transition ${
-                        selected
-                          ? "border-violet-500 bg-violet-500/20 text-white"
-                          : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20"
-                      }`}
-                    >
-                      <span className="text-lg">{DOMAIN_ICONS[domain.value] || "📌"}</span>
-                      <span className="mt-1 block font-medium">{domain.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {newsDomains.length > 0 && (
-                <>
-                  <p className="mt-4 text-sm font-medium text-amber-200">חדשות מהיום</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {newsDomains.map((domain) => {
-                      const selected = selectedDomains.includes(domain.value);
-                      return (
-                        <button
-                          key={domain.value}
-                          type="button"
-                          onClick={() => toggleDomain(domain.value)}
-                          className={`rounded-xl border p-3 text-start text-sm transition ${
-                            selected
-                              ? "border-amber-400 bg-amber-500/20 text-white"
-                              : "border-amber-500/20 bg-amber-500/5 text-slate-300"
-                          }`}
-                        >
-                          <span className="text-lg">{DOMAIN_ICONS[domain.value] || "📰"}</span>
-                          <span className="mt-1 block font-medium">{domain.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-              {hasNewsDomainsSelected && (
-                <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-100">
-                  Gemini ייקח אירוע חדשותי טרנדי ויבנה מאמר או דף נחיתה סביבו.
-                </p>
-              )}
-              <label className="mt-4 block text-sm">
-                <span className="mb-1 block text-slate-400">מילות מפתח (פסיק או שורה חדשה)</span>
-                <p className="mb-2 text-xs text-slate-500">
-                  בחרו ביטויים בטבלת «תוצאות מחקר SEO» למטה ולחצו «הוסף למילות מפתח», או הקלידו כאן ידנית.
-                  בחירת תחום למעלה ממלאת אוטומטית מילות ברירת מחדל.
-                </p>
-                {selectedResearchRows.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mb-2 border-violet-500/40 bg-violet-500/10 text-violet-200"
-                    onClick={() => addResearchToKeywords(selectedResearchRows)}
-                  >
-                    ↓ הוסף {selectedResearchRows.length} ביטויים מהמחקר
-                  </Button>
-                )}
-                <textarea className={`${inputClass} min-h-28`} value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} />
-              </label>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={allDomainsSelected} onChange={toggleAllDomains} />
-                  <span>בחר הכל</span>
-                </label>
-                <span className="text-slate-400">{selectedDomains.length} תחומים נבחרו</span>
-              </div>
-            </StudioPanel>
-
-            <StudioPanel title="מה כולל המחקר?">
-              <ul className="space-y-2 text-sm text-slate-300">
-                {["זיהוי טרנדים עדכניים", "מילות מפתח בנפח גבוה", "ניתוח כוונת חיפוש", "הצעות כותרות ו-meta"].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200">ניתוח מתחרים</span>
-                <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">User Intent</span>
-                <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">כותרות / Meta</span>
-              </div>
-              <p className="mt-3 text-xs text-slate-500">⏱ הערכת זמן: 5–10 דקות</p>
             </StudioPanel>
           </div>
         </div>
 
         {/* Research results */}
-        <StudioPanel title="תוצאות מחקר SEO">
+        <StudioPanel title="תוצאות מחקר SEO" subtitle="סמנו ביטויים והעבירו לשדה מילות המפתח" accent="sky">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-400">
               מציג {seoSource === "trends" ? "Trends" : "Search Console"} · {sourceFilteredResearch.length} צירופים
@@ -1190,7 +1097,7 @@ export default function WorkspacePage() {
                   size="sm"
                   disabled={!geminiReady || !canScheduleResearchJobs || scheduleResearchJobs.isPending}
                   onClick={() => scheduleResearchJobs.mutate(selectedResearchRows)}
-                  className="bg-violet-600 hover:bg-violet-500"
+                  className="bg-[#6F42F5] hover:bg-[#5a32d4]"
                 >
                   תזמן ג׳ובים מהמחקר
                 </Button>
@@ -1267,7 +1174,7 @@ export default function WorkspacePage() {
                   type="button"
                   onClick={() => setJobTab(tab)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    jobTab === tab ? "bg-violet-600 text-white" : "bg-white/5 text-slate-400 hover:bg-white/10"
+                    jobTab === tab ? "bg-[#6F42F5] text-white" : "bg-white/5 text-slate-400 hover:bg-white/10"
                   }`}
                 >
                   {label}
@@ -1284,7 +1191,7 @@ export default function WorkspacePage() {
           </label>
           {canManage && (
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" size="sm" disabled={runSelectedJob.isPending || runNextStep.isPending} onClick={startSelectedJob} className="bg-violet-600">
+              <Button type="button" size="sm" disabled={runSelectedJob.isPending || runNextStep.isPending} onClick={startSelectedJob} className="bg-[#6F42F5] hover:bg-[#5a32d4]">
                 התחל
               </Button>
               <Button type="button" variant="outline" size="sm" disabled={!queueRunning} onClick={() => setQueueRunning(false)} className="border-white/10 bg-white/5">
@@ -1329,7 +1236,7 @@ export default function WorkspacePage() {
                     <div
                       key={job.id}
                       className={`grid ${batchJobsGridClass} items-center border-t border-white/10 px-3 py-3 text-sm ${
-                        isSelected ? "bg-violet-500/10" : "hover:bg-white/5"
+                        isSelected ? "bg-[#6F42F5]/10" : "hover:bg-white/5"
                       }`}
                     >
                       <button type="button" className="text-start" onClick={() => setSelectedJobId(job.id)}>
@@ -1344,7 +1251,7 @@ export default function WorkspacePage() {
                       <div>
                         <span className="text-xs text-slate-400">{job.progress_percent}%</span>
                         <span className="mt-1 block h-1.5 rounded-full bg-white/10">
-                          <span className="block h-1.5 rounded-full bg-violet-500" style={{ width: `${job.progress_percent}%` }} />
+                          <span className="block h-1.5 rounded-full bg-[#6F42F5]" style={{ width: `${job.progress_percent}%` }} />
                         </span>
                       </div>
                       {showNextRunColumn && (
@@ -1484,7 +1391,7 @@ export default function WorkspacePage() {
                           </Link>
                         )}
                         {canPublish && page.status !== "published" && (
-                          <Button type="button" size="sm" className="bg-violet-600" onClick={() => publish.mutate(page)} disabled={publish.isPending}>
+                          <Button type="button" size="sm" className="bg-[#6F42F5] hover:bg-[#5a32d4]" onClick={() => publish.mutate(page)} disabled={publish.isPending}>
                             אשר פרסום
                           </Button>
                         )}
