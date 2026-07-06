@@ -10,6 +10,7 @@ from ai_seo.api.v1.views import (
     AiSeoWorkspaceDisableScheduledAutomationView,
     AiSeoWorkspaceDeleteJobView,
     AiSeoWorkspaceDeletePageView,
+    AiSeoWorkspaceSwapPageImageView,
     AiSeoWorkspaceGenerateView,
     AiSeoWorkspacePublishJobView,
     AiSeoWorkspacePublishView,
@@ -34,6 +35,7 @@ urlpatterns = [
     path("workspace/publish/", AiSeoWorkspacePublishView.as_view(), name="ai-seo-workspace-publish"),
     path("workspace/jobs/<uuid:job_id>/publish/", AiSeoWorkspacePublishJobView.as_view(), name="ai-seo-workspace-publish-job"),
     path("workspace/pages/<uuid:page_id>/delete/", AiSeoWorkspaceDeletePageView.as_view(), name="ai-seo-workspace-delete-page"),
+    path("workspace/pages/<uuid:page_id>/swap-image/", AiSeoWorkspaceSwapPageImageView.as_view(), name="ai-seo-workspace-swap-image"),
     path("workspace/queue/run-next/", AiSeoWorkspaceRunNextView.as_view(), name="ai-seo-workspace-run-next"),
     path(
         "workspace/scheduled-automation/disable/",

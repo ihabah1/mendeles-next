@@ -22,7 +22,7 @@ export default function ContentPage() {
 
   const pages = useQuery({
     queryKey: ["content-pages"],
-    queryFn: contentApi.listPages,
+    queryFn: () => contentApi.listPages(),
     enabled: canView,
   });
 

@@ -429,13 +429,36 @@ class AiSeoGenerationService:
         }
 
     @staticmethod
+    def _queue_daily_stats(tenant_id) -> dict:
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        job_types = [JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE]
+        base = AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=job_types,
+            deleted_at__isnull=True,
+        )
+        waiting = base.filter(status__in=[JobStatus.QUEUED, JobStatus.SCHEDULED]).count()
+        running = base.filter(status=JobStatus.RUNNING).count()
+        completed_today = base.filter(status=JobStatus.COMPLETED, finished_at__gte=today_start).count()
+        failed_today = base.filter(status=JobStatus.FAILED, finished_at__gte=today_start).count()
+        started_today = base.filter(started_at__gte=today_start).count()
+        return {
+            "waiting": waiting,
+            "running": running,
+            "completed_today": completed_today,
+            "failed_today": failed_today,
+            "started_today": started_today,
+            "total_active": waiting + running,
+        }
+
+    @staticmethod
     def workspace_state(tenant_id) -> dict:
         AiSeoGenerationService.recover_stale_jobs(tenant_id)
         jobs = AutomationJob.objects.filter(
             tenant_id=tenant_id,
             job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
             deleted_at__isnull=True,
-        ).order_by("-created_at")[:20]
+        ).order_by("-created_at")[:80]
         pages = Page.objects.filter(
             tenant_id=tenant_id,
             page_type__in=[PageType.BLOG, PageType.LANDING_PAGE],
@@ -448,6 +471,7 @@ class AiSeoGenerationService:
             "drafts": [AiSeoGenerationService.serialize_page(page) for page in pages],
             "history": AiSeoGenerationService.run_history(tenant_id),
             "scheduled_automation": AiSeoGenerationService._scheduled_automation_state(tenant_id),
+            "queue_stats": AiSeoGenerationService._queue_daily_stats(tenant_id),
         }
 
     @classmethod
@@ -1658,3 +1682,50 @@ Locale: {locale}.
     @staticmethod
     def delete_page(tenant_id, page_id: str) -> None:
         PageService.soft_delete(tenant_id, page_id)
+
+    @classmethod
+    def swap_page_image(cls, tenant_id, page_id: str) -> Page:
+        page = PageService.get_page(tenant_id, page_id)
+        source_config = cls._source_config_for_page(page)
+        domain = source_config.get("domain")
+        keywords = source_config.get("keywords") or []
+        if not domain:
+            category = cls._page_category(page)
+            if category and category.get("slug"):
+                domain = next(
+                    (item for item in DOMAIN_OPTIONS if item.get("value") == category["slug"]),
+                    None,
+                )
+        if not domain:
+            domain = DOMAIN_OPTIONS[0] if DOMAIN_OPTIONS else None
+
+        visual_asset = cls._random_visual_asset(
+            domain,
+            keywords=keywords,
+            prompt=page.title or page.meta_title or "",
+        )
+        locale = page.locale or "he"
+        image_caption = (
+            f"Free stock image for commercial use · {visual_asset.get('source', '')}"
+            if locale == "en"
+            else f"תמונה חינמית לשימוש מסחרי · {visual_asset.get('source', '')}"
+        )
+        image_block = (
+            page.blocks.filter(block_type="image", deleted_at__isnull=True, is_visible=True)
+            .order_by("sort_order")
+            .first()
+        )
+        next_config = {**visual_asset, "caption": image_caption}
+        if image_block:
+            BlockService.update_block(image_block, {"config": {**image_block.config, **next_config}})
+        else:
+            BlockService.create_block(
+                page,
+                {
+                    "block_type": "image",
+                    "sort_order": 0,
+                    "config": next_config,
+                },
+            )
+        page.refresh_from_db()
+        return page

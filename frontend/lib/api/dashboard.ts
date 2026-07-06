@@ -222,9 +222,55 @@ export type ContentPage = {
   created_at: string;
 };
 
+export type ContentPageDetail = ContentPage & {
+  meta_title: string;
+  meta_description: string;
+  updated_at: string | null;
+  blocks: Array<{
+    id: string;
+    block_type: string;
+    sort_order: number;
+    config: Record<string, unknown>;
+    is_visible: boolean;
+  }>;
+  terms: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    taxonomy: string;
+  }>;
+  image?: Record<string, unknown> | null;
+};
+
 export const contentApi = {
-  listPages: () =>
-    apiFetch<{ results: ContentPage[] }>("/api/v1/content/pages/", { headers: authHeaders() }),
+  listPages: (params?: { page_type?: string; status?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.page_type) sp.set("page_type", params.page_type);
+    if (params?.status) sp.set("status", params.status);
+    const query = sp.toString();
+    return apiFetch<{ results: ContentPage[] }>(
+      `/api/v1/content/pages/${query ? `?${query}` : ""}`,
+      { headers: authHeaders() },
+    );
+  },
+  getPage: (id: string) =>
+    apiFetch<ContentPageDetail>(`/api/v1/content/pages/${id}/`, { headers: authHeaders() }),
+  updatePage: (
+    id: string,
+    data: Partial<{ title: string; meta_title: string; meta_description: string; slug: string }>,
+  ) =>
+    apiFetch<ContentPage>(`/api/v1/content/pages/${id}/`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      json: data,
+    }),
+  updateBlock: (pageId: string, blockId: string, data: { config?: Record<string, unknown> }) =>
+    apiFetch<{ id: string; block_type: string; config: Record<string, unknown> }>(
+      `/api/v1/content/pages/${pageId}/blocks/${blockId}/`,
+      { method: "PATCH", headers: authHeaders(), json: data },
+    ),
+  deletePage: (id: string) =>
+    apiFetch<void>(`/api/v1/content/pages/${id}/`, { method: "DELETE", headers: authHeaders() }),
   createPage: (data: { title: string; slug?: string; page_type?: string; locale?: string }) =>
     apiFetch<ContentPage>("/api/v1/content/pages/", {
       method: "POST",
@@ -674,6 +720,11 @@ export const aiSeoApi = {
       method: "DELETE",
       headers: authHeaders(),
     }),
+  swapWorkspacePageImage: (pageId: string) =>
+    apiFetch<AiSeoWorkspaceDraft>(`/api/v1/ai-seo/workspace/pages/${pageId}/swap-image/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
   runWorkspaceJob: (jobId: string) =>
     apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/run/`, {
       method: "POST",
@@ -809,6 +860,14 @@ export type AiSeoScheduledAutomation = {
   news_hot_topics_enabled: boolean;
   auto_publish_enabled: boolean;
 };
+export type AiSeoWorkspaceQueueStats = {
+  waiting: number;
+  running: number;
+  completed_today: number;
+  failed_today: number;
+  started_today: number;
+  total_active: number;
+};
 export type AiSeoWorkspace = {
   domains: AiSeoWorkspaceDomain[];
   gemini_configured: boolean;
@@ -816,4 +875,5 @@ export type AiSeoWorkspace = {
   drafts: AiSeoWorkspaceDraft[];
   history: AiSeoWorkspaceHistory[];
   scheduled_automation: AiSeoScheduledAutomation | null;
+  queue_stats: AiSeoWorkspaceQueueStats;
 };

@@ -36,6 +36,7 @@ import {
   OutputPill,
   StudioPanel,
 } from "@/components/workspace/workspace-studio-ui";
+import { KeywordChipField } from "@/components/workspace/keyword-chip-field";
 
 const AUTO_RUN_STORAGE_KEY = "ai-seo-auto-run-jobs";
 const LEGACY_DISABLE_AUTO_RUN_KEY = "ai-seo-disable-auto-run";
@@ -121,8 +122,11 @@ export default function WorkspacePage() {
   const [queueRunning, setQueueRunning] = useState(false);
   const [queueTick, setQueueTick] = useState(0);
   const queueAutoStartedRef = useRef(false);
-  const queueRunModeRef = useRef<"queue" | "selected">("queue");
+  const queueRunModeRef = useRef<"queue" | "selected" | "checked">("queue");
+  const queueTargetIdsRef = useRef<string[]>([]);
+  const queueTargetIndexRef = useRef(0);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [expandedPreviewIds, setExpandedPreviewIds] = useState<string[]>([]);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
@@ -303,11 +307,19 @@ export default function WorkspacePage() {
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
       if (["failed", "cancelled", "waiting_approval"].includes(job.status)) {
-        setQueueRunning(false);
-        queueAutoStartedRef.current = false;
+        if (queueRunModeRef.current === "checked") {
+          advanceCheckedQueue();
+        } else {
+          setQueueRunning(false);
+          queueAutoStartedRef.current = false;
+        }
         return;
       }
       if (job.status === "completed") {
+        if (queueRunModeRef.current === "checked") {
+          advanceCheckedQueue();
+          return;
+        }
         if (autoRunJobsEnabled) {
           queueRunModeRef.current = "queue";
           window.setTimeout(() => setQueueTick((tick) => tick + 1), 400);
@@ -382,7 +394,7 @@ export default function WorkspacePage() {
     }
   }
 
-  function startQueueProcessor(mode: "queue" | "selected" = "queue") {
+  function startQueueProcessor(mode: "queue" | "selected" | "checked" = "queue") {
     queueRunModeRef.current = mode;
     setQueueRunning(true);
     setQueueTick((tick) => tick + 1);
@@ -391,6 +403,52 @@ export default function WorkspacePage() {
   function startSelectedJob() {
     if (!selectedJobId) return;
     startQueueProcessor("selected");
+  }
+
+  function advanceCheckedQueue() {
+    const ids = queueTargetIdsRef.current;
+    let nextIdx = queueTargetIndexRef.current + 1;
+    const currentJobs = workspace.data?.jobs ?? [];
+    while (nextIdx < ids.length) {
+      const nextJob = currentJobs.find((item) => item.id === ids[nextIdx]);
+      if (nextJob && isRunnableJob(nextJob)) {
+        queueTargetIndexRef.current = nextIdx;
+        setSelectedJobId(ids[nextIdx]);
+        window.setTimeout(() => setQueueTick((tick) => tick + 1), 400);
+        return;
+      }
+      nextIdx += 1;
+    }
+    setQueueRunning(false);
+    queueAutoStartedRef.current = false;
+  }
+
+  function runActivatedJobs() {
+    const ids = selectedJobIds.filter((id) => {
+      const job = (workspace.data?.jobs ?? []).find((item) => item.id === id);
+      return job && isRunnableJob(job);
+    });
+    if (!ids.length) return;
+    queueTargetIdsRef.current = ids;
+    queueTargetIndexRef.current = 0;
+    setSelectedJobId(ids[0]);
+    startQueueProcessor("checked");
+  }
+
+  function toggleJobSelection(jobId: string) {
+    setSelectedJobIds((prev) =>
+      prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId],
+    );
+  }
+
+  function toggleAllJobsOnPage() {
+    const pageIds = pagedJobs.map((job) => job.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedJobIds.includes(id));
+    if (allSelected) {
+      setSelectedJobIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+      return;
+    }
+    setSelectedJobIds((prev) => Array.from(new Set([...prev, ...pageIds])));
   }
 
   function runAllJobs() {
@@ -499,6 +557,11 @@ export default function WorkspacePage() {
       runSelectedJob.mutate(selectedJobId);
       return;
     }
+    if (queueRunModeRef.current === "checked") {
+      const currentId = queueTargetIdsRef.current[queueTargetIndexRef.current];
+      if (currentId) runSelectedJob.mutate(currentId);
+      return;
+    }
     runNextStep.mutate();
   }, [queueRunning, queueTick, selectedJobId]);
 
@@ -537,13 +600,20 @@ export default function WorkspacePage() {
     if (!q) return true;
     return [job.name, job.user, job.id, job.current_step_name].some((part) => part.toLowerCase().includes(q));
   });
-  const runnableJobsCount = useMemo(() => jobs.filter(isRunnableJob).length, [jobs]);
-  const batchJobsGridClass = "grid-cols-[1.6fr_0.8fr_0.7fr_0.9fr_1fr_1fr_0.8fr_0.8fr]";
+  const runnableJobsCount = jobs.filter(isRunnableJob).length;
+  const activatedRunnableCount = selectedJobIds.filter((id) => {
+    const job = jobs.find((item) => item.id === id);
+    return job && isRunnableJob(job);
+  }).length;
+  const queueStats = workspace.data?.queue_stats;
+  const batchJobsGridClass = "grid-cols-[40px_1.6fr_0.8fr_0.7fr_0.9fr_1fr_1fr_0.8fr_0.8fr]";
   const researchCurrentPage = Math.min(researchPage, pageCount(sourceFilteredResearch.length));
   const jobsCurrentPage = Math.min(jobsPage, pageCount(filteredJobs.length));
   const draftsCurrentPage = Math.min(draftsPage, pageCount(drafts.length));
   const pagedResearchRows = pageSlice(sourceFilteredResearch, researchCurrentPage);
   const pagedJobs = pageSlice(filteredJobs, jobsCurrentPage);
+  const allJobsOnPageSelected =
+    pagedJobs.length > 0 && pagedJobs.every((job) => selectedJobIds.includes(job.id));
   const pagedDrafts = pageSlice(drafts, draftsCurrentPage);
   const selectedResearchRows = researchRows.filter((row) => selectedResearchIds.includes(row.id));
   const selectedResearchDomainValues = Array.from(new Set(selectedResearchRows.map((row) => row.category_value).filter(Boolean)));
@@ -869,7 +939,7 @@ export default function WorkspacePage() {
               <label className="mt-4 block text-sm">
                 <span className="mb-1 block font-medium text-slate-300">מילות מפתח</span>
                 <p className="mb-2 text-xs text-slate-500">
-                  מטבלת המחקר למטה → «הוסף למילות מפתח», או הקלידו כאן.
+                  גררו ביטויים מטבלת המחקר לבלונים, או הקלידו ישירות.
                 </p>
                 {selectedResearchRows.length > 0 && (
                   <Button
@@ -882,7 +952,7 @@ export default function WorkspacePage() {
                     ↓ הוסף {selectedResearchRows.length} ביטויים מהמחקר
                   </Button>
                 )}
-                <textarea className={`${inputClass} min-h-28 font-mono text-xs`} value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} placeholder="מילה אחת בכל שורה, או מופרדות בפסיק..." />
+                <KeywordChipField value={keywordsText} onChange={setKeywordsText} />
               </label>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm">
                 <label className="flex items-center gap-2">
@@ -1142,7 +1212,18 @@ export default function WorkspacePage() {
                   className="grid cursor-pointer grid-cols-[40px_1.4fr_100px_1fr_100px] items-center border-t border-white/10 px-3 py-3 text-sm hover:bg-white/5"
                 >
                   <input type="checkbox" checked={selectedResearchIds.includes(row.id)} onChange={() => toggleResearchSelection(row.id)} />
-                  <span className="font-medium text-white">{row.keyword}</span>
+                  <span
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData("application/x-research-keyword", row.keyword);
+                      event.dataTransfer.setData("text/plain", row.keyword);
+                      event.dataTransfer.effectAllowed = "copy";
+                    }}
+                    className="cursor-grab font-medium text-white active:cursor-grabbing"
+                    title="גרור לשדה מילות המפתח"
+                  >
+                    {row.keyword}
+                  </span>
                   <span className="text-slate-300">
                     {row.volume === null ? "—" : row.volume.toLocaleString("he-IL")}
                   </span>
@@ -1157,6 +1238,30 @@ export default function WorkspacePage() {
 
         {/* Batch Jobs */}
         <StudioPanel title="Batch Jobs">
+          {queueStats && (
+            <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+              <div>
+                <p className="text-xs text-slate-500">ממתינים בתור</p>
+                <p className="text-lg font-semibold text-amber-200">{queueStats.waiting}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">רצים עכשיו</p>
+                <p className="text-lg font-semibold text-sky-200">{queueStats.running}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">הושלמו היום</p>
+                <p className="text-lg font-semibold text-emerald-200">{queueStats.completed_today}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">נכשלו היום</p>
+                <p className="text-lg font-semibold text-red-300">{queueStats.failed_today}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">התחילו היום</p>
+                <p className="text-lg font-semibold text-violet-200">{queueStats.started_today}</p>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <input
               type="search"
@@ -1198,9 +1303,19 @@ export default function WorkspacePage() {
               <Button
                 type="button"
                 size="sm"
+                disabled={activatedRunnableCount === 0 || runSelectedJob.isPending || runNextStep.isPending || queueRunning}
+                onClick={runActivatedJobs}
+                className="bg-[#6F42F5] hover:bg-[#5a32d4]"
+              >
+                הפעל{activatedRunnableCount > 0 ? ` (${activatedRunnableCount})` : ""}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
                 disabled={runnableJobsCount === 0 || runSelectedJob.isPending || runNextStep.isPending || queueRunning}
                 onClick={runAllJobs}
-                className="bg-[#6F42F5] hover:bg-[#5a32d4]"
+                className="border-white/10 bg-white/5"
               >
                 הרץ הכל{runnableJobsCount > 0 ? ` (${runnableJobsCount})` : ""}
               </Button>
@@ -1232,8 +1347,16 @@ export default function WorkspacePage() {
             <p className="mt-4 text-sm text-slate-400">אין jobs בטאב זה.</p>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-xl border border-white/10">
-              <div className="min-w-[1060px]">
+              <div className="min-w-[1100px]">
                 <div className={`grid ${batchJobsGridClass} bg-white/5 px-3 py-2 text-xs font-medium text-slate-400`}>
+                  <label className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={allJobsOnPageSelected}
+                      onChange={toggleAllJobsOnPage}
+                      aria-label="בחר הכל בעמוד"
+                    />
+                  </label>
                   <span>משימה</span>
                   <span>סוג תוכן</span>
                   <span>נושאים</span>
@@ -1259,6 +1382,15 @@ export default function WorkspacePage() {
                         isSelected ? "bg-[#6F42F5]/10" : "hover:bg-white/5"
                       }`}
                     >
+                      <label className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedJobIds.includes(job.id)}
+                          onChange={() => toggleJobSelection(job.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label={`בחר ${job.name}`}
+                        />
+                      </label>
                       <button type="button" className="text-start" onClick={() => setSelectedJobId(job.id)}>
                         <span className="block truncate font-medium text-white">{job.name}</span>
                         <span className="block truncate text-xs text-slate-500">{job.user}</span>

@@ -19,6 +19,9 @@ def test_ai_seo_workspace_lists_domains(owner_client):
     assert "domains" in body
     assert "jobs" in body
     assert "drafts" in body
+    assert "queue_stats" in body
+    assert "waiting" in body["queue_stats"]
+    assert "completed_today" in body["queue_stats"]
     assert len(body["domains"]) > 5
 
 
@@ -610,3 +613,33 @@ def test_ai_seo_workspace_delete_job_auto_cancels(owner_client, settings):
 
     assert response.status_code == 204, response.content
     assert all(job["id"] != job_id for job in workspace.json()["jobs"])
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_swap_page_image(owner_client, tenant, owner_user):
+    from content.application.block_service import BlockService
+
+    page = Page.objects.create(
+        tenant=tenant,
+        title="כתבה לבדיקה",
+        slug="swap-image-test",
+        full_path="/blog/swap-image-test",
+        page_type="blog",
+        locale="he",
+        created_by=owner_user,
+    )
+    BlockService.create_block(
+        page,
+        {
+            "block_type": "image",
+            "sort_order": 0,
+            "config": {"url": "https://example.com/old.jpg", "source": "test"},
+        },
+    )
+
+    response = owner_client.post(f"/api/v1/ai-seo/workspace/pages/{page.id}/swap-image/")
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["image"] is not None
+    assert body["image"].get("url")
+    assert body["image"]["url"] != "https://example.com/old.jpg"
