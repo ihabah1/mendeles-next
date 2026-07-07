@@ -1,4 +1,5 @@
 import { backendBase } from "@/lib/api/backend-url";
+import { absoluteSiteUrl, getSiteUrl, resolveSiteUrl, sanitizeSeoUrl } from "./site-url";
 import type { PageMetadata, SEOSettings, SEOPublicBundle } from "./types";
 
 export const DEFAULT_SEO_SETTINGS: SEOSettings = {
@@ -9,17 +10,28 @@ export const DEFAULT_SEO_SETTINGS: SEOSettings = {
   default_author: "",
   default_language: "he",
   robots_policy: "index,follow",
-  canonical_base_url: process.env.NEXT_PUBLIC_SITE_URL || process.env.FRONTEND_URL || "http://localhost:3000",
+  canonical_base_url: getSiteUrl(),
   default_og_image: "",
   default_twitter_image: "",
   organization_name: "Mendeles",
   organization_logo: "",
-  organization_url: "",
+  organization_url: getSiteUrl(),
 };
 
 let cachedBundle: SEOPublicBundle | null = null;
 let cacheTs = 0;
 const CACHE_MS = 60_000;
+
+function normalizeSettings(settings: SEOSettings): SEOSettings {
+  const base = resolveSiteUrl(settings.canonical_base_url);
+  return {
+    ...settings,
+    canonical_base_url: base,
+    organization_url: sanitizeSeoUrl(settings.organization_url || base, base) || base,
+    default_og_image: settings.default_og_image ? sanitizeSeoUrl(settings.default_og_image, base) : "",
+    default_twitter_image: settings.default_twitter_image ? sanitizeSeoUrl(settings.default_twitter_image, base) : "",
+  };
+}
 
 export async function fetchPublicSEO(): Promise<SEOPublicBundle | null> {
   const now = Date.now();
@@ -31,7 +43,11 @@ export async function fetchPublicSEO(): Promise<SEOPublicBundle | null> {
       signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
-    cachedBundle = (await res.json()) as SEOPublicBundle;
+    const bundle = (await res.json()) as SEOPublicBundle;
+    cachedBundle = {
+      ...bundle,
+      settings: normalizeSettings(bundle.settings),
+    };
     cacheTs = now;
     return cachedBundle;
   } catch {
@@ -50,30 +66,40 @@ export function mergePageMetadata(settings: SEOSettings, page: {
   og_type?: string;
   canonical?: string;
 }): PageMetadata {
-  const locale = page.locale || settings.default_language || "he";
-  const title = page.title || settings.default_title || settings.site_name;
-  const description = page.description || settings.default_description;
-  const keywords = page.keywords || settings.default_keywords;
-  const base = settings.canonical_base_url.replace(/\/$/, "");
-  const canonical = page.canonical || (base ? `${base}${page.path.startsWith("/") ? page.path : `/${page.path}`}` : page.path);
-  const ogImage = page.og_image || settings.default_og_image;
-  const twitterImage = settings.default_twitter_image || ogImage;
+  const normalizedSettings = normalizeSettings(settings);
+  const locale = page.locale || normalizedSettings.default_language || "he";
+  const title = page.title || normalizedSettings.default_title || normalizedSettings.site_name;
+  const description = page.description || normalizedSettings.default_description;
+  const keywords = page.keywords || normalizedSettings.default_keywords;
+  const base = normalizedSettings.canonical_base_url;
+  const canonical = sanitizeSeoUrl(
+    page.canonical || absoluteSiteUrl(page.path.startsWith("/") ? page.path : `/${page.path}`, base),
+    base,
+  );
+  const ogImage = page.og_image
+    ? sanitizeSeoUrl(page.og_image, base)
+    : normalizedSettings.default_og_image
+      ? sanitizeSeoUrl(normalizedSettings.default_og_image, base)
+      : "";
+  const twitterImage = normalizedSettings.default_twitter_image
+    ? sanitizeSeoUrl(normalizedSettings.default_twitter_image, base)
+    : ogImage;
 
   return {
     title,
     description,
     keywords,
-    author: page.author || settings.default_author,
+    author: page.author || normalizedSettings.default_author,
     language: locale,
     canonical,
-    robots: settings.robots_policy,
+    robots: normalizedSettings.robots_policy,
     open_graph: {
       title,
       description,
       image: ogImage,
       url: canonical,
       type: page.og_type || "website",
-      site_name: settings.site_name || settings.organization_name,
+      site_name: normalizedSettings.site_name || normalizedSettings.organization_name,
       locale,
     },
     twitter: {

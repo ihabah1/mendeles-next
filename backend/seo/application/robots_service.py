@@ -1,6 +1,7 @@
 import os
 
 from seo.application.settings_service import SEOSettingsService
+from seo.application.site_url import resolve_site_url
 
 
 class RobotsService:
@@ -20,7 +21,7 @@ class RobotsService:
     def generate(cls, tenant_id, *, environment: str | None = None) -> str:
         env = environment or cls.detect_environment()
         settings = SEOSettingsService.get_settings(tenant_id)
-        base = (settings.get("canonical_base_url") or "").rstrip("/")
+        base = resolve_site_url(settings.get("canonical_base_url") or "").rstrip("/")
         sitemap_url = f"{base}/sitemap.xml" if base else "/sitemap.xml"
 
         if env in ("development", "staging"):

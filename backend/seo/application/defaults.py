@@ -1,5 +1,6 @@
 from django.conf import settings as django_settings
 
+from seo.application.site_url import resolve_site_url
 from tenancy.infrastructure.models import Tenant
 
 BRAND_NAME = "Mendeles"
@@ -32,7 +33,7 @@ def _site_name_for_tenant(tenant: Tenant) -> str:
 
 def default_settings_for_tenant(tenant: Tenant, *, language: str = "he") -> dict:
     copy = _COPY.get(language, _COPY["he"])
-    base_url = django_settings.FRONTEND_URL.rstrip("/")
+    base_url = resolve_site_url(django_settings.FRONTEND_URL)
     site_name = _site_name_for_tenant(tenant)
 
     return {

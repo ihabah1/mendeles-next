@@ -1,29 +1,32 @@
 import type { BreadcrumbItem, SEOSettings } from "./types";
 import { buildCanonicalUrl } from "./canonical";
+import { resolveSiteUrl } from "./site-url";
 
 export function organizationSchema(settings: SEOSettings) {
+  const base = resolveSiteUrl(settings.canonical_base_url);
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: settings.organization_name || settings.site_name,
-    url: settings.organization_url || settings.canonical_base_url,
+    url: resolveSiteUrl(settings.organization_url || base),
   };
   if (settings.organization_logo) schema.logo = settings.organization_logo;
   return schema;
 }
 
 export function websiteSchema(settings: SEOSettings) {
+  const base = resolveSiteUrl(settings.canonical_base_url);
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: settings.site_name || settings.organization_name,
-    url: settings.canonical_base_url || settings.organization_url,
+    url: base,
     inLanguage: settings.default_language || "he",
   };
 }
 
 export function breadcrumbSchema(settings: SEOSettings, items: BreadcrumbItem[]) {
-  const base = settings.canonical_base_url.replace(/\/$/, "");
+  const base = resolveSiteUrl(settings.canonical_base_url).replace(/\/$/, "");
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

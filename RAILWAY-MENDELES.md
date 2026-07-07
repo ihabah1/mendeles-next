@@ -23,6 +23,10 @@ BACKEND_PUBLIC_HOST=${{eloquent-perfection.RAILWAY_PUBLIC_DOMAIN}}
 # Google Analytics 4 — set GA_MEASUREMENT_ID (runtime, recommended) or NEXT_PUBLIC_GA_MEASUREMENT_ID (build-time)
 # GA_MEASUREMENT_ID=G-MQRMQHNNRR
 # NEXT_PUBLIC_GA_MEASUREMENT_ID=G-MQRMQHNNRR
+
+# SEO — canonical base (build + runtime). Must be https://mendeles.com in production.
+NEXT_PUBLIC_SITE_URL=https://mendeles.com
+SITE_URL=https://mendeles.com
 ```
 
 > **חובה ב-runtime** — ב-Variables של `mendeles-next` ודא ש-`API_URL` או `BACKEND_PUBLIC_HOST` מוגדרים (לא `localhost`).
@@ -36,8 +40,9 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 DJANGO_SETTINGS_MODULE=config.settings.production
 DJANGO_SECRET_KEY=<מחרוזת-אקראית-50+>
 JWT_SECRET_KEY=<מחרוזת-אקראית-32+>
-CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
-FRONTEND_URL=https://mendeles-next-production.up.railway.app
+CORS_ALLOWED_ORIGINS=https://mendeles.com,https://www.mendeles.com
+FRONTEND_URL=https://mendeles.com
+SITE_URL=https://mendeles.com
 # ALLOWED_HOSTS is optional — code always adds .railway.app for healthchecks
 # Do not set SECURE_SSL_REDIRECT=true — Railway terminates TLS; Django redirect breaks healthchecks
 BOOTSTRAP_ADMIN_EMAIL=admin@yourdomain.com
@@ -55,4 +60,4 @@ Do **not** use `/` — it triggers full SSR and backend fetches during deploy pr
 ## בדיקה
 
 - API: `https://<backend>/api/v1/health/` → `healthy`
-- Web: `https://mendeles-next-production.up.railway.app`
+- Web: `https://mendeles.com`

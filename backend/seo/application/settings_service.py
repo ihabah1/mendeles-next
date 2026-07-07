@@ -1,6 +1,7 @@
 from django.conf import settings
 
 from seo.application.defaults import default_settings_for_tenant, needs_default_seed
+from seo.application.site_url import resolve_site_url, sanitize_seo_url
 from seo.infrastructure.models import SEOGlobalSettings
 from tenancy.infrastructure.models import Tenant
 
@@ -62,7 +63,14 @@ class SEOSettingsService:
         obj = cls.get_or_create(tenant_id)
         if needs_default_seed(obj):
             obj = cls.seed_defaults(tenant_id)
-        return obj.to_dict()
+        data = obj.to_dict()
+        base = resolve_site_url(data.get("canonical_base_url") or "")
+        data["canonical_base_url"] = base
+        if data.get("organization_url"):
+            data["organization_url"] = sanitize_seo_url(data["organization_url"], base)
+        else:
+            data["organization_url"] = base
+        return data
 
     @classmethod
     def update_settings(cls, tenant_id, updates: dict) -> dict:

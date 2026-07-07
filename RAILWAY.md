@@ -1,6 +1,6 @@
 # Railway — הגדרה ללוגין
 
-Frontend: https://mendeles-next-production.up.railway.app
+Frontend: https://mendeles.com (custom domain) — Railway service: `mendeles-next-production.up.railway.app`
 
 ---
 
@@ -26,8 +26,9 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}}
 BOOTSTRAP_ADMIN_EMAIL=admin@admin.com
 BOOTSTRAP_ADMIN_PASSWORD=admin
-CORS_ALLOWED_ORIGINS=https://mendeles-next-production.up.railway.app
-FRONTEND_URL=https://mendeles-next-production.up.railway.app
+CORS_ALLOWED_ORIGINS=https://mendeles.com,https://www.mendeles.com
+FRONTEND_URL=https://mendeles.com
+SITE_URL=https://mendeles.com
 PAIS_SKIP_LIVE_FETCH=true
 RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
@@ -41,6 +42,7 @@ RESEND_FROM_EMAIL=Mandeles <noreply@yourdomain.com>
 
 ```
 API_BASE_URL=https://eloquent-perfection-production-de3d.up.railway.app/api
+NEXT_PUBLIC_SITE_URL=https://mendeles.com
 # מומלץ — חיבור פנימי יציב יותר בין Frontend ל-Backend (אותו פרויקט Railway):
 BACKEND_PRIVATE_URL=http://${{eloquent-perfection.RAILWAY_PRIVATE_DOMAIN}}
 RESEND_API_KEY=re_xxxxxxxx

@@ -1,4 +1,5 @@
 import { DEFAULT_SEO_SETTINGS } from "./settings";
+import { getSiteUrl } from "./site-url";
 
 export function detectEnvironment(): "development" | "staging" | "production" {
   const env = (process.env.APP_ENV || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || "").toLowerCase();
@@ -10,7 +11,7 @@ export function detectEnvironment(): "development" | "staging" | "production" {
 
 export function generateRobotsTxt(baseUrl?: string, robotsPolicy?: string): string {
   const env = detectEnvironment();
-  const base = (baseUrl || DEFAULT_SEO_SETTINGS.canonical_base_url).replace(/\/$/, "");
+  const base = (baseUrl || getSiteUrl()).replace(/\/$/, "");
   const sitemapUrl = `${base}/sitemap.xml`;
 
   if (env === "development" || env === "staging") {

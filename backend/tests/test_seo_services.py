@@ -100,6 +100,26 @@ def test_validation_detects_missing_fields(tenant):
 
 
 @pytest.mark.django_db
+def test_sitemap_rejects_localhost_base_in_production(tenant, monkeypatch):
+    monkeypatch.setenv("DEBUG", "false")
+    SEOSettingsService.update_settings(tenant.id, {"canonical_base_url": "http://localhost:3000"})
+    entries = SitemapService.collect_all(tenant.id)
+    locs = [e["loc"] for e in entries]
+    assert all("localhost" not in loc for loc in locs)
+    assert all(loc.startswith("https://") for loc in locs)
+    assert "https://mendeles.com/" in locs
+
+
+@pytest.mark.django_db
+def test_robots_sitemap_uses_production_domain(tenant, monkeypatch):
+    monkeypatch.setenv("DEBUG", "false")
+    SEOSettingsService.update_settings(tenant.id, {"canonical_base_url": "http://localhost:3000"})
+    prod = RobotsService.generate(tenant.id, environment="production")
+    assert "Sitemap: https://mendeles.com/sitemap.xml" in prod
+    assert "localhost" not in prod
+
+
+@pytest.mark.django_db
 def test_settings_auto_seed_when_never_configured(tenant):
     obj = SEOSettingsService.get_or_create(tenant.id)
     obj.site_name = ""
