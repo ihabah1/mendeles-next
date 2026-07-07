@@ -1,13 +1,22 @@
+import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import {
   getAccessibilitySiteConfig,
   isAccessibilityCoordinatorConfigured,
 } from "@/lib/a11y/site-config";
+import { isProductionRuntime } from "@/lib/seo/site-url";
+
+function displayValue(value: string | null, devPlaceholder: string): ReactNode {
+  if (value) return value;
+  if (isProductionRuntime()) return "—";
+  return <span className="italic text-slate-400">{devPlaceholder}</span>;
+}
 
 export async function AccessibilityCoordinatorSection() {
   const t = await getTranslations("a11y.page");
   const config = getAccessibilitySiteConfig();
   const configured = isAccessibilityCoordinatorConfigured(config);
+  const isProd = isProductionRuntime();
 
   return (
     <section className="mt-10 space-y-4" aria-labelledby="a11y-coordinator">
@@ -19,11 +28,7 @@ export async function AccessibilityCoordinatorSection() {
       <dl className="grid gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
         <div>
           <dt className="font-medium text-white">{t("coordinatorNameLabel")}</dt>
-          <dd className="mt-1">
-            {config.coordinatorName ?? (
-              <span className="italic text-slate-400">{t("placeholderValue")}</span>
-            )}
-          </dd>
+          <dd className="mt-1">{displayValue(config.coordinatorName, t("placeholderValue"))}</dd>
         </div>
         <div>
           <dt className="font-medium text-white">{t("coordinatorPhoneLabel")}</dt>
@@ -33,7 +38,7 @@ export async function AccessibilityCoordinatorSection() {
                 {config.coordinatorPhone}
               </a>
             ) : (
-              <span className="italic text-slate-400">{t("placeholderValue")}</span>
+              displayValue(null, t("placeholderValue"))
             )}
           </dd>
         </div>
@@ -45,23 +50,21 @@ export async function AccessibilityCoordinatorSection() {
                 {config.coordinatorEmail}
               </a>
             ) : (
-              <span className="italic text-slate-400">{t("placeholderValue")}</span>
+              displayValue(null, t("placeholderValue"))
             )}
           </dd>
         </div>
       </dl>
 
-      {!configured && (
+      {!configured && !isProd ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           {t("coordinatorPending")}
         </p>
-      )}
+      ) : null}
 
       <p className="text-sm text-slate-400">
         <span className="font-medium text-slate-300">{t("lastUpdatedLabel")}: </span>
-        {config.statementLastUpdated ?? (
-          <span className="italic">{t("placeholderValue")}</span>
-        )}
+        {displayValue(config.statementLastUpdated, t("placeholderValue"))}
       </p>
     </section>
   );

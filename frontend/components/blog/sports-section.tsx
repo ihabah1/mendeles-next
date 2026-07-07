@@ -1,6 +1,7 @@
 import { ArticleCard } from "@/components/blog/article-card";
 import { Link } from "@/lib/i18n/navigation";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
+import { blogHref } from "@/lib/blog/utils";
 import type { BlogCardPost } from "@/lib/blog/types";
 
 type Props = {
@@ -21,7 +22,7 @@ export function SportsSection({ posts, locale }: Props) {
           <p className="mt-1 text-sm text-slate-600">{copy.sportsSubtitle}</p>
         </div>
         <Link
-          href="/blog?category=sports"
+          href={blogHref({ category: "sports" })}
           className="rounded-xl bg-[#6F42F5] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5a32d4]"
         >
           {locale === "en" ? "All sports" : "כל הספורט"}

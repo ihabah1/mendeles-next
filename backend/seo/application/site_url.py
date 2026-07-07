@@ -9,6 +9,19 @@ def _is_local_host(hostname: str) -> bool:
     return hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost")
 
 
+def _is_deploy_host(hostname: str) -> bool:
+    host = (hostname or "").lower()
+    return _is_local_host(host) or host.endswith(".railway.app") or host.endswith(".vercel.app")
+
+
+def _is_canonical_production_host(url: str) -> bool:
+    try:
+        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        return host == "mendeles.com"
+    except Exception:
+        return False
+
+
 def is_production_runtime() -> bool:
     env = (os.environ.get("APP_ENV") or os.environ.get("RAILWAY_ENVIRONMENT") or "").lower()
     if env in {"development", "staging", "stage"}:
@@ -42,22 +55,27 @@ def normalize_site_url(url: str) -> str:
 
 
 def resolve_site_url(stored: str = "") -> str:
+    if is_production_runtime():
+        normalized_stored = normalize_site_url(stored)
+        if normalized_stored and _is_canonical_production_host(normalized_stored):
+            return normalized_stored
+        for key in ("SITE_URL", "NEXT_PUBLIC_SITE_URL", "FRONTEND_URL"):
+            normalized = normalize_site_url(os.environ.get(key, ""))
+            if normalized and _is_canonical_production_host(normalized):
+                return normalized
+        return PRODUCTION_SITE_URL
+
     candidates = [
         stored,
         os.environ.get("SITE_URL", ""),
         os.environ.get("NEXT_PUBLIC_SITE_URL", ""),
         os.environ.get("FRONTEND_URL", ""),
     ]
-
     for candidate in candidates:
         normalized = normalize_site_url(candidate)
-        if not normalized:
-            continue
-        if is_production_runtime() and _is_local_host(urlparse(normalized).hostname or ""):
-            continue
-        return normalized
-
-    return PRODUCTION_SITE_URL if is_production_runtime() else LOCAL_DEV_SITE_URL
+        if normalized:
+            return normalized
+    return LOCAL_DEV_SITE_URL
 
 
 def absolute_site_url(path: str, base: str | None = None) -> str:
@@ -74,7 +92,7 @@ def sanitize_seo_url(url: str, base: str | None = None) -> str:
 
     parsed = urlparse(trimmed if "://" in trimmed else f"{site_base}{trimmed if trimmed.startswith('/') else '/' + trimmed}")
     hostname = parsed.hostname or ""
-    if _is_local_host(hostname) or parsed.scheme == "http":
+    if _is_local_host(hostname) or parsed.scheme == "http" or (is_production_runtime() and _is_deploy_host(hostname)):
         return f"{site_base}{parsed.path or ''}{'?' + parsed.query if parsed.query else ''}"
 
     if is_production_runtime() and parsed.scheme == "http":

@@ -17,10 +17,13 @@ export function SearchToolbar({
   locale = "he",
 }: Props) {
   const copy = editorialCopy(locale);
+  const formAction = locale === "en" ? "/en/blog" : "/blog";
 
   return (
     <form
       id="blog-search"
+      action={formAction}
+      method="get"
       className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center"
     >
       <div className="relative min-w-0 flex-1">

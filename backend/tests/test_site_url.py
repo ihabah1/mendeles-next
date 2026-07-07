@@ -31,6 +31,16 @@ def test_resolve_production_ignores_localhost_stored(prod_env, monkeypatch):
     assert resolve_site_url("http://localhost:3000") == PRODUCTION_SITE_URL
 
 
+def test_resolve_production_ignores_railway_stored(prod_env, monkeypatch):
+    monkeypatch.setenv("FRONTEND_URL", "http://localhost:3000")
+    assert resolve_site_url("https://mendeles-next-production.up.railway.app") == PRODUCTION_SITE_URL
+
+
+def test_sanitize_rewrites_railway_to_production(prod_env, monkeypatch):
+    monkeypatch.setenv("SITE_URL", "https://mendeles.com")
+    assert sanitize_seo_url("https://mendeles-next-production.up.railway.app/blog") == "https://mendeles.com/blog"
+
+
 def test_resolve_production_prefers_env_site_url(prod_env, monkeypatch):
     monkeypatch.setenv("SITE_URL", "https://mendeles.com")
     assert resolve_site_url("") == PRODUCTION_SITE_URL

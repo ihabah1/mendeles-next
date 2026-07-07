@@ -51,6 +51,13 @@ const COPY = {
     faq: "שאלות נפוצות",
     emptyPage: "הדף פורסם, אך עדיין אין בו בלוקים להצגה.",
     contact: "יצירת קשר",
+    sourceLink: "מקור",
+    features: [
+      { title: "מדריכים", description: "הוראות מעשיות ליישום SEO, שיווק ואוטומציה בתוך הארגון." },
+      { title: "מחקר", description: "ניתוחים, טרנדים ותובנות מבוססות נתונים מהשטח." },
+      { title: "כלי AI", description: "המלצות על כלי בינה מלאכותית לשיווק, תוכן ואוטומציה." },
+      { title: "קהילה", description: "ידע מקצועי, שיתופי פעולה ותובנות ממומחי צמיחה." },
+    ],
   },
   en: {
     metaTitle: "Mendeles Insights — Blog",
@@ -102,6 +109,13 @@ const COPY = {
     faq: "FAQ",
     emptyPage: "This page is published but has no visible blocks yet.",
     contact: "Contact us",
+    sourceLink: "Source",
+    features: [
+      { title: "Guides", description: "Practical playbooks for implementing SEO, marketing, and automation in your organization." },
+      { title: "Research", description: "Analysis, trends, and data-driven insights from the field." },
+      { title: "AI Tools", description: "Recommendations for AI tools across marketing, content, and automation." },
+      { title: "Community", description: "Expert knowledge, collaboration, and insights from growth practitioners." },
+    ],
   },
 } as const;
 

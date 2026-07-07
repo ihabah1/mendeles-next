@@ -70,7 +70,6 @@ export function mergePageMetadata(settings: SEOSettings, page: {
   const locale = page.locale || normalizedSettings.default_language || "he";
   const title = page.title || normalizedSettings.default_title || normalizedSettings.site_name;
   const description = page.description || normalizedSettings.default_description;
-  const keywords = page.keywords || normalizedSettings.default_keywords;
   const base = normalizedSettings.canonical_base_url;
   const canonical = sanitizeSeoUrl(
     page.canonical || absoluteSiteUrl(page.path.startsWith("/") ? page.path : `/${page.path}`, base),
@@ -88,7 +87,7 @@ export function mergePageMetadata(settings: SEOSettings, page: {
   return {
     title,
     description,
-    keywords,
+    keywords: "",
     author: page.author || normalizedSettings.default_author,
     language: locale,
     canonical,

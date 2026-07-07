@@ -25,7 +25,10 @@ def test_slug_unique_generation(tenant):
 
 
 @pytest.mark.django_db
-def test_metadata_service_builds_tags(tenant):
+def test_metadata_service_builds_tags(tenant, monkeypatch):
+    monkeypatch.setenv("DEBUG", "true")
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("RAILWAY_ENVIRONMENT", raising=False)
     SEOSettingsService.update_settings(
         tenant.id,
         {
@@ -71,7 +74,10 @@ def test_robots_production_vs_development(tenant):
 
 
 @pytest.mark.django_db
-def test_sitemap_includes_static_pages(tenant):
+def test_sitemap_includes_static_pages(tenant, monkeypatch):
+    monkeypatch.setenv("DEBUG", "true")
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("RAILWAY_ENVIRONMENT", raising=False)
     SEOSettingsService.update_settings(tenant.id, {"canonical_base_url": "https://example.com"})
     entries = SitemapService.collect_all(tenant.id)
     locs = [e["loc"] for e in entries]

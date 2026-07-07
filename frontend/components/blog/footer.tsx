@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { MendelesInsightsLogo } from "@/components/blog/mendeles-insights-logo";
 
 export function BlogFooter() {
-  const t = useTranslations("marketing.footer");
+  const t = useTranslations("landing.footer");
 
   return (
     <footer className="border-t border-slate-200 bg-white px-4 py-8 sm:px-6">

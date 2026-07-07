@@ -74,11 +74,11 @@ function normalizeSlug(slug: string): string {
   return slug.trim().toLowerCase().replace(/-/g, "_");
 }
 
-export function localizeBlogCategory(slug: string, locale: string, fallback = ""): string {
-  if (!slug) return fallback;
+export function localizeBlogCategory(slug: string, locale: string, _fallback = ""): string {
+  if (!slug) return "";
   const key = normalizeSlug(slug);
   const labels = locale === "en" ? EN_LABELS : HE_LABELS;
-  return labels[key] ?? labels[slug.toLowerCase()] ?? fallback ?? slug;
+  return labels[key] ?? labels[slug.toLowerCase()] ?? key.replace(/_/g, " ");
 }
 
 export function localizeBlogCategories(categories: BlogCategory[], locale: string): BlogCategory[] {

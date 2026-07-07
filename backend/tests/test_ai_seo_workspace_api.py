@@ -37,7 +37,8 @@ def test_ai_seo_workspace_lists_news_domains(owner_client):
 
 
 @pytest.mark.django_db
-def test_ai_seo_resolve_news_event_from_trends(tenant):
+def test_ai_seo_resolve_news_event_from_trends(tenant, monkeypatch):
+    monkeypatch.setattr("ai_seo.application.generation_service.headlines_for_domain", lambda *args, **kwargs: [])
     IntegrationSyncRecord.objects.create(
         tenant=tenant,
         service_type=GoogleServiceType.TRENDS,

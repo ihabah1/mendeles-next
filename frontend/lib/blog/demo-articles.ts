@@ -1,4 +1,5 @@
 import type { BlogCardPost, BlogCategory } from "@/lib/blog/types";
+import { localizeBlogCategory } from "@/lib/blog/category-labels";
 import { pickCuratedPhoto } from "@/lib/blog/stock-photos";
 
 type DemoArticle = {
@@ -397,7 +398,7 @@ function toCardPost(article: DemoArticle): BlogCardPost {
     meta_description: article.meta_description,
     published_at: publishedDaysAgo(article.days_ago),
     image_url: pickCuratedPhoto(article.category, article.category_slug, article.id),
-    category: article.category,
+    category: localizeBlogCategory(article.category_slug, article.locale, article.category),
     category_slug: article.category_slug,
     reading_minutes: article.reading_minutes,
     is_preview: true,

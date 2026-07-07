@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     locale,
-    title: page.meta_title || page.title,
+    title: page.page_type === "blog" ? page.title : page.meta_title || page.title,
     description: page.meta_description || page.title,
     path: page.full_path,
   });
@@ -84,21 +84,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function HeroBlock({
   config,
   isLandingPage,
+  isBlog = false,
 }: {
   config: Record<string, unknown>;
   isLandingPage: boolean;
+  isBlog?: boolean;
 }) {
   const theme = config.theme && typeof config.theme === "object" ? (config.theme as Record<string, unknown>) : {};
   const accent = textValue(theme.accent) || "cyan";
   const cta = textValue(config.cta);
   const href = isLandingPage ? blockHref(config, "#contact") : "";
+  const HeadingTag = isBlog ? "h2" : "h1";
 
   return (
     <section className={`rounded-[2rem] border px-6 py-14 text-center shadow-2xl sm:px-10 ${accentClasses(accent)}`}>
       <p className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-200">Mendeles AI</p>
-      <h1 className="mt-5 text-3xl font-bold text-white sm:text-5xl">
+      <HeadingTag className="mt-5 text-3xl font-bold text-white sm:text-5xl">
         {textValue(config.headline) || textValue(config.title)}
-      </h1>
+      </HeadingTag>
       <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-200">
         {textValue(config.subheadline) || textValue(config.description)}
       </p>
@@ -129,6 +132,21 @@ function ImageBlock({ config }: { config: Record<string, unknown> }) {
       caption={textValue(config.license) || textValue(config.caption) || "Free stock image"}
       matchedDomain={matchedDomain}
     />
+  );
+}
+
+function SourceLinkBlock({ config, locale }: { config: Record<string, unknown>; locale: string }) {
+  const url = textValue(config.url);
+  const label = textValue(config.label) || textValue(config.source_name);
+  if (!url) return null;
+  const copy = editorialCopy(locale);
+  const text = label ? `${copy.sourceLink}: ${label}` : copy.sourceLink;
+  return (
+    <p className="border-t border-slate-200 pt-6 text-sm text-slate-500">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#6F42F5] underline">
+        {text}
+      </a>
+    </p>
   );
 }
 
@@ -225,7 +243,8 @@ function PublicBlock({
   const isBlog = page.page_type === "blog";
 
   if (block.block_type === "image") return <ImageBlock config={block.config} />;
-  if (block.block_type === "hero") return <HeroBlock config={block.config} isLandingPage={isLandingPage} />;
+  if (block.block_type === "source_link") return <SourceLinkBlock config={block.config} locale={locale} />;
+  if (block.block_type === "hero") return <HeroBlock config={block.config} isLandingPage={isLandingPage} isBlog={isBlog} />;
   if (block.block_type === "faq") return <FaqBlock config={block.config} locale={locale} />;
   if (block.block_type === "cta") return <CtaBlock config={block.config} isLandingPage={isLandingPage} />;
   if (block.block_type === "contact_form" || block.block_type === "form") {

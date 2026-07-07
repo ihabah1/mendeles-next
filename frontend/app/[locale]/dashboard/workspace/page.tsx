@@ -37,34 +37,10 @@ import {
   StudioPanel,
 } from "@/components/workspace/workspace-studio-ui";
 import { KeywordChipField } from "@/components/workspace/keyword-chip-field";
+import { ActiveAutomationBanner } from "@/components/workspace/active-automation-banner";
 
 const AUTO_RUN_STORAGE_KEY = "ai-seo-auto-run-jobs";
 const LEGACY_DISABLE_AUTO_RUN_KEY = "ai-seo-disable-auto-run";
-
-const RECURRENCE_INTERVAL_LABELS: Record<string, string> = {
-  hourly: "כל שעה",
-  every_6_hours: "כל 6 שעות",
-  every_24_hours: "כל 24 שעות",
-  every_2_days: "כל יומיים",
-};
-
-function formatScheduledAutomationSummary(
-  automation: NonNullable<import("@/lib/api/dashboard").AiSeoScheduledAutomation>,
-): string {
-  const parts: string[] = [];
-  if (automation.news_hot_topics_enabled) parts.push("חדשות חמות");
-  if (automation.random_topics_enabled) parts.push("נושאים אקראיים");
-  if (automation.auto_publish_enabled) parts.push("פרסום אוטומטי");
-  if (automation.recurrence_minutes > 0) {
-    parts.push(`חוזר כל ${automation.recurrence_minutes} דקות`);
-  } else if (automation.recurrence_interval) {
-    parts.push(`חוזר ${RECURRENCE_INTERVAL_LABELS[automation.recurrence_interval] ?? automation.recurrence_interval}`);
-  }
-  if (automation.scheduled_jobs_count > 0) {
-    parts.push(`${automation.scheduled_jobs_count} ריצות ממתינות`);
-  }
-  return parts.join(" · ");
-}
 
 function isRunnableJob(job: Pick<AiSeoWorkspaceJob, "status">): boolean {
   return job.status === "queued" || job.status === "running";
@@ -76,6 +52,7 @@ export default function WorkspacePage() {
   const canManage = hasPermission("ai_seo.manage");
   const canPublish = hasPermission("content.publish");
   const qc = useQueryClient();
+  const automationBannerRef = useRef<HTMLDivElement>(null);
 
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [keywordsText, setKeywordsText] = useState("");
@@ -196,6 +173,13 @@ export default function WorkspacePage() {
             ? `אוטומציה חוזרת הופעלה — ${jobCount} משימות בתור${scheduleStartNow ? "" : `, ריצה ראשונה ב-${new Date(scheduleStartAt).toLocaleString("he-IL")}`}.`
             : `נוצרו ${jobCount} משימות יצירה.`,
       });
+      if (mode === "automation") {
+        setRunMode("automation");
+        setScheduleEnabled(true);
+        window.requestAnimationFrame(() => {
+          automationBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
       if (data.jobs.some(isRunnableJob)) {
         queueAutoStartedRef.current = false;
         autoStartQueueIfEnabled();
@@ -651,41 +635,27 @@ export default function WorkspacePage() {
     { id: 4, label: "פרסום ומעקב", active: false },
   ];
 
+  function requestCancelScheduledAutomation() {
+    if (
+      window.confirm(
+        "לבטל את האוטומציה? ריצות ממתינות יבוטלו ולא ייווצרו ריצות חוזרות נוספות.",
+      )
+    ) {
+      disableScheduledAutomation.mutate();
+    }
+  }
+
   return (
     <div className="workspace-studio -m-6 min-h-full bg-[#080c16] p-4 text-slate-100 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-[1400px] space-y-6">
         {scheduledAutomation?.active ? (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center rounded-full border border-emerald-400/50 bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-200">
-                  פעיל
-                </span>
-                <p className="text-sm font-semibold text-white">תזמון אוטומטי פעיל</p>
-              </div>
-              <p className="text-sm text-emerald-100/90">{formatScheduledAutomationSummary(scheduledAutomation)}</p>
-              {scheduledAutomation.next_run_at ? (
-                <p className="text-xs text-emerald-200/70">
-                  הריצה הבאה: {new Date(scheduledAutomation.next_run_at).toLocaleString("he-IL")}
-                </p>
-              ) : null}
-            </div>
-            {canManage ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={disableScheduledAutomation.isPending}
-                onClick={() => {
-                  if (window.confirm("לכבות את התזמון האוטומטי? ריצות ממתינות יבוטלו ולא ייווצרו ריצות חוזרות נוספות.")) {
-                    disableScheduledAutomation.mutate();
-                  }
-                }}
-                className="shrink-0 border-red-500/40 bg-red-500/10 text-red-200 hover:bg-red-500/20"
-              >
-                {disableScheduledAutomation.isPending ? "מכבה..." : "כבה תזמון"}
-              </Button>
-            ) : null}
+          <div ref={automationBannerRef}>
+            <ActiveAutomationBanner
+              automation={scheduledAutomation}
+              canCancel={canManage}
+              cancelPending={disableScheduledAutomation.isPending}
+              onCancel={requestCancelScheduledAutomation}
+            />
           </div>
         ) : null}
 

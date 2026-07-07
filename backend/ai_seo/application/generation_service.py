@@ -19,8 +19,13 @@ from content.application.page_service import PageService
 from content.application.publish_service import PublishService
 from content.application.taxonomy_service import TaxonomyService
 from content.domain.status import PageStatus, PageType
-from content.infrastructure.models import Page, Taxonomy, TaxonomyTerm
+from content.infrastructure.models import ContentBlock, Page, Taxonomy, TaxonomyTerm
 from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, batch_locales, localize_domain, selected_domain_rows
+from ai_seo.application.news_source_service import (
+    headlines_for_domain,
+    normalize_source_url,
+    normalize_topic_fingerprint,
+)
 from leads.infrastructure.models import FormDefinition
 from ai_seo.application.gemini_service import GeminiService
 from integrations.application.trends_service import TrendsService
@@ -360,17 +365,44 @@ class AiSeoGenerationService:
 
     @classmethod
     def _scheduled_automation_state(cls, tenant_id) -> dict | None:
-        jobs = AutomationJob.objects.filter(
+        base = AutomationJob.objects.filter(
             tenant_id=tenant_id,
             job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
             deleted_at__isnull=True,
-            status__in=[JobStatus.SCHEDULED, JobStatus.QUEUED, JobStatus.RUNNING],
         )
         active_jobs: list[AutomationJob] = []
-        for job in jobs:
+        seen_ids: set[str] = set()
+
+        def consider(job: AutomationJob) -> None:
+            job_id = str(job.id)
+            if job_id in seen_ids:
+                return
+            seen_ids.add(job_id)
+            active_jobs.append(job)
+
+        for job in base.filter(status__in=[JobStatus.SCHEDULED, JobStatus.QUEUED, JobStatus.RUNNING]):
             config = job.config or {}
             if job.status == JobStatus.SCHEDULED or cls._recurrence_timedelta(config):
-                active_jobs.append(job)
+                consider(job)
+
+        for job in base.filter(status__in=[JobStatus.WAITING_APPROVAL, JobStatus.COMPLETED]):
+            config = job.config or {}
+            if not cls._recurrence_timedelta(config) and not config.get("next_recurring_job_id"):
+                continue
+            consider(job)
+            next_job_id = config.get("next_recurring_job_id")
+            if not next_job_id:
+                continue
+            child = (
+                base.filter(
+                    id=next_job_id,
+                    status__in=[JobStatus.SCHEDULED, JobStatus.QUEUED, JobStatus.RUNNING],
+                )
+                .first()
+            )
+            if child:
+                consider(child)
+
         if not active_jobs:
             return None
 
@@ -605,10 +637,89 @@ class AiSeoGenerationService:
         return bool(matched and matched.get("value") == domain_value)
 
     @staticmethod
-    def _resolve_news_event(tenant_id, domain: dict, keywords: list[str]) -> dict | None:
+    def _collect_used_news_fingerprints(tenant_id) -> tuple[set[str], set[str]]:
+        used_urls: set[str] = set()
+        used_topics: set[str] = set()
+
+        jobs = AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+            deleted_at__isnull=True,
+        ).order_by("-created_at")[:300]
+        for job in jobs:
+            news_event = (job.config or {}).get("news_event") or {}
+            source_url = news_event.get("source_url") or ""
+            if source_url:
+                used_urls.add(normalize_source_url(source_url))
+            topic = news_event.get("topic") or news_event.get("headline") or ""
+            if topic:
+                used_topics.add(normalize_topic_fingerprint(topic))
+
+        blocks = ContentBlock.objects.filter(
+            page__tenant_id=tenant_id,
+            page__deleted_at__isnull=True,
+            block_type="source_link",
+            deleted_at__isnull=True,
+        ).values_list("config", flat=True)
+        for config in blocks:
+            if not isinstance(config, dict):
+                continue
+            url = config.get("url") or ""
+            if url:
+                used_urls.add(normalize_source_url(url))
+            topic = config.get("topic") or ""
+            if topic:
+                used_topics.add(normalize_topic_fingerprint(topic))
+
+        pages = Page.objects.filter(
+            tenant_id=tenant_id,
+            page_type=PageType.BLOG,
+            deleted_at__isnull=True,
+        ).only("title")
+        for page in pages:
+            if page.title:
+                used_topics.add(normalize_topic_fingerprint(page.title))
+
+        return used_urls, used_topics
+
+    @classmethod
+    def _is_duplicate_news(cls, tenant_id, *, source_url: str = "", topic: str = "") -> bool:
+        used_urls, used_topics = cls._collect_used_news_fingerprints(tenant_id)
+        if source_url and normalize_source_url(source_url) in used_urls:
+            return True
+        fingerprint = normalize_topic_fingerprint(topic)
+        if not fingerprint:
+            return False
+        if fingerprint in used_topics:
+            return True
+        for existing in used_topics:
+            if len(fingerprint) > 12 and len(existing) > 12 and (fingerprint in existing or existing in fingerprint):
+                return True
+        return False
+
+    @classmethod
+    def _resolve_news_event(cls, tenant_id, domain: dict, keywords: list[str]) -> dict | None:
         domain_value = (domain or {}).get("value", "")
         if domain_value not in NEWS_DOMAIN_VALUES:
             return None
+
+        rss_items = headlines_for_domain(domain_value)
+        for item in rss_items:
+            title = item.get("title", "").strip()
+            source_url = item.get("url", "").strip()
+            if not title or not source_url:
+                continue
+            if cls._is_duplicate_news(tenant_id, source_url=source_url, topic=title):
+                continue
+            return {
+                "topic": title,
+                "headline": title,
+                "source": "google_news_rss",
+                "source_url": source_url,
+                "source_name": item.get("source_name") or "",
+                "date": item.get("published") or "",
+                "domain": domain_value,
+            }
 
         sync = AiSeoGenerationService._latest_integration_sync(tenant_id, GoogleServiceType.TRENDS)
         processed = (sync.processed_data if sync else {}) or {}
@@ -654,11 +765,15 @@ class AiSeoGenerationService:
 
         for topic in candidates:
             if AiSeoGenerationService._matches_news_domain(topic, domain_value):
+                if cls._is_duplicate_news(tenant_id, topic=topic):
+                    continue
                 retrieved = sync.retrieved_at if sync else None
                 return {
                     "topic": topic,
                     "headline": topic,
                     "source": "google_trends",
+                    "source_url": "",
+                    "source_name": "",
                     "date": retrieved.isoformat() if retrieved else "",
                     "domain": domain_value,
                 }
@@ -670,22 +785,28 @@ class AiSeoGenerationService:
                 keyword_candidates.append(kw)
         for topic in keyword_candidates:
             if AiSeoGenerationService._matches_news_domain(topic, domain_value):
+                if cls._is_duplicate_news(tenant_id, topic=topic):
+                    continue
                 retrieved = sync.retrieved_at if sync else None
                 return {
                     "topic": topic,
                     "headline": topic,
                     "source": "keywords",
+                    "source_url": "",
+                    "source_name": "",
                     "date": retrieved.isoformat() if retrieved else "",
                     "domain": domain_value,
                 }
 
         fallback = (candidates[0] if candidates else "") or (keywords[0] if keywords else "") or (domain or {}).get("label", "")
-        if fallback:
+        if fallback and not cls._is_duplicate_news(tenant_id, topic=fallback):
             retrieved = sync.retrieved_at if sync else None
             return {
                 "topic": fallback,
                 "headline": fallback,
                 "source": "keywords",
+                "source_url": "",
+                "source_name": "",
                 "date": retrieved.isoformat() if retrieved else "",
                 "domain": domain_value,
             }
@@ -1452,6 +1573,21 @@ class AiSeoGenerationService:
                     },
                 )
         cls._assign_generation_category(page, domain, locale=locale)
+        news_event = config.get("news_event") or {}
+        if page_type == PageType.BLOG and news_event.get("source_url"):
+            source_name = news_event.get("source_name") or ""
+            BlockService.create_block(
+                page,
+                {
+                    "block_type": "source_link",
+                    "sort_order": len(blocks) + 2,
+                    "config": {
+                        "url": news_event["source_url"],
+                        "label": source_name,
+                        "topic": news_event.get("topic") or "",
+                    },
+                },
+            )
         job.config = {**config, "generated_page_id": str(page.id), "generated_page_title": page.title}
         job.save(update_fields=["config", "updated_at"])
         return page
@@ -1539,11 +1675,19 @@ class AiSeoGenerationService:
 
         news_block = ""
         if news_event and news_event.get("topic"):
+            source_line = ""
+            if news_event.get("source_url"):
+                source_name = news_event.get("source_name") or "international media"
+                source_line = f"""
+- International source article: {news_event.get("source_url")}
+- Source publication: {source_name}
+Include a neutral attribution that the story is based on international reporting. Do not copy text verbatim.
+"""
             news_block = f"""
 This is a news-driven piece. Base the entire {asset} on today's trending news event:
 - Headline/topic: {news_event.get("headline") or news_event.get("topic")}
 - Category: {domain_label}
-- Source signal: {news_event.get("source", "trends")}
+- Source signal: {news_event.get("source", "trends")}{source_line}
 Write in a neutral journalistic tone. Explain what happened, why it matters, and context for {audience}.
 Do not invent quotes, interviews, statistics, or named officials unless they are generic and clearly non-fictional.
 For blog articles: news-style intro, timeline/context sections, implications, and balanced summary.

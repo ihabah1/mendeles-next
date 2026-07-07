@@ -66,7 +66,7 @@ function categoryInfo(page: PublicBlogPage, locale: string): { name: string; slu
   const term = page.terms.find((item) => item.taxonomy === "ai-seo-categories");
   const slug = term?.slug || "";
   return {
-    name: localizeBlogCategory(slug, locale, term?.name || (locale === "en" ? "SEO" : "קידום אתרים")),
+    name: localizeBlogCategory(slug, locale),
     slug,
   };
 }

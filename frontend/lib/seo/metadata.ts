@@ -10,7 +10,7 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
   const settings = bundle?.settings ?? DEFAULT_SEO_SETTINGS;
   const locale = page.locale || settings.default_language || "he";
   const localizedPath = localizePath(page.path, locale);
-  const base = settings.canonical_base_url || getSiteUrl();
+  const base = getSiteUrl();
 
   const meta = mergePageMetadata(settings, { ...page, path: localizedPath, locale });
   const hePath = localizePath(page.path, "he");
@@ -20,7 +20,6 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
     metadataBase: new URL(base),
     title: meta.title,
     description: meta.description,
-    keywords: meta.keywords || undefined,
     authors: meta.author ? [{ name: meta.author }] : undefined,
     alternates: {
       canonical: meta.canonical,

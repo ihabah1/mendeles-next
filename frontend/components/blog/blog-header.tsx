@@ -3,6 +3,7 @@ import { MarketingLocaleSwitcher } from "@/components/marketing/marketing-locale
 import { MendelesInsightsLogo } from "@/components/blog/mendeles-insights-logo";
 import { defaultNavCategories, localizeBlogCategories } from "@/lib/blog/category-labels";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
+import { blogHref } from "@/lib/blog/utils";
 import type { BlogCategory } from "@/lib/blog/types";
 
 type Props = {
@@ -27,7 +28,7 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
           aria-label={copy.navLabel}
         >
           {navCategories.map((item) => (
-            <Link key={item.slug} href={`/blog?category=${item.slug}`} className="whitespace-nowrap transition hover:text-[#6F42F5]">
+            <Link key={item.slug} href={blogHref({ category: item.slug })} className="whitespace-nowrap transition hover:text-[#6F42F5]">
               {item.name}
             </Link>
           ))}

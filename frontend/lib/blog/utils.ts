@@ -4,6 +4,12 @@ import { dateLocale, sortLocale } from "@/lib/blog/editorial-copy";
 export const BLOG_ACCENT = "#6F42F5";
 export const BLOG_PAGE_SIZE = 9;
 
+export type BlogLinkHref = {
+  pathname: "/blog";
+  query?: Record<string, string>;
+};
+
+/** next-intl Link href — query must be a separate object, not embedded in the pathname string. */
 export function blogHref({
   page,
   category,
@@ -14,14 +20,14 @@ export function blogHref({
   category?: string;
   q?: string;
   sort?: string;
-}): string {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (category) params.set("category", category);
-  if (sort && sort !== "newest") params.set("sort", sort);
-  if (page && page > 1) params.set("page", String(page));
-  const query = params.toString();
-  return query ? `/blog?${query}` : "/blog";
+} = {}): BlogLinkHref {
+  const query: Record<string, string> = {};
+  if (q) query.q = q;
+  if (category) query.category = category;
+  if (sort && sort !== "newest") query.sort = sort;
+  if (page && page > 1) query.page = String(page);
+  if (Object.keys(query).length === 0) return { pathname: "/blog" };
+  return { pathname: "/blog", query };
 }
 
 export function formatPublishDate(value: string | null, locale = "he"): string {
