@@ -37,6 +37,16 @@ def _resolve_public_tenant_id() -> str | None:
     return str(tenant.id) if tenant else None
 
 
+def _localized_category_label(slug: str, locale: str, fallback: str = "") -> str:
+    from ai_seo.application.domain_catalog import DOMAIN_OPTIONS, localize_domain
+
+    domain = next((item for item in DOMAIN_OPTIONS if item.get("value") == slug), None)
+    if not domain:
+        return fallback or slug
+    localized = localize_domain(domain, locale)
+    return localized.get("label") or fallback or slug
+
+
 class PublicPageResolveView(APIView):
     """Resolve a published content page by public path without requiring admin auth."""
 
@@ -100,9 +110,10 @@ class PublicPageListView(APIView):
         categories = {}
         for page in pages:
             for page_term in page.page_terms.filter(deleted_at__isnull=True):
-                categories[page_term.term.slug] = {
-                    "slug": page_term.term.slug,
-                    "name": page_term.term.name,
+                slug = page_term.term.slug
+                categories[slug] = {
+                    "slug": slug,
+                    "name": _localized_category_label(slug, locale, page_term.term.name),
                 }
 
         return Response(

@@ -20,6 +20,7 @@ import {
   getSportsDemoPosts,
 } from "@/lib/blog/demo-articles";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
+import { localizeBlogCategories, localizeBlogCategory } from "@/lib/blog/category-labels";
 import { resolveEditorialImage } from "@/lib/blog/resolve-editorial-image";
 import type { BlogCardPost, BlogCategory, BlogSort } from "@/lib/blog/types";
 import { BLOG_PAGE_SIZE, blogHref, sortPosts } from "@/lib/blog/utils";
@@ -61,11 +62,12 @@ function firstImage(page: PublicBlogPage): string {
   return textValue(config?.url);
 }
 
-function categoryInfo(page: PublicBlogPage): { name: string; slug: string } {
+function categoryInfo(page: PublicBlogPage, locale: string): { name: string; slug: string } {
   const term = page.terms.find((item) => item.taxonomy === "ai-seo-categories");
+  const slug = term?.slug || "";
   return {
-    name: term?.name || "SEO",
-    slug: term?.slug || "",
+    name: localizeBlogCategory(slug, locale, term?.name || (locale === "en" ? "SEO" : "קידום אתרים")),
+    slug,
   };
 }
 
@@ -79,8 +81,8 @@ function readingMinutes(page: PublicBlogPage): number {
   return Math.max(3, Math.min(15, Math.ceil(words / 180)));
 }
 
-async function toCardPost(page: PublicBlogPage): Promise<BlogCardPost> {
-  const category = categoryInfo(page);
+async function toCardPost(page: PublicBlogPage, locale: string): Promise<BlogCardPost> {
+  const category = categoryInfo(page, locale);
   const image_url = await resolveEditorialImage({
     category: category.name,
     categorySlug: category.slug,
@@ -133,7 +135,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
 
   const cardPosts = usingDemo
     ? filterDemoPosts(getEditorialDemoPosts(locale), { q, category })
-    : await Promise.all(feed.results.map(toCardPost));
+    : await Promise.all(feed.results.map((page) => toCardPost(page, locale)));
 
   const sortedPosts = sortPosts(cardPosts, (sort as BlogSort) || "newest", locale);
   const sportsPosts = usingDemo
@@ -149,10 +151,13 @@ export default async function BlogPage({ params, searchParams }: Props) {
 
   const categoryCounts: BlogCategory[] = usingDemo
     ? getEditorialDemoCategories(locale)
-    : feed.categories.map((item) => ({
-        ...item,
-        count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
-      }));
+    : localizeBlogCategories(
+        feed.categories.map((item) => ({
+          ...item,
+          count: feed.results.filter((post) => post.terms.some((term) => term.slug === item.slug)).length || 0,
+        })),
+        locale,
+      );
 
   return (
     <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale}>

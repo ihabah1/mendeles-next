@@ -1,29 +1,9 @@
 import { Link } from "@/lib/i18n/navigation";
 import { MarketingLocaleSwitcher } from "@/components/marketing/marketing-locale-switcher";
 import { MendelesInsightsLogo } from "@/components/blog/mendeles-insights-logo";
+import { defaultNavCategories, localizeBlogCategories } from "@/lib/blog/category-labels";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCategory } from "@/lib/blog/types";
-
-function fallbackNav(locale: string): BlogCategory[] {
-  if (locale === "en") {
-    return [
-      { slug: "world_news", name: "World News", count: 0 },
-      { slug: "sports", name: "Sports", count: 0 },
-      { slug: "law", name: "Law", count: 0 },
-      { slug: "economy", name: "Economy", count: 0 },
-      { slug: "current_affairs", name: "Current Affairs", count: 0 },
-      { slug: "automotive", name: "Automotive", count: 0 },
-    ];
-  }
-  return [
-    { slug: "world_news", name: "בעולם", count: 0 },
-    { slug: "sports", name: "ספורט", count: 0 },
-    { slug: "law", name: "עריכת דין", count: 0 },
-    { slug: "economy", name: "כלכלה", count: 0 },
-    { slug: "current_affairs", name: "אקטואליה", count: 0 },
-    { slug: "automotive", name: "רכב", count: 0 },
-  ];
-}
 
 type Props = {
   categories: BlogCategory[];
@@ -32,7 +12,10 @@ type Props = {
 
 export function BlogHeader({ categories, locale = "he" }: Props) {
   const copy = editorialCopy(locale);
-  const navCategories = categories.length > 0 ? categories.slice(0, 6) : fallbackNav(locale);
+  const navCategories = localizeBlogCategories(
+    categories.length > 0 ? categories.slice(0, 6) : defaultNavCategories(locale),
+    locale,
+  );
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_4px_20px_rgba(15,23,42,0.04)] backdrop-blur-md">
