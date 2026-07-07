@@ -34,7 +34,7 @@ export const CURATED_EDITORIAL_PHOTOS: Record<string, string[]> = {
     "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&h=900&q=80",
   ],
   news: [
-    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1600&h=900&q=80",
+    "https://images.unsplash.com/photo-1504711434967-e33886168f5c?auto=format&fit=crop&w=1600&h=900&q=80",
     "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1600&h=900&q=80",
   ],
   sports: [

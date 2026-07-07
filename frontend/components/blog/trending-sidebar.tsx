@@ -14,7 +14,7 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
   const trending = [...categories].sort((a, b) => b.count - a.count).slice(0, 8);
 
   return (
-    <section className={`rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.05)] ${locale === "en" ? "text-left" : "text-right"}`}>
+    <section className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${locale === "en" ? "text-left" : "text-right"}`}>
       <h2 className="text-lg font-bold text-slate-900">{copy.trendingTopics}</h2>
       <div className="mt-5 space-y-1">
         {trending.length === 0 ? (
@@ -27,10 +27,10 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
               className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition ${
                 activeCategory === item.slug
                   ? "bg-[#6F42F5]/10 font-semibold text-[#6F42F5]"
-                  : "text-slate-600 hover:bg-[#F7F8FC] hover:text-[#6F42F5]"
+                  : "text-slate-600 hover:bg-pink-50 hover:text-[#6F42F5]"
               }`}
             >
-              <span className="rounded-md bg-[#F7F8FC] px-2 py-0.5 text-xs font-medium text-slate-500">{item.count}</span>
+              <span className="rounded-md bg-pink-50 px-2 py-0.5 text-xs font-medium text-slate-500">{item.count}</span>
               <span>{item.name}</span>
             </Link>
           ))
@@ -38,16 +38,16 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
       </div>
 
       <div className="mt-8 border-t border-slate-100 pt-6">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">{copy.categoriesLabel}</h3>
+        <h3 className="text-sm font-bold text-slate-500">{copy.categoriesLabel}</h3>
         <div className={`mt-3 flex flex-wrap gap-2 ${locale === "en" ? "justify-start" : "justify-end"}`}>
           {categories.map((item) => (
             <Link
               key={item.slug}
               href={blogHref({ category: item.slug })}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 activeCategory === item.slug
                   ? "bg-[#6F42F5] text-white"
-                  : "border border-slate-200 bg-[#F7F8FC] text-slate-600 hover:border-[#6F42F5]/30"
+                  : "border border-slate-200 bg-pink-50/80 text-slate-600 hover:border-[#6F42F5]/30"
               }`}
             >
               {item.name}

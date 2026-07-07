@@ -3,15 +3,9 @@ export function NewsletterCard({ locale = "he" }: { locale?: string }) {
   return (
     <section
       id="newsletter"
-      className="rounded-2xl border border-[#6F42F5]/15 bg-gradient-to-br from-[#F7F8FC] to-white p-6 text-center shadow-[0_8px_30px_rgba(15,23,42,0.05)]"
+      className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${en ? "text-left" : "text-right"}`}
     >
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#6F42F5]/10 text-[#6F42F5]">
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <path d="M4 4h16v16H4z" strokeLinejoin="round" />
-          <path d="M4 7l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-      <h2 className="mt-4 text-lg font-bold text-slate-900">{en ? "Get fresh updates" : "קבלו עדכונים חדשים"}</h2>
+      <h2 className="text-lg font-bold text-slate-900">{en ? "Get fresh updates" : "קבלו עדכונים חדשים"}</h2>
       <p className="mt-2 text-sm leading-7 text-slate-600">
         {en ? "Guides, research, and growth tools — straight to your inbox." : "מדריכים, מחקרים וכלים לצמיחה דיגיטלית — ישירות לתיבה."}
       </p>

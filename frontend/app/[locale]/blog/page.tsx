@@ -156,22 +156,19 @@ export default async function BlogPage({ params, searchParams }: Props) {
 
   return (
     <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale}>
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {usingDemo ? <DemoNotice locale={locale} /> : null}
 
-        <EditorialMasthead articleCount={sortedPosts.length} categoryCount={categoryCounts.length} locale={locale} />
+        <EditorialMasthead locale={locale} />
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
-          <div className="min-w-0 space-y-10">
+        <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_minmax(280px,320px)]">
+          <div className="min-w-0 space-y-8">
             {featured ? <HeroArticle post={featured} locale={locale} /> : null}
             {secondaryFeatured.length > 0 ? <FeaturedStrip posts={secondaryFeatured} locale={locale} /> : null}
-            {category !== "sports" && sportsPosts.length > 0 ? (
-              <SportsSection posts={sportsPosts} locale={locale} />
-            ) : null}
 
-            <section className="space-y-6">
+            <section id="blog-search" className="space-y-6 scroll-mt-28">
               <div
-                className={`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 ${
+                className={`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4 ${
                   locale === "en" ? "text-left" : "text-right"
                 }`}
               >
@@ -184,12 +181,16 @@ export default async function BlogPage({ params, searchParams }: Props) {
               <SearchToolbar categories={categoryCounts} query={q} activeCategory={category} sort={sort} locale={locale} />
               <CategoryFilter categories={categoryCounts} activeCategory={category} query={q} sort={sort} locale={locale} />
 
+              {category !== "sports" && sportsPosts.length > 0 ? (
+                <SportsSection posts={sportsPosts} locale={locale} />
+              ) : null}
+
               {gridPosts.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-12 text-center text-slate-500 shadow-sm">
+                <div className="rounded-2xl bg-white p-12 text-center text-slate-500 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
                   {copy.noResults}
                 </div>
               ) : (
-                <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {gridPosts.map((post) => (
                     <ArticleCard key={post.id} post={post} locale={locale} />
                   ))}
