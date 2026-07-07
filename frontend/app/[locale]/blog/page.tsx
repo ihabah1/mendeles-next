@@ -160,7 +160,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
       );
 
   return (
-    <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale}>
+    <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale} editable={!usingDemo}>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {usingDemo ? <DemoNotice locale={locale} /> : null}
 

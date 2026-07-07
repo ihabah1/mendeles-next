@@ -3,7 +3,13 @@
 import type { AiSeoWorkspaceDraft, AiSeoWorkspaceJob } from "@/lib/api/dashboard";
 import { Button } from "@/components/ui/button";
 
-export const NEWS_DOMAIN_VALUES = new Set(["sports", "economy", "current_affairs", "world_news"]);
+export const NEWS_DOMAIN_VALUES = new Set([
+  "sports",
+  "economy",
+  "current_affairs",
+  "world_news",
+  "international_news",
+]);
 
 export const DOMAIN_ICONS: Record<string, string> = {
   law: "⚖️",
@@ -30,6 +36,7 @@ export const DOMAIN_ICONS: Record<string, string> = {
   economy: "📈",
   current_affairs: "📰",
   world_news: "🌍",
+  international_news: "🗞️",
 };
 
 export function pageLocale(locale?: string): "he" | "en" {
@@ -211,19 +218,14 @@ export function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
                 <section key={block.id} className="rounded-2xl bg-violet-500/15 p-5">
                   <h4 className="text-xl font-semibold">{textValue(config, "headline") || page.title}</h4>
                   <p className="mt-2 text-sm text-slate-200">{textValue(config, "subheadline")}</p>
-                  {textValue(config, "cta") &&
-                    (isLandingPage ? (
-                      <a
-                        href="#contact"
-                        className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950"
-                      >
-                        {textValue(config, "cta")}
-                      </a>
-                    ) : (
-                      <span className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950">
-                        {textValue(config, "cta")}
-                      </span>
-                    ))}
+                  {textValue(config, "cta") && (
+                    <a
+                      href={isLandingPage ? "#contact" : "#faq"}
+                      className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950"
+                    >
+                      {textValue(config, "cta")}
+                    </a>
+                  )}
                 </section>
               );
             }
@@ -250,19 +252,14 @@ export function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
               return (
                 <section key={block.id} className="rounded-2xl border border-violet-300/30 bg-violet-300/10 p-5">
                   <h4 className="text-lg font-semibold">{textValue(config, "headline")}</h4>
-                  {textValue(config, "button") &&
-                    (isLandingPage ? (
-                      <a
-                        href="#contact"
-                        className="mt-3 inline-flex rounded-full bg-violet-400 px-4 py-2 text-sm font-medium text-slate-950"
-                      >
-                        {textValue(config, "button")}
-                      </a>
-                    ) : (
-                      <span className="mt-3 inline-flex rounded-full bg-violet-400 px-4 py-2 text-sm font-medium text-slate-950">
-                        {textValue(config, "button")}
-                      </span>
-                    ))}
+                  {textValue(config, "button") && (
+                    <a
+                      href={isLandingPage ? "#contact" : "#faq"}
+                      className="mt-3 inline-flex rounded-full bg-violet-400 px-4 py-2 text-sm font-medium text-slate-950"
+                    >
+                      {textValue(config, "button")}
+                    </a>
+                  )}
                 </section>
               );
             }

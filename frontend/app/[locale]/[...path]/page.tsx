@@ -61,6 +61,10 @@ function blockHref(config: Record<string, unknown>, fallback: string): string {
   return textValue(config.cta_href) || textValue(config.button_href) || fallback;
 }
 
+function defaultBlockAnchor(isLandingPage: boolean, config: Record<string, unknown>): string {
+  return blockHref(config, isLandingPage ? "#contact" : "#faq");
+}
+
 function accentClasses(accent: string): string {
   if (accent === "emerald") return "border-emerald-400/20 bg-emerald-400/10 shadow-emerald-950/20";
   if (accent === "violet") return "border-violet-400/20 bg-violet-400/10 shadow-violet-950/20";
@@ -93,7 +97,7 @@ function HeroBlock({
   const theme = config.theme && typeof config.theme === "object" ? (config.theme as Record<string, unknown>) : {};
   const accent = textValue(theme.accent) || "cyan";
   const cta = textValue(config.cta);
-  const href = isLandingPage ? blockHref(config, "#contact") : "";
+  const href = defaultBlockAnchor(isLandingPage, config);
   const HeadingTag = isBlog ? "h2" : "h1";
 
   return (
@@ -105,17 +109,14 @@ function HeroBlock({
       <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-200">
         {textValue(config.subheadline) || textValue(config.description)}
       </p>
-      {cta &&
-        (href ? (
-          <a
-            href={href}
-            className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
-          >
-            {cta}
-          </a>
-        ) : (
-          <span className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950">{cta}</span>
-        ))}
+      {cta ? (
+        <a
+          href={href}
+          className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+        >
+          {cta}
+        </a>
+      ) : null}
     </section>
   );
 }
@@ -174,20 +175,48 @@ function RichTextBlock({ config, isBlog }: { config: Record<string, unknown>; is
   );
 }
 
-function FaqBlock({ config, locale }: { config: Record<string, unknown>; locale: string }) {
+function FaqBlock({
+  config,
+  locale,
+  isBlog = false,
+}: {
+  config: Record<string, unknown>;
+  locale: string;
+  isBlog?: boolean;
+}) {
   const items = Array.isArray(config.items) ? config.items : [];
   if (!items.length) return null;
   const copy = editorialCopy(locale);
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-white">{copy.faq}</h2>
+    <section
+      id="faq"
+      className={
+        isBlog
+          ? "scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          : "scroll-mt-24 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8"
+      }
+    >
+      <h2 className={`text-2xl font-bold ${isBlog ? "text-slate-900" : "text-white"}`}>{copy.faq}</h2>
       <div className="mt-6 space-y-4">
         {items.map((item, index) => {
           const row = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
           return (
-            <details key={index} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-              <summary className="cursor-pointer font-semibold text-white">{textValue(row.question)}</summary>
-              <p className="mt-3 leading-7 text-slate-300">{textValue(row.answer)}</p>
+            <details
+              key={index}
+              className={
+                isBlog
+                  ? "rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  : "rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+              }
+            >
+              <summary
+                className={`cursor-pointer font-semibold ${isBlog ? "text-slate-900" : "text-white"}`}
+              >
+                {textValue(row.question)}
+              </summary>
+              <p className={`mt-3 leading-7 ${isBlog ? "text-slate-600" : "text-slate-300"}`}>
+                {textValue(row.answer)}
+              </p>
             </details>
           );
         })}
@@ -199,31 +228,34 @@ function FaqBlock({ config, locale }: { config: Record<string, unknown>; locale:
 function CtaBlock({
   config,
   isLandingPage,
+  locale,
 }: {
   config: Record<string, unknown>;
   isLandingPage: boolean;
+  locale: string;
 }) {
-  const button = textValue(config.button);
-  const href = isLandingPage ? blockHref(config, "#contact") : "";
+  const copy = editorialCopy(locale);
+  const button = textValue(config.button) || textValue(config.cta);
+  const headline = textValue(config.headline) || textValue(config.title);
+  const href = defaultBlockAnchor(isLandingPage, config);
+  const linkLabel = button || copy.learnMore;
+
   return (
     <section className="rounded-[2rem] bg-gradient-to-br from-cyan-300 to-blue-500 p-8 text-center text-slate-950">
-      <h2 className="text-3xl font-bold">{textValue(config.headline) || textValue(config.title)}</h2>
+      <h2 className="text-3xl font-bold">{headline}</h2>
       {(textValue(config.text) || textValue(config.description)) && (
         <p className="mx-auto mt-3 max-w-2xl text-base font-medium">
           {textValue(config.text) || textValue(config.description)}
         </p>
       )}
-      {button &&
-        (href ? (
-          <a
-            href={href}
-            className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
-          >
-            {button}
-          </a>
-        ) : (
-          <span className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white">{button}</span>
-        ))}
+      {(button || headline) && (
+        <a
+          href={href}
+          className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+        >
+          {linkLabel}
+        </a>
+      )}
     </section>
   );
 }
@@ -244,9 +276,11 @@ function PublicBlock({
 
   if (block.block_type === "image") return <ImageBlock config={block.config} />;
   if (block.block_type === "source_link") return <SourceLinkBlock config={block.config} locale={locale} />;
-  if (block.block_type === "hero") return <HeroBlock config={block.config} isLandingPage={isLandingPage} isBlog={isBlog} />;
-  if (block.block_type === "faq") return <FaqBlock config={block.config} locale={locale} />;
-  if (block.block_type === "cta") return <CtaBlock config={block.config} isLandingPage={isLandingPage} />;
+  if (block.block_type === "hero") {
+    return <HeroBlock config={block.config} isLandingPage={isLandingPage} isBlog={isBlog} />;
+  }
+  if (block.block_type === "faq") return <FaqBlock config={block.config} locale={locale} isBlog={isBlog} />;
+  if (block.block_type === "cta") return <CtaBlock config={block.config} isLandingPage={isLandingPage} locale={locale} />;
   if (block.block_type === "contact_form" || block.block_type === "form") {
     const formId = textValue(block.config.formId);
     if (!formId) return null;

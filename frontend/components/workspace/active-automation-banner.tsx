@@ -13,6 +13,7 @@ const RECURRENCE_INTERVAL_LABELS: Record<string, string> = {
 export function formatScheduledAutomationSummary(automation: AiSeoScheduledAutomation): string {
   const parts: string[] = [];
   if (automation.news_hot_topics_enabled) parts.push("חדשות חמות");
+  if (automation.international_news_translation_enabled) parts.push("תרגום חדשות בינלאומיות");
   if (automation.random_topics_enabled) parts.push("נושאים אקראיים");
   if (automation.auto_publish_enabled) parts.push("פרסום אוטומטי");
   if (automation.recurrence_minutes > 0) {

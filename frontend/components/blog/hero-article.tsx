@@ -1,4 +1,5 @@
 import { BlogReadLink } from "@/components/blog/blog-read-link";
+import { BlogAdminSelectControl } from "@/components/blog/blog-admin-edit-controls";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCardPost } from "@/lib/blog/types";
@@ -16,6 +17,7 @@ export function HeroArticle({ post, locale = "he" }: Props) {
   return (
     <article className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
       <div className="relative min-h-[360px] sm:min-h-[440px] lg:min-h-[500px]">
+        <BlogAdminSelectControl postId={post.id} title={post.title} locale={locale} />
         <EditorialCardImage
           src={post.image_url}
           alt={post.title}

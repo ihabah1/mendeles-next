@@ -687,6 +687,7 @@ export const aiSeoApi = {
     random_topics_enabled?: boolean;
     random_topic_count?: number;
     news_hot_topics_enabled?: boolean;
+    international_news_translation_enabled?: boolean;
     landing_design_enabled?: boolean;
     free_image_enabled?: boolean;
     content_locales?: "both" | "he" | "en";
@@ -859,6 +860,7 @@ export type AiSeoScheduledAutomation = {
   recurrence_interval: string;
   random_topics_enabled: boolean;
   news_hot_topics_enabled: boolean;
+  international_news_translation_enabled: boolean;
   auto_publish_enabled: boolean;
 };
 export type AiSeoWorkspaceQueueStats = {

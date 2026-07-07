@@ -68,6 +68,7 @@ export default function WorkspacePage() {
   const [randomTopicsEnabled, setRandomTopicsEnabled] = useState(false);
   const [randomTopicCount, setRandomTopicCount] = useState(2);
   const [newsHotTopicsEnabled, setNewsHotTopicsEnabled] = useState(false);
+  const [internationalNewsTranslationEnabled, setInternationalNewsTranslationEnabled] = useState(false);
   const [contentLocales, setContentLocales] = useState<"both" | "he" | "en">("both");
   const [sportsTranslationEnabled, setSportsTranslationEnabled] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -157,6 +158,7 @@ export default function WorkspacePage() {
         random_topics_enabled: randomTopicsEnabled,
         random_topic_count: randomTopicCount,
         news_hot_topics_enabled: newsHotTopicsEnabled,
+        international_news_translation_enabled: internationalNewsTranslationEnabled,
         landing_design_enabled: landingDesignEnabled,
         free_image_enabled: freeImageEnabled,
         content_locales: contentLocales,
@@ -579,6 +581,12 @@ export default function WorkspacePage() {
     }
   }, [newsHotTopicsEnabled]);
 
+  useEffect(() => {
+    if (internationalNewsTranslationEnabled) {
+      setOutputTypes(["blog"]);
+    }
+  }, [internationalNewsTranslationEnabled]);
+
   if (!canView) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#12182a] p-6 text-sm text-slate-400">
@@ -623,7 +631,10 @@ export default function WorkspacePage() {
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
   const allDomainsSelected = domains.length > 0 && selectedDomains.length === domains.length;
   const canStartGeneration =
-    randomTopicsEnabled || newsHotTopicsEnabled || selectedDomains.length > 0;
+    randomTopicsEnabled ||
+    newsHotTopicsEnabled ||
+    internationalNewsTranslationEnabled ||
+    selectedDomains.length > 0;
   const inputClass =
     "w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600";
   const selectClass = inputClass;
@@ -773,19 +784,19 @@ export default function WorkspacePage() {
                 <OutputPill
                   label="בלוג / מאמר"
                   active={outputTypes.includes("blog") && !outputTypes.includes("landing_page")}
-                  disabled={newsHotTopicsEnabled}
+                  disabled={newsHotTopicsEnabled || internationalNewsTranslationEnabled}
                   onClick={() => setOutputTypes(["blog"])}
                 />
                 <OutputPill
                   label="דף נחיתה"
                   active={outputTypes.includes("landing_page") && !outputTypes.includes("blog")}
-                  disabled={newsHotTopicsEnabled}
+                  disabled={newsHotTopicsEnabled || internationalNewsTranslationEnabled}
                   onClick={() => setOutputTypes(["landing_page"])}
                 />
                 <OutputPill
                   label="שניהם"
                   active={outputTypes.includes("blog") && outputTypes.includes("landing_page")}
-                  disabled={newsHotTopicsEnabled}
+                  disabled={newsHotTopicsEnabled || internationalNewsTranslationEnabled}
                   onClick={() => setOutputTypes(["blog", "landing_page"])}
                 />
               </div>
@@ -801,10 +812,26 @@ export default function WorkspacePage() {
               />
               <OptionCard
                 checked={newsHotTopicsEnabled}
-                onChange={setNewsHotTopicsEnabled}
+                onChange={(checked) => {
+                  setNewsHotTopicsEnabled(checked);
+                  if (checked) setInternationalNewsTranslationEnabled(false);
+                }}
                 tone="amber"
                 title="חדשות חמות"
                 description="אירוע מ-24 שעות → מאמר + דף נחיתה"
+              />
+              <OptionCard
+                checked={internationalNewsTranslationEnabled}
+                onChange={(checked) => {
+                  setInternationalNewsTranslationEnabled(checked);
+                  if (checked) {
+                    setNewsHotTopicsEnabled(false);
+                    setOutputTypes(["blog"]);
+                  }
+                }}
+                tone="sky"
+                title="תרגם כתבות חדשותיות עם לינק למקור"
+                description="BBC, Reuters, CNN, Guardian, NYT, Al Jazeera ועוד — מאמר מתורגם + קישור למקור"
               />
               <OptionCard
                 checked={autoPublishEnabled}

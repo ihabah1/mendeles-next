@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/i18n/navigation";
 import {
@@ -50,6 +51,8 @@ function imageUrl(page: ContentPageDetail | null): string | null {
 
 export function ContentStudioHub({ kind }: { kind: StudioKind }) {
   const meta = STUDIO_META[kind];
+  const searchParams = useSearchParams();
+  const pageIdFromUrl = searchParams.get("pageId");
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("content.edit");
   const canDelete = hasPermission("content.delete") || hasPermission("ai_seo.manage");
@@ -153,6 +156,13 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
 
   const selectedPage = detailQuery.data ?? null;
   const previewImage = imageUrl(selectedPage);
+
+  useEffect(() => {
+    if (!pageIdFromUrl || !pages.length) return;
+    if (pages.some((page) => page.id === pageIdFromUrl)) {
+      setSelectedId(pageIdFromUrl);
+    }
+  }, [pageIdFromUrl, pages]);
 
   useEffect(() => {
     if (!detailQuery.data) return;

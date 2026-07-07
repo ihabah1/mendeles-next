@@ -1,7 +1,7 @@
 import type { BlogCategory } from "@/lib/blog/types";
 
 const HE_LABELS: Record<string, string> = {
-  law: "עריכת דין",
+  law: "משפט ופלילי",
   real_estate: 'נדל"ן',
   insurance: "ביטוח",
   finance: "פיננסים",
@@ -25,6 +25,7 @@ const HE_LABELS: Record<string, string> = {
   economy: "כלכלה",
   current_affairs: "אקטואליה",
   world_news: "בעולם",
+  international_news: "תרגום חדשות בינלאומיות",
   seo: "קידום אתרים",
   "digital-marketing": "שיווק דיגיטלי",
   digital_marketing: "שיווק דיגיטלי",
@@ -60,6 +61,7 @@ const EN_LABELS: Record<string, string> = {
   economy: "Economy",
   current_affairs: "Current Affairs",
   world_news: "World News",
+  international_news: "International News Translation",
   seo: "SEO",
   "digital-marketing": "Digital Marketing",
   digital_marketing: "Digital Marketing",

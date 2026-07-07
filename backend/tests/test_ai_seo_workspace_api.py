@@ -182,7 +182,7 @@ def test_ai_seo_workspace_research_lists_trends_phrases(owner_client, tenant):
     assert body["available"] is True
     assert body["items"][0]["keyword"] == "עורך דין תעבורה"
     assert body["items"][0]["volume"] == 100
-    assert body["items"][0]["category"] == "עריכת דין"
+    assert body["items"][0]["category"] == "משפט ופלילי"
 
 
 @pytest.mark.django_db

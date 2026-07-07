@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { BlogReadLink } from "@/components/blog/blog-read-link";
+import { BlogAdminSelectControl } from "@/components/blog/blog-admin-edit-controls";
+import { useBlogAdminEdit } from "@/components/blog/blog-admin-edit-context";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { bookmarkedIds, toggleBookmark } from "@/lib/blog/reads";
@@ -15,16 +17,23 @@ type Props = {
 
 export function ArticleCard({ post, locale = "he" }: Props) {
   const [bookmarked, setBookmarked] = useState(false);
+  const { isSelected } = useBlogAdminEdit();
   const copy = editorialCopy(locale);
+  const selected = isSelected(post.id);
 
   useEffect(() => {
     setBookmarked(bookmarkedIds().has(post.id));
   }, [post.id]);
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(15,23,42,0.1)]">
+    <article
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(15,23,42,0.1)] ${
+        selected ? "ring-2 ring-[#6F42F5] ring-offset-2" : ""
+      }`}
+    >
       <BlogReadLink href={post.full_path} postId={post.id} className="flex h-full flex-col">
         <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+          <BlogAdminSelectControl postId={post.id} title={post.title} locale={locale} />
           <EditorialCardImage
             src={post.image_url}
             alt={post.title}

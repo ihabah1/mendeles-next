@@ -126,6 +126,46 @@ def test_resolve_news_event_skips_duplicate_source_url(tenant, monkeypatch, owne
     assert event["source_url"] == "https://news.google.com/articles/example-sports-2"
 
 
+def test_headlines_from_popular_sites_merges_publishers(monkeypatch):
+    feeds = {
+        "http://feeds.bbci.co.uk/news/world/rss.xml": [
+            {"title": "Story A", "url": "https://bbc.co.uk/a", "source_name": "BBC News", "published": ""},
+        ],
+        "https://feeds.reuters.com/reuters/worldNews": [
+            {"title": "Story B", "url": "https://reuters.com/b", "source_name": "Reuters", "published": ""},
+        ],
+    }
+
+    def fake_fetch(feed_url, *, limit=25):
+        return feeds.get(feed_url, [])[:limit]
+
+    monkeypatch.setattr("ai_seo.application.news_source_service.fetch_rss_headlines", fake_fetch)
+    monkeypatch.setattr(
+        "ai_seo.application.news_source_service.POPULAR_WORLD_NEWS_SITES",
+        [
+            {"name": "BBC News", "feed": "http://feeds.bbci.co.uk/news/world/rss.xml"},
+            {"name": "Reuters", "feed": "https://feeds.reuters.com/reuters/worldNews"},
+        ],
+    )
+    from ai_seo.application.news_source_service import headlines_from_popular_sites
+
+    items = headlines_from_popular_sites(limit=4)
+    assert len(items) == 2
+    assert items[0]["publisher"] in {"BBC News", "Reuters"}
+
+
+def test_headlines_for_domain_international_news_uses_popular_sites(monkeypatch):
+    monkeypatch.setattr(
+        "ai_seo.application.news_source_service.headlines_from_popular_sites",
+        lambda limit=25: [{"title": "Global headline", "url": "https://example.com/global", "source_name": "CNN", "published": ""}],
+    )
+    from ai_seo.application.news_source_service import headlines_for_domain
+
+    items = headlines_for_domain("international_news")
+    assert len(items) == 1
+    assert items[0]["source_name"] == "CNN"
+
+
 def test_create_page_adds_source_link_block(tenant, owner_user, monkeypatch):
     from automation.infrastructure.models import AutomationQueue
 

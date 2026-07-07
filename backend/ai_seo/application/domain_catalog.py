@@ -26,6 +26,10 @@ DOMAIN_EN: dict[str, dict] = {
     "economy": {"label": "Economy", "keywords": ["economy", "stock market", "inflation", "interest rates"]},
     "current_affairs": {"label": "Current Affairs", "keywords": ["breaking news", "politics", "headlines"]},
     "world_news": {"label": "World News", "keywords": ["international news", "geopolitics", "Europe", "United States"]},
+    "international_news": {
+        "label": "International News Translation",
+        "keywords": ["world news", "BBC", "Reuters", "CNN", "Guardian", "translate"],
+    },
 }
 
 
@@ -53,7 +57,7 @@ def batch_locales(data: dict) -> list[str]:
 
 
 DOMAIN_OPTIONS = [
-    {"value": "law", "label": "עריכת דין", "keywords": ["עורך דין", "ייעוץ משפטי", "תביעה אזרחית"]},
+    {"value": "law", "label": "משפט ופלילי", "keywords": ["עורך דין", "ייעוץ משפטי", "תביעה אזרחית"]},
     {"value": "real_estate", "label": "נדל\"ן", "keywords": ["דירות למכירה", "השקעות נדלן", "משכנתא"]},
     {"value": "insurance", "label": "ביטוח", "keywords": ["ביטוח רכב", "ביטוח בריאות", "ביטוח עסק"]},
     {"value": "finance", "label": "פיננסים", "keywords": ["הלוואות", "תכנון פיננסי", "השקעות"]},
@@ -77,6 +81,11 @@ DOMAIN_OPTIONS = [
     {"value": "economy", "label": "כלכלה", "keywords": ["כלכלה", "שוק ההון", "בורסה", "אינפלציה", "ריבית בנק ישראל"]},
     {"value": "current_affairs", "label": "אקטואליה", "keywords": ["אקטואליה", "חדשות היום", "פוליטיקה", "ישראל", "מבזקים"]},
     {"value": "world_news", "label": "בעולם", "keywords": ["חדשות בעולם", "בינלאומי", "גיאופוליטיקה", "ארה\"ב", "אירופה"]},
+    {
+        "value": "international_news",
+        "label": "תרגום חדשות בינלאומיות",
+        "keywords": ["חדשות בעולם", "תרגום", "BBC", "Reuters", "CNN", "Guardian", "NYT"],
+    },
 ]
 
 

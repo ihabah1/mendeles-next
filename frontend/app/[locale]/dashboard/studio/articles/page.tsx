@@ -1,7 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { ContentStudioHub } from "@/components/studio/content-studio-hub";
 
 export default function ArticleStudioPage() {
-  return <ContentStudioHub kind="blog" />;
+  return (
+    <Suspense fallback={null}>
+      <ContentStudioHub kind="blog" />
+    </Suspense>
+  );
 }

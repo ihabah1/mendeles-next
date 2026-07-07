@@ -239,15 +239,17 @@ IMAGE_CONTEXT_ALIASES = {
     "economy": ["economy", "market", "stock", "inflation", "כלכלה", "בורסה", "שוק", "אינפלציה", "ריבית"],
     "current_affairs": ["news", "breaking", "politic", "אקטואליה", "חדשות", "פוליטיקה", "מבזק", "ישראל"],
     "world_news": ["world", "global", "international", "בעולם", "בינלאומי", "גיאופוליטיקה", "ארה\"ב", "אירופה"],
+    "international_news": ["world", "global", "international", "translate", "bbc", "reuters", "cnn", "תרגום", "בינלאומי"],
 }
 
-NEWS_DOMAIN_VALUES = frozenset({"sports", "economy", "current_affairs", "world_news"})
+NEWS_DOMAIN_VALUES = frozenset({"sports", "economy", "current_affairs", "world_news", "international_news"})
 
 NEWS_DOMAIN_HINTS = {
     "sports": ["ספורט", "כדורגל", "כדורסל", "טניס", "אולימפ", "ליגה", "משחק", "sport", "football", "nba"],
     "economy": ["כלכלה", "בורסה", "שוק", "אינפלציה", "ריבית", "דולר", "שקל", "economy", "market", "finance"],
     "current_affairs": ["אקטואליה", "פוליט", "ממשלה", "כנסת", "ישראל", "חדשות", "news", "breaking", "מבזק"],
     "world_news": ["בעולם", "בינלאומי", "ארה\"ב", "אירופה", "סין", "אוקראינה", "world", "global", "international"],
+    "international_news": ["תרגום", "בינלאומי", "bbc", "reuters", "cnn", "guardian", "world", "global", "international"],
 }
 
 LANDING_THEMES = [
@@ -288,11 +290,20 @@ class AiSeoGenerationService:
         return pool
 
     @classmethod
-    def _prepare_news_domain_run(cls, tenant_id, *, requested_values: list[str] | None = None) -> tuple[dict, list[str], dict | None]:
-        pool = cls._news_domain_pool(requested_values)
-        if not pool:
-            raise RuntimeError("No news domains configured.")
-        domain = random.choice(pool)
+    def _prepare_news_domain_run(
+        cls,
+        tenant_id,
+        *,
+        requested_values: list[str] | None = None,
+        international_news_translation_enabled: bool = False,
+    ) -> tuple[dict, list[str], dict | None]:
+        if international_news_translation_enabled:
+            domain = next(item for item in DOMAIN_OPTIONS if item["value"] == "international_news")
+        else:
+            pool = cls._news_domain_pool(requested_values)
+            if not pool:
+                raise RuntimeError("No news domains configured.")
+            domain = random.choice(pool)
         keywords = cls._select_keywords_for_run(domain, [], random_topics_enabled=True)
         news_event = cls._resolve_news_event(tenant_id, domain, keywords)
         if news_event:
@@ -308,8 +319,9 @@ class AiSeoGenerationService:
         random_topics_enabled: bool,
         random_topic_count: int,
         news_hot_topics_enabled: bool = False,
+        international_news_translation_enabled: bool = False,
     ) -> list[dict]:
-        if news_hot_topics_enabled:
+        if news_hot_topics_enabled or international_news_translation_enabled:
             return []
         pool = selected_domain_rows(values) if values else DOMAIN_OPTIONS
         if not random_topics_enabled:
@@ -430,6 +442,7 @@ class AiSeoGenerationService:
             "recurrence_interval": config.get("recurrence_interval") or "",
             "random_topics_enabled": bool(config.get("random_topics_enabled")),
             "news_hot_topics_enabled": bool(config.get("news_hot_topics_enabled")),
+            "international_news_translation_enabled": bool(config.get("international_news_translation_enabled")),
             "auto_publish_enabled": bool(config.get("auto_publish_enabled") or representative.auto_publish_enabled),
         }
 
@@ -1006,6 +1019,7 @@ class AiSeoGenerationService:
         requested_domain_values = data.get("domains") or []
         random_topics_enabled = bool(data.get("random_topics_enabled", False))
         news_hot_topics_enabled = bool(data.get("news_hot_topics_enabled", False))
+        international_news_translation_enabled = bool(data.get("international_news_translation_enabled", False))
         random_topic_count = max(1, min(int(data.get("random_topic_count") or 1), 6))
         recurrence_minutes = max(0, min(int(data.get("recurrence_minutes") or 0), 10_080))
         domains = cls._select_domains_for_run(
@@ -1013,9 +1027,17 @@ class AiSeoGenerationService:
             random_topics_enabled=random_topics_enabled,
             random_topic_count=random_topic_count,
             news_hot_topics_enabled=news_hot_topics_enabled,
+            international_news_translation_enabled=international_news_translation_enabled,
         )
         prepared_news = None
-        if news_hot_topics_enabled:
+        if international_news_translation_enabled:
+            prepared_news = cls._prepare_news_domain_run(
+                tenant_id,
+                requested_values=requested_domain_values,
+                international_news_translation_enabled=True,
+            )
+            domains = [prepared_news[0]]
+        elif news_hot_topics_enabled:
             prepared_news = cls._prepare_news_domain_run(tenant_id, requested_values=requested_domain_values)
             domains = [prepared_news[0]]
         elif not domains:
@@ -1029,6 +1051,8 @@ class AiSeoGenerationService:
                 raise RuntimeError("Select at least one domain or enable random/news scheduling.")
 
         output_types = [o for o in (data.get("output_types") or []) if o in OUTPUT_TO_JOB]
+        if international_news_translation_enabled and not output_types:
+            output_types = ["blog"]
         if news_hot_topics_enabled and not output_types:
             output_types = ["blog", "landing_page"]
         if not output_types:
@@ -1051,6 +1075,7 @@ class AiSeoGenerationService:
 
         locales = batch_locales(data)
         sports_translation_enabled = bool(data.get("sports_translation_enabled", False))
+        international_news_translation_flag = international_news_translation_enabled
 
         for domain in domains:
             if prepared_news and domain.get("value") == prepared_news[0].get("value"):
@@ -1105,6 +1130,7 @@ class AiSeoGenerationService:
                                 "random_topics_enabled": random_topics_enabled,
                                 "random_topic_count": random_topic_count,
                                 "news_hot_topics_enabled": news_hot_topics_enabled,
+                                "international_news_translation_enabled": international_news_translation_flag,
                                 "landing_design_enabled": landing_design_enabled,
                                 "free_image_enabled": free_image_enabled,
                                 "visual_asset": visual_asset,
@@ -1145,6 +1171,7 @@ class AiSeoGenerationService:
             user_prompt=config.get("prompt", ""),
             news_event=config.get("news_event"),
             sports_translation_enabled=bool(config.get("sports_translation_enabled")),
+            international_news_translation_enabled=bool(config.get("international_news_translation_enabled")),
         )
         result = GeminiService.generate_json(prompt)
         return cls._create_page_from_payload(job, result)
@@ -1201,6 +1228,7 @@ class AiSeoGenerationService:
                 user_prompt=config.get("prompt", ""),
                 news_event=news_event,
                 sports_translation_enabled=bool(config.get("sports_translation_enabled")),
+                international_news_translation_enabled=bool(config.get("international_news_translation_enabled")),
             )
             result = GeminiService.generate_json(prompt)
             job.config = {**config, "gemini_payload": result}
@@ -1543,6 +1571,8 @@ class AiSeoGenerationService:
                 block_config = {**block_config, "theme": landing_theme}
             if page_type == PageType.LANDING_PAGE and block.get("type") in {"hero", "cta"}:
                 block_config = {**block_config, "cta_href": "#contact", "button_href": "#contact"}
+            elif page_type == PageType.BLOG and block.get("type") in {"hero", "cta"}:
+                block_config = {**block_config, "cta_href": "#faq", "button_href": "#faq"}
             BlockService.create_block(
                 page,
                 {
@@ -1662,6 +1692,7 @@ class AiSeoGenerationService:
         user_prompt: str,
         news_event: dict | None = None,
         sports_translation_enabled: bool = False,
+        international_news_translation_enabled: bool = False,
     ) -> str:
         domain_label = domain.get("label", "")
         domain_value = domain.get("value", "")
@@ -1703,6 +1734,17 @@ Do not invent a specific foreign newspaper name. Mention that the story reflects
 Use a stadium atmosphere and competitive tension. Include a strong headline and subhead suitable for a sports section.
 """
 
+        international_news_block = ""
+        if domain_value == "international_news" or international_news_translation_enabled:
+            publishers = "BBC, Reuters, CNN, The Guardian, NYT, Al Jazeera, Deutsche Welle, France 24, Sky News, NBC News"
+            international_news_block = f"""
+This is a translated international news article adapted from popular world news outlets ({publishers}).
+Translate and rewrite the story into fluent, natural journalistic {locale.upper()} for {audience}.
+Preserve factual accuracy. Paraphrase — never copy sentences verbatim from the source.
+The published page will include a direct link to the original international article — mention the source publication naturally.
+Use a neutral newsroom tone: what happened, context, regional/global impact, and what to watch next.
+"""
+
         landing_cta_note = ""
         if output_type == "landing_page":
             landing_cta_note = (
@@ -1715,7 +1757,7 @@ Use a stadium atmosphere and competitive tension. Include a strong headline and 
 Create a production-ready {asset}. {language_instruction}
 Business/news domain: {domain_label}.
 Use only the following real user-selected keywords: {", ".join(keywords)}.
-{news_block}{sports_block}
+{news_block}{sports_block}{international_news_block}
 {landing_cta_note}
 Additional user instructions: {user_prompt or "none"}.
 Revision feedback: {feedback or "none"}.

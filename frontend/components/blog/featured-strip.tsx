@@ -1,4 +1,5 @@
 import { BlogReadLink } from "@/components/blog/blog-read-link";
+import { BlogAdminSelectControl } from "@/components/blog/blog-admin-edit-controls";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCardPost } from "@/lib/blog/types";
@@ -22,6 +23,7 @@ export function FeaturedStrip({ posts, locale = "he" }: Props) {
         >
           <BlogReadLink href={post.full_path} postId={post.id} className="flex h-full flex-col">
             <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+              <BlogAdminSelectControl postId={post.id} title={post.title} locale={locale} />
               <EditorialCardImage
                 src={post.image_url}
                 alt={post.title}

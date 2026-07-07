@@ -146,12 +146,13 @@ export function OptionCard({
   onChange: (checked: boolean) => void;
   title: string;
   description: string;
-  tone?: "neutral" | "amber" | "purple";
+  tone?: "neutral" | "amber" | "purple" | "sky";
 }) {
   const toneStyles = {
     neutral: checked ? "border-white/30 bg-white/10" : "border-white/10 bg-white/[0.03]",
     amber: checked ? "border-amber-400/50 bg-amber-500/15" : "border-amber-500/20 bg-amber-500/5",
     purple: checked ? "border-[#6F42F5]/50 bg-[#6F42F5]/10" : "border-[#6F42F5]/20 bg-[#6F42F5]/5",
+    sky: checked ? "border-sky-400/50 bg-sky-500/15" : "border-sky-500/20 bg-sky-500/5",
   }[tone];
 
   return (
