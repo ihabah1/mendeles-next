@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { MarketingLocaleSwitcher } from "@/components/marketing/marketing-locale-switcher";
 import { MarketingLogo } from "@/components/marketing/marketing-logo";
 import { MobileNav } from "@/components/marketing/mobile-nav";
-import { MAIN_NAV } from "@/lib/marketing/content";
+import { MAIN_NAV, FEATURED_NAV_CLASS } from "@/lib/marketing/content";
 import { cn } from "@/lib/utils";
 
 const DROPDOWN_NAV = new Set(["navSolutions"]);
@@ -30,13 +30,23 @@ export async function PublicHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="inline-flex items-center gap-0.5 whitespace-nowrap transition hover:text-white"
+              className={
+                "featured" in item && item.featured
+                  ? FEATURED_NAV_CLASS
+                  : "inline-flex items-center gap-0.5 whitespace-nowrap transition hover:text-white"
+              }
             >
               {tl(item.labelKey)}
-              {DROPDOWN_NAV.has(item.labelKey) && (
-                <span className="text-[10px] opacity-60" aria-hidden="true">
-                  ▾
+              {"featured" in item && item.featured ? (
+                <span className="text-[10px] opacity-90" aria-hidden="true">
+                  ✦
                 </span>
+              ) : (
+                DROPDOWN_NAV.has(item.labelKey) && (
+                  <span className="text-[10px] opacity-60" aria-hidden="true">
+                    ▾
+                  </span>
+                )
               )}
             </Link>
           ))}

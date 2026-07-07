@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
-import { MAIN_NAV } from "@/lib/marketing/content";
+import { MAIN_NAV, FEATURED_NAV_MOBILE_CLASS } from "@/lib/marketing/content";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -33,10 +33,19 @@ export function MobileNav() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+                  className={
+                    "featured" in item && item.featured
+                      ? FEATURED_NAV_MOBILE_CLASS
+                      : "block rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+                  }
                   onClick={() => setOpen(false)}
                 >
                   {tl(item.labelKey)}
+                  {"featured" in item && item.featured ? (
+                    <span className="ms-1.5 text-[10px] opacity-90" aria-hidden="true">
+                      ✦
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             ))}
