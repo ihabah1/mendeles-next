@@ -5,9 +5,8 @@ const COPY = {
     metaTitle: "Mendeles Insights — בלוג",
     metaDescription: "תובנות, מדריכים ומחקר לצמיחה דיגיטלית — בלוג Mendeles Insights.",
     mastheadKicker: "Mendeles Insights",
-    mastheadTitle: "חדר חדשות דיגיטלי",
-    mastheadSubtitle:
-      "מדריכים, מחקרים ותובנות על SEO, שיווק, AI ואוטומציה — עיצוב עיתונאי לצוותי צמיחה.",
+    mastheadTitle: "חדשות מנדלס",
+    mastheadSubtitle: "חדשות ומאמרים מעניינים מהארץ ומהעולם",
     articles: "מאמרים",
     categories: "קטגוריות",
     lastUpdate: "עדכון אחרון",
