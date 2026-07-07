@@ -813,6 +813,7 @@
     "skipToContent": "Skip to main content",
     "openPanel": "Open accessibility menu",
     "closePanel": "Close accessibility menu",
+    "widgetLabel": "Accessibility",
     "panelTitle": "Accessibility options",
     "panelDesc": "Customize the site for your needs. Settings are saved in your browser.",
     "fontSize": "Text size",

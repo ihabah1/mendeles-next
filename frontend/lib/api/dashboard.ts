@@ -720,10 +720,11 @@ export const aiSeoApi = {
       method: "DELETE",
       headers: authHeaders(),
     }),
-  swapWorkspacePageImage: (pageId: string) =>
+  swapWorkspacePageImage: (pageId: string, body?: { domain?: string; context?: string }) =>
     apiFetch<AiSeoWorkspaceDraft>(`/api/v1/ai-seo/workspace/pages/${pageId}/swap-image/`, {
       method: "POST",
       headers: authHeaders(),
+      json: body ?? {},
     }),
   runWorkspaceJob: (jobId: string) =>
     apiFetch<AiSeoWorkspaceJob>(`/api/v1/ai-seo/workspace/jobs/${jobId}/run/`, {

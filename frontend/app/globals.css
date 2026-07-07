@@ -153,13 +153,43 @@ html.a11y-high-contrast video {
   clip: auto;
   white-space: normal;
   border-radius: 0.5rem;
-  background: #4f46e5;
+  background: #6f42f5;
   color: #ffffff;
   font-size: 0.875rem;
   font-weight: 600;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.25);
   outline: 2px solid #ffffff;
   outline-offset: 2px;
+}
+
+/* Floating accessibility balloon — portaled to body on every page */
+.a11y-widget-root {
+  pointer-events: none;
+}
+
+.a11y-widget-root > * {
+  pointer-events: auto;
+}
+
+.a11y-widget-panel {
+  animation: a11y-panel-in 0.18s ease-out;
+}
+
+@keyframes a11y-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a11y-widget-panel {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

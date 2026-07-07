@@ -378,9 +378,15 @@ class AiSeoGenerationService:
         representative = scheduled_jobs[0] if scheduled_jobs else active_jobs[0]
         config = representative.config or {}
         next_run_at = None
-        scheduled_times = [job.scheduled_at for job in scheduled_jobs if job.scheduled_at]
-        if scheduled_times:
-            next_run_at = min(scheduled_times).isoformat()
+        upcoming_times: list = []
+        for job in active_jobs:
+            if job.scheduled_at:
+                upcoming_times.append(job.scheduled_at)
+            next_recurring = _parse_scheduled_at((job.config or {}).get("next_recurring_run_at"))
+            if next_recurring:
+                upcoming_times.append(next_recurring)
+        if upcoming_times:
+            next_run_at = min(upcoming_times).isoformat()
 
         return {
             "active": True,
@@ -779,7 +785,19 @@ class AiSeoGenerationService:
         }
 
     @staticmethod
+    def _promote_due_scheduled_jobs(tenant_id) -> int:
+        now = timezone.now()
+        return AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=[JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE],
+            status=JobStatus.SCHEDULED,
+            scheduled_at__lte=now,
+            deleted_at__isnull=True,
+        ).update(status=JobStatus.QUEUED, updated_at=now)
+
+    @staticmethod
     def recover_stale_jobs(tenant_id) -> None:
+        AiSeoGenerationService._promote_due_scheduled_jobs(tenant_id)
         timeout_seconds = int(getattr(settings, "AI_SEO_STEP_TIMEOUT_SECONDS", 90))
         max_retries = int(getattr(settings, "AI_SEO_STEP_MAX_RETRIES", 3))
         stale_before = timezone.now() - timedelta(seconds=timeout_seconds)
@@ -1102,6 +1120,7 @@ class AiSeoGenerationService:
         if step_type == "ai_seo.finish":
             page_title = (job.config or {}).get("generated_page_title", "")
             AutomationLogService.log(job, f"סיום: התוצר מוכן לבדיקה{f' — {page_title}' if page_title else ''}", execution=execution)
+            cls._schedule_next_recurring_job(job, execution=execution)
             return None
 
         if step_type == "ai_seo.publish":
@@ -1111,7 +1130,6 @@ class AiSeoGenerationService:
                 config.pop("manual_publish_requested", None)
                 job.config = config
                 job.save(update_fields=["config", "updated_at"])
-                cls._schedule_next_recurring_job(job, execution=execution)
                 AutomationLogService.log(job, f"העלאה לפרודקשן הושלמה: {page.full_path or page.title}", execution=execution)
                 return page
 
@@ -1684,25 +1702,54 @@ Locale: {locale}.
         PageService.soft_delete(tenant_id, page_id)
 
     @classmethod
-    def swap_page_image(cls, tenant_id, page_id: str) -> Page:
+    def swap_page_image(
+        cls,
+        tenant_id,
+        page_id: str,
+        *,
+        domain_value: str = "",
+        context_text: str = "",
+    ) -> Page:
         page = PageService.get_page(tenant_id, page_id)
         source_config = cls._source_config_for_page(page)
-        domain = source_config.get("domain")
-        keywords = source_config.get("keywords") or []
+        domain = None
+        if domain_value:
+            domain = next((item for item in DOMAIN_OPTIONS if item.get("value") == domain_value), None)
+            if not domain:
+                domain = {"value": domain_value, "label": domain_value, "keywords": []}
+
         if not domain:
-            category = cls._page_category(page)
-            if category and category.get("slug"):
-                domain = next(
-                    (item for item in DOMAIN_OPTIONS if item.get("value") == category["slug"]),
-                    None,
-                )
+            domain = source_config.get("domain")
+            if not domain:
+                category = cls._page_category(page)
+                if category and category.get("slug"):
+                    domain = next(
+                        (item for item in DOMAIN_OPTIONS if item.get("value") == category["slug"]),
+                        None,
+                    )
         if not domain:
             domain = DOMAIN_OPTIONS[0] if DOMAIN_OPTIONS else None
+
+        keywords = list(source_config.get("keywords") or [])
+        context = (context_text or "").strip()
+        if context:
+            keywords = [context, *keywords]
+
+        prompt = " ".join(
+            part
+            for part in [
+                context,
+                page.title or "",
+                page.meta_title or "",
+                source_config.get("prompt", ""),
+            ]
+            if part
+        )
 
         visual_asset = cls._random_visual_asset(
             domain,
             keywords=keywords,
-            prompt=page.title or page.meta_title or "",
+            prompt=prompt,
         )
         locale = page.locale or "he"
         image_caption = (

@@ -61,6 +61,15 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
   const [draftMetaTitle, setDraftMetaTitle] = useState("");
   const [draftMetaDescription, setDraftMetaDescription] = useState("");
   const [draftBlocks, setDraftBlocks] = useState<Record<string, string>>({});
+  const [imageDomain, setImageDomain] = useState("");
+  const [imageContext, setImageContext] = useState("");
+
+  const domainsQuery = useQuery({
+    queryKey: ["ai-seo-workspace-domains"],
+    queryFn: aiSeoApi.workspace,
+    staleTime: 5 * 60_000,
+  });
+  const domainOptions = domainsQuery.data?.domains ?? [];
 
   const listQuery = useQuery({
     queryKey: ["content-studio", kind],
@@ -95,6 +104,8 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
 
   function selectPage(page: ContentPage) {
     setSelectedId(page.id);
+    setImageDomain("");
+    setImageContext("");
   }
 
   const save = useMutation({
@@ -121,7 +132,11 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
   });
 
   const swapImage = useMutation({
-    mutationFn: () => aiSeoApi.swapWorkspacePageImage(selectedId!),
+    mutationFn: () =>
+      aiSeoApi.swapWorkspacePageImage(selectedId!, {
+        domain: imageDomain || undefined,
+        context: imageContext.trim() || undefined,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content-studio-detail", selectedId] });
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
@@ -237,7 +252,7 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
                         onClick={() => swapImage.mutate()}
                         className="border-white/10 bg-white/5"
                       >
-                        תמונה אחרת
+                        {swapImage.isPending ? "מחפש תמונה…" : "מצא תמונה מתאימה"}
                       </Button>
                     </>
                   )}
@@ -262,6 +277,42 @@ export function ContentStudioHub({ kind }: { kind: StudioKind }) {
                 <div className="overflow-hidden rounded-xl border border-white/10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={previewImage} alt="" className="max-h-56 w-full object-cover" />
+                </div>
+              )}
+
+              {canEdit && selectedPage && (
+                <div className="rounded-xl border border-white/10 bg-[#0b1020]/60 p-4">
+                  <p className="text-sm font-medium text-slate-200">החלפת תמונה לפי תחום</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    בחרו תחום מהרשימה או הקלידו מילות חיפוש — המערכת תמצא תמונה מסחרית מתאימה.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm sm:col-span-1">
+                      <span className="mb-1 block text-slate-400">תחום</span>
+                      <select
+                        value={imageDomain}
+                        onChange={(e) => setImageDomain(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2 text-slate-100"
+                      >
+                        <option value="">אוטומטי (לפי הכתבה)</option>
+                        {domainOptions.map((domain) => (
+                          <option key={domain.value} value={domain.value}>
+                            {domain.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-sm sm:col-span-1">
+                      <span className="mb-1 block text-slate-400">מילות חיפוש</span>
+                      <input
+                        type="text"
+                        value={imageContext}
+                        onChange={(e) => setImageContext(e.target.value)}
+                        placeholder="לדוגמה: רכבת, ביטוח, עורך דין…"
+                        className="w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 py-2 text-slate-100 placeholder:text-slate-600"
+                      />
+                    </label>
+                  </div>
                 </div>
               )}
 

@@ -2,7 +2,7 @@ import pytest
 from datetime import timedelta
 from django.utils import timezone
 
-from automation.domain.enums import JobStatus, StepStatus
+from automation.domain.enums import JobStatus, JobType, StepStatus
 from automation.infrastructure.models import AutomationJob, AutomationJobStep
 from content.domain.status import PageStatus
 from content.infrastructure.models import Page
@@ -398,6 +398,74 @@ def test_ai_seo_workspace_scheduled_automation_for_pending_recurring_batch(owner
 
 
 @pytest.mark.django_db
+def test_ai_seo_workspace_schedules_recurring_without_auto_publish(owner_client, settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+
+    def fake_generate_json(prompt):
+        return {
+            "title": "דף מחזורי ללא פרסום",
+            "meta_title": "דף מחזורי ללא פרסום",
+            "meta_description": "תיאור",
+            "blocks": [{"type": "hero", "config": {"headline": "כותרת"}}],
+        }
+
+    monkeypatch.setattr(
+        "ai_seo.application.gemini_service.GeminiService.generate_json",
+        fake_generate_json,
+    )
+    create = owner_client.post(
+        "/api/v1/ai-seo/workspace/generate/",
+        {
+            "domains": ["law"],
+            "output_types": ["landing_page"],
+            "keywords": ["עורך דין"],
+            "recurrence_minutes": 60,
+        },
+        format="json",
+    )
+    job_id = create.json()["jobs"][0]["id"]
+    response = None
+    for _ in range(6):
+        response = owner_client.post(f"/api/v1/ai-seo/workspace/jobs/{job_id}/run/")
+
+    assert response is not None
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["status"] == "waiting_approval"
+    next_job_id = body["config"]["next_recurring_job_id"]
+    next_job = AutomationJob.objects.get(id=next_job_id)
+    assert next_job.status == JobStatus.SCHEDULED
+    assert next_job.scheduled_at is not None
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_promotes_due_scheduled_jobs(owner_client, settings, tenant, owner_user):
+    settings.GEMINI_API_KEY = "test-key"
+    from automation.infrastructure.models import AutomationQueue
+
+    queue, _ = AutomationQueue.objects.get_or_create(
+        tenant=tenant,
+        slug="default",
+        defaults={"name": "Default", "is_default": True},
+    )
+    job = AutomationJob.objects.create(
+        tenant=tenant,
+        queue=queue,
+        name="Scheduled recurring job",
+        job_type=JobType.GENERATE_BLOG_ARTICLE,
+        status=JobStatus.SCHEDULED,
+        scheduled_at=timezone.now() - timedelta(minutes=5),
+        created_by=owner_user,
+        config={"recurrence_minutes": 120},
+    )
+
+    owner_client.get("/api/v1/ai-seo/workspace/")
+    job.refresh_from_db()
+
+    assert job.status == JobStatus.QUEUED
+
+
+@pytest.mark.django_db
 def test_ai_seo_workspace_delete_page(owner_client, tenant, owner_user):
     page = Page.objects.create(
         tenant=tenant,
@@ -643,3 +711,38 @@ def test_ai_seo_workspace_swap_page_image(owner_client, tenant, owner_user):
     assert body["image"] is not None
     assert body["image"].get("url")
     assert body["image"]["url"] != "https://example.com/old.jpg"
+
+
+@pytest.mark.django_db
+def test_ai_seo_workspace_swap_page_image_with_domain_and_context(owner_client, tenant, owner_user):
+    from content.application.block_service import BlockService
+
+    page = Page.objects.create(
+        tenant=tenant,
+        title="כתבה על רכבת",
+        slug="train-article",
+        full_path="/blog/train-article",
+        page_type="blog",
+        locale="he",
+        created_by=owner_user,
+    )
+    BlockService.create_block(
+        page,
+        {
+            "block_type": "image",
+            "sort_order": 0,
+            "config": {"url": "https://example.com/old.jpg", "source": "test"},
+        },
+    )
+
+    response = owner_client.post(
+        f"/api/v1/ai-seo/workspace/pages/{page.id}/swap-image/",
+        {"domain": "automotive", "context": "רכבת ישראל תחבורה"},
+        format="json",
+    )
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["image"] is not None
+    assert body["image"].get("url")
+    assert body["image"]["url"] != "https://example.com/old.jpg"
+    assert body["image"].get("matched_domain") == "automotive"

@@ -17,6 +17,8 @@ export const ADMIN_INTERFACE_DEFS: SiteInterfaceDef[] = [
   { id: "links", href: "/dashboard/links", adminOnly: true },
   { id: "users", href: "/dashboard/users", permission: "users.view" },
   { id: "content", href: "/dashboard/content", permission: "content.view" },
+  { id: "articleStudio", href: "/dashboard/studio/articles", permission: "content.edit" },
+  { id: "landingStudio", href: "/dashboard/studio/landing-pages", permission: "content.edit" },
   { id: "leads", href: "/dashboard/leads", permission: "leads.view" },
   { id: "workspace", href: "/dashboard/workspace", permission: "ai_seo.view" },
   { id: "traffic", href: "/dashboard/traffic", permission: "ai_seo.view" },

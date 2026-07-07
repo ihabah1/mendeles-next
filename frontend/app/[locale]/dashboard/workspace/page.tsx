@@ -113,6 +113,7 @@ export default function WorkspacePage() {
   const [jobSearch, setJobSearch] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [generateFeedback, setGenerateFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [autoRunJobsEnabled, setAutoRunJobsEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     const stored = window.localStorage.getItem(AUTO_RUN_STORAGE_KEY);
@@ -184,12 +185,27 @@ export default function WorkspacePage() {
         content_locales: contentLocales,
         sports_translation_enabled: sportsTranslationEnabled,
       }),
-    onSuccess: (data) => {
+    onSuccess: (data, mode) => {
+      qc.setQueryData(["ai-seo-workspace"], data.workspace);
       qc.invalidateQueries({ queryKey: ["ai-seo-workspace"] });
+      const jobCount = data.jobs.length;
+      setGenerateFeedback({
+        tone: "success",
+        message:
+          mode === "automation"
+            ? `אוטומציה חוזרת הופעלה — ${jobCount} משימות בתור${scheduleStartNow ? "" : `, ריצה ראשונה ב-${new Date(scheduleStartAt).toLocaleString("he-IL")}`}.`
+            : `נוצרו ${jobCount} משימות יצירה.`,
+      });
       if (data.jobs.some(isRunnableJob)) {
         queueAutoStartedRef.current = false;
         autoStartQueueIfEnabled();
       }
+    },
+    onError: (error) => {
+      setGenerateFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "הפעלת האוטומציה נכשלה. נסו שוב.",
+      });
     },
   });
 
@@ -887,10 +903,22 @@ export default function WorkspacePage() {
                 (runMode === "automation" && scheduleEveryMinutes < 3) ||
                 (runMode === "automation" && !scheduleStartNow && !scheduleStartAt)
               }
-              onClick={() => generate.mutate(runMode)}
+              onClick={() => {
+                setGenerateFeedback(null);
+                generate.mutate(runMode);
+              }}
             >
               {generate.isPending ? "יוצר batch..." : runMode === "now" ? "▶ צור תוכן עכשיו" : "🔄 הפעל אוטומציה חוזרת"}
             </Button>
+            {generateFeedback ? (
+              <p
+                className={`mt-2 text-center text-sm ${
+                  generateFeedback.tone === "success" ? "text-emerald-300" : "text-amber-300"
+                }`}
+              >
+                {generateFeedback.message}
+              </p>
+            ) : null}
             {!canStartGeneration && (
               <p className="mt-2 text-center text-xs text-amber-300">
                 בחרו תחום, או סמנו «נושאים אקראיים» / «חדשות חמות»

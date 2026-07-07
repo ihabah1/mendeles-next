@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
 import { useAccessibility } from "@/lib/a11y/context";
@@ -14,12 +15,17 @@ export function AccessibilityWidget() {
   const t = useTranslations("a11y");
   const { prefs, increaseFont, decreaseFont, toggle, reset } = useAccessibility();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const panelId = useId();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useFocusTrap(panelRef, open);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -42,8 +48,10 @@ export function AccessibilityWidget() {
     { key: "reduceMotion", label: t("reduceMotion"), id: `${panelId}-reduce-motion` },
   ];
 
-  return (
-    <div className="fixed bottom-4 start-4 z-[100] flex flex-col items-start gap-2">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="a11y-widget-root fixed bottom-4 start-4 z-[9999] flex flex-col items-start gap-2">
       {open && (
         <div
           ref={panelRef}
@@ -51,7 +59,7 @@ export function AccessibilityWidget() {
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="w-[min(100vw-2rem,22rem)] rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4 text-[var(--foreground)] shadow-2xl"
+          className="a11y-widget-panel w-[min(100vw-2rem,22rem)] rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4 text-[var(--foreground)] shadow-2xl"
         >
           <h2 id={titleId} className="text-base font-bold">
             {t("panelTitle")}
@@ -66,7 +74,7 @@ export function AccessibilityWidget() {
               <button
                 type="button"
                 onClick={decreaseFont}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] text-lg font-bold hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] text-lg font-bold hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6F42F5]"
                 aria-label={t("decreaseFont")}
               >
                 A−
@@ -77,7 +85,7 @@ export function AccessibilityWidget() {
               <button
                 type="button"
                 onClick={increaseFont}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] text-lg font-bold hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] text-lg font-bold hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6F42F5]"
                 aria-label={t("increaseFont")}
               >
                 A+
@@ -94,7 +102,7 @@ export function AccessibilityWidget() {
                     type="checkbox"
                     checked={prefs[key]}
                     onChange={() => toggle(key)}
-                    className="h-4 w-4 accent-indigo-600"
+                    className="h-4 w-4 accent-[#6F42F5]"
                   />
                   <span className="text-sm">{label}</span>
                 </label>
@@ -109,13 +117,13 @@ export function AccessibilityWidget() {
                 reset();
                 setOpen(false);
               }}
-              className="w-full rounded-lg border border-[var(--border)] py-2 text-sm font-medium hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="w-full rounded-lg border border-[var(--border)] py-2 text-sm font-medium hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6F42F5]"
             >
               {t("reset")}
             </button>
             <Link
               href="/accessibility"
-              className="w-full rounded-lg border border-[var(--border)] py-2 text-center text-sm font-medium hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="w-full rounded-lg border border-[var(--border)] py-2 text-center text-sm font-medium hover:bg-[var(--muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6F42F5]"
               onClick={() => setOpen(false)}
             >
               {t("statementLink")}
@@ -136,12 +144,14 @@ export function AccessibilityWidget() {
         aria-label={open ? t("closePanel") : t("openPanel")}
         data-a11y-widget="toggle"
         className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 transition hover:bg-indigo-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300",
-          open && "ring-4 ring-indigo-300",
+          "a11y-widget-toggle flex h-14 min-w-14 items-center justify-center gap-1 rounded-full bg-[#6F42F5] px-4 text-white shadow-lg shadow-[#6F42F5]/40 transition hover:bg-[#5a32d4] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#6F42F5]/35",
+          open && "ring-4 ring-[#6F42F5]/35",
         )}
       >
-        <AccessibilityIcon />
+        <AccessibilityIcon className="h-6 w-6 shrink-0" />
+        <span className="hidden text-sm font-semibold sm:inline">{t("widgetLabel")}</span>
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

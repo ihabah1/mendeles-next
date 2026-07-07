@@ -213,9 +213,17 @@ class AiSeoWorkspaceDeletePageView(APIView):
 
 class AiSeoWorkspaceSwapPageImageView(APIView):
     def post(self, request, page_id):
-        _check(request, self, "ai_seo.manage")
         try:
-            page = AiSeoGenerationService.swap_page_image(request.user.default_tenant_id, page_id)
+            _check(request, self, "content.edit")
+        except ForbiddenError:
+            _check(request, self, "ai_seo.manage")
+        try:
+            page = AiSeoGenerationService.swap_page_image(
+                request.user.default_tenant_id,
+                page_id,
+                domain_value=request.data.get("domain") or "",
+                context_text=request.data.get("context") or "",
+            )
         except Exception as exc:
             return Response({"error": str(exc)}, status=400)
         return Response(AiSeoGenerationService.serialize_page(page))

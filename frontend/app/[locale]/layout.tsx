@@ -8,8 +8,7 @@ import { routing, type Locale } from "@/lib/i18n/routing";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { AccessibilityProvider } from "@/lib/a11y/context";
 import { EARLY_A11Y_SCRIPT } from "@/lib/a11y/preferences";
-import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
-import { SkipToContent } from "@/components/a11y/skip-to-content";
+import { SiteAccessibilityShell } from "@/components/a11y/site-accessibility-shell";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { AnalyticsRouteTracker } from "@/components/analytics/analytics-route-tracker";
 import { Providers } from "../providers";
@@ -48,9 +47,8 @@ export default async function LocaleLayout({ children, params }: Props) {
           <NextIntlClientProvider messages={messages}>
             <Providers>
               <AccessibilityProvider>
-                <SkipToContent />
                 <AuthProvider>{children}</AuthProvider>
-                <AccessibilityWidget />
+                <SiteAccessibilityShell />
               </AccessibilityProvider>
             </Providers>
           </NextIntlClientProvider>

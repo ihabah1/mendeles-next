@@ -29,6 +29,8 @@ DASHBOARD_PATHS = [
     "/dashboard/links",
     "/dashboard/users",
     "/dashboard/content",
+    "/dashboard/studio/articles",
+    "/dashboard/studio/landing-pages",
     "/dashboard/leads",
     "/dashboard/workspace",
     "/dashboard/traffic",
