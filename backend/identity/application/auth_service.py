@@ -107,10 +107,10 @@ class AuthService:
         try:
             EmailService.send_verification_email(to_email=user.email, verify_url=verify_url)
             return True
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "verification_email_failed",
-                extra={"user_id": str(user.id), "email": user.email},
+                extra={"user_id": str(user.id), "email": user.email, "error": str(exc)},
             )
             return False
 

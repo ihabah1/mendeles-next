@@ -48,6 +48,7 @@ class ResendEmailBackend(BaseEmailBackend):
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
+                    "User-Agent": "mendeles-backend/1.0",
                 },
                 method="POST",
             )
