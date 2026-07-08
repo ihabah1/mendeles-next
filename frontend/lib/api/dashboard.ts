@@ -190,6 +190,33 @@ export const emailReleaseApi = {
     }),
 };
 
+export type UsersHubData = {
+  generated_at: string;
+  scope: "platform" | "tenant";
+  days: number;
+  stats: {
+    logins_24h: number;
+    logins_period: number;
+    unique_emails_period: number;
+    users_total: number;
+    users_verified: number;
+    users_unverified: number;
+  };
+  daily_logins: Array<{ date: string; count: number }>;
+  logins_by_email: Array<{ email: string; count: number; last_login: string | null }>;
+  recent_logins: Array<{ id: string; user_email: string | null; ip_address: string | null; created_at: string | null }>;
+};
+
+export const usersHubApi = {
+  get: (days = 7) =>
+    apiFetch<UsersHubData>(`/api/v1/users/hub/?days=${days}`, { headers: authHeaders() }),
+  emailDaily: (email: string, days = 7) =>
+    apiFetch<{ email: string; days: number; total: number; daily: Array<{ date: string; count: number }> }>(
+      `/api/v1/users/hub/?email=${encodeURIComponent(email)}&days=${days}`,
+      { headers: authHeaders() },
+    ),
+};
+
 export type InboxMessage = {
   id: string;
   subject: string;

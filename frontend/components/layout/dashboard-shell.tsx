@@ -10,10 +10,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
   { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
-  { href: "/dashboard/inbox", labelKey: "inbox", permission: null },
-  { href: "/dashboard/messages", labelKey: "messages", permission: "users.edit" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
-  { href: "/dashboard/users/release", labelKey: "emailRelease", permission: "tenants.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
   { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },
@@ -56,7 +53,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={cn(
                 "rounded-md px-3 py-2 text-sm whitespace-nowrap",
-                pathname === item.href ? "bg-[var(--muted)] font-semibold" : "hover:bg-[var(--muted)]",
+                pathname === item.href || (item.href === "/dashboard/users" && pathname.startsWith("/dashboard/users"))
+                  ? "bg-[var(--muted)] font-semibold"
+                  : "hover:bg-[var(--muted)]",
               )}
             >
               {t(item.labelKey)}

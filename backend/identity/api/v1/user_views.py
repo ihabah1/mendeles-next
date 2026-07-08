@@ -7,6 +7,7 @@ from core.permissions.base import HasPermission
 from identity.api.v1.serializers import InviteUserSerializer, UpdateUserSerializer
 from identity.application.auth_service import AuthService
 from identity.application.purge_service import UserPurgeService
+from identity.application.user_hub_service import UserHubService
 from identity.application.user_service import UserManagementService
 from rbac.application.permission_service import PermissionService
 from rbac.infrastructure.models import Role, UserRole
@@ -126,6 +127,34 @@ class UserForceVerifyView(APIView):
             user=user, requested_by=request.user, request=request
         )
         return Response(AuthService.serialize_user(updated, request.user.default_tenant_id))
+
+
+class UserHubView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "users.view"
+
+    def get(self, request):
+        platform_wide = PermissionService.user_has_permission(
+            request.user, "tenants.view", request.user.default_tenant_id
+        )
+        days = min(int(request.query_params.get("days", "7")), 30)
+        email = (request.query_params.get("email") or "").strip().lower()
+        if email:
+            return Response(
+                UserHubService.get_email_daily(
+                    email=email,
+                    tenant_id=request.user.default_tenant_id,
+                    platform_wide=platform_wide,
+                    days=days,
+                )
+            )
+        return Response(
+            UserHubService.get_hub(
+                tenant_id=request.user.default_tenant_id,
+                platform_wide=platform_wide,
+                days=days,
+            )
+        )
 
 
 class UserBlockedRegistrationsView(APIView):
