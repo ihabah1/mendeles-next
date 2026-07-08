@@ -67,9 +67,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def soft_delete(self):
         from django.utils import timezone
 
+        freed_email = f"deleted.{self.id.hex[:12]}.{self.email}"
+        if len(freed_email) > 255:
+            freed_email = f"deleted.{self.id.hex}@purged.local"
+        self.email = freed_email
         self.deleted_at = timezone.now()
         self.is_active = False
-        self.save(update_fields=["deleted_at", "is_active", "updated_at"])
+        self.save(update_fields=["email", "deleted_at", "is_active", "updated_at"])
 
     def __str__(self) -> str:
         return self.email
