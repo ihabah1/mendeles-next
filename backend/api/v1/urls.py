@@ -4,8 +4,11 @@ from audit.api.v1.views import AuditLogListView
 from identity.api.v1.urls import urlpatterns as auth_urls
 from identity.api.v1.user_views import (
     UserDetailView,
+    UserForceVerifyView,
     UserInviteView,
     UserListView,
+    UserResendVerificationView,
+    UserResetPasswordView,
     UserRoleAssignView,
 )
 from content.api.v1.urls import urlpatterns as content_urls
@@ -22,6 +25,13 @@ urlpatterns = [
     path("users/", UserListView.as_view(), name="users-list"),
     path("users/invite/", UserInviteView.as_view(), name="users-invite"),
     path("users/<uuid:user_id>/", UserDetailView.as_view(), name="users-detail"),
+    path("users/<uuid:user_id>/reset-password/", UserResetPasswordView.as_view(), name="users-reset-password"),
+    path(
+        "users/<uuid:user_id>/resend-verification/",
+        UserResendVerificationView.as_view(),
+        name="users-resend-verification",
+    ),
+    path("users/<uuid:user_id>/verify-email/", UserForceVerifyView.as_view(), name="users-force-verify"),
     path("users/<uuid:user_id>/roles/", UserRoleAssignView.as_view(), name="users-roles"),
     path(
         "users/<uuid:user_id>/roles/<uuid:role_id>/",
@@ -39,4 +49,6 @@ urlpatterns = [
     path("automation/", include(automation_urls)),
     path("integrations/", include("integrations.api.v1.urls")),
     path("ai-seo/", include("ai_seo.api.v1.urls")),
+    path("inbox/", include("identity.api.v1.inbox_urls")),
+    path("whatsapp/", include("whatsapp.urls")),
 ]

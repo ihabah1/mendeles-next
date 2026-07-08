@@ -32,6 +32,7 @@ export default function UsersPage() {
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", is_active: true });
   const [roleSlug, setRoleSlug] = useState("read_only");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["users"] });
 
@@ -84,6 +85,24 @@ export default function UsersPage() {
     onError: (e: Error) => setError(e.message),
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id: string) => usersApi.resetPassword(id),
+    onSuccess: () => setMessage(t("resetPasswordSent")),
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const resendVerifyMutation = useMutation({
+    mutationFn: (id: string) => usersApi.resendVerification(id),
+    onSuccess: () => setMessage(t("verificationSent")),
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const forceVerifyMutation = useMutation({
+    mutationFn: (id: string) => usersApi.forceVerify(id),
+    onSuccess: invalidate,
+    onError: (e: Error) => setError(e.message),
+  });
+
   if (!canView) {
     return (
       <Card>
@@ -104,6 +123,7 @@ export default function UsersPage() {
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {message && <p className="text-sm text-green-700">{message}</p>}
 
       <Card className="overflow-hidden p-0">
         {users.isLoading && <p className="p-6 text-sm">{tc("loading")}</p>}
@@ -115,6 +135,7 @@ export default function UsersPage() {
                 <th className="px-4 py-3 font-medium">{t("colEmail")}</th>
                 <th className="px-4 py-3 font-medium">{t("colName")}</th>
                 <th className="px-4 py-3 font-medium">{t("colRoles")}</th>
+                <th className="px-4 py-3 font-medium">{t("colVerified")}</th>
                 <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
                 <th className="px-4 py-3 font-medium">{t("colActions")}</th>
               </tr>
@@ -146,12 +167,44 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
+                    <span className={u.email_verified ? "text-[var(--success)]" : "text-[var(--warning)]"}>
+                      {u.email_verified ? t("verified") : t("unverified")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <span className={u.is_active ? "text-[var(--success)]" : "text-[var(--muted-fg)]"}>
                       {u.is_active ? t("active") : t("inactive")}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="text-xs text-[var(--accent)] hover:underline"
+                          onClick={() => resetPasswordMutation.mutate(u.id)}
+                        >
+                          {t("resetPassword")}
+                        </button>
+                      )}
+                      {canEdit && !u.email_verified && (
+                        <>
+                          <button
+                            type="button"
+                            className="text-xs text-[var(--accent)] hover:underline"
+                            onClick={() => resendVerifyMutation.mutate(u.id)}
+                          >
+                            {t("resendVerification")}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs text-[var(--success)] hover:underline"
+                            onClick={() => forceVerifyMutation.mutate(u.id)}
+                          >
+                            {t("forceVerify")}
+                          </button>
+                        </>
+                      )}
                       {canEdit && (
                         <button
                           type="button"

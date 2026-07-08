@@ -1,6 +1,7 @@
 import pytest
 
 from seo.application.settings_service import SEOSettingsService
+from seo.application.site_url import PRODUCTION_SITE_URL
 
 
 @pytest.mark.django_db
@@ -18,14 +19,27 @@ def test_owner_can_update_seo_settings(owner_client, tenant):
         {
             "site_name": "Mendeles",
             "default_title": "Mendeles SEO",
-            "canonical_base_url": "https://mendeles.co.il",
+            "canonical_base_url": "https://mendeles.com",
         },
         format="json",
     )
     assert response.status_code == 200
     data = response.json()
     assert data["site_name"] == "Mendeles"
-    assert data["canonical_base_url"] == "https://mendeles.co.il"
+    assert data["canonical_base_url"] == PRODUCTION_SITE_URL
+
+
+@pytest.mark.django_db
+def test_update_seo_settings_rejects_railway_canonical_in_production(tenant, monkeypatch):
+    monkeypatch.setenv("DEBUG", "false")
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("RAILWAY_ENVIRONMENT", raising=False)
+    monkeypatch.setenv("FRONTEND_URL", "http://localhost:3000")
+    data = SEOSettingsService.update_settings(
+        tenant.id,
+        {"canonical_base_url": "https://mendeles-next-production.up.railway.app"},
+    )
+    assert data["canonical_base_url"] == PRODUCTION_SITE_URL
 
 
 @pytest.mark.django_db

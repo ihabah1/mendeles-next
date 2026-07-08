@@ -10,6 +10,7 @@ from identity.api.v1.serializers import (
     ForgotPasswordSerializer,
     LoginSerializer,
     RegisterSerializer,
+    ResendVerificationSerializer,
     ResetPasswordSerializer,
     VerifyEmailSerializer,
 )
@@ -101,6 +102,46 @@ class VerifyEmailView(APIView):
         serializer.is_valid(raise_exception=True)
         AuthService.verify_email(token=serializer.validated_data["token"], request=request)
         return Response({"message": "האימייל אומת בהצלחה. ניתן להתחבר."})
+
+
+class ResendVerificationView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-resend-verification", rate="5/h"):
+            return blocked
+        serializer = ResendVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        sent = AuthService.resend_verification(
+            email=serializer.validated_data["email"],
+            request=request,
+        )
+        message = (
+            "אם האימייל קיים וטרם אומת, נשלח קישור אימות חדש."
+            if sent
+            else "לא הצלחנו לשלוח אימייל כרגע — נסו שוב מאוחר יותר."
+        )
+        return Response({"message": message, "verification_email_sent": sent})
+
+
+class EmailStatusView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        import os
+
+        from django.conf import settings
+
+        resend_key = bool(os.environ.get("RESEND_API_KEY", "").strip())
+        from_email = os.environ.get("RESEND_FROM_EMAIL", "").strip() or settings.DEFAULT_FROM_EMAIL
+        return Response(
+            {
+                "configured": resend_key and bool(from_email),
+                "backend": settings.EMAIL_BACKEND,
+                "from_email": from_email if resend_key else None,
+                "frontend_url": settings.FRONTEND_URL,
+            }
+        )
 
 
 class ForgotPasswordView(APIView):

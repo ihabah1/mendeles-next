@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { authApi } from "@/lib/api/auth";
 import { Card } from "@/components/ui/card";
 import { getAuthErrorMessage } from "@/lib/auth/auth-context";
@@ -40,6 +41,14 @@ function VerifyEmailInner() {
         <p className={status === "error" ? "text-red-600" : ""}>
           {message || (status === "loading" ? tc("loading") : "")}
         </p>
+        {status === "ok" && (
+          <Link
+            href="/login"
+            className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-[var(--radius)] bg-[var(--primary)] text-sm font-medium text-[var(--primary-fg)] hover:opacity-90"
+          >
+            {t("goToLogin")}
+          </Link>
+        )}
       </Card>
     </div>
   );

@@ -323,7 +323,9 @@
     "sendResetLink": "Send reset link",
     "backToLogin": "Back to login",
     "missingToken": "Missing token",
-    "missingVerifyToken": "Missing verification token"
+    "missingVerifyToken": "Missing verification token",
+    "resendVerification": "Resend verification email",
+    "goToLogin": "Go to login"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -343,6 +345,8 @@
     "settings": "Settings",
     "seo": "SEO",
     "audit": "Audit log",
+    "inbox": "Inbox",
+    "messages": "User messages",
     "logout": "Log out"
   },
   "dashboard": {
@@ -368,6 +372,7 @@
     "landingPagesPublishedLabel": "Published pages",
     "landingPagesDraft": "{n} drafts",
     "audit24hLabel": "Events (24h)",
+    "dailyBreakdown": "Daily breakdown",
     "leadsTotal": "Leads",
     "automationTitle": "Automation Center",
     "automationSubtitle": "Job orchestration across SEO, content, publishing and marketing",
@@ -478,6 +483,7 @@
     "colEmail": "Email",
     "colName": "Name",
     "colRoles": "Roles",
+    "colVerified": "Email verified",
     "colStatus": "Status",
     "colActions": "Actions",
     "firstName": "First name",
@@ -493,7 +499,14 @@
     "confirmRemove": "Remove this user from the organization?",
     "assignRole": "Assign role",
     "assignRoleTitle": "Assign role",
-    "removeRole": "Remove role"
+    "removeRole": "Remove role",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "resetPassword": "Reset password",
+    "resetPasswordSent": "Password reset link sent",
+    "resendVerification": "Resend verification",
+    "verificationSent": "Verification email sent",
+    "forceVerify": "Verify manually"
   },
   "settings": {
     "title": "Settings",
@@ -850,5 +863,34 @@
       "coordinatorPending": "Accessibility coordinator details are not configured yet. Set NEXT_PUBLIC_A11Y_COORDINATOR_* environment variables before launch.",
       "lastUpdatedLabel": "Last updated"
     }
+  },
+  "contactWidget": {
+    "label": "Contact",
+    "title": "Contact us",
+    "subtitle": "We're here to help — choose how to reach us",
+    "whatsapp": "WhatsApp",
+    "formCta": "Contact form",
+    "open": "Open contact",
+    "close": "Close contact",
+    "configureHint": "Set NEXT_PUBLIC_CONTACT_* or NEXT_PUBLIC_WHATSAPP_NUMBER"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "loadError": "Failed to load messages",
+    "empty": "No messages yet",
+    "unreadCount": "{n} unread messages",
+    "markRead": "Mark as read",
+    "systemSender": "System"
+  },
+  "messagesAdmin": {
+    "title": "Send user messages",
+    "noAccess": "You don't have permission to send messages",
+    "broadcastAll": "Send to all active users",
+    "recipient": "Recipient",
+    "selectRecipient": "Select user",
+    "subject": "Subject",
+    "body": "Message",
+    "send": "Send",
+    "sent": "Message sent"
   }
 }

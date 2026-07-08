@@ -286,7 +286,9 @@
     "sendResetLink": "שלח קישור",
     "backToLogin": "חזרה להתחברות",
     "missingToken": "חסר אסימון",
-    "missingVerifyToken": "חסר אסימון אימות"
+    "missingVerifyToken": "חסר אסימון אימות",
+    "resendVerification": "שלח שוב אימייל אימות",
+    "goToLogin": "מעבר להתחברות"
   },
   "nav": {
     "dashboard": "דשבורד",
@@ -306,6 +308,8 @@
     "settings": "הגדרות",
     "seo": "SEO",
     "audit": "יומן פעולות",
+    "inbox": "תיבה אישית",
+    "messages": "הודעות למשתמשים",
     "logout": "יציאה"
   },
   "dashboard": {
@@ -331,6 +335,7 @@
     "landingPagesPublishedLabel": "דפים מפורסמים",
     "landingPagesDraft": "{n} טיוטות",
     "audit24hLabel": "אירועים (24 שעות)",
+    "dailyBreakdown": "פילוח יומי",
     "leadsTotal": "לידים",
     "automationTitle": "מרכז אוטומציה",
     "automationSubtitle": "תזמור משימות ב-SEO, תוכן, פרסום ושיווק",
@@ -441,6 +446,7 @@
     "colEmail": "אימייל",
     "colName": "שם",
     "colRoles": "תפקידים",
+    "colVerified": "אימות מייל",
     "colStatus": "סטטוס",
     "colActions": "פעולות",
     "firstName": "שם פרטי",
@@ -456,7 +462,14 @@
     "confirmRemove": "להסיר משתמש זה מהארגון?",
     "assignRole": "שיוך תפקיד",
     "assignRoleTitle": "שיוך תפקיד",
-    "removeRole": "הסרת תפקיד"
+    "removeRole": "הסרת תפקיד",
+    "verified": "מאומת",
+    "unverified": "לא מאומת",
+    "resetPassword": "איפוס סיסמה",
+    "resetPasswordSent": "נשלח קישור לאיפוס סיסמה",
+    "resendVerification": "שלח אימות",
+    "verificationSent": "נשלח אימייל אימות",
+    "forceVerify": "אמת ידנית"
   },
   "settings": {
     "title": "הגדרות",
@@ -813,5 +826,34 @@
       "coordinatorPending": "פרטי רכז/ת הנגישות טרם הושלמו. יש להגדיר את המשתנים NEXT_PUBLIC_A11Y_COORDINATOR_* לפני העלאה לאוויר.",
       "lastUpdatedLabel": "תאריך עדכון אחרון"
     }
+  },
+  "contactWidget": {
+    "label": "צור קשר",
+    "title": "צור קשר",
+    "subtitle": "נשמח לעזור — בחרו דרך יצירת קשר",
+    "whatsapp": "WhatsApp",
+    "formCta": "טופס יצירת קשר",
+    "open": "פתח צור קשר",
+    "close": "סגור צור קשר",
+    "configureHint": "הגדירו NEXT_PUBLIC_CONTACT_* או NEXT_PUBLIC_WHATSAPP_NUMBER"
+  },
+  "inbox": {
+    "title": "תיבה אישית",
+    "loadError": "שגיאה בטעינת הודעות",
+    "empty": "אין הודעות",
+    "unreadCount": "{n} הודעות שלא נקראו",
+    "markRead": "סמן כנקרא",
+    "systemSender": "מערכת"
+  },
+  "messagesAdmin": {
+    "title": "שליחת הודעות למשתמשים",
+    "noAccess": "אין הרשאה לשלוח הודעות",
+    "broadcastAll": "שלח לכל המשתמשים הפעילים",
+    "recipient": "נמען",
+    "selectRecipient": "בחר משתמש",
+    "subject": "נושא",
+    "body": "תוכן",
+    "send": "שלח",
+    "sent": "ההודעה נשלחה"
   }
 }

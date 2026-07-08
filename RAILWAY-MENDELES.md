@@ -47,10 +47,48 @@ SITE_URL=https://mendeles.com
 # Do not set SECURE_SSL_REDIRECT=true — Railway terminates TLS; Django redirect breaks healthchecks
 BOOTSTRAP_ADMIN_EMAIL=admin@yourdomain.com
 BOOTSTRAP_ADMIN_PASSWORD=<strong-password-min-10-chars>
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+
+# Email verification (Resend) — REQUIRED for registration emails
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM_EMAIL=Mandeles <noreply@mendeles.co.il>
+# EMAIL_BACKEND is auto-set to Resend when RESEND_API_KEY exists.
+# Remove EMAIL_BACKEND=console if you added it earlier.
+
+# WhatsApp bot (Twilio) — optional
+# WHATSAPP_AGENT_ENABLED=true
+# TWILIO_ACCOUNT_SID=AC...
+# TWILIO_AUTH_TOKEN=...
+# TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+# GEMINI_API_KEY=...
 ```
 
-אחרי שמירה → **Redeploy** על שני השירותים.
+## Frontend (`mendeles-next`) — Variables (contact widget)
+
+```env
+NEXT_PUBLIC_CONTACT_PHONE=+972-3-0000000
+NEXT_PUBLIC_CONTACT_EMAIL=hello@mendeles.co.il
+NEXT_PUBLIC_WHATSAPP_NUMBER=97230000000
+NEXT_PUBLIC_WHATSAPP_PREFILL=שלום Mendeles
+```
+
+אחרי שמירה → **Redeploy** על שני השירותים + **migrate** ב-Backend:
+
+```bash
+python manage.py migrate
+```
+
+## אימות מייל — בדיקה אחרי deploy
+
+1. `GET https://mendeles.com/api/v1/auth/email-status/` → `"configured": true`
+2. הרשמה ב-`/register` → מייל עם קישור `/verify-email?token=...`
+3. לחיצה על הקישור → הודעת הצלחה + מעבר ל-`/login`
+4. אם המייל לא הגיע: כפתור **שלח שוב אימות** בדף ההרשמה, או `POST /api/v1/auth/resend-verification/` עם `{ "email": "..." }`
+
+## WhatsApp bot — הגדרה
+
+1. [Twilio WhatsApp Sandbox](https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn)
+2. Webhook: `POST https://<backend-public-domain>/api/v1/whatsapp/webhook/`
+3. בדיקה: `GET https://<backend>/api/v1/whatsapp/status/` → `"configured": true`
 
 ## Healthcheck
 

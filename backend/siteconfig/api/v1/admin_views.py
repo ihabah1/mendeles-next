@@ -48,6 +48,39 @@ class AdminOverviewView(APIView):
             .values("id", "created_at", "user__email", "ip_address")
         )
 
+        daily_logins = []
+        for offset in range(6, -1, -1):
+            day_start = (now - timezone.timedelta(days=offset)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            day_end = day_start + timezone.timedelta(days=1)
+            daily_logins.append(
+                {
+                    "date": day_start.date().isoformat(),
+                    "count": AuditLog.objects.filter(
+                        action="auth.login",
+                        created_at__gte=day_start,
+                        created_at__lt=day_end,
+                    ).count(),
+                }
+            )
+
+        daily_audit = []
+        for offset in range(6, -1, -1):
+            day_start = (now - timezone.timedelta(days=offset)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            day_end = day_start + timezone.timedelta(days=1)
+            daily_audit.append(
+                {
+                    "date": day_start.date().isoformat(),
+                    "count": AuditLog.objects.filter(
+                        created_at__gte=day_start,
+                        created_at__lt=day_end,
+                    ).count(),
+                }
+            )
+
         landing_pages_qs = Page.objects.filter(
             deleted_at__isnull=True,
             page_type=PageType.LANDING_PAGE,
@@ -95,6 +128,8 @@ class AdminOverviewView(APIView):
                     "landing_pages_draft": landing_pages_qs.filter(status=PageStatus.DRAFT).count(),
                     "leads_total": leads_qs.count(),
                 },
+                "daily_logins": daily_logins,
+                "daily_audit": daily_audit,
                 "automation": automation_stats,
                 "recent_jobs": recent_jobs,
                 "users_by_role": [

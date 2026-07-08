@@ -72,19 +72,7 @@ class AuthService:
         owner_role = Role.objects.get(slug="business_owner", tenant__isnull=True, is_system=True)
         UserRole.objects.create(user=user, role=owner_role, tenant=tenant)
 
-        raw_token = TokenHasher.generate_raw_token()
-        EmailVerificationToken.objects.create(
-            user=user,
-            token_hash=TokenHasher.hash_token(raw_token),
-            expires_at=timezone.now() + settings.EMAIL_VERIFICATION_TTL,
-        )
-        verify_url = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
-        verification_email_sent = True
-        try:
-            EmailService.send_verification_email(to_email=user.email, verify_url=verify_url)
-        except Exception:
-            verification_email_sent = False
-            logger.exception("verification_email_failed", extra={"user_id": str(user.id), "email": user.email})
+        verification_email_sent = AuthService.send_verification_email_for_user(user)
 
         ip, ua = _client_meta(request)
         AuditService.log(
@@ -98,6 +86,53 @@ class AuthService:
             metadata={"verification_email_sent": verification_email_sent},
         )
         return user, verification_email_sent
+
+    @staticmethod
+    def _issue_verification_token(user: User) -> str:
+        EmailVerificationToken.objects.filter(user=user, used_at__isnull=True).update(
+            used_at=timezone.now()
+        )
+        raw_token = TokenHasher.generate_raw_token()
+        EmailVerificationToken.objects.create(
+            user=user,
+            token_hash=TokenHasher.hash_token(raw_token),
+            expires_at=timezone.now() + settings.EMAIL_VERIFICATION_TTL,
+        )
+        return raw_token
+
+    @staticmethod
+    def send_verification_email_for_user(user: User) -> bool:
+        raw_token = AuthService._issue_verification_token(user)
+        verify_url = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
+        try:
+            EmailService.send_verification_email(to_email=user.email, verify_url=verify_url)
+            return True
+        except Exception:
+            logger.exception(
+                "verification_email_failed",
+                extra={"user_id": str(user.id), "email": user.email},
+            )
+            return False
+
+    @staticmethod
+    def resend_verification(*, email: str, request) -> bool:
+        email = email.strip().lower()
+        user = User.objects.filter(email=email, deleted_at__isnull=True).first()
+        if not user or user.is_email_verified:
+            return True
+        sent = AuthService.send_verification_email_for_user(user)
+        if sent:
+            ip, ua = _client_meta(request)
+            AuditService.log(
+                action="user.verification_resent",
+                user=user,
+                tenant_id=user.default_tenant_id,
+                resource_type="user",
+                resource_id=user.id,
+                ip_address=ip,
+                user_agent=ua,
+            )
+        return sent
 
     @staticmethod
     def login(*, email: str, password: str, request) -> dict:

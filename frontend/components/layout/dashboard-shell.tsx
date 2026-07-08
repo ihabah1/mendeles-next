@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
   { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
+  { href: "/dashboard/inbox", labelKey: "inbox", permission: null },
+  { href: "/dashboard/messages", labelKey: "messages", permission: "users.edit" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },

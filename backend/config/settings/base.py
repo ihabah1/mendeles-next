@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "leads",
     "automation",
     "integrations",
+    "whatsapp",
 ]
 
 MIDDLEWARE = [
@@ -161,11 +162,20 @@ GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECOND
 
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@mendeles.co.il")
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    os.environ.get("RESEND_FROM_EMAIL", "noreply@mendeles.co.il"),
 )
+if os.environ.get("RESEND_API_KEY", "").strip():
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND",
+        "identity.infrastructure.resend_backend.ResendEmailBackend",
+    )
+else:
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.console.EmailBackend",
+    )
 
 LOGGING = {
     "version": 1,

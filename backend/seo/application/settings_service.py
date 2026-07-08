@@ -75,8 +75,17 @@ class SEOSettingsService:
     @classmethod
     def update_settings(cls, tenant_id, updates: dict) -> dict:
         obj = cls.get_or_create(tenant_id)
+        resolved_base = resolve_site_url(
+            updates.get("canonical_base_url") or obj.canonical_base_url or "",
+        )
         for field in cls.EDITABLE_FIELDS:
-            if field in updates:
-                setattr(obj, field, updates[field])
+            if field not in updates:
+                continue
+            value = updates[field]
+            if field == "canonical_base_url":
+                value = resolved_base
+            elif field == "organization_url" and value:
+                value = sanitize_seo_url(value, resolved_base)
+            setattr(obj, field, value)
         obj.save()
-        return obj.to_dict()
+        return cls.get_settings(tenant_id)

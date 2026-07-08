@@ -126,6 +126,26 @@ def test_register_without_rbac_seed_auto_seeds(api_client):
 
 
 @pytest.mark.django_db
+def test_resend_verification(api_client, seeded, monkeypatch):
+    api_client.post("/api/v1/auth/register/", _register_payload("resend@test.com"), format="json")
+
+    sent = {"count": 0}
+
+    def fake_send(user):
+        sent["count"] += 1
+        return True
+
+    monkeypatch.setattr("identity.application.auth_service.AuthService.send_verification_email_for_user", fake_send)
+    res = api_client.post(
+        "/api/v1/auth/resend-verification/",
+        {"email": "resend@test.com"},
+        format="json",
+    )
+    assert res.status_code == 200
+    assert sent["count"] == 1
+
+
+@pytest.mark.django_db
 def test_register_survives_email_failure(api_client, seeded, monkeypatch):
     def boom(*_args, **_kwargs):
         raise RuntimeError("smtp unavailable")

@@ -31,6 +31,9 @@ export default function RegisterPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [emailFailed, setEmailFailed] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +43,10 @@ export default function RegisterPage() {
     try {
       const res = await authApi.register(form);
       setMessage(res.message);
-      if (res.verification_email_sent !== false) {
+      setRegisteredEmail(form.email);
+      const failed = res.verification_email_sent === false;
+      setEmailFailed(failed);
+      if (!failed) {
         setTimeout(() => router.push("/login"), 2500);
       }
     } catch (err) {
@@ -85,6 +91,29 @@ export default function RegisterPage() {
           ))}
           {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
           {message && <p className="text-sm text-green-700" role="status">{message}</p>}
+          {emailFailed && registeredEmail && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={resendLoading}
+              className="w-full"
+              onClick={async () => {
+                setResendLoading(true);
+                setError("");
+                try {
+                  const res = await authApi.resendVerification(registeredEmail);
+                  setMessage(res.message);
+                  if (res.verification_email_sent !== false) setEmailFailed(false);
+                } catch (err) {
+                  setError(getAuthErrorMessage(err, tc("unexpectedError")));
+                } finally {
+                  setResendLoading(false);
+                }
+              }}
+            >
+              {resendLoading ? tc("loading") : t("resendVerification")}
+            </Button>
+          )}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? tc("loading") : t("register")}
           </Button>

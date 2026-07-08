@@ -33,6 +33,7 @@ class UserListView(APIView):
                     "first_name": u.first_name,
                     "last_name": u.last_name,
                     "is_active": u.is_active,
+                    "email_verified": u.is_email_verified,
                     "roles": PermissionService.get_user_roles(u, tenant_id),
                     "role_assignments": [
                         {"id": str(ur.role_id), "slug": ur.role.slug, "name": ur.role.name}
@@ -83,6 +84,47 @@ class UserDetailView(APIView):
         user = UserManagementService.get_user(user_id, request.user.default_tenant_id)
         UserManagementService.soft_delete_user(user, request.user, request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserResetPasswordView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "users.edit"
+
+    def post(self, request, user_id):
+        user = UserManagementService.get_user(user_id, request.user.default_tenant_id)
+        UserManagementService.admin_reset_password(
+            user=user, requested_by=request.user, request=request
+        )
+        return Response({"message": "נשלח קישור לאיפוס סיסמה"})
+
+
+class UserResendVerificationView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "users.edit"
+
+    def post(self, request, user_id):
+        user = UserManagementService.get_user(user_id, request.user.default_tenant_id)
+        sent = UserManagementService.admin_resend_verification(
+            user=user, requested_by=request.user, request=request
+        )
+        message = (
+            "נשלח אימייל אימות"
+            if sent
+            else "לא הצלחנו לשלוח אימייל אימות"
+        )
+        return Response({"message": message, "verification_email_sent": sent})
+
+
+class UserForceVerifyView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "users.edit"
+
+    def post(self, request, user_id):
+        user = UserManagementService.get_user(user_id, request.user.default_tenant_id)
+        updated = UserManagementService.admin_force_verify(
+            user=user, requested_by=request.user, request=request
+        )
+        return Response(AuthService.serialize_user(updated, request.user.default_tenant_id))
 
 
 class UserRoleAssignView(APIView):

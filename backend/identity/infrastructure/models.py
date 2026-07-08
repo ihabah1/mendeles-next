@@ -75,6 +75,38 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class UserInboxMessage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        "tenancy.Tenant",
+        on_delete=models.CASCADE,
+        related_name="inbox_messages",
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_inbox_messages",
+    )
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="inbox_messages",
+    )
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "user_inbox_messages"
+        indexes = [
+            models.Index(fields=["recipient", "read_at"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+
 class EmailVerificationToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verification_tokens")

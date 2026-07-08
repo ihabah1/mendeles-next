@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
 import { StatCard } from "@/components/admin/stat-card";
+import { ExpandableStatCard } from "@/components/admin/expandable-stat-card";
 import { Card } from "@/components/ui/card";
 import { adminApi } from "@/lib/api/dashboard";
 import { healthApi } from "@/lib/api/auth";
@@ -64,11 +65,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <ExpandableStatCard
               label={t("logins7d")}
               value={data.system.logins_last_7d}
               hint={t("audit24h", { n: data.system.audit_last_24h })}
               accent
+              daily={data.daily_logins}
+              dailyLabel={t("dailyBreakdown")}
             />
             <StatCard
               label={t("landingPagesTotal")}
@@ -80,10 +83,12 @@ export default function DashboardPage() {
               value={data.system.landing_pages_published}
               hint={t("landingPagesDraft", { n: data.system.landing_pages_draft })}
             />
-            <StatCard
+            <ExpandableStatCard
               label={t("leadsTotal")}
               value={data.system.leads_total}
-              hint={t("audit24h", { n: data.system.audit_last_24h })}
+              hint={t("audit24hLabel", { n: data.system.audit_last_24h })}
+              daily={data.daily_audit}
+              dailyLabel={t("dailyBreakdown")}
             />
           </div>
 

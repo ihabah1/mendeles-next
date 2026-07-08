@@ -9,6 +9,7 @@ import { AuthProvider } from "@/lib/auth/auth-context";
 import { AccessibilityProvider } from "@/lib/a11y/context";
 import { EARLY_A11Y_SCRIPT } from "@/lib/a11y/preferences";
 import { SiteAccessibilityShell } from "@/components/a11y/site-accessibility-shell";
+import { SiteContactShell } from "@/components/contact/site-contact-shell";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { AnalyticsRouteTracker } from "@/components/analytics/analytics-route-tracker";
 import { Providers } from "../providers";
@@ -48,6 +49,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Providers>
               <AccessibilityProvider>
                 <AuthProvider>{children}</AuthProvider>
+                <SiteContactShell />
                 <SiteAccessibilityShell />
               </AccessibilityProvider>
             </Providers>

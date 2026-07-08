@@ -24,6 +24,8 @@ export type AdminOverview = {
     landing_pages_draft: number;
     leads_total: number;
   };
+  daily_logins: Array<{ date: string; count: number }>;
+  daily_audit: Array<{ date: string; count: number }>;
   automation: {
     status: string;
     active_jobs: number;
@@ -81,6 +83,7 @@ export type UserRow = {
   first_name: string;
   last_name: string;
   is_active: boolean;
+  email_verified?: boolean;
   roles: string[];
   role_assignments: Array<{ id: string; slug: string; name: string }>;
   created_at: string;
@@ -125,6 +128,56 @@ export const usersApi = {
     apiFetch<void>(`/api/v1/users/${id}/roles/${roleId}/`, {
       method: "DELETE",
       headers: authHeaders(),
+    }),
+  resetPassword: (id: string) =>
+    apiFetch<{ message: string }>(`/api/v1/users/${id}/reset-password/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  resendVerification: (id: string) =>
+    apiFetch<{ message: string; verification_email_sent?: boolean }>(
+      `/api/v1/users/${id}/resend-verification/`,
+      { method: "POST", headers: authHeaders() },
+    ),
+  forceVerify: (id: string) =>
+    apiFetch<UserRow>(`/api/v1/users/${id}/verify-email/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+};
+
+export type InboxMessage = {
+  id: string;
+  subject: string;
+  body: string;
+  sender_email: string | null;
+  sender_name: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
+export const inboxApi = {
+  list: (unreadOnly = false) =>
+    apiFetch<{ unread_count: number; results: InboxMessage[] }>(
+      `/api/v1/inbox/${unreadOnly ? "?unread=1" : ""}`,
+      { headers: authHeaders() },
+    ),
+  markRead: (id: string) =>
+    apiFetch<{ message: string }>(`/api/v1/inbox/${id}/read/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  send: (data: {
+    subject: string;
+    body: string;
+    recipient_id?: string;
+    broadcast?: boolean;
+    recipient_ids?: string[];
+  }) =>
+    apiFetch<InboxMessage | { message: string; count: number }>("/api/v1/inbox/send/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
     }),
 };
 

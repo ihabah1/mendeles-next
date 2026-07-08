@@ -46,6 +46,8 @@ class UserManagementService:
             default_tenant=tenant,
             is_active=True,
         )
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_at", "updated_at"])
         role = Role.objects.filter(slug=role_slug, deleted_at__isnull=True).filter(
             Q(tenant=tenant) | Q(tenant__isnull=True, is_system=True)
         ).first()
@@ -76,6 +78,69 @@ class UserManagementService:
             metadata={"email": email, "role": role_slug},
             ip_address=ip,
             user_agent=ua,
+        )
+        return user
+
+    @staticmethod
+    @transaction.atomic
+    def admin_reset_password(*, user: User, requested_by, request) -> None:
+        from identity.application.auth_service import AuthService
+
+        raw = TokenHasher.generate_raw_token()
+        PasswordResetToken.objects.create(
+            user=user,
+            token_hash=TokenHasher.hash_token(raw),
+            expires_at=timezone.now() + settings.PASSWORD_RESET_TTL,
+        )
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw}"
+        EmailService.send_password_reset_email(to_email=user.email, reset_url=reset_url)
+        ip = request.META.get("REMOTE_ADDR")
+        AuditService.log(
+            action="user.password_reset_requested",
+            user=requested_by,
+            tenant_id=user.default_tenant_id,
+            resource_type="user",
+            resource_id=user.id,
+            metadata={"target_email": user.email},
+            ip_address=ip,
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def admin_resend_verification(*, user: User, requested_by, request) -> bool:
+        from identity.application.auth_service import AuthService
+
+        if user.is_email_verified:
+            return True
+        sent = AuthService.send_verification_email_for_user(user)
+        if sent:
+            AuditService.log(
+                action="user.verification_resent",
+                user=requested_by,
+                tenant_id=user.default_tenant_id,
+                resource_type="user",
+                resource_id=user.id,
+                metadata={"target_email": user.email},
+                ip_address=request.META.get("REMOTE_ADDR"),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            )
+        return sent
+
+    @staticmethod
+    @transaction.atomic
+    def admin_force_verify(*, user: User, requested_by, request) -> User:
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_at", "updated_at"])
+        AuditService.log(
+            action="user.email_verified_admin",
+            user=requested_by,
+            tenant_id=user.default_tenant_id,
+            resource_type="user",
+            resource_id=user.id,
+            metadata={"target_email": user.email},
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
         return user
 
