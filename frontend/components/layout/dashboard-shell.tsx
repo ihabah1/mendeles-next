@@ -13,6 +13,7 @@ const NAV = [
   { href: "/dashboard/inbox", labelKey: "inbox", permission: null },
   { href: "/dashboard/messages", labelKey: "messages", permission: "users.edit" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
+  { href: "/dashboard/users/release", labelKey: "emailRelease", permission: "tenants.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
   { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -115,11 +116,20 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        {canInvite && (
-          <Button type="button" onClick={() => setInviteOpen(true)}>
-            {t("invite")}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {hasPermission("tenants.view") && (
+            <Link href="/dashboard/users/release">
+              <Button type="button" variant="outline">
+                {t("releaseEmails")}
+              </Button>
+            </Link>
+          )}
+          {canInvite && (
+            <Button type="button" onClick={() => setInviteOpen(true)}>
+              {t("invite")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

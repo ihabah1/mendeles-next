@@ -39,6 +39,20 @@ def assign_role(user, tenant, slug: str):
 
 
 @pytest.fixture
+def super_admin_user(seeded, tenant):
+    user = User.objects.create_user(
+        email="super@test.com",
+        password="SecurePass123!",
+        first_name="Super",
+        last_name="Admin",
+        default_tenant=tenant,
+    )
+    verify_user(user)
+    assign_role(user, tenant, "super_admin")
+    return user
+
+
+@pytest.fixture
 def owner_user(seeded, tenant):
     user = User.objects.create_user(
         email="owner@test.com",

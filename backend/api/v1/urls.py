@@ -3,10 +3,13 @@ from django.urls import include, path
 from audit.api.v1.views import AuditLogListView
 from identity.api.v1.urls import urlpatterns as auth_urls
 from identity.api.v1.user_views import (
+    UserBlockedRegistrationsView,
     UserDetailView,
     UserForceVerifyView,
     UserInviteView,
     UserListView,
+    UserPurgeByIdView,
+    UserPurgeEmailsView,
     UserResendVerificationView,
     UserResetPasswordView,
     UserRoleAssignView,
@@ -24,6 +27,8 @@ urlpatterns = [
     path("auth/", include(auth_urls)),
     path("users/", UserListView.as_view(), name="users-list"),
     path("users/invite/", UserInviteView.as_view(), name="users-invite"),
+    path("users/blocked-registrations/", UserBlockedRegistrationsView.as_view(), name="users-blocked-registrations"),
+    path("users/purge/", UserPurgeEmailsView.as_view(), name="users-purge-emails"),
     path("users/<uuid:user_id>/", UserDetailView.as_view(), name="users-detail"),
     path("users/<uuid:user_id>/reset-password/", UserResetPasswordView.as_view(), name="users-reset-password"),
     path(
@@ -32,6 +37,7 @@ urlpatterns = [
         name="users-resend-verification",
     ),
     path("users/<uuid:user_id>/verify-email/", UserForceVerifyView.as_view(), name="users-force-verify"),
+    path("users/<uuid:user_id>/purge/", UserPurgeByIdView.as_view(), name="users-purge"),
     path("users/<uuid:user_id>/roles/", UserRoleAssignView.as_view(), name="users-roles"),
     path(
         "users/<uuid:user_id>/roles/<uuid:role_id>/",

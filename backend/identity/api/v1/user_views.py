@@ -6,6 +6,7 @@ from core.exceptions.base import ForbiddenError
 from core.permissions.base import HasPermission
 from identity.api.v1.serializers import InviteUserSerializer, UpdateUserSerializer
 from identity.application.auth_service import AuthService
+from identity.application.purge_service import UserPurgeService
 from identity.application.user_service import UserManagementService
 from rbac.application.permission_service import PermissionService
 from rbac.infrastructure.models import Role, UserRole
@@ -125,6 +126,93 @@ class UserForceVerifyView(APIView):
             user=user, requested_by=request.user, request=request
         )
         return Response(AuthService.serialize_user(updated, request.user.default_tenant_id))
+
+
+class UserBlockedRegistrationsView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "tenants.view"
+
+    def get(self, request):
+        email = (request.query_params.get("email") or "").strip().lower()
+        if email:
+            user = UserPurgeService.find_by_email(email)
+            if not user:
+                return Response({"found": False, "email": email})
+            return Response(
+                {
+                    "found": True,
+                    "user": {
+                        "id": str(user.id),
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                        "is_active": user.is_active,
+                        "email_verified": user.is_email_verified,
+                        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None,
+                        "tenant_id": str(user.default_tenant_id) if user.default_tenant_id else None,
+                        "tenant_name": user.default_tenant.name if user.default_tenant else None,
+                        "created_at": user.created_at.isoformat() if user.created_at else None,
+                    },
+                }
+            )
+        limit = min(int(request.query_params.get("limit", "50")), 100)
+        unverified = request.query_params.get("unverified", "1") != "0"
+        return Response(
+            {
+                "results": UserPurgeService.list_blocked_registrations(
+                    limit=limit,
+                    unverified_only=unverified,
+                )
+            }
+        )
+
+
+class UserPurgeEmailsView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "tenants.view"
+
+    def post(self, request):
+        emails = request.data.get("emails") or []
+        single = (request.data.get("email") or "").strip()
+        if single:
+            emails = [single, *emails]
+        emails = [e.strip().lower() for e in emails if isinstance(e, str) and e.strip()]
+        if not emails:
+            return Response(
+                {"error": {"code": "validation_error", "message": "נדרש לפחות אימייל אחד", "details": {}}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        purge_tenant = request.data.get("purge_tenant") is True
+        unverified_only = request.data.get("unverified_only") is True
+        results = UserPurgeService.purge_many(
+            emails=emails,
+            purge_tenant=purge_tenant,
+            unverified_only=unverified_only,
+            actor=request.user,
+            request=request,
+        )
+        return Response({"results": results})
+
+
+class UserPurgeByIdView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "users.remove"
+
+    def post(self, request, user_id):
+        purge_tenant = request.data.get("purge_tenant") is True
+        result = UserPurgeService.purge_by_id(
+            user_id=user_id,
+            tenant_id=request.user.default_tenant_id,
+            purge_tenant=purge_tenant,
+            actor=request.user,
+            request=request,
+        )
+        if result["status"] == "not_found":
+            return Response(
+                {"error": {"code": "not_found", "message": "משתמש לא נמצא", "details": {}}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(result)
 
 
 class UserRoleAssignView(APIView):

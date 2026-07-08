@@ -144,6 +144,50 @@ export const usersApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  purgeById: (id: string, purge_tenant = false) =>
+    apiFetch<{ status: string; email?: string; tenant_purged?: boolean }>(
+      `/api/v1/users/${id}/purge/`,
+      { method: "POST", headers: authHeaders(), json: { purge_tenant } },
+    ),
+};
+
+export type BlockedRegistration = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  email_verified: boolean;
+  deleted_at: string | null;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  created_at: string | null;
+};
+
+export type PurgeResult = {
+  email: string;
+  status: "purged" | "not_found" | "skipped_verified";
+  user_id?: string;
+  tenant_purged?: boolean;
+};
+
+export const emailReleaseApi = {
+  listBlocked: (unverifiedOnly = true) =>
+    apiFetch<{ results: BlockedRegistration[] }>(
+      `/api/v1/users/blocked-registrations/${unverifiedOnly ? "?unverified=1" : "?unverified=0"}`,
+      { headers: authHeaders() },
+    ),
+  lookup: (email: string) =>
+    apiFetch<{ found: boolean; email?: string; user?: BlockedRegistration }>(
+      `/api/v1/users/blocked-registrations/?email=${encodeURIComponent(email)}`,
+      { headers: authHeaders() },
+    ),
+  purge: (data: { emails: string[]; purge_tenant?: boolean; unverified_only?: boolean }) =>
+    apiFetch<{ results: PurgeResult[] }>("/api/v1/users/purge/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
 };
 
 export type InboxMessage = {
