@@ -84,6 +84,7 @@ export type UserRow = {
   last_name: string;
   is_active: boolean;
   email_verified?: boolean;
+  tenant_name?: string | null;
   roles: string[];
   role_assignments: Array<{ id: string; slug: string; name: string }>;
   created_at: string;

@@ -17,10 +17,11 @@ User = get_user_model()
 
 class UserManagementService:
     @staticmethod
-    def list_users(tenant_id):
-        return User.objects.filter(default_tenant_id=tenant_id, deleted_at__isnull=True).order_by(
-            "-created_at"
-        )
+    def list_users(tenant_id, *, platform_wide: bool = False):
+        qs = User.objects.filter(deleted_at__isnull=True).select_related("default_tenant")
+        if not platform_wide:
+            qs = qs.filter(default_tenant_id=tenant_id)
+        return qs.order_by("-created_at")
 
     @staticmethod
     def get_user(user_id, tenant_id):

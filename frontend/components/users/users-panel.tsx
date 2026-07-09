@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { rolesApi, usersApi, type UserRow } from "@/lib/api/dashboard";
+import { useAuth } from "@/lib/auth/auth-context";
 import { Field, Modal } from "@/components/users/shared";
 
 type Props = {
@@ -33,6 +34,8 @@ export function UsersPanel({
   const t = useTranslations("users");
   const tc = useTranslations("common");
   const qc = useQueryClient();
+  const { hasPermission } = useAuth();
+  const isPlatform = hasPermission("tenants.view");
 
   const users = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
   const roles = useQuery({ queryKey: ["roles"], queryFn: rolesApi.list, enabled: canChangeRoles });
@@ -127,6 +130,11 @@ export function UsersPanel({
       {message && <p className="text-sm text-green-700">{message}</p>}
 
       <Card className="overflow-hidden p-0">
+        {isPlatform && (
+          <p className="border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted-fg)]">
+            {t("platformScopeHint")}
+          </p>
+        )}
         {users.isLoading && <p className="p-6 text-sm">{tc("loading")}</p>}
         {users.isError && <p className="p-6 text-sm text-red-600">{t("loadError")}</p>}
         <div className="overflow-x-auto">
@@ -134,6 +142,7 @@ export function UsersPanel({
             <thead className="border-b border-[var(--border)] bg-[var(--muted)]/50 text-start text-xs uppercase tracking-wide text-[var(--muted-fg)]">
               <tr>
                 <th className="px-4 py-3 font-medium">{t("colEmail")}</th>
+                {isPlatform && <th className="px-4 py-3 font-medium">{t("colTenant")}</th>}
                 <th className="px-4 py-3 font-medium">{t("colName")}</th>
                 <th className="px-4 py-3 font-medium">{t("colRoles")}</th>
                 <th className="px-4 py-3 font-medium">{t("colVerified")}</th>
@@ -145,6 +154,7 @@ export function UsersPanel({
               {users.data?.results?.map((u) => (
                 <tr key={u.id} className="hover:bg-[var(--muted)]/30">
                   <td className="px-4 py-3 font-medium">{u.email}</td>
+                  {isPlatform && <td className="px-4 py-3 text-[var(--muted-fg)]">{u.tenant_name || "—"}</td>}
                   <td className="px-4 py-3 text-[var(--muted-fg)]">{u.first_name} {u.last_name}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">

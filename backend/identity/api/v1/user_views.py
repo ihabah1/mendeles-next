@@ -24,10 +24,14 @@ class UserListView(APIView):
 
     def get(self, request):
         tenant_id = request.user.default_tenant_id
-        users = UserManagementService.list_users(tenant_id)
+        platform_wide = PermissionService.user_has_permission(
+            request.user, "tenants.view", tenant_id
+        )
+        users = UserManagementService.list_users(tenant_id, platform_wide=platform_wide)
         data = []
         for u in users:
-            role_rows = UserRole.objects.filter(user=u, tenant_id=tenant_id).select_related("role")
+            role_tenant_id = u.default_tenant_id if platform_wide else tenant_id
+            role_rows = UserRole.objects.filter(user=u, tenant_id=role_tenant_id).select_related("role")
             data.append(
                 {
                     "id": str(u.id),
@@ -36,7 +40,8 @@ class UserListView(APIView):
                     "last_name": u.last_name,
                     "is_active": u.is_active,
                     "email_verified": u.is_email_verified,
-                    "roles": PermissionService.get_user_roles(u, tenant_id),
+                    "tenant_name": u.default_tenant.name if u.default_tenant else None,
+                    "roles": PermissionService.get_user_roles(u, role_tenant_id),
                     "role_assignments": [
                         {"id": str(ur.role_id), "slug": ur.role.slug, "name": ur.role.name}
                         for ur in role_rows
@@ -44,7 +49,7 @@ class UserListView(APIView):
                     "created_at": u.created_at.isoformat(),
                 }
             )
-        return Response({"results": data})
+        return Response({"results": data, "scope": "platform" if platform_wide else "tenant"})
 
 
 class UserInviteView(APIView):
