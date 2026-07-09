@@ -11,7 +11,9 @@
     "language": "Language",
     "hebrew": "עברית",
     "english": "English",
-    "homeLink": "Mendeles — Home"
+    "homeLink": "Mendeles — Home",
+    "on": "On",
+    "off": "Off"
   },
   "metadata": {
     "title": "Mendeles — AI Lead Generation Platform",
@@ -417,7 +419,9 @@
     "viewAllInterfaces": "All interfaces",
     "noRoles": "No role assignments yet",
     "recentActivity": "Recent activity",
-    "audit24h": "{n} events in 24h"
+    "audit24h": "{n} events in 24h",
+    "contactWidgetFlag": "Contact balloon on homepage",
+    "contactWidgetFlagHint": "Show or hide the contact widget on the public homepage"
   },
   "siteLinks": {
     "title": "Site interfaces",

@@ -13,7 +13,16 @@ DEFAULT_SETTINGS = {
     "analytics.ga_id": "",
     "analytics.gtm_id": "",
     "analytics.fb_pixel": "",
+    "features.contact_widget_home": "true",
 }
+
+PUBLIC_FEATURE_KEYS = ("features.contact_widget_home",)
+
+
+def _setting_bool(value: str | None, *, default: bool = True) -> bool:
+    if value is None:
+        return default
+    return str(value).strip().lower() not in {"false", "0", "no", "off"}
 
 
 class SettingsService:
@@ -37,3 +46,15 @@ class SettingsService:
                 defaults={"value": value, "updated_by": user},
             )
         return SettingsService.get_tenant_settings(tenant_id)
+
+    @staticmethod
+    def get_public_features(tenant_id) -> dict:
+        if not tenant_id:
+            return {"contact_widget_home": True}
+        settings = SettingsService.get_tenant_settings(tenant_id)
+        return {
+            "contact_widget_home": _setting_bool(
+                settings.get("features.contact_widget_home"),
+                default=True,
+            ),
+        }

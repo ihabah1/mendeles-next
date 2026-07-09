@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from core.permissions.base import HasPermission
 from siteconfig.application.settings_service import SettingsService
+from tenancy.application.public_tenant import resolve_public_tenant_id
 
 
 class HealthView(APIView):
@@ -56,3 +57,13 @@ class SettingsView(APIView):
             request.user.default_tenant_id, request.data, request.user
         )
         return Response(data)
+
+
+class PublicFeaturesView(APIView):
+    """Public feature flags for marketing pages (no auth)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tenant_id = resolve_public_tenant_id()
+        return Response(SettingsService.get_public_features(tenant_id))

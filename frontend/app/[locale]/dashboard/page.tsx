@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
 import { StatCard } from "@/components/admin/stat-card";
 import { ExpandableStatCard } from "@/components/admin/expandable-stat-card";
+import { ContactWidgetFeatureFlag } from "@/components/admin/contact-widget-feature-flag";
 import { Card } from "@/components/ui/card";
 import { adminApi } from "@/lib/api/dashboard";
 import { healthApi } from "@/lib/api/auth";
@@ -91,6 +92,8 @@ export default function DashboardPage() {
               dailyLabel={t("dailyBreakdown")}
             />
           </div>
+
+          <ContactWidgetFeatureFlag />
 
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">

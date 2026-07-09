@@ -11,7 +11,9 @@
     "language": "שפה",
     "hebrew": "עברית",
     "english": "English",
-    "homeLink": "Mendeles — דף הבית"
+    "homeLink": "Mendeles — דף הבית",
+    "on": "פעיל",
+    "off": "כבוי"
   },
   "metadata": {
     "title": "Mendeles — פלטפורמת לידים מבוססת AI",
@@ -380,7 +382,9 @@
     "viewAllInterfaces": "כל הממשקים",
     "noRoles": "אין הקצאות תפקידים עדיין",
     "recentActivity": "פעילות אחרונה",
-    "audit24h": "{n} אירועים ב-24 שעות"
+    "audit24h": "{n} אירועים ב-24 שעות",
+    "contactWidgetFlag": "בלון \"צור קשר\" בדף הבית",
+    "contactWidgetFlagHint": "הצג או הסתר את בלון יצירת הקשר בדף הראשי של האתר"
   },
   "siteLinks": {
     "title": "מפת ממשקים",

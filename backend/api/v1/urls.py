@@ -19,7 +19,7 @@ from content.api.v1.urls import urlpatterns as content_urls
 from leads.api.v1.urls import urlpatterns as leads_urls
 from automation.api.v1.urls import urlpatterns as automation_urls
 from seo.api.v1.urls import urlpatterns as seo_urls
-from siteconfig.api.v1.views import HealthView, SettingsView
+from siteconfig.api.v1.views import HealthView, PublicFeaturesView, SettingsView
 from siteconfig.api.v1.admin_views import AdminOverviewView
 from rbac.api.v1.views import PermissionListView, RoleListView
 
@@ -49,6 +49,7 @@ urlpatterns = [
     path("roles/", RoleListView.as_view(), name="roles-list"),
     path("permissions/", PermissionListView.as_view(), name="permissions-list"),
     path("settings/", SettingsView.as_view(), name="settings"),
+    path("settings/public/", PublicFeaturesView.as_view(), name="settings-public"),
     path("admin/overview/", AdminOverviewView.as_view(), name="admin-overview"),
     path("audit-logs/", AuditLogListView.as_view(), name="audit-logs"),
     path("seo/", include(seo_urls)),
