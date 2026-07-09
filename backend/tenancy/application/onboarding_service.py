@@ -23,7 +23,7 @@ class OnboardingService:
             subject="ברוכים הבאים ל-Mendeles",
             body=(
                 f"שלום {user.first_name},\n\n"
-                f"קיבלתם {NEW_CLIENT_CREDITS} קרדיטים לפתיחה — כל בקשה לדף נחיתה או מאמר עולה 15 קרדיטים.\n"
+                f"קיבלתם {NEW_CLIENT_CREDITS} קרדיטים לפתיחה — כל בקשה לדף נחיתה או מאמר עם פרסומת עולה 15 קרדיטים.\n"
                 "שלחו בקשה ליצירה מהדשבורד ונעדכן אתכם כשהתוכן מוכן."
             ),
             request=request,

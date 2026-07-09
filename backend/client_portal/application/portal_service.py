@@ -7,7 +7,7 @@ from automation.domain.enums import JobStatus, JobType
 from automation.infrastructure.models import AutomationJob
 from core.exceptions.base import ValidationError
 from leads.infrastructure.models import Lead
-from tenancy.application.credit_service import PRODUCT_CREDIT_COST, CreditService
+from tenancy.application.credit_service import NEW_CLIENT_CREDITS, PRODUCT_CREDIT_COST, CreditService
 
 CLIENT_REQUEST_SOURCE = "client_portal"
 
@@ -27,7 +27,7 @@ GENERATION_STEPS = [
 
 PRODUCT_LABELS = {
     "landing_page": "דף נחיתה",
-    "article": "מאמר",
+    "article": "מאמר עם פרסומת",
 }
 
 
@@ -165,7 +165,7 @@ class ClientPortalService:
         return {
             "credits_balance": balance,
             "credit_cost_per_product": PRODUCT_CREDIT_COST,
-            "new_client_bonus": 30,
+            "new_client_bonus": NEW_CLIENT_CREDITS,
             "requests": requests,
             "pending_requests_count": pending_count,
             "pending_platform_requests_count": pending_platform if platform_wide else None,

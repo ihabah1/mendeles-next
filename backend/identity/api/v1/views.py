@@ -91,6 +91,9 @@ class LogoutView(APIView):
 
 class MeView(APIView):
     def get(self, request):
+        from identity.application.client_portal_service import ensure_client_portal_user
+
+        ensure_client_portal_user(request.user, request=request)
         tenant_id = getattr(request, "tenant_id", None) or request.user.default_tenant_id
         return Response(AuthService.serialize_user(request.user, tenant_id))
 

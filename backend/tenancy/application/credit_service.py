@@ -8,7 +8,7 @@ from django.db.models import F
 from core.exceptions.base import ValidationError
 from tenancy.infrastructure.models import Tenant
 
-NEW_CLIENT_CREDITS = 30
+NEW_CLIENT_CREDITS = 15
 PRODUCT_CREDIT_COST = 15
 
 

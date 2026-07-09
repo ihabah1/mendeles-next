@@ -56,6 +56,38 @@ def test_client_dashboard(client_client):
 
 
 @pytest.mark.django_db
+def test_login_converts_self_registered_owner_to_client(api_client, seeded, tenant):
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    from audit.application.audit_service import AuditService
+    from rbac.infrastructure.models import Role, UserRole
+
+    User = get_user_model()
+    user = User.objects.create_user(
+        email="legacy-owner@test.com",
+        password="SecurePass123!",
+        first_name="Legacy",
+        last_name="Owner",
+        default_tenant=tenant,
+        email_verified_at=timezone.now(),
+    )
+    owner_role = Role.objects.get(slug="business_owner", tenant__isnull=True, is_system=True)
+    UserRole.objects.create(user=user, role=owner_role, tenant=tenant)
+    AuditService.log(action="user.registered", user=user, tenant_id=tenant.id, resource_type="user", resource_id=user.id)
+
+    login = api_client.post(
+        "/api/v1/auth/login/",
+        {"email": "legacy-owner@test.com", "password": "SecurePass123!"},
+        format="json",
+    )
+    assert login.status_code == 200
+    body = login.json()["user"]
+    assert "client" in body["roles"]
+    assert body.get("credits_balance", 0) == NEW_CLIENT_CREDITS
+
+
+@pytest.mark.django_db
 def test_update_me_profile(client_client):
     res = client_client.patch(
         "/api/v1/auth/me/",

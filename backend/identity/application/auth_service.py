@@ -156,6 +156,9 @@ class AuthService:
         user.save(update_fields=["last_login_at", "updated_at"])
 
         tenant_id = user.default_tenant_id
+        from identity.application.client_portal_service import ensure_client_portal_user
+
+        ensure_client_portal_user(user, request=request)
         ip, ua = _client_meta(request)
         access = JWTService.create_access_token(user, tenant_id)
         refresh, _record = JWTService.create_refresh_token(user, ip_address=ip, user_agent=ua)

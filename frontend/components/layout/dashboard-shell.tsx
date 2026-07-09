@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/lib/i18n/navigation";
 import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
+import { isClientPortalUser } from "@/lib/auth/portal-mode";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -33,8 +34,9 @@ const CLIENT_NAV = [
   { href: "/dashboard", labelKey: "overview" },
   { href: "/dashboard/requests", labelKey: "creationRequests" },
   { href: "/dashboard/leads", labelKey: "leads" },
-  { href: "/dashboard/inbox", labelKey: "messages" },
-  { href: "/dashboard/profile", labelKey: "profile" },
+  { href: "/dashboard/inbox", labelKey: "mailbox" },
+  { href: "/dashboard/profile", labelKey: "changeDetails" },
+  { href: "/forgot-password", labelKey: "resetPassword" },
 ] as const;
 
 function navIsActive(pathname: string, tab: string | null, href: string) {
@@ -42,6 +44,7 @@ function navIsActive(pathname: string, tab: string | null, href: string) {
   if (pathname !== path && !(path === "/dashboard/users" && pathname.startsWith("/dashboard/users"))) {
     return false;
   }
+  if (path === "/forgot-password") return pathname === "/forgot-password";
   if (!query) {
     if (path === "/dashboard") return !tab || tab === "overview";
     if (path === "/dashboard/users") return !tab || tab === "users";
@@ -53,10 +56,7 @@ function navIsActive(pathname: string, tab: string | null, href: string) {
 }
 
 function isClientPortal(user: ReturnType<typeof useAuth>["user"], hasPermission: (p: string) => boolean) {
-  return Boolean(
-    user?.roles.includes("client") ||
-      (hasPermission("requests.view") && !hasPermission("tenants.view") && !hasPermission("settings.manage")),
-  );
+  return isClientPortalUser(user, hasPermission);
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
