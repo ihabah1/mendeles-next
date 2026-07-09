@@ -4,13 +4,19 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
-import { getContactSiteConfig, whatsappHref } from "@/lib/contact/site-config";
+import { getContactSiteConfig, whatsappHref, type ContactSiteConfig } from "@/lib/contact/site-config";
 import { focusFirstElement, useFocusTrap } from "@/lib/a11y/use-focus-trap";
 import { cn } from "@/lib/utils";
 
-export function ContactWidget() {
+export function ContactWidget({ contact: contactProp }: { contact?: ContactSiteConfig }) {
   const t = useTranslations("contactWidget");
-  const config = getContactSiteConfig();
+  const envConfig = getContactSiteConfig();
+  const config: ContactSiteConfig = {
+    phone: envConfig.phone || contactProp?.phone || "",
+    email: envConfig.email || contactProp?.email || "",
+    whatsappNumber: envConfig.whatsappNumber || contactProp?.whatsappNumber || "",
+    whatsappMessage: envConfig.whatsappMessage || contactProp?.whatsappMessage || "Hello Mendeles",
+  };
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const panelId = useId();
@@ -95,7 +101,7 @@ export function ContactWidget() {
             </Link>
           </div>
 
-          {!config.phone && !config.email && !waLink && (
+          {!config.phone && !config.email && !waLink && process.env.NODE_ENV === "development" && (
             <p className="mt-3 text-xs text-[var(--muted-fg)]">{t("configureHint")}</p>
           )}
         </div>

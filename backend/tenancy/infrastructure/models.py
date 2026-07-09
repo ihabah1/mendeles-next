@@ -12,6 +12,7 @@ class Tenant(BaseModel):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=100, unique=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    credits_balance = models.PositiveIntegerField(default=0)
     settings_json = models.JSONField(default=dict, blank=True, db_column="settings")
 
     class Meta:

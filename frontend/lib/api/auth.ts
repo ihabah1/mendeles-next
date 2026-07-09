@@ -5,11 +5,13 @@ export type AuthUser = {
   email: string;
   first_name: string;
   last_name: string;
+  phone?: string;
   tenant_id: string | null;
   roles: string[];
   permissions: string[];
   preferred_locale: string;
   email_verified: boolean;
+  credits_balance?: number;
 };
 
 let accessToken: string | null = null;
@@ -56,6 +58,13 @@ export const authApi = {
   me: () =>
     apiFetch<AuthUser>("/api/v1/auth/me/", {
       headers: authHeaders(),
+    }),
+
+  updateMe: (body: Partial<Pick<AuthUser, "first_name" | "last_name" | "phone" | "preferred_locale">>) =>
+    apiFetch<AuthUser>("/api/v1/auth/me/", {
+      method: "PATCH",
+      headers: authHeaders(),
+      json: body,
     }),
 
   verifyEmail: (token: string) =>

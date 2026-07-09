@@ -12,6 +12,7 @@ from identity.api.v1.serializers import (
     RegisterSerializer,
     ResendVerificationSerializer,
     ResetPasswordSerializer,
+    UpdateMeSerializer,
     VerifyEmailSerializer,
 )
 from identity.application.auth_service import AuthService
@@ -92,6 +93,17 @@ class MeView(APIView):
     def get(self, request):
         tenant_id = getattr(request, "tenant_id", None) or request.user.default_tenant_id
         return Response(AuthService.serialize_user(request.user, tenant_id))
+
+    def patch(self, request):
+        serializer = UpdateMeSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = AuthService.update_me(
+            user=request.user,
+            data=serializer.validated_data,
+            request=request,
+        )
+        tenant_id = getattr(request, "tenant_id", None) or user.default_tenant_id
+        return Response(AuthService.serialize_user(user, tenant_id))
 
 
 class VerifyEmailView(APIView):

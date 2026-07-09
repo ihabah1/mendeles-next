@@ -116,6 +116,7 @@ export type ControlCenterData = {
     errors_24h: number;
     roles_total: number;
     feature_flags_active: number;
+    pending_client_requests: number;
   };
   daily_activity: Array<{ date: string; logins: number; events: number }>;
   feature_flags: Array<{ key: string; slug: string; enabled: boolean }>;
@@ -146,6 +147,49 @@ export type ControlCenterData = {
     created_at: string | null;
   }>;
   role_summary: Array<{ slug: string; name: string; count: number }>;
+  client_requests: ClientCreationRequest[];
+};
+
+export type ClientCreationRequest = {
+  id: string;
+  product_type: "landing_page" | "article" | string;
+  product_label: string;
+  title: string;
+  brief: string;
+  status: string;
+  credits_charged: number;
+  created_at: string | null;
+  updated_at: string | null;
+  tenant_name?: string | null;
+  client_email?: string | null;
+  client_name?: string | null;
+};
+
+export type ClientDashboardData = {
+  credits_balance: number;
+  credit_cost_per_product: number;
+  new_client_bonus: number;
+  requests: ClientCreationRequest[];
+  pending_requests_count: number;
+  pending_platform_requests_count: number | null;
+  leads_total: number;
+  leads_new: number;
+  inbox_unread: number;
+};
+
+export const clientPortalApi = {
+  dashboard: () =>
+    apiFetch<ClientDashboardData>("/api/v1/client/dashboard/", { headers: authHeaders() }),
+  listRequests: () =>
+    apiFetch<{ results: ClientCreationRequest[] }>("/api/v1/client/requests/", {
+      headers: authHeaders(),
+    }),
+  submitRequest: (body: { product_type: "landing_page" | "article"; title: string; brief?: string }) =>
+    apiFetch<ClientCreationRequest>("/api/v1/client/requests/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
 };
 
 export const usersApi = {

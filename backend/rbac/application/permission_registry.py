@@ -33,6 +33,8 @@ PERMISSIONS = [
     ("integrations.manage", "integrations", "manage", "ניהול אינטגרציות"),
     ("ai_seo.view", "ai_seo", "view", "צפייה ב-AI SEO Automation Center"),
     ("ai_seo.manage", "ai_seo", "manage", "ניהול AI SEO Automation Center"),
+    ("requests.view", "requests", "view", "צפייה בבקשות יצירה"),
+    ("requests.create", "requests", "create", "שליחת בקשות יצירה"),
     ("tenants.view", "tenants", "view", "צפייה בדיירים"),
     ("tenants.edit", "tenants", "edit", "עריכת דיירים"),
 ]
@@ -130,6 +132,11 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     ],
     "support_agent": ["users.view"],
     "read_only": ["users.view", "settings.view", "audit.view"],
+    "client": [
+        "requests.view",
+        "requests.create",
+        "leads.view",
+    ],
 }
 
 SYSTEM_ROLES = [
@@ -143,4 +150,5 @@ SYSTEM_ROLES = [
     ("marketing_manager", "מנהל שיווק", "קמפיינים ושיווק"),
     ("support_agent", "נציג תמיכה", "תמיכת לקוחות"),
     ("read_only", "קריאה בלבד", "צפייה ללא עריכה"),
+    ("client", "לקוח", "פורטל לקוח — בקשות יצירה, לידים והודעות"),
 ]

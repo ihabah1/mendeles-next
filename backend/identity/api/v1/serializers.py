@@ -38,6 +38,13 @@ class InviteUserSerializer(serializers.Serializer):
     role_slug = serializers.CharField(max_length=100, default="read_only")
 
 
+class UpdateMeSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=100, required=False)
+    last_name = serializers.CharField(max_length=100, required=False)
+    phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    preferred_locale = serializers.CharField(max_length=10, required=False)
+
+
 class UpdateUserSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=100, required=False)
     last_name = serializers.CharField(max_length=100, required=False)

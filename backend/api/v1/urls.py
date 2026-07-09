@@ -61,6 +61,7 @@ urlpatterns = [
     path("automation/", include(automation_urls)),
     path("integrations/", include("integrations.api.v1.urls")),
     path("ai-seo/", include("ai_seo.api.v1.urls")),
+    path("client/", include("client_portal.api.v1.urls")),
     path("inbox/", include("identity.api.v1.inbox_urls")),
     path("whatsapp/", include("whatsapp.urls")),
 ]

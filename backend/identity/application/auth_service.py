@@ -13,6 +13,7 @@ from identity.infrastructure.jwt import JWTService, TokenHasher
 from identity.infrastructure.models import EmailVerificationToken, PasswordResetToken
 from rbac.application.permission_service import PermissionService
 from rbac.infrastructure.models import Role, UserRole
+from tenancy.application.onboarding_service import OnboardingService
 from tenancy.domain.services import slugify_tenant_name
 from tenancy.infrastructure.models import Tenant
 
@@ -31,11 +32,15 @@ def _client_meta(request) -> tuple[str | None, str]:
 
 
 def _ensure_system_roles_seeded() -> None:
-    if Role.objects.filter(slug="business_owner", tenant__isnull=True, is_system=True).exists():
-        return
-    from rbac.management.commands.seed_rbac import Command as SeedRbacCommand
+    needs_seed = not Role.objects.filter(
+        slug__in=("business_owner", "client"),
+        tenant__isnull=True,
+        is_system=True,
+    ).count() >= 2
+    if needs_seed:
+        from rbac.management.commands.seed_rbac import Command as SeedRbacCommand
 
-    SeedRbacCommand().handle()
+        SeedRbacCommand().handle()
 
 
 class AuthService:
@@ -69,8 +74,10 @@ class AuthService:
         )
 
         _ensure_system_roles_seeded()
-        owner_role = Role.objects.get(slug="business_owner", tenant__isnull=True, is_system=True)
-        UserRole.objects.create(user=user, role=owner_role, tenant=tenant)
+        client_role = Role.objects.get(slug="client", tenant__isnull=True, is_system=True)
+        UserRole.objects.create(user=user, role=client_role, tenant=tenant)
+
+        OnboardingService.setup_new_client(tenant=tenant, user=user, request=request)
 
         verification_email_sent = AuthService.send_verification_email_for_user(user)
 
@@ -284,12 +291,15 @@ class AuthService:
 
     @staticmethod
     def serialize_user(user: User, tenant_id=None) -> dict:
+        from tenancy.application.credit_service import CreditService
+
         tid = tenant_id or user.default_tenant_id
-        return {
+        payload = {
             "id": str(user.id),
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
+            "phone": user.phone or "",
             "is_active": user.is_active,
             "tenant_id": str(tid) if tid else None,
             "roles": PermissionService.get_user_roles(user, tid),
@@ -297,3 +307,33 @@ class AuthService:
             "preferred_locale": user.preferred_locale,
             "email_verified": user.is_email_verified,
         }
+        if tid:
+            payload["credits_balance"] = CreditService.get_balance(tid)
+        return payload
+
+    @staticmethod
+    @transaction.atomic
+    def update_me(*, user: User, data: dict, request) -> User:
+        allowed = ("first_name", "last_name", "phone", "preferred_locale")
+        updates = []
+        for field in allowed:
+            if field in data:
+                value = data[field]
+                if field in ("first_name", "last_name", "phone", "preferred_locale"):
+                    value = (value or "").strip()
+                setattr(user, field, value)
+                updates.append(field)
+        if updates:
+            user.save(update_fields=[*updates, "updated_at"])
+            ip, ua = _client_meta(request)
+            AuditService.log(
+                action="user.profile_updated",
+                user=user,
+                tenant_id=user.default_tenant_id,
+                resource_type="user",
+                resource_id=user.id,
+                ip_address=ip,
+                user_agent=ua,
+                metadata={"fields": updates},
+            )
+        return user

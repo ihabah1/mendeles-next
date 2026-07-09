@@ -67,6 +67,35 @@ def owner_user(seeded, tenant):
 
 
 @pytest.fixture
+def client_user(seeded, tenant):
+    user = User.objects.create_user(
+        email="client@test.com",
+        password="SecurePass123!",
+        first_name="Client",
+        last_name="User",
+        default_tenant=tenant,
+    )
+    verify_user(user)
+    assign_role(user, tenant, "client")
+    from tenancy.application.credit_service import CreditService
+
+    CreditService.grant_new_client_bonus(tenant.id)
+    from automation.infrastructure.models import AutomationQueue
+
+    AutomationQueue.objects.get_or_create(
+        tenant=tenant,
+        slug="default",
+        defaults={"name": "Default Queue", "is_default": True},
+    )
+    return user
+
+
+@pytest.fixture
+def client_client(api_client, client_user):
+    return auth_client(api_client, client_user)
+
+
+@pytest.fixture
 def read_only_user(seeded, tenant):
     user = User.objects.create_user(
         email="readonly@test.com",

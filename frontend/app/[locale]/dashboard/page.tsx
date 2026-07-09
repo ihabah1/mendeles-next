@@ -3,21 +3,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
-import { StatCard } from "@/components/admin/stat-card";
 import { Card } from "@/components/ui/card";
 import { ControlCenter } from "@/components/control-center/control-center";
+import { ClientDashboard } from "@/components/client/client-dashboard";
 import { healthApi } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth/auth-context";
+
+function isClientPortal(user: ReturnType<typeof useAuth>["user"], hasPermission: (p: string) => boolean) {
+  return Boolean(
+    user?.roles.includes("client") ||
+      (hasPermission("requests.view") && !hasPermission("tenants.view") && !hasPermission("settings.manage")),
+  );
+}
 
 export default function DashboardPage() {
   const td = useTranslations("dashboard");
   const tc = useTranslations("common");
   const { user, hasPermission } = useAuth();
   const isAdmin = hasPermission("tenants.view") || user?.roles.includes("super_admin");
-  const health = useQuery({ queryKey: ["health"], queryFn: healthApi.check, enabled: !isAdmin });
+  const isClient = isClientPortal(user, hasPermission);
+  const health = useQuery({ queryKey: ["health"], queryFn: healthApi.check, enabled: !isAdmin && !isClient });
 
   if (isAdmin) {
     return <ControlCenter />;
+  }
+
+  if (isClient) {
+    return <ClientDashboard />;
   }
 
   return (

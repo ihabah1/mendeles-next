@@ -8,15 +8,16 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const ADMIN_NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
   { href: "/dashboard?tab=flags", labelKey: "featureFlags", permission: "settings.view" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
+  { href: "/dashboard/requests", labelKey: "creationRequests", permission: "tenants.view" },
   { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
   { href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" },
   { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
-  { href: "/dashboard/users?tab=inbox", labelKey: "messages", permission: null },
+  { href: "/dashboard/users?tab=inbox", labelKey: "messages", permission: "users.view" },
   { href: "/dashboard/audit", labelKey: "reports", permission: "audit.view" },
   { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
   { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
@@ -26,6 +27,14 @@ const NAV = [
   { href: "/dashboard/ai-seo", labelKey: "aiSeo", permission: "ai_seo.view" },
   { href: "/dashboard/roles", labelKey: "roles", permission: "roles.view" },
   { href: "/dashboard/seo", labelKey: "seo", permission: "seo.view" },
+] as const;
+
+const CLIENT_NAV = [
+  { href: "/dashboard", labelKey: "overview" },
+  { href: "/dashboard/requests", labelKey: "creationRequests" },
+  { href: "/dashboard/leads", labelKey: "leads" },
+  { href: "/dashboard/inbox", labelKey: "messages" },
+  { href: "/dashboard/profile", labelKey: "profile" },
 ] as const;
 
 function navIsActive(pathname: string, tab: string | null, href: string) {
@@ -43,24 +52,40 @@ function navIsActive(pathname: string, tab: string | null, href: string) {
   return tab === expectedTab;
 }
 
+function isClientPortal(user: ReturnType<typeof useAuth>["user"], hasPermission: (p: string) => boolean) {
+  return Boolean(
+    user?.roles.includes("client") ||
+      (hasPermission("requests.view") && !hasPermission("tenants.view") && !hasPermission("settings.manage")),
+  );
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const ta = useTranslations("a11y");
+  const tClient = useTranslations("clientPortal");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
   const { user, logout, hasPermission } = useAuth();
 
-  const items = NAV.filter((item) => !item.permission || hasPermission(item.permission));
+  const clientMode = isClientPortal(user, hasPermission);
+  const items = clientMode
+    ? CLIENT_NAV
+    : ADMIN_NAV.filter((item) => !item.permission || hasPermission(item.permission));
   const isControlCenter = pathname === "/dashboard";
 
   return (
-    <div className={cn("min-h-screen md:flex", isControlCenter && "dashboard-cc")}>
+    <div className={cn("min-h-screen md:flex", isControlCenter && !clientMode && "dashboard-cc")}>
       <aside className="w-full border-b border-[var(--border)] md:w-64 md:border-b-0 md:border-e">
         <div className="flex items-center justify-between gap-2 p-4 md:block">
           <div>
             <div className="text-lg font-bold">Mendeles</div>
             <div className="text-xs text-[var(--muted-fg)]">{user?.email}</div>
+            {clientMode && (
+              <div className="mt-1 text-xs font-medium text-[var(--accent)]">
+                {tClient("creditsBalance")}: {user?.credits_balance ?? 0}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 md:mt-3">
             <LocaleSwitcher />
@@ -77,7 +102,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 navIsActive(pathname, tab, item.href) ? "bg-[var(--muted)] font-semibold" : "hover:bg-[var(--muted)]",
               )}
             >
-              {t(item.labelKey)}
+              {t(item.labelKey as "overview")}
             </Link>
           ))}
           <button

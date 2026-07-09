@@ -32,7 +32,12 @@ def test_read_only_cannot_update_settings(readonly_client):
 def test_public_features_default_enabled(api_client):
     response = api_client.get("/api/v1/settings/public/")
     assert response.status_code == 200
-    assert response.json()["contact_widget_home"] is True
+    body = response.json()
+    assert body["contact_widget_home"] is True
+    assert body["contact_email"] == "mendelessupport@gmail.com"
+    assert body["contact_phone"] == "972537985362"
+    assert body["whatsapp_number"] == "972537985362"
+    assert "whatsapp_prefill" in body
 
 
 @pytest.mark.django_db

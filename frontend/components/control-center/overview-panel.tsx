@@ -43,6 +43,7 @@ export function OverviewPanel({ data }: { data: ControlCenterData }) {
         <KpiCard label={t("kpiLogins7d")} value={data.stats.logins_7d.toLocaleString()} spark={loginSpark} accent="#2979ff" />
         <KpiCard label={t("kpiChanges24h")} value={data.stats.changes_24h.toLocaleString()} spark={eventSpark} accent="#7c4dff" />
         <KpiCard label={t("kpiErrors24h")} value={data.stats.errors_24h.toLocaleString()} spark={eventSpark} accent="#ff5252" />
+        <KpiCard label={t("kpiPendingRequests")} value={data.stats.pending_client_requests.toLocaleString()} accent="#ffb300" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -141,6 +142,35 @@ export function OverviewPanel({ data }: { data: ControlCenterData }) {
           </table>
         </div>
       </div>
+
+      {data.client_requests.length > 0 && (
+        <div className="cc-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[var(--cc-border)] px-5 py-4">
+            <h3 className="font-semibold">{t("clientRequestsTitle")}</h3>
+            <Link href="/dashboard/requests" className="text-xs text-[var(--cc-accent)] hover:underline">
+              {t("viewAllRequests")}
+            </Link>
+          </div>
+          <table className="cc-table w-full text-sm">
+            <thead>
+              <tr>
+                <th>{t("colRequest")}</th>
+                <th>{t("colClient")}</th>
+                <th>{t("colStatus")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.client_requests.map((req) => (
+                <tr key={req.id}>
+                  <td>{req.title}</td>
+                  <td className="text-[var(--cc-muted)]">{req.client_email || req.tenant_name}</td>
+                  <td>{req.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

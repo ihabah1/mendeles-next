@@ -3,7 +3,9 @@ from django.db.models import Count
 from django.utils import timezone
 
 from audit.infrastructure.models import AuditLog, SiteErrorLog
+from automation.domain.enums import JobStatus
 from automation.infrastructure.models import AutomationJob
+from client_portal.application.portal_service import CLIENT_REQUEST_SOURCE, ClientPortalService
 from rbac.infrastructure.models import Role, UserRole
 from siteconfig.application.settings_service import (
     FEATURE_FLAG_DEFINITIONS,
@@ -153,6 +155,21 @@ class ControlCenterService:
         if not is_platform:
             errors_24h_qs = errors_24h_qs.filter(tenant_id=tenant_id)
 
+        pending_statuses = [
+            JobStatus.QUEUED,
+            JobStatus.SCHEDULED,
+            JobStatus.RUNNING,
+            JobStatus.WAITING_APPROVAL,
+            JobStatus.RETRYING,
+        ]
+        pending_qs = AutomationJob.objects.filter(
+            deleted_at__isnull=True,
+            config__request_source=CLIENT_REQUEST_SOURCE,
+            status__in=pending_statuses,
+        )
+        if not is_platform:
+            pending_qs = pending_qs.filter(tenant_id=tenant_id)
+
         return {
             "generated_at": now.isoformat(),
             "scope": "platform" if is_platform else "tenant",
@@ -173,6 +190,7 @@ class ControlCenterService:
                 "feature_flags_active": sum(
                     1 for f in ControlCenterService.get_feature_flags(tenant_id) if f["enabled"]
                 ),
+                "pending_client_requests": pending_qs.count(),
             },
             "daily_activity": daily_activity,
             "feature_flags": ControlCenterService.get_feature_flags(tenant_id),
@@ -182,6 +200,12 @@ class ControlCenterService:
             "error_logs": ControlCenterService.get_error_logs(is_platform=is_platform, tenant_id=tenant_id),
             "client_permissions": ControlCenterService.get_client_permissions(
                 is_platform=is_platform, tenant_id=tenant_id
+            ),
+            "client_requests": ClientPortalService.list_requests(
+                tenant_id=tenant_id,
+                user=user,
+                platform_wide=is_platform,
+                limit=8,
             ),
             "role_summary": ControlCenterService.get_role_summary(
                 is_platform=is_platform, tenant_id=tenant_id

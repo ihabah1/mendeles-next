@@ -19,5 +19,5 @@ export function SiteContactShell() {
   if (features.isLoading || features.isError) return null;
   if (!features.data?.contact_widget_home) return null;
 
-  return <ContactWidget />;
+  return <ContactWidget contact={features.data.contact} />;
 }
