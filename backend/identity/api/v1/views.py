@@ -132,13 +132,17 @@ class EmailStatusView(APIView):
 
         from django.conf import settings
 
+        from identity.infrastructure.email_config import normalize_from_email, resolve_from_email
+
         resend_key = bool(os.environ.get("RESEND_API_KEY", "").strip())
-        from_email = os.environ.get("RESEND_FROM_EMAIL", "").strip() or settings.DEFAULT_FROM_EMAIL
+        raw_from = os.environ.get("RESEND_FROM_EMAIL", "").strip() or settings.DEFAULT_FROM_EMAIL
+        from_email = normalize_from_email(raw_from)
         return Response(
             {
                 "configured": resend_key and bool(from_email),
                 "backend": settings.EMAIL_BACKEND,
                 "from_email": from_email if resend_key else None,
+                "from_email_raw": raw_from if resend_key else None,
                 "frontend_url": settings.FRONTEND_URL,
             }
         )

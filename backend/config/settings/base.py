@@ -4,6 +4,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from identity.infrastructure.email_config import resolve_from_email
+from seo.application.site_url import resolve_site_url
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -143,7 +146,7 @@ JWT_REFRESH_COOKIE_SAMESITE = os.environ.get("JWT_COOKIE_SAMESITE", "Lax")
 EMAIL_VERIFICATION_TTL = timedelta(hours=int(os.environ.get("EMAIL_VERIFICATION_TTL_HOURS", "48")))
 PASSWORD_RESET_TTL = timedelta(hours=int(os.environ.get("PASSWORD_RESET_TTL_HOURS", "2")))
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+FRONTEND_URL = resolve_site_url(os.environ.get("FRONTEND_URL", "http://localhost:3000"))
 APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
 
 # Google OAuth (Search Console + GA4) — set in production; never commit secrets
@@ -162,10 +165,7 @@ GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECOND
 
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL",
-    os.environ.get("RESEND_FROM_EMAIL", "noreply@mendeles.co.il"),
-)
+DEFAULT_FROM_EMAIL = resolve_from_email()
 if os.environ.get("RESEND_API_KEY", "").strip():
     EMAIL_BACKEND = os.environ.get(
         "EMAIL_BACKEND",

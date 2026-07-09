@@ -11,30 +11,34 @@ import urllib.request
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 
+from identity.infrastructure.email_config import normalize_from_email, resolve_from_email
+
 logger = logging.getLogger(__name__)
 
 
 class ResendEmailBackend(BaseEmailBackend):
+    def _resolve_from(self, message) -> str:
+        raw = (message.from_email or "").strip() or resolve_from_email()
+        return normalize_from_email(raw)
+
     def send_messages(self, email_messages):
         api_key = os.environ.get("RESEND_API_KEY", "").strip()
         if not api_key:
             raise RuntimeError("RESEND_API_KEY is not configured")
 
-        from_email = (
-            os.environ.get("RESEND_FROM_EMAIL", "").strip()
-            or getattr(settings, "DEFAULT_FROM_EMAIL", "")
-        )
-        if not from_email:
-            raise RuntimeError("RESEND_FROM_EMAIL or DEFAULT_FROM_EMAIL is not configured")
-
         sent = 0
         for message in email_messages:
+            from_email = self._resolve_from(message)
             payload = {
                 "from": from_email,
                 "to": list(message.to),
                 "subject": message.subject,
                 "text": message.body,
             }
+            for content, mimetype in getattr(message, "alternatives", []):
+                if mimetype == "text/html":
+                    payload["html"] = content
+                    break
             if message.cc:
                 payload["cc"] = list(message.cc)
             if message.bcc:
@@ -60,11 +64,11 @@ class ResendEmailBackend(BaseEmailBackend):
                 sent += 1
             except urllib.error.HTTPError as exc:
                 body = exc.read().decode("utf-8", errors="replace")
-                logger.exception("resend_send_failed", extra={"status": exc.code, "body": body})
+                logger.exception("resend_send_failed", extra={"status": exc.code, "body": body, "from": from_email})
                 if not self.fail_silently:
                     raise RuntimeError(f"Resend API error {exc.code}: {body}") from exc
             except Exception:
-                logger.exception("resend_send_failed")
+                logger.exception("resend_send_failed", extra={"from": from_email})
                 if not self.fail_silently:
                     raise
         return sent
