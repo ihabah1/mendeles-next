@@ -12,6 +12,8 @@ from automation.application.dashboard_service import DashboardService
 from leads.infrastructure.models import Lead
 from rbac.infrastructure.models import Permission, Role, UserRole
 from tenancy.infrastructure.models import Tenant
+from siteconfig.application.control_center_service import ControlCenterService
+from rbac.application.permission_service import PermissionService
 
 User = get_user_model()
 
@@ -169,3 +171,14 @@ class AdminOverviewView(APIView):
                 ],
             }
         )
+
+
+class ControlCenterView(APIView):
+    permission_classes = [HasPermission]
+    required_permission = "tenants.view"
+
+    def get(self, request):
+        is_platform = PermissionService.user_has_permission(
+            request.user, "tenants.view", request.user.default_tenant_id
+        )
+        return Response(ControlCenterService.get_payload(user=request.user, is_platform=is_platform))

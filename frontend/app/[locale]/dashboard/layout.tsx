@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -22,4 +22,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return <DashboardShell>{children}</DashboardShell>;
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("common");
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">{t("loading")}</div>}>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </Suspense>
+  );
 }

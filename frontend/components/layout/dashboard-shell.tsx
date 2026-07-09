@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/lib/i18n/navigation";
 import { LocaleSwitcher } from "@/components/ui/locale-switcher";
@@ -9,32 +10,52 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", labelKey: "overview", permission: null },
-  { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
+  { href: "/dashboard?tab=flags", labelKey: "featureFlags", permission: "settings.view" },
   { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
+  { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
   { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
+  { href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" },
+  { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
+  { href: "/dashboard/users?tab=inbox", labelKey: "messages", permission: null },
+  { href: "/dashboard/audit", labelKey: "reports", permission: "audit.view" },
+  { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
+  { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
   { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
   { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },
-  { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
   { href: "/dashboard/workspace", labelKey: "workspace", permission: "ai_seo.view" },
-  { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
   { href: "/dashboard/ai-seo", labelKey: "aiSeo", permission: "ai_seo.view" },
-  { href: "/dashboard/automation", labelKey: "automation", permission: "automation.view" },
   { href: "/dashboard/roles", labelKey: "roles", permission: "roles.view" },
-  { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
   { href: "/dashboard/seo", labelKey: "seo", permission: "seo.view" },
-  { href: "/dashboard/audit", labelKey: "audit", permission: "audit.view" },
 ] as const;
+
+function navIsActive(pathname: string, tab: string | null, href: string) {
+  const [path, query] = href.split("?");
+  if (pathname !== path && !(path === "/dashboard/users" && pathname.startsWith("/dashboard/users"))) {
+    return false;
+  }
+  if (!query) {
+    if (path === "/dashboard") return !tab || tab === "overview";
+    if (path === "/dashboard/users") return !tab || tab === "users";
+    return pathname === path;
+  }
+  const params = new URLSearchParams(query);
+  const expectedTab = params.get("tab");
+  return tab === expectedTab;
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const ta = useTranslations("a11y");
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
   const { user, logout, hasPermission } = useAuth();
 
   const items = NAV.filter((item) => !item.permission || hasPermission(item.permission));
+  const isControlCenter = pathname === "/dashboard";
 
   return (
-    <div className="min-h-screen md:flex">
+    <div className={cn("min-h-screen md:flex", isControlCenter && "dashboard-cc")}>
       <aside className="w-full border-b border-[var(--border)] md:w-64 md:border-b-0 md:border-e">
         <div className="flex items-center justify-between gap-2 p-4 md:block">
           <div>
@@ -53,9 +74,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={cn(
                 "rounded-md px-3 py-2 text-sm whitespace-nowrap",
-                pathname === item.href || (item.href === "/dashboard/users" && pathname.startsWith("/dashboard/users"))
-                  ? "bg-[var(--muted)] font-semibold"
-                  : "hover:bg-[var(--muted)]",
+                navIsActive(pathname, tab, item.href) ? "bg-[var(--muted)] font-semibold" : "hover:bg-[var(--muted)]",
               )}
             >
               {t(item.labelKey)}

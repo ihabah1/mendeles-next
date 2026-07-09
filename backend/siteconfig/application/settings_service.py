@@ -18,6 +18,14 @@ DEFAULT_SETTINGS = {
 
 PUBLIC_FEATURE_KEYS = ("features.contact_widget_home",)
 
+FEATURE_FLAG_DEFINITIONS = [
+    {
+        "key": "features.contact_widget_home",
+        "slug": "contact_widget_home",
+        "default": True,
+    },
+]
+
 
 def _setting_bool(value: str | None, *, default: bool = True) -> bool:
     if value is None:

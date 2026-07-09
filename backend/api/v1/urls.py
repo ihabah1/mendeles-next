@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from audit.api.v1.views import AuditLogListView
+from audit.api.v1.views import AuditLogListView, SiteErrorLogListView, SiteErrorReportView
 from identity.api.v1.urls import urlpatterns as auth_urls
 from identity.api.v1.user_views import (
     UserBlockedRegistrationsView,
@@ -20,7 +20,7 @@ from leads.api.v1.urls import urlpatterns as leads_urls
 from automation.api.v1.urls import urlpatterns as automation_urls
 from seo.api.v1.urls import urlpatterns as seo_urls
 from siteconfig.api.v1.views import HealthView, PublicFeaturesView, SettingsView
-from siteconfig.api.v1.admin_views import AdminOverviewView
+from siteconfig.api.v1.admin_views import AdminOverviewView, ControlCenterView
 from rbac.api.v1.views import PermissionListView, RoleListView
 
 urlpatterns = [
@@ -51,7 +51,10 @@ urlpatterns = [
     path("settings/", SettingsView.as_view(), name="settings"),
     path("settings/public/", PublicFeaturesView.as_view(), name="settings-public"),
     path("admin/overview/", AdminOverviewView.as_view(), name="admin-overview"),
+    path("admin/control-center/", ControlCenterView.as_view(), name="admin-control-center"),
     path("audit-logs/", AuditLogListView.as_view(), name="audit-logs"),
+    path("errors/", SiteErrorLogListView.as_view(), name="error-logs"),
+    path("errors/report/", SiteErrorReportView.as_view(), name="error-report"),
     path("seo/", include(seo_urls)),
     path("content/", include(content_urls)),
     path("leads/", include(leads_urls)),

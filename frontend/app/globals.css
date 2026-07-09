@@ -230,3 +230,140 @@ html.a11y-high-contrast video {
 .workspace-stepper-line {
   background: linear-gradient(90deg, #6f42f5 0%, rgba(111, 66, 245, 0.15) 100%);
 }
+
+/* Control center — dark ops dashboard */
+.control-center {
+  --cc-bg: #0b0e14;
+  --cc-card: #161b22;
+  --cc-border: #2a3140;
+  --cc-fg: #f3f4f6;
+  --cc-muted: #9ca3af;
+  --cc-accent: #7c4dff;
+  --cc-accent-soft: rgba(124, 77, 255, 0.15);
+  --cc-ok: #00e676;
+  --cc-warn: #ffb300;
+  --cc-err: #ff5252;
+  background: var(--cc-bg);
+  color: var(--cc-fg);
+}
+
+.cc-card {
+  border-radius: 12px;
+  border: 1px solid var(--cc-border);
+  background: var(--cc-card);
+}
+
+.cc-kpi {
+  border-radius: 12px;
+  border: 1px solid var(--cc-border);
+  background: linear-gradient(180deg, #1a2030 0%, #121722 100%);
+  padding: 1rem 1.1rem;
+}
+
+.cc-kpi__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+}
+
+.cc-kpi__value {
+  margin-top: 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cc-kpi__trend {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--cc-ok);
+}
+
+.cc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--cc-border);
+  padding-bottom: 0.35rem;
+}
+
+.cc-tab {
+  border-radius: 8px 8px 0 0;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cc-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.cc-tab:hover {
+  background: rgba(124, 77, 255, 0.08);
+  color: var(--cc-fg);
+}
+
+.cc-tab--active {
+  border: 1px solid var(--cc-border);
+  border-bottom-color: var(--cc-bg);
+  background: var(--cc-card);
+  color: var(--cc-fg);
+}
+
+.cc-table thead {
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+}
+
+.cc-table th,
+.cc-table td {
+  padding: 0.75rem 1rem;
+  text-align: start;
+  border-bottom: 1px solid var(--cc-border);
+}
+
+.cc-table tbody tr:hover {
+  background: rgba(124, 77, 255, 0.05);
+}
+
+.cc-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cc-badge--ok {
+  background: rgba(0, 230, 118, 0.12);
+  color: var(--cc-ok);
+}
+
+.cc-badge--off {
+  background: rgba(156, 163, 175, 0.15);
+  color: var(--cc-muted);
+}
+
+.cc-badge--err {
+  background: rgba(255, 82, 82, 0.12);
+  color: var(--cc-err);
+}
+
+.cc-badge--warn {
+  background: rgba(255, 179, 0, 0.12);
+  color: var(--cc-warn);
+}
+
+.dashboard-cc aside {
+  background: #0d111a;
+  border-color: #2a3140;
+}
+
+.dashboard-cc aside a.bg-\[var\(--muted\)\] {
+  background: rgba(124, 77, 255, 0.18) !important;
+  color: #e9d5ff !important;
+}

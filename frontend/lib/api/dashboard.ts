@@ -100,6 +100,51 @@ export type RoleRow = {
 export const adminApi = {
   overview: () =>
     apiFetch<AdminOverview>("/api/v1/admin/overview/", { headers: authHeaders() }),
+  controlCenter: () =>
+    apiFetch<ControlCenterData>("/api/v1/admin/control-center/", { headers: authHeaders() }),
+};
+
+export type ControlCenterData = {
+  generated_at: string;
+  scope: "platform" | "tenant";
+  stats: {
+    users_total: number;
+    users_active: number;
+    logins_7d: number;
+    changes_24h: number;
+    errors_24h: number;
+    roles_total: number;
+    feature_flags_active: number;
+  };
+  daily_activity: Array<{ date: string; logins: number; events: number }>;
+  feature_flags: Array<{ key: string; slug: string; enabled: boolean }>;
+  recent_changes: Array<{
+    id: string;
+    action: string;
+    resource_type: string | null;
+    resource_id: string | null;
+    user_email: string | null;
+    metadata: Record<string, unknown>;
+    created_at: string | null;
+  }>;
+  error_logs: Array<{
+    id: string;
+    level: string;
+    source: string;
+    message: string;
+    url: string;
+    user_email: string | null;
+    created_at: string | null;
+  }>;
+  client_permissions: Array<{
+    id: string;
+    email: string;
+    name: string;
+    is_active: boolean;
+    roles: Array<{ slug: string; name: string }>;
+    created_at: string | null;
+  }>;
+  role_summary: Array<{ slug: string; name: string; count: number }>;
 };
 
 export const usersApi = {
