@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import os
 
-VERIFIED_FROM_DOMAIN = "mendeles.co.il"
-DEFAULT_FROM_ADDRESS = f"Mendeles <noreply@{VERIFIED_FROM_DOMAIN}>"
+VERIFIED_FROM_DOMAIN = os.environ.get("RESEND_VERIFIED_DOMAIN", "mandeles.co.il").strip() or "mandeles.co.il"
+DEFAULT_FROM_ADDRESS = f"Mandeles <noreply@{VERIFIED_FROM_DOMAIN}>"
 
-_UNVERIFIED_SUFFIXES = ("@mendeles.ai", "@mandeles.ai", "@mendeles.com")
+# Legacy / typo domains → verified Resend domain (mandeles.co.il has DKIM; mendeles.co.il does not exist).
+_UNVERIFIED_SUFFIXES = (
+    "@mendeles.ai",
+    "@mandeles.ai",
+    "@mendeles.com",
+    "@mendeles.co.il",  # common typo (e vs a)
+)
 
 
 def _fix_domain(email: str) -> str:
