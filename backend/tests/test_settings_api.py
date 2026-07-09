@@ -35,7 +35,7 @@ def test_public_features_default_enabled(api_client):
     body = response.json()
     assert body["contact_widget_home"] is True
     assert body["contact_email"] == "mendelessupport@gmail.com"
-    assert body["contact_phone"] == "972537985362"
+    assert body["contact_phone"] == ""
     assert body["whatsapp_number"] == "972537985362"
     assert "whatsapp_prefill" in body
 

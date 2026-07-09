@@ -100,7 +100,6 @@ class SettingsService:
             os.environ.get("CONTACT_PHONE"),
             os.environ.get("PUBLIC_CONTACT_PHONE"),
             settings.get("company.phone"),
-            "972537985362",
         )
         whatsapp_number = _whatsapp_number_from_env() or "972537985362"
         whatsapp_prefill = _first_non_empty(

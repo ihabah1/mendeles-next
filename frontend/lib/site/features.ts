@@ -8,7 +8,7 @@ export type PublicFeatures = {
 };
 
 const DEFAULT_CONTACT: ContactSiteConfig = {
-  phone: "972537985362",
+  phone: "",
   email: "mendelessupport@gmail.com",
   whatsappNumber: "972537985362",
   whatsappMessage: "שלום Mendeles",
