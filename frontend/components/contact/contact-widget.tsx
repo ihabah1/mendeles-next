@@ -4,11 +4,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
+import { WhatsAppIcon } from "@/components/contact/whatsapp-icon";
 import { getContactSiteConfig, whatsappHref, type ContactSiteConfig } from "@/lib/contact/site-config";
 import { focusFirstElement, useFocusTrap } from "@/lib/a11y/use-focus-trap";
 import { cn } from "@/lib/utils";
 
-export function ContactWidget({ contact: contactProp }: { contact?: ContactSiteConfig }) {
+export function ContactWidget({
+  contact: contactProp,
+  stacked = false,
+}: {
+  contact?: ContactSiteConfig;
+  stacked?: boolean;
+}) {
   const t = useTranslations("contactWidget");
   const envConfig = getContactSiteConfig();
   const config: ContactSiteConfig = {
@@ -47,7 +54,12 @@ export function ContactWidget({ contact: contactProp }: { contact?: ContactSiteC
   if (!mounted) return null;
 
   return createPortal(
-    <div className="contact-widget-root fixed bottom-4 end-4 z-[9998] flex flex-col items-end gap-2">
+    <div
+      className={cn(
+        "contact-widget-root fixed end-4 z-[9998] flex flex-col items-end gap-2",
+        stacked ? "bottom-20" : "bottom-4",
+      )}
+    >
       {open && (
         <div
           ref={panelRef}
@@ -88,8 +100,8 @@ export function ContactWidget({ contact: contactProp }: { contact?: ContactSiteC
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
               >
-                <span aria-hidden>💬</span>
-                <span>{t("whatsapp")}</span>
+                <WhatsAppIcon className="h-5 w-5 shrink-0 text-[#25D366]" />
+                <span>{t("whatsappBot")}</span>
               </a>
             )}
             <Link

@@ -105,7 +105,7 @@ class SettingsService:
         whatsapp_prefill = _first_non_empty(
             os.environ.get("WHATSAPP_PREFILL"),
             os.environ.get("PUBLIC_WHATSAPP_PREFILL"),
-            "שלום Mendeles",
+            "שלום, אשמח לעזרה מבוט Mendeles",
         )
 
         return {

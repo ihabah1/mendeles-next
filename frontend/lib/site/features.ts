@@ -11,7 +11,7 @@ const DEFAULT_CONTACT: ContactSiteConfig = {
   phone: "",
   email: "mendelessupport@gmail.com",
   whatsappNumber: "972537985362",
-  whatsappMessage: "שלום Mendeles",
+  whatsappMessage: "שלום, אשמח לעזרה מבוט Mendeles",
 };
 
 const DEFAULT_FEATURES: PublicFeatures = {
