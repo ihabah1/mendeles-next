@@ -40,6 +40,10 @@ class CampaignService:
             "media_prompt": campaign.media_prompt,
             "video_prompt": campaign.video_prompt,
             "media_url": campaign.media_url,
+            "instagram_image_url": campaign.instagram_image_url,
+            "tiktok_video_url": campaign.tiktok_video_url,
+            "simulated_at": campaign.simulated_at.isoformat() if campaign.simulated_at else None,
+            "simulation_log": campaign.simulation_log or [],
             "status": campaign.status,
             "scheduled_at": campaign.scheduled_at.isoformat() if campaign.scheduled_at else None,
             "published_at": campaign.published_at.isoformat() if campaign.published_at else None,
@@ -72,6 +76,8 @@ class CampaignService:
         campaign.video_prompt = generated.get("video_prompt") or ""
         campaign.status = CampaignStatus.READY
         campaign.last_error = ""
+        campaign.simulated_at = None
+        campaign.simulation_log = []
         campaign.media_url = campaign.media_url or _placeholder_media_url(
             campaign.media_prompt, campaign.media_type
         )
@@ -97,12 +103,77 @@ class CampaignService:
             campaign.hashtags_json = data["hashtags"]
         if "platforms" in data and isinstance(data["platforms"], list):
             campaign.platforms = [p for p in data["platforms"] if p in SUPPORTED_PLATFORMS]
+        # Edits invalidate prior simulation.
+        if any(k in data for k in ("title", "captions", "hashtags", "cta", "media_prompt", "video_prompt", "media_url", "platforms")):
+            campaign.simulated_at = None
+            if campaign.status == CampaignStatus.SIMULATED:
+                campaign.status = CampaignStatus.READY
         campaign.save()
         return campaign
 
     @staticmethod
     def soft_delete(campaign: SocialCampaign) -> None:
         campaign.soft_delete()
+
+    @staticmethod
+    def run_simulation(campaign: SocialCampaign) -> dict[str, Any]:
+        """Validate creatives + captions before allowing real Buffer publish."""
+        from social.application.media_service import MediaGenerationService
+
+        log: list[dict[str, Any]] = []
+        platforms = campaign.platforms or []
+
+        def check(step: str, ok: bool, detail: str = ""):
+            log.append({"step": step, "ok": ok, "detail": detail})
+            return ok
+
+        ok = True
+        ok &= check("Campaign content", bool(campaign.title and campaign.captions_json), campaign.title or "missing title")
+        if "instagram" in platforms:
+            if not campaign.instagram_image_url:
+                try:
+                    MediaGenerationService.create_instagram_image(campaign)
+                except Exception as exc:
+                    ok &= check("Instagram image", False, str(exc))
+                else:
+                    ok &= check("Instagram image", True, campaign.instagram_image_url)
+            else:
+                ok &= check("Instagram image", True, campaign.instagram_image_url)
+            ok &= check(
+                "Instagram caption",
+                bool((campaign.captions_json or {}).get("instagram")),
+                "caption ready" if (campaign.captions_json or {}).get("instagram") else "missing caption",
+            )
+            ok &= check("Website link on creative", bool(campaign.website_url), campaign.website_url or "missing URL")
+        if "tiktok" in platforms:
+            ok &= check(
+                "TikTok video",
+                bool(campaign.tiktok_video_url),
+                campaign.tiktok_video_url or "Generate TikTok video before simulation",
+            )
+            ok &= check(
+                "TikTok caption",
+                bool((campaign.captions_json or {}).get("tiktok")),
+                "caption ready" if (campaign.captions_json or {}).get("tiktok") else "missing caption",
+            )
+        if "linkedin" in platforms:
+            ok &= check(
+                "LinkedIn caption",
+                bool((campaign.captions_json or {}).get("linkedin")),
+                "caption ready" if (campaign.captions_json or {}).get("linkedin") else "missing caption",
+            )
+
+        campaign.simulation_log = log
+        if ok:
+            campaign.simulated_at = timezone.now()
+            campaign.status = CampaignStatus.SIMULATED
+            campaign.last_error = ""
+        else:
+            campaign.simulated_at = None
+            campaign.status = CampaignStatus.READY
+            campaign.last_error = "Simulation failed — fix the issues below before releasing."
+        campaign.save()
+        return CampaignService.serialize(campaign)
 
     @staticmethod
     def publish(
@@ -120,6 +191,13 @@ class CampaignService:
             log.append(entry)
             return entry
 
+        if not campaign.simulated_at:
+            campaign.status = CampaignStatus.FAILED
+            campaign.last_error = "Simulation required before releasing the campaign to the network."
+            campaign.publish_log = [step("Gate", campaign.last_error, False)]
+            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            return CampaignService.serialize(campaign)
+
         if not publisher.configured():
             campaign.status = CampaignStatus.FAILED
             campaign.last_error = "BUFFER_ACCESS_TOKEN is not configured on the server."
@@ -127,11 +205,15 @@ class CampaignService:
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
 
-        step("Generating AI...", "Campaign content ready")
-        step("Generating image...", "Using media prompt / placeholder media")
+        step("Simulation passed", campaign.simulated_at.isoformat())
+        step("Preparing media...", "Using simulated creatives")
 
         if not campaign.media_url:
-            campaign.media_url = _placeholder_media_url(campaign.media_prompt, campaign.media_type)
+            campaign.media_url = (
+                campaign.instagram_image_url
+                or campaign.tiktok_video_url
+                or _placeholder_media_url(campaign.media_prompt, campaign.media_type)
+            )
             campaign.save(update_fields=["media_url", "updated_at"])
         step("Uploading media...", campaign.media_url or "text-only")
 
@@ -177,11 +259,19 @@ class CampaignService:
             if cta and cta not in caption:
                 text_parts.append(cta)
             text = "\n\n".join(p for p in text_parts if p).strip()
+            media_for_platform = ""
+            if platform == "instagram":
+                media_for_platform = campaign.instagram_image_url or campaign.media_url
+            elif platform == "linkedin":
+                media_for_platform = campaign.instagram_image_url or campaign.media_url
+            elif platform == "tiktok":
+                # Buffer GraphQL image asset; vertical video URL kept for simulation preview.
+                media_for_platform = campaign.instagram_image_url or ""
             result = publisher.publish(
                 PublishPayload(
                     text=text,
                     platform=platform,
-                    media_url=campaign.media_url if campaign.media_type == "image" else "",
+                    media_url=media_for_platform,
                     scheduled_at_iso=scheduled_iso,
                     now=not schedule,
                 )

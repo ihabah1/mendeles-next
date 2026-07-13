@@ -7,10 +7,12 @@ from core.permissions.base import HasPermission
 from social.api.v1.serializers import (
     GenerateCampaignSerializer,
     PublishCampaignSerializer,
+    TikTokVideoUploadSerializer,
     UpdateCampaignSerializer,
 )
 from social.application.campaign_service import CampaignService
 from social.application.generation_service import CampaignGenerationService
+from social.application.media_service import MediaGenerationService
 from social.domain.enums import CampaignStatus
 from social.infrastructure.models import SocialCampaign
 from social.providers import get_default_publisher
@@ -171,3 +173,63 @@ class CampaignRepublishView(APIView):
             raise NotFoundError("Campaign not found.")
         result = CampaignService.publish(campaign, schedule=False)
         return Response(result)
+
+
+class CampaignSimulateView(APIView):
+    """POST — run dry-run checks; required before releasing to Buffer."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def post(self, request, campaign_id):
+        _check(request, self, "automation.manage")
+        campaign = CampaignService.get_campaign(_tenant_id(request), campaign_id)
+        if not campaign:
+            raise NotFoundError("Campaign not found.")
+        return Response(CampaignService.run_simulation(campaign))
+
+
+class CampaignInstagramImageView(APIView):
+    """POST — generate square Instagram creative with website link on the image."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def post(self, request, campaign_id):
+        _check(request, self, "automation.manage")
+        campaign = CampaignService.get_campaign(_tenant_id(request), campaign_id)
+        if not campaign:
+            raise NotFoundError("Campaign not found.")
+        try:
+            MediaGenerationService.create_instagram_image(campaign)
+        except Exception as exc:
+            raise ValidationError(str(exc)) from exc
+        campaign.simulated_at = None
+        if campaign.status == CampaignStatus.SIMULATED:
+            campaign.status = CampaignStatus.READY
+        campaign.save(update_fields=["simulated_at", "status", "updated_at"])
+        return Response(CampaignService.serialize(campaign))
+
+
+class CampaignTikTokVideoView(APIView):
+    """POST — upload browser-recorded TikTok video (data URL)."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def post(self, request, campaign_id):
+        _check(request, self, "automation.manage")
+        campaign = CampaignService.get_campaign(_tenant_id(request), campaign_id)
+        if not campaign:
+            raise NotFoundError("Campaign not found.")
+        ser = TikTokVideoUploadSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            MediaGenerationService.save_tiktok_video(campaign, data_url=ser.validated_data["data_url"])
+        except Exception as exc:
+            raise ValidationError(str(exc)) from exc
+        campaign.simulated_at = None
+        if campaign.status == CampaignStatus.SIMULATED:
+            campaign.status = CampaignStatus.READY
+        campaign.save(update_fields=["simulated_at", "status", "updated_at"])
+        return Response(CampaignService.serialize(campaign))

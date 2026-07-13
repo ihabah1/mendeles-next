@@ -11,6 +11,7 @@ import {
   type SocialCampaign,
   type SocialPlatform,
 } from "@/lib/api/social";
+import { createTikTokPromoVideo } from "@/lib/social/create-tiktok-video";
 import { cn } from "@/lib/utils";
 
 const CAMPAIGN_TYPES = [
@@ -46,8 +47,8 @@ const GEN_STEPS = [
 ];
 
 const PUBLISH_STEPS = [
-  "Generating AI...",
-  "Generating image...",
+  "Simulation gate...",
+  "Preparing media...",
   "Uploading media...",
   "Publishing to Buffer...",
   "Completed",
@@ -199,8 +200,60 @@ export default function AiAutomationPage() {
     onSuccess: (data) => {
       setActive(data);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      if (data.status === "failed") setError(data.last_error || "Republish failed");
     },
     onError: (err: Error) => setError(err.message),
+  });
+
+  const createIgImage = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      await saveEdits.mutateAsync();
+      return socialApi.createInstagramImage(active.id);
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      setError("");
+    },
+    onError: (err: Error) => setError(err.message || "Instagram image failed"),
+  });
+
+  const createTikTok = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      await saveEdits.mutateAsync();
+      const dataUrl = await createTikTokPromoVideo({
+        title: active.title || active.main_idea || "Mendeles",
+        cta: active.cta || "Learn more",
+        websiteUrl: active.website_url || websiteUrl,
+      });
+      return socialApi.uploadTikTokVideo(active.id, dataUrl);
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      setError("");
+    },
+    onError: (err: Error) => setError(err.message || "TikTok video failed"),
+  });
+
+  const simulate = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      await saveEdits.mutateAsync();
+      return socialApi.simulate(active.id);
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      if (data.status !== "simulated") {
+        setError(data.last_error || "Simulation failed — fix the checklist items.");
+      } else {
+        setError("");
+      }
+    },
+    onError: (err: Error) => setError(err.message || "Simulation failed"),
   });
 
   const hashtagText = useMemo(() => {
@@ -240,6 +293,7 @@ export default function AiAutomationPage() {
 
   const generating = generate.isPending || active?.status === "generating";
   const publishing = publish.isPending;
+  const simulated = Boolean(active?.simulated_at) || active?.status === "simulated";
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
@@ -247,7 +301,7 @@ export default function AiAutomationPage() {
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6F42F5]">Automation</p>
         <h1 className="text-3xl font-extrabold tracking-tight">AI Automation</h1>
         <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
-          Create, preview, schedule and publish AI social campaigns through Buffer — all on one page.
+          Generate creatives, run a simulation, then release to the network via Buffer — nothing goes live until simulation passes.
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span
@@ -470,30 +524,117 @@ export default function AiAutomationPage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-bold">Publish</h2>
+            <h2 className="text-xl font-bold">Creatives</h2>
             <Card className="space-y-4 !rounded-2xl">
+              <p className="text-sm text-[var(--muted-fg)]">
+                Create an Instagram image (with website link on the creative) and a short TikTok video before simulation.
+              </p>
               <div className="flex flex-wrap gap-3">
                 <Button
                   type="button"
-                  disabled={!canManage || publishing}
-                  onClick={() => {
-                    setScheduleMode(false);
-                    publish.mutate();
-                  }}
-                  className="rounded-full bg-[#6F42F5] px-6 font-bold text-white"
+                  variant="outline"
+                  disabled={!canManage || createIgImage.isPending}
+                  onClick={() => createIgImage.mutate()}
+                  className="rounded-full"
                 >
-                  Publish Now
+                  {createIgImage.isPending ? "Creating…" : "Create Instagram image"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={!canManage}
+                  disabled={!canManage || createTikTok.isPending}
+                  onClick={() => createTikTok.mutate()}
+                  className="rounded-full"
+                >
+                  {createTikTok.isPending ? "Recording…" : "Create TikTok video"}
+                </Button>
+              </div>
+              <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
+                <p>
+                  Instagram:{" "}
+                  <span className={active.instagram_image_url ? "font-semibold text-emerald-700" : ""}>
+                    {active.instagram_image_url ? "Ready" : "Not created yet"}
+                  </span>
+                </p>
+                <p>
+                  TikTok:{" "}
+                  <span className={active.tiktok_video_url ? "font-semibold text-emerald-700" : ""}>
+                    {active.tiktok_video_url ? "Ready" : "Not created yet"}
+                  </span>
+                </p>
+              </div>
+            </Card>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold">Simulation</h2>
+            <Card className="space-y-4 !rounded-2xl">
+              <p className="text-sm text-[var(--muted-fg)]">
+                Dry-run checks captions and creatives. Release stays locked until this passes.
+              </p>
+              <Button
+                type="button"
+                disabled={!canManage || simulate.isPending}
+                onClick={() => simulate.mutate()}
+                className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+              >
+                {simulate.isPending ? "Simulating…" : "Run simulation"}
+              </Button>
+              {active.simulation_log?.length ? (
+                <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
+                  {active.simulation_log.map((entry, i) => (
+                    <li key={`${entry.step}-${i}`} className="flex gap-2">
+                      <span className={entry.ok ? "text-emerald-600" : "text-red-600"}>{entry.ok ? "✓" : "✗"}</span>
+                      <span>
+                        <span className="font-semibold">{entry.step}</span>
+                        {entry.detail ? ` — ${entry.detail}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {simulated ? (
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Simulation passed{active.simulated_at ? ` · ${formatDate(active.simulated_at)}` : ""}
+                </p>
+              ) : (
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Simulation required before releasing the campaign.
+                </p>
+              )}
+            </Card>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold">Release to network</h2>
+            <Card className="space-y-4 !rounded-2xl">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  disabled={!canManage || !simulated || publishing}
+                  onClick={() => {
+                    setScheduleMode(false);
+                    publish.mutate();
+                  }}
+                  className="rounded-full bg-red-600 px-6 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
+                >
+                  {publishing ? "Sending…" : "שלח קמפיין לרשת"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canManage || !simulated}
                   onClick={() => setScheduleMode(true)}
                   className="rounded-full"
                 >
-                  Schedule
+                  Schedule release
                 </Button>
               </div>
+              {!simulated ? (
+                <p className="text-xs text-[var(--muted-fg)]">
+                  The red release button unlocks only after a successful simulation.
+                </p>
+              ) : null}
 
               {scheduleMode ? (
                 <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
@@ -530,11 +671,11 @@ export default function AiAutomationPage() {
                   </label>
                   <Button
                     type="button"
-                    disabled={!canManage || !scheduleDate || publishing}
+                    disabled={!canManage || !simulated || !scheduleDate || publishing}
                     onClick={() => publish.mutate()}
-                    className="md:col-span-3 rounded-full bg-slate-900 font-bold text-white dark:bg-white dark:text-slate-900"
+                    className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
                   >
-                    Confirm schedule
+                    Confirm scheduled release
                   </Button>
                 </div>
               ) : null}
@@ -546,10 +687,10 @@ export default function AiAutomationPage() {
                       <span
                         className={cn(
                           "h-2 w-2 rounded-full",
-                          idx <= publishStep ? "bg-[#6F42F5]" : "bg-slate-300",
+                          idx <= publishStep ? "bg-red-600" : "bg-slate-300",
                         )}
                       />
-                      <span className={idx === publishStep ? "font-bold text-[#6F42F5]" : ""}>{step}</span>
+                      <span className={idx === publishStep ? "font-bold text-red-600" : ""}>{step}</span>
                     </div>
                   ))}
                   {active.publish_log?.length ? (

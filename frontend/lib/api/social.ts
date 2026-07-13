@@ -8,6 +8,12 @@ function authHeaders(): Record<string, string> {
 
 export type SocialPlatform = "linkedin" | "instagram" | "tiktok";
 
+export type SimulationLogEntry = {
+  step: string;
+  ok: boolean;
+  detail?: string;
+};
+
 export type SocialCampaign = {
   id: string;
   title: string;
@@ -25,6 +31,10 @@ export type SocialCampaign = {
   media_prompt: string;
   video_prompt: string;
   media_url: string;
+  instagram_image_url: string;
+  tiktok_video_url: string;
+  simulated_at: string | null;
+  simulation_log: SimulationLogEntry[];
   status: string;
   scheduled_at: string | null;
   published_at: string | null;
@@ -97,6 +107,22 @@ export const socialApi = {
     apiFetch<void>(`/api/v1/social/campaigns/${id}/`, {
       method: "DELETE",
       headers: authHeaders(),
+    }),
+  simulate: (id: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/simulate/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  createInstagramImage: (id: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/instagram-image/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  uploadTikTokVideo: (id: string, data_url: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { data_url },
     }),
   publish: (body: PublishInput) =>
     apiFetch<SocialCampaign>("/api/v1/social/publish/", {

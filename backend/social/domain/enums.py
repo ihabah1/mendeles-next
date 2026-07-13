@@ -29,6 +29,7 @@ class CampaignStatus(TextChoices):
     DRAFT = "draft", "Draft"
     GENERATING = "generating", "Generating"
     READY = "ready", "Ready"
+    SIMULATED = "simulated", "Simulated"
     SCHEDULED = "scheduled", "Scheduled"
     PUBLISHING = "publishing", "Publishing"
     PUBLISHED = "published", "Published"

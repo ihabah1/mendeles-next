@@ -32,9 +32,13 @@ export function LinkedInPreview({ campaign }: Props) {
           {tags ? `\n\n${tags}` : ""}
           {campaign.cta ? `\n\n${campaign.cta}` : ""}
         </p>
-        {campaign.media_url ? (
+        {campaign.instagram_image_url || campaign.media_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={campaign.media_url} alt="" className="h-48 w-full rounded-xl object-cover" />
+          <img
+            src={campaign.instagram_image_url || campaign.media_url}
+            alt=""
+            className="h-48 w-full rounded-xl object-cover"
+          />
         ) : (
           <div className="flex h-48 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-400 dark:bg-zinc-800">
             Image placeholder
@@ -61,9 +65,13 @@ export function InstagramPreview({ campaign }: Props) {
         </div>
         <p className="text-xs font-bold">mendeles</p>
       </div>
-      {campaign.media_url ? (
+      {campaign.instagram_image_url || campaign.media_url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={campaign.media_url} alt="" className="aspect-square w-full object-cover" />
+        <img
+          src={campaign.instagram_image_url || campaign.media_url}
+          alt=""
+          className="aspect-square w-full object-cover"
+        />
       ) : (
         <div className="flex aspect-square items-center justify-center bg-slate-100 text-xs text-slate-400">Image</div>
       )}
@@ -89,9 +97,22 @@ export function TikTokPreview({ campaign }: Props) {
   return (
     <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[32px] border-[8px] border-zinc-900 bg-zinc-950 shadow-xl">
       <div className="relative aspect-[9/16] bg-gradient-to-b from-zinc-800 to-zinc-950">
-        {campaign.media_url ? (
+        {campaign.tiktok_video_url ? (
+          <video
+            src={campaign.tiktok_video_url}
+            className="absolute inset-0 h-full w-full object-cover"
+            muted
+            loop
+            playsInline
+            autoPlay
+          />
+        ) : campaign.instagram_image_url || campaign.media_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={campaign.media_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+          <img
+            src={campaign.instagram_image_url || campaign.media_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-80"
+          />
         ) : null}
         <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black/80 to-transparent p-4">
           <p className="text-xs font-bold text-white">@mendeles</p>

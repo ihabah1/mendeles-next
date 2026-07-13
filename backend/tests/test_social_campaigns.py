@@ -150,3 +150,60 @@ def test_publish_missing_platform_lists_connected(monkeypatch):
     assert "tiktok" in result.error.lower()
     assert "linkedin" in result.error.lower()
     assert "BUFFER_PROFILE" not in result.error
+
+
+def test_simulation_required_before_publish(tenant, owner_user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Demo push",
+        goal="Book demos",
+        website_url="https://mendeles.com",
+        platforms=["linkedin", "instagram"],
+        captions_json={
+            "linkedin": "LI caption",
+            "instagram": "IG caption",
+        },
+        hashtags_json={"linkedin": ["#a"], "instagram": ["#b"]},
+        cta="Book a demo",
+        status=CampaignStatus.READY,
+    )
+
+    blocked = CampaignService.publish(campaign, schedule=False)
+    assert blocked["status"] == CampaignStatus.FAILED
+    assert "Simulation required" in blocked["last_error"]
+
+    simulated = CampaignService.run_simulation(campaign)
+    assert simulated["status"] == CampaignStatus.SIMULATED
+    assert simulated["instagram_image_url"]
+    assert any(s["step"] == "Instagram image" and s["ok"] for s in simulated["simulation_log"])
+
+
+def test_tiktok_simulation_requires_video(tenant, owner_user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="TikTok push",
+        goal="Views",
+        website_url="https://mendeles.com",
+        platforms=["tiktok"],
+        captions_json={"tiktok": "Hook caption"},
+        hashtags_json={"tiktok": ["#mendeles"]},
+        status=CampaignStatus.READY,
+    )
+    result = CampaignService.run_simulation(campaign)
+    assert result["status"] == CampaignStatus.READY
+    assert result["simulated_at"] is None
+    assert any(s["step"] == "TikTok video" and not s["ok"] for s in result["simulation_log"])

@@ -94,6 +94,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = [
@@ -166,6 +168,8 @@ GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECOND
 
 # Buffer social publishing (server-side only)
 BUFFER_ACCESS_TOKEN = os.environ.get("BUFFER_ACCESS_TOKEN", "")
+# Public backend origin for media files Buffer can fetch (e.g. https://xxx.up.railway.app)
+BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
 
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
