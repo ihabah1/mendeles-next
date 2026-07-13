@@ -322,7 +322,12 @@
     "changeDetails": "שינוי פרטים",
     "resetPassword": "איפוס סיסמה",
     "creationRequests": "בקשות יצירה",
-    "logout": "יציאה"
+    "logout": "יציאה",
+    "groupControl": "מרכז בקרה",
+    "groupPeople": "אנשים ו־CRM",
+    "groupContent": "תוכן ו־SEO",
+    "groupAutomation": "אוטומציה",
+    "groupSystem": "מערכת"
   },
   "clientPortal": {
     "title": "האזור שלי",

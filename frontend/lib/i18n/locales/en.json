@@ -359,7 +359,12 @@
     "changeDetails": "Update details",
     "resetPassword": "Reset password",
     "creationRequests": "Creation requests",
-    "logout": "Log out"
+    "logout": "Log out",
+    "groupControl": "Control center",
+    "groupPeople": "People & CRM",
+    "groupContent": "Content & SEO",
+    "groupAutomation": "Automation",
+    "groupSystem": "System"
   },
   "clientPortal": {
     "title": "My portal",
