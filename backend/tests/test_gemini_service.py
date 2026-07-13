@@ -36,3 +36,18 @@ def test_gemini_service_reports_all_timeout_failures(settings, monkeypatch):
 
     assert "No Gemini model completed generateContent" in str(exc.value)
     assert "gemini-2.5-flash: timeout" in str(exc.value)
+
+
+def test_gemini_generate_image_returns_bytes(settings, monkeypatch):
+    settings.GEMINI_API_KEY = "test-key"
+    settings.GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
+
+    def fake_image(api_key, model, prompt, *, aspect_ratio="1:1"):
+        assert model == "gemini-2.5-flash-image"
+        assert aspect_ratio == "1:1"
+        return b"png-bytes", "image/png"
+
+    monkeypatch.setattr(GeminiService, "_generate_image_with_model", fake_image)
+    raw, mime = GeminiService.generate_image("Attractive Mendeles campaign ad")
+    assert raw == b"png-bytes"
+    assert mime == "image/png"

@@ -247,3 +247,38 @@ def test_bootstrap_creatives_on_generate(tenant, owner_user, settings, tmp_path,
     assert result.tiktok_video_url.endswith("tt.svg")
     assert len(result.tiktok_videos_json) == 3
     assert result.media_url == result.instagram_image_url
+
+
+def test_create_instagram_image_uses_gemini_when_available(tenant, owner_user, settings, tmp_path, monkeypatch):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    settings.GEMINI_API_KEY = "test-key"
+
+    from ai_seo.application.gemini_service import GeminiService
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Attractive growth",
+        goal="Demos",
+        media_prompt="Cinematic violet AI dashboard glow",
+        website_url="https://mendeles.com",
+        platforms=["instagram"],
+        status=CampaignStatus.READY,
+    )
+
+    monkeypatch.setattr(
+        GeminiService,
+        "generate_image",
+        classmethod(lambda cls, prompt, *, aspect_ratio="1:1": (b"\x89PNG-fake", "image/png")),
+    )
+
+    url = MediaGenerationService.create_instagram_image(campaign)
+    campaign.refresh_from_db()
+    assert url.endswith(".png")
+    assert campaign.instagram_image_url == url
+    assert campaign.media_url == url
+    assert (tmp_path / "social").exists()

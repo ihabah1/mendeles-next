@@ -93,11 +93,11 @@ class CampaignService:
         platforms = campaign.platforms or []
         errors: list[str] = []
 
-        if "instagram" in platforms or "linkedin" in platforms:
-            try:
-                MediaGenerationService.create_instagram_image(campaign)
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"instagram: {exc}")
+        # Always create an attractive campaign image on Generate.
+        try:
+            MediaGenerationService.create_instagram_image(campaign)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"image: {exc}")
 
         if "tiktok" in platforms:
             try:

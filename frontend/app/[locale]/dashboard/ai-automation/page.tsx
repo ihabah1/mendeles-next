@@ -43,7 +43,7 @@ const GEN_STEPS = [
   "Generating AI...",
   "Crafting captions...",
   "Building hashtags & CTA...",
-  "Creating Instagram image...",
+  "Creating attractive AI image...",
   "Generating TikTok videos...",
 ];
 
@@ -618,7 +618,8 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Creatives are built automatically on Generate. You can regenerate Instagram / TikTok here anytime.
+            Creatives are built automatically on Generate (AI campaign image + TikTok videos).
+            You can regenerate Instagram / TikTok here anytime.
             AI video failover: Runway → Veo 3.1 → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
@@ -655,7 +656,7 @@ export default function AiAutomationPage() {
               onClick={() => createIgImage.mutate()}
               className="rounded-full"
             >
-              {createIgImage.isPending ? "Creating…" : "Create Instagram image"}
+              {createIgImage.isPending ? "Creating…" : "Create AI campaign image"}
             </Button>
             <Button
               type="button"
