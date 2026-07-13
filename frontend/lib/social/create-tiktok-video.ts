@@ -1,6 +1,7 @@
 /**
  * Record a short vertical TikTok-style WebM from canvas (title + CTA + URL).
  * Produces a clean data:video/webm;base64,... URL the backend accepts.
+ * Motion is intentional and obvious so the clip is clearly a video, not a still.
  */
 export async function createTikTokPromoVideo(opts: {
   title: string;
@@ -8,79 +9,105 @@ export async function createTikTokPromoVideo(opts: {
   websiteUrl: string;
   durationMs?: number;
 }): Promise<string> {
-  const durationMs = opts.durationMs ?? 4500;
+  const durationMs = opts.durationMs ?? 5500;
   const width = 540;
   const height = 960;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx) throw new Error("Canvas not supported in this browser.");
+  // Keep in DOM — some browsers freeze captureStream on detached canvases.
+  canvas.setAttribute("aria-hidden", "true");
+  canvas.style.cssText =
+    "position:fixed;left:-99999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;";
+  document.body.appendChild(canvas);
 
-  // Paint first frame before capture — some browsers drop empty MediaRecorder blobs.
-  paintFrame(ctx, width, height, opts, 0);
+  try {
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+    if (!ctx) throw new Error("Canvas not supported in this browser.");
 
-  const stream = canvas.captureStream(30);
-  const mimeCandidates = [
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm",
-  ];
-  const mime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || "";
-  if (!mime) throw new Error("MediaRecorder WebM is not supported in this browser.");
+    paintFrame(ctx, width, height, opts, 0);
 
-  const chunks: Blob[] = [];
-  const recorder = new MediaRecorder(stream, {
-    mimeType: mime,
-    videoBitsPerSecond: 1_800_000,
-  });
-  recorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0) chunks.push(e.data);
-  };
-
-  const started = performance.now();
-  let raf = 0;
-  const draw = (now: number) => {
-    const t = Math.min(1, (now - started) / durationMs);
-    paintFrame(ctx, width, height, opts, t);
-    if (now - started < durationMs) {
-      raf = requestAnimationFrame(draw);
-    }
-  };
-
-  const done = new Promise<Blob>((resolve, reject) => {
-    recorder.onerror = () => reject(new Error("Video recording failed."));
-    recorder.onstop = () => {
-      if (!chunks.length) {
-        reject(new Error("Video recording produced no data."));
-        return;
+    // fps=0 + requestFrame is the reliable way to push every painted frame into the stream.
+    const stream = canvas.captureStream(0);
+    const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
+    const requestFrame = () => {
+      try {
+        track.requestFrame?.();
+      } catch {
+        /* unsupported */
       }
-      // Normalize MIME so backend regex / players get video/webm without codecs= clutter.
-      resolve(new Blob(chunks, { type: "video/webm" }));
     };
-  });
+    requestFrame();
 
-  recorder.start(200);
-  raf = requestAnimationFrame(draw);
-  await wait(durationMs + 250);
-  cancelAnimationFrame(raf);
-  // Final paint + flush last chunk
-  paintFrame(ctx, width, height, opts, 1);
-  if (recorder.state === "recording") {
-    try {
-      recorder.requestData();
-    } catch {
-      /* older Safari */
+    const mimeCandidates = [
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8",
+      "video/webm",
+    ];
+    const mime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || "";
+    if (!mime) throw new Error("MediaRecorder WebM is not supported in this browser.");
+
+    const chunks: Blob[] = [];
+    const recorder = new MediaRecorder(stream, {
+      mimeType: mime,
+      videoBitsPerSecond: 2_500_000,
+    });
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
+
+    const started = performance.now();
+    let raf = 0;
+    const draw = (now: number) => {
+      const t = Math.min(1, (now - started) / durationMs);
+      paintFrame(ctx, width, height, opts, t);
+      requestFrame();
+      if (now - started < durationMs) {
+        raf = requestAnimationFrame(draw);
+      }
+    };
+
+    const done = new Promise<Blob>((resolve, reject) => {
+      recorder.onerror = () => reject(new Error("Video recording failed."));
+      recorder.onstop = () => {
+        if (!chunks.length) {
+          reject(new Error("Video recording produced no data."));
+          return;
+        }
+        resolve(new Blob(chunks, { type: "video/webm" }));
+      };
+    });
+
+    recorder.start(100);
+    // Seed a few frames before the animation loop so duration isn't a single still.
+    for (let i = 0; i < 3; i++) {
+      paintFrame(ctx, width, height, opts, i * 0.02);
+      requestFrame();
+      await wait(32);
     }
-    recorder.stop();
-  }
-  stream.getTracks().forEach((t) => t.stop());
+    raf = requestAnimationFrame(draw);
+    await wait(durationMs + 320);
+    cancelAnimationFrame(raf);
+    paintFrame(ctx, width, height, opts, 1);
+    requestFrame();
+    if (recorder.state === "recording") {
+      try {
+        recorder.requestData();
+      } catch {
+        /* older Safari */
+      }
+      recorder.stop();
+    }
+    stream.getTracks().forEach((t) => t.stop());
 
-  const blob = await done;
-  if (blob.size < 64) throw new Error("Video recording produced an empty file.");
-  const dataUrl = await blobToDataUrl(blob);
-  // Ensure the exact scheme the API expects (strip codecs= from header if FileReader kept it).
-  return normalizeVideoDataUrl(dataUrl);
+    const blob = await done;
+    if (blob.size < 8_000) {
+      throw new Error("Video recording looks too small — try again in Chrome/Edge.");
+    }
+    return normalizeVideoDataUrl(await blobToDataUrl(blob));
+  } finally {
+    canvas.remove();
+  }
 }
 
 function normalizeVideoDataUrl(dataUrl: string): string {
@@ -97,6 +124,10 @@ function normalizeVideoDataUrl(dataUrl: string): string {
   return `data:${mime};base64,${b64}`;
 }
 
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 function paintFrame(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -104,41 +135,100 @@ function paintFrame(
   opts: { title: string; cta: string; websiteUrl: string },
   t: number,
 ) {
-  const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+  const enter = easeOutCubic(Math.min(1, t / 0.28));
+  const sweep = (t * 2.2) % 1;
+  const bob = Math.sin(t * Math.PI * 6) * 10;
+  const ctaPulse = 1 + 0.06 * Math.sin(t * Math.PI * 8);
 
-  const g = ctx.createLinearGradient(0, 0, width, height);
-  g.addColorStop(0, "#111827");
-  g.addColorStop(0.45, "#4C1D95");
-  g.addColorStop(1, "#0F172A");
+  // Moving background (Ken Burns + color shift) — must change every frame.
+  const g = ctx.createLinearGradient(
+    width * (0.1 + t * 0.35),
+    0,
+    width * (0.7 - t * 0.2),
+    height,
+  );
+  g.addColorStop(0, "#0B1220");
+  g.addColorStop(0.35 + t * 0.15, "#5B21B6");
+  g.addColorStop(0.7, "#312E81");
+  g.addColorStop(1, "#020617");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.beginPath();
-  ctx.arc(width * 0.85, height * 0.12, 80 + pulse * 20, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(255,255,255,${0.08 + pulse * 0.04})`;
-  ctx.fill();
+  // Floating orbs
+  for (let i = 0; i < 4; i++) {
+    const ox = ((0.15 + i * 0.22 + t * (0.35 + i * 0.08)) % 1.2) * width - width * 0.1;
+    const oy = height * (0.18 + i * 0.18) + Math.sin(t * Math.PI * 2 + i) * 40;
+    const r = 50 + i * 28 + bob;
+    ctx.beginPath();
+    ctx.arc(ox, oy, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${0.04 + i * 0.015})`;
+    ctx.fill();
+  }
 
+  // Diagonal light sweep
+  ctx.save();
+  ctx.translate(width * sweep, -40);
+  ctx.rotate(0.4);
+  const shine = ctx.createLinearGradient(0, 0, 120, height);
+  shine.addColorStop(0, "rgba(255,255,255,0)");
+  shine.addColorStop(0.5, "rgba(255,255,255,0.14)");
+  shine.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = shine;
+  ctx.fillRect(-60, 0, 120, height * 1.4);
+  ctx.restore();
+
+  // Brand
+  ctx.save();
+  ctx.globalAlpha = enter;
   ctx.fillStyle = "#DDD6FE";
   ctx.font = "bold 22px Arial, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("MENDELES", width / 2, 90);
+  ctx.fillText("MENDELES", width / 2, 70 + (1 - enter) * -30);
+  ctx.restore();
 
-  wrapFillText(ctx, opts.title || "Mendeles campaign", width / 2, height * 0.38, width - 80, 36, 5);
+  // Title slides up + slight scale
+  ctx.save();
+  ctx.translate(width / 2, height * 0.36 + (1 - enter) * 80 + bob * 0.35);
+  ctx.scale(0.92 + enter * 0.08, 0.92 + enter * 0.08);
+  ctx.globalAlpha = enter;
+  wrapFillText(ctx, opts.title || "Mendeles campaign", 0, 0, width - 80, 38, 5);
+  ctx.restore();
 
-  const btnW = 320;
-  const btnH = 56;
+  // CTA pulse
+  const btnW = 320 * ctaPulse;
+  const btnH = 56 * ctaPulse;
   const btnX = (width - btnW) / 2;
-  const btnY = height * 0.72;
+  const btnY = height * 0.7 + (1 - enter) * 60 + Math.sin(t * Math.PI * 4) * 6;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, enter + 0.15);
+  ctx.shadowColor = "rgba(167,139,250,0.55)";
+  ctx.shadowBlur = 24 + Math.sin(t * Math.PI * 8) * 10;
   ctx.fillStyle = "#ffffff";
   roundRect(ctx, btnX, btnY, btnW, btnH, 28);
   ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.fillStyle = "#4C1D95";
   ctx.font = "bold 20px Arial, sans-serif";
-  ctx.fillText((opts.cta || "Learn more").slice(0, 36), width / 2, btnY + 36);
+  ctx.textAlign = "center";
+  ctx.fillText((opts.cta || "Learn more").slice(0, 36), width / 2, btnY + btnH * 0.62);
+  ctx.restore();
 
   ctx.fillStyle = "#E2E8F0";
   ctx.font = "16px Arial, sans-serif";
-  ctx.fillText((opts.websiteUrl || "https://mendeles.com").slice(0, 42), width / 2, btnY + 90);
+  ctx.textAlign = "center";
+  ctx.globalAlpha = enter;
+  ctx.fillText((opts.websiteUrl || "https://mendeles.com").slice(0, 42), width / 2, btnY + btnH + 36);
+  ctx.globalAlpha = 1;
+
+  // Progress bar — proves continuous motion when playing
+  const barPad = 28;
+  const barY = height - 36;
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  roundRect(ctx, barPad, barY, width - barPad * 2, 8, 4);
+  ctx.fill();
+  ctx.fillStyle = "#A78BFA";
+  roundRect(ctx, barPad, barY, (width - barPad * 2) * t, 8, 4);
+  ctx.fill();
 }
 
 function wait(ms: number) {
@@ -162,12 +252,13 @@ function roundRect(
   h: number,
   r: number,
 ) {
+  const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
 }
 

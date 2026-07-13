@@ -94,7 +94,14 @@ export function InstagramPreview({ campaign }: Props) {
 export function TikTokPreview({ campaign }: Props) {
   const text = campaign.captions?.tiktok || "";
   const tags = hashtagsLine(campaign, "tiktok");
-  const media = campaign.tiktok_video_url || campaign.instagram_image_url || campaign.media_url;
+  const fromList = [...(campaign.tiktok_videos || [])]
+    .reverse()
+    .find((v) => v?.url && /\.(webm|mp4|mov)(\?|$)/i.test(v.url))?.url;
+  const media =
+    fromList ||
+    campaign.tiktok_video_url ||
+    campaign.instagram_image_url ||
+    campaign.media_url;
   const isVideo = Boolean(media && /\.(webm|mp4|mov)(\?|$)/i.test(media));
   return (
     <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[32px] border-[8px] border-zinc-900 bg-zinc-950 shadow-xl">
@@ -102,12 +109,14 @@ export function TikTokPreview({ campaign }: Props) {
         {media ? (
           isVideo ? (
             <video
+              key={media}
               src={media}
               className="absolute inset-0 h-full w-full object-cover"
               muted
               loop
               playsInline
               autoPlay
+              controls
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element

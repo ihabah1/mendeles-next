@@ -260,6 +260,10 @@ class MediaGenerationService:
     @staticmethod
     def create_tiktok_creative(campaign: SocialCampaign) -> str:
         """Create a vertical TikTok creative (SVG) with title + website link for simulation/preview."""
+        # Never replace a real uploaded WebM/MP4 with a static SVG.
+        existing = (campaign.tiktok_video_url or "").strip()
+        if existing and (".webm" in existing.lower() or ".mp4" in existing.lower()):
+            return existing
         title = (campaign.title or campaign.main_idea or "Mendeles")[:120]
         url = (campaign.website_url or "https://mendeles.com").strip()
         cta = (campaign.cta or "Learn more")[:80]

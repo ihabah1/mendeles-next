@@ -106,7 +106,17 @@ export default function AiAutomationPage() {
   }, [creativePoll.data]);
 
   function isPlayableVideo(url: string) {
-    return /\.(mp4|webm)(\?|$)/i.test(url);
+    return /\.(mp4|webm)(\?|$)/i.test(url || "");
+  }
+
+  function bestTikTokVideoUrl(campaign: SocialCampaign | null | undefined) {
+    if (!campaign) return "";
+    const fromList = [...(campaign.tiktok_videos || [])]
+      .reverse()
+      .find((v) => isPlayableVideo(v.url))?.url;
+    if (fromList) return fromList;
+    if (isPlayableVideo(campaign.tiktok_video_url || "")) return campaign.tiktok_video_url;
+    return campaign.tiktok_video_url || "";
   }
 
   function pushLocalLog(message: string, level = "info") {
@@ -747,26 +757,29 @@ export default function AiAutomationPage() {
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
 
-          {hasCampaign && active?.tiktok_video_url ? (
+          {hasCampaign && bestTikTokVideoUrl(active) ? (
             <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
               <p className="text-sm font-semibold">
-                {isPlayableVideo(active.tiktok_video_url)
-                  ? "TikTok video — press Play"
+                {isPlayableVideo(bestTikTokVideoUrl(active))
+                  ? "TikTok video — auto-plays (press controls for sound)"
                   : "TikTok preview image only (not a video yet — click Generate below)"}
               </p>
               <div className="mx-auto max-w-xs overflow-hidden rounded-2xl border border-[var(--border)] bg-black">
-                {isPlayableVideo(active.tiktok_video_url) ? (
+                {isPlayableVideo(bestTikTokVideoUrl(active)) ? (
                   <video
-                    key={active.tiktok_video_url}
-                    src={active.tiktok_video_url}
+                    key={bestTikTokVideoUrl(active)}
+                    src={bestTikTokVideoUrl(active)}
                     controls
                     playsInline
+                    autoPlay
+                    muted
+                    loop
                     className="aspect-[9/16] w-full object-cover"
                   />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={active.tiktok_video_url}
+                    src={bestTikTokVideoUrl(active)}
                     alt="TikTok creative"
                     className="aspect-[9/16] w-full object-cover"
                   />
