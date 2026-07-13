@@ -5,9 +5,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import type { Locale } from "@/lib/i18n/routing";
+import { SYSTEM_LOCALES, systemLocaleLabel } from "@/lib/i18n/system-locales";
 import { cn } from "@/lib/utils";
-
-const LOCALE_ORDER: Locale[] = ["he", "en", "ar"];
 
 type Props = {
   className?: string;
@@ -27,12 +26,6 @@ export function LanguageDropdown({ className, variant = "dashboard" }: Props) {
   const menuRef = useRef<HTMLUListElement>(null);
   const listId = useId();
 
-  const labels: Record<Locale, string> = {
-    he: t("hebrew"),
-    en: t("english"),
-    ar: t("arabic"),
-  };
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -44,7 +37,7 @@ export function LanguageDropdown({ className, variant = "dashboard" }: Props) {
     }
     const place = () => {
       const rect = buttonRef.current!.getBoundingClientRect();
-      const menuWidth = Math.max(160, rect.width);
+      const menuWidth = Math.max(200, rect.width);
       const isRtl = typeof document !== "undefined" && document.documentElement.dir === "rtl";
       let left = isRtl ? rect.right - menuWidth : rect.left;
       left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
@@ -100,23 +93,23 @@ export function LanguageDropdown({ className, variant = "dashboard" }: Props) {
             id={listId}
             role="listbox"
             aria-label={t("language")}
-            className="fixed z-[10000] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl"
-            style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width, minWidth: 160 }}
+            className="fixed z-[10000] max-h-[min(70vh,420px)] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl"
+            style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width, minWidth: 200 }}
           >
-            {LOCALE_ORDER.map((code) => (
-              <li key={code}>
+            {SYSTEM_LOCALES.map((loc) => (
+              <li key={loc.code}>
                 <button
                   type="button"
                   role="option"
-                  aria-selected={locale === code}
-                  onClick={() => switchLocale(code)}
+                  aria-selected={locale === loc.code}
+                  onClick={() => switchLocale(loc.code as Locale)}
                   className={cn(
                     "flex w-full items-center justify-between px-3 py-2.5 text-start text-sm hover:bg-slate-100",
-                    locale === code && "bg-[#6F42F5]/10 font-semibold text-[#6F42F5]",
+                    locale === loc.code && "bg-[#6F42F5]/10 font-semibold text-[#6F42F5]",
                   )}
                 >
-                  <span>{labels[code]}</span>
-                  {locale === code ? <span className="text-xs">✓</span> : null}
+                  <span>{loc.native}</span>
+                  {locale === loc.code ? <span className="text-xs">✓</span> : null}
                 </button>
               </li>
             ))}
@@ -144,7 +137,7 @@ export function LanguageDropdown({ className, variant = "dashboard" }: Props) {
         <span aria-hidden className="text-base leading-none">
           🌐
         </span>
-        <span>{labels[locale] ?? locale}</span>
+        <span className="max-w-[7rem] truncate">{systemLocaleLabel(locale)}</span>
         <span aria-hidden className={cn("text-[10px] opacity-70 transition", open && "rotate-180")}>
           ▼
         </span>

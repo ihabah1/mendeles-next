@@ -17,7 +17,26 @@ from content.domain.status import PageStatus
 from content.infrastructure.models import ContentBlock, Page
 from core.exceptions.base import ValidationError
 
-TARGET_LOCALES = ("he", "en", "es", "ar", "de", "zh")
+TARGET_LOCALES = (
+    "he",
+    "en",
+    "es",
+    "ar",
+    "de",
+    "zh",
+    "fr",
+    "it",
+    "pt",
+    "ru",
+    "ja",
+    "ko",
+    "hi",
+    "tr",
+    "pl",
+    "nl",
+    "uk",
+    "ro",
+)
 # Lobby + dashboard surfaces — always included when present in CMS.
 SYSTEM_SURFACE_PATHS = ("/", "/dashboard", "/lobby")
 
@@ -28,6 +47,18 @@ LOCALE_NAMES = {
     "ar": "Arabic",
     "de": "German",
     "zh": "Chinese (Simplified)",
+    "fr": "French",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "hi": "Hindi",
+    "tr": "Turkish",
+    "pl": "Polish",
+    "nl": "Dutch",
+    "uk": "Ukrainian",
+    "ro": "Romanian",
 }
 
 

@@ -32,7 +32,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   setRequestLocale(locale);
   const messages = await getMessages();
-  const dir = locale === "en" ? "ltr" : "rtl";
+  const dir = locale === "he" || locale === "ar" ? "rtl" : "ltr";
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>

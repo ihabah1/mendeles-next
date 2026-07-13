@@ -7,16 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { automationApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
+import { SYSTEM_LOCALES } from "@/lib/i18n/system-locales";
 import { cn } from "@/lib/utils";
 
-const ALL_LOCALES = [
-  { code: "he", label: "עברית" },
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "ar", label: "العربية" },
-  { code: "de", label: "Deutsch" },
-  { code: "zh", label: "中文" },
-] as const;
+const ALL_LOCALES = SYSTEM_LOCALES.map((l) => ({ code: l.code, label: l.native }));
 
 const ACTIVE = new Set(["queued", "running", "retrying"]);
 const OPEN = new Set(["queued", "running", "retrying", "paused"]);
@@ -194,7 +188,23 @@ export default function SiteTranslationsPage() {
         ) : null}
         <div>
           <p className="mb-2 text-sm font-medium">שפות יעד</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="text-xs font-semibold text-[#6F42F5] underline"
+              onClick={() => setLocales(ALL_LOCALES.map((l) => l.code))}
+            >
+              בחר הכל
+            </button>
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--muted-fg)] underline"
+              onClick={() => setLocales([])}
+            >
+              נקה בחירה
+            </button>
+          </div>
+          <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto rounded-xl border border-[var(--border)] p-3">
             {ALL_LOCALES.map((loc) => (
               <button
                 key={loc.code}

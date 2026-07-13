@@ -240,10 +240,22 @@ export function UsersPanel({
               >
                 <option value="he">עברית</option>
                 <option value="en">English</option>
-                <option value="ar">العربية</option>
                 <option value="es">Español</option>
+                <option value="ar">العربية</option>
                 <option value="de">Deutsch</option>
                 <option value="zh">中文</option>
+                <option value="fr">Français</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+                <option value="ru">Русский</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+                <option value="hi">हिन्दी</option>
+                <option value="tr">Türkçe</option>
+                <option value="pl">Polski</option>
+                <option value="nl">Nederlands</option>
+                <option value="uk">Українська</option>
+                <option value="ro">Română</option>
               </select>
             </Field>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editForm.is_active} onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })} />{t("active")}</label>
