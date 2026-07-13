@@ -36,6 +36,12 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
             >
               {copy.blog}
             </Link>
+            <Link
+              href="/blog/tools"
+              className="rounded-lg px-2 py-1.5 text-slate-700 transition hover:bg-slate-100 hover:text-[#6F42F5]"
+            >
+              {copy.tools}
+            </Link>
           </nav>
         </div>
 

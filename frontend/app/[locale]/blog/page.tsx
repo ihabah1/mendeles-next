@@ -13,6 +13,7 @@ import { PopularArticles } from "@/components/blog/popular-articles";
 import { SearchToolbar } from "@/components/blog/search-toolbar";
 import { SportsSection } from "@/components/blog/sports-section";
 import { TrendingSidebar } from "@/components/blog/trending-sidebar";
+import { ToolsMenu } from "@/components/tools/tools-menu";
 import {
   filterDemoPosts,
   getEditorialDemoCategories,
@@ -165,6 +166,10 @@ export default async function BlogPage({ params, searchParams }: Props) {
         {usingDemo ? <DemoNotice locale={locale} /> : null}
 
         <EditorialMasthead locale={locale} />
+
+        <div className="mt-6">
+          <ToolsMenu locale={locale} />
+        </div>
 
         <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_minmax(280px,320px)]">
           <div className="min-w-0 space-y-8">
