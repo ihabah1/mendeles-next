@@ -749,7 +749,7 @@ export default function WorkspacePage() {
         {canManage && (
           <StudioPanel
             title="יצירת תוכן"
-            subtitle="בחרו מצב, הגדירו תוצר, ולחצו להפעלה"
+            subtitle="מצב ריצה, הגדרות תוכן, תוצר והפעלה — כולל אוטומציה חוזרת"
             accent={runMode === "now" ? "purple" : "emerald"}
             className="border-2"
           >
@@ -885,6 +885,101 @@ export default function WorkspacePage() {
               </div>
             )}
 
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/25 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">הגדרות תוכן</p>
+                  <p className="text-xs text-slate-400">חלק מיצירת התוכן — הנחיות, שפות וסגנון כתיבה</p>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-[#c4b5fd] hover:underline"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                >
+                  {showAdvanced ? "הסתר מתקדמות" : "הגדרות מתקדמות"}
+                </button>
+              </div>
+              <label className="block text-sm">
+                <span className="mb-1 block text-slate-400">הנחיות ל-Gemini</span>
+                <textarea
+                  className={`${inputClass} min-h-24`}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="לדוגמה: להתמקד בלידים לעסקים קטנים, טון מקצועי, CTA ברור..."
+                />
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="block text-sm">
+                  <span className="mb-1 block text-slate-400">שפות תוכן</span>
+                  <select className={selectClass} value={contentLocales} onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}>
+                    <option value="both">עברית + אנגלית</option>
+                    <option value="he">עברית בלבד</option>
+                    <option value="en">אנגלית בלבד</option>
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block text-slate-400">רמת כתיבה</span>
+                  <select className={selectClass} value={writingTone} onChange={(e) => setWritingTone(e.target.value)}>
+                    <option>בטוח ורציני</option>
+                    <option>ידידותי ונגיש</option>
+                    <option>מומחה וטכני</option>
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block text-slate-400">סגנון וכתיבה</span>
+                  <select className={selectClass} value={writingStyle} onChange={(e) => setWritingStyle(e.target.value)}>
+                    <option>מקצועי ואמין</option>
+                    <option>שיווקי ומשכנע</option>
+                    <option>עיתונאי וניטרלי</option>
+                  </select>
+                </label>
+              </div>
+              {hasSportsSelected && (
+                <div className="mt-3">
+                  <OptionCard
+                    checked={sportsTranslationEnabled}
+                    onChange={setSportsTranslationEnabled}
+                    tone="purple"
+                    title="תרגום כתבת ספורט (כדורגל)"
+                    description="כתבה עיתונאית מתורגמת עם תמונת סטוק — בעברית ובאנגלית"
+                  />
+                </div>
+              )}
+              {showAdvanced && (
+                <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
+                  <label className="block">
+                    <span className="mb-1 block text-slate-400">תאריך פרסום</span>
+                    <input type="datetime-local" className={inputClass} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" className="accent-[#6F42F5]" checked={landingDesignEnabled} onChange={(e) => setLandingDesignEnabled(e.target.checked)} />
+                    <span>עיצוב אקראי לדפי נחיתה</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" className="accent-[#6F42F5]" checked={freeImageEnabled} onChange={(e) => setFreeImageEnabled(e.target.checked)} />
+                    <span>תמונת סטוק חופשית</span>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-slate-400">היסטוריית ריצות</span>
+                    <select
+                      className={selectClass}
+                      value={selectedHistoryId}
+                      onChange={(e) => {
+                        const preset = history.find((item) => item.id === e.target.value);
+                        setSelectedHistoryId(e.target.value);
+                        if (preset) applyHistoryPreset(preset);
+                      }}
+                    >
+                      <option value="">בחר preset...</option>
+                      {history.map((item) => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
+
             <Button
               type="button"
               className={`mt-5 w-full py-6 text-lg font-bold shadow-xl transition hover:scale-[1.01] active:scale-[0.99] ${
@@ -1007,7 +1102,7 @@ export default function WorkspacePage() {
             </StudioPanel>
           </div>
 
-          {/* SEO + settings — step 2–3 */}
+          {/* SEO — step 2 */}
           <div className="flex flex-col gap-5">
             <StudioPanel title="מקור SEO" subtitle="הפעילו מחקר לפני יצירת תוכן" step={2} accent="sky">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1081,93 +1176,6 @@ export default function WorkspacePage() {
                 <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">
                   {research.data?.refresh_error || (refreshResearch.error instanceof Error ? refreshResearch.error.message : "שגיאת מחקר")}
                 </p>
-              )}
-            </StudioPanel>
-
-            <StudioPanel title="הגדרות תוכן" subtitle="הנחיות, שפות וסגנון כתיבה" step={3}>
-              <label className="block text-sm">
-                <span className="mb-1 block text-slate-400">הנחיות ל-Gemini</span>
-                <textarea
-                  className={`${inputClass} min-h-24`}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="לדוגמה: להתמקד בלידים לעסקים קטנים, טון מקצועי, CTA ברור..."
-                />
-              </label>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-sm">
-                  <span className="mb-1 block text-slate-400">שפות תוכן</span>
-                  <select className={selectClass} value={contentLocales} onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}>
-                    <option value="both">עברית + אנגלית</option>
-                    <option value="he">עברית בלבד</option>
-                    <option value="en">אנגלית בלבד</option>
-                  </select>
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-slate-400">רמת כתיבה</span>
-                  <select className={selectClass} value={writingTone} onChange={(e) => setWritingTone(e.target.value)}>
-                    <option>בטוח ורציני</option>
-                    <option>ידידותי ונגיש</option>
-                    <option>מומחה וטכני</option>
-                  </select>
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-slate-400">סגנון וכתיבה</span>
-                  <select className={selectClass} value={writingStyle} onChange={(e) => setWritingStyle(e.target.value)}>
-                    <option>מקצועי ואמין</option>
-                    <option>שיווקי ומשכנע</option>
-                    <option>עיתונאי וניטרלי</option>
-                  </select>
-                </label>
-              </div>
-              {hasSportsSelected && (
-                <OptionCard
-                  checked={sportsTranslationEnabled}
-                  onChange={setSportsTranslationEnabled}
-                  tone="purple"
-                  title="תרגום כתבת ספורט (כדורגל)"
-                  description="כתבה עיתונאית מתורגמת עם תמונת סטוק — בעברית ובאנגלית"
-                />
-              )}
-              <button
-                type="button"
-                className="mt-3 text-xs text-[#c4b5fd] hover:underline"
-                onClick={() => setShowAdvanced((v) => !v)}
-              >
-                {showAdvanced ? "הסתר הגדרות מתקדמות" : "הגדרות מתקדמות (תמונות, פרסום, היסטוריה)"}
-              </button>
-              {showAdvanced && (
-                <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
-                  <label className="block">
-                    <span className="mb-1 block text-slate-400">תאריך פרסום</span>
-                    <input type="datetime-local" className={inputClass} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="accent-[#6F42F5]" checked={landingDesignEnabled} onChange={(e) => setLandingDesignEnabled(e.target.checked)} />
-                    <span>עיצוב אקראי לדפי נחיתה</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="accent-[#6F42F5]" checked={freeImageEnabled} onChange={(e) => setFreeImageEnabled(e.target.checked)} />
-                    <span>תמונת סטוק חופשית</span>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-slate-400">היסטוריית ריצות</span>
-                    <select
-                      className={selectClass}
-                      value={selectedHistoryId}
-                      onChange={(e) => {
-                        const preset = history.find((item) => item.id === e.target.value);
-                        setSelectedHistoryId(e.target.value);
-                        if (preset) applyHistoryPreset(preset);
-                      }}
-                    >
-                      <option value="">בחר preset...</option>
-                      {history.map((item) => (
-                        <option key={item.id} value={item.id}>{item.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
               )}
             </StudioPanel>
           </div>
