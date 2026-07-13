@@ -142,7 +142,7 @@ export const socialApi = {
       {
         method: "POST",
         headers: authHeaders(),
-        json: { mode: "ai", count },
+        json: { mode: "ai", count, async: false },
       },
     ),
   videoProviders: () =>

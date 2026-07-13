@@ -102,12 +102,12 @@ class CampaignService:
 
         if "tiktok" in platforms:
             try:
+                # Instant preview; real playable video is created in the browser after Generate.
                 MediaGenerationService.create_tiktok_creative(campaign)
                 MediaGenerationService.append_creative_log(
-                    campaign, "TikTok preview ready — starting AI video generation…"
+                    campaign,
+                    "TikTok static preview ready — browser will attach a playable WebM next",
                 )
-                count = max(1, min(int(tiktok_count or 1), 20))
-                MediaGenerationService.start_ai_tiktok_async(campaign, count=count)
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"tiktok: {exc}")
 

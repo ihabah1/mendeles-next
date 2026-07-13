@@ -88,10 +88,14 @@ export default function AiAutomationPage() {
   const [error, setError] = useState("");
   const [tiktokCount, setTiktokCount] = useState(1);
 
+  const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
+  const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
+  const [localCreativeBusy, setLocalCreativeBusy] = useState(false);
+
   const creativePoll = useQuery({
     queryKey: ["campaign-creatives", active?.id],
     queryFn: () => socialApi.get(active!.id),
-    enabled: Boolean(active?.id) && Boolean(active?.tiktok_generating),
+    enabled: Boolean(active?.id) && (Boolean(active?.tiktok_generating) || localCreativeBusy),
     refetchInterval: 1500,
   });
 
@@ -103,6 +107,10 @@ export default function AiAutomationPage() {
 
   function isPlayableVideo(url: string) {
     return /\.(mp4|webm)(\?|$)/i.test(url);
+  }
+
+  function pushLocalLog(message: string, level = "info") {
+    setLocalCreativeLog((prev) => [...prev.slice(-80), { level, message }]);
   }
 
   const status = useQuery({
@@ -151,11 +159,34 @@ export default function AiAutomationPage() {
       setGenStep(0);
       setActive({ status: "generating" } as SocialCampaign);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setActive(data);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
-      if (data.platforms?.includes("tiktok")) {
+      if (data.platforms?.includes("tiktok") && data.id) {
         qc.invalidateQueries({ queryKey: ["campaign-creatives", data.id] });
+        // Immediately create one playable WebM so Play works after Generate.
+        try {
+          setLocalCreativeBusy(true);
+          setLocalCreativeProgress(10);
+          setLocalCreativeLog([{ level: "info", message: "Recording playable TikTok video after Generate…" }]);
+          const dataUrl = await createTikTokPromoVideo({
+            title: data.title || data.main_idea || "Mendeles",
+            cta: data.cta || "Learn more",
+            websiteUrl: data.website_url || websiteUrl,
+          });
+          setLocalCreativeProgress(70);
+          const updated = await socialApi.uploadTikTokVideo(data.id, dataUrl);
+          setActive(updated);
+          setLocalCreativeProgress(100);
+          pushLocalLog("Playable TikTok video ready — press Play", "success");
+        } catch (err) {
+          pushLocalLog(
+            `Auto TikTok video failed: ${err instanceof Error ? err.message : "error"} — use Generate videos below`,
+            "warn",
+          );
+        } finally {
+          setLocalCreativeBusy(false);
+        }
       }
     },
     onError: (err: Error) => {
@@ -277,16 +308,79 @@ export default function AiAutomationPage() {
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
       await saveEdits.mutateAsync();
-      return socialApi.generateAiTikTokVideos(active.id, tiktokCount);
+
+      const count = Math.max(1, Math.min(20, tiktokCount));
+      setLocalCreativeBusy(true);
+      setLocalCreativeProgress(2);
+      setLocalCreativeLog([]);
+      pushLocalLog(`Starting ${count} playable TikTok video(s)…`);
+
+      let campaign = active;
+      let made = 0;
+      const haveAiProvider = (videoProviders.data?.providers || []).some(
+        (p) => p.available && p.provider !== "local",
+      );
+
+      // Reliable path: browser WebM (always playable). Server AI/threads often fail in prod.
+      for (let i = 0; i < count; i++) {
+        const n = i + 1;
+        setLocalCreativeProgress(Math.round((i / count) * 85) + 5);
+        pushLocalLog(`Video ${n}/${count}: recording WebM in browser…`);
+        try {
+          const dataUrl = await createTikTokPromoVideo({
+            title: `${campaign.title || campaign.main_idea || "Mendeles"} · ${n}`,
+            cta: campaign.cta || "Learn more",
+            websiteUrl: campaign.website_url || websiteUrl,
+            durationMs: 4200 + i * 200,
+          });
+          pushLocalLog(`Video ${n}/${count}: uploading…`);
+          campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
+          setActive(campaign);
+          made += 1;
+          pushLocalLog(`Video ${n}/${count}: ready (browser WebM)`, "success");
+        } catch (err) {
+          pushLocalLog(
+            `Video ${n}/${count}: browser record failed — ${err instanceof Error ? err.message : "error"}`,
+            "warn",
+          );
+        }
+        setLocalCreativeProgress(Math.round((n / count) * 90));
+      }
+
+      if (made === 0 && haveAiProvider) {
+        pushLocalLog("Browser failed — trying Veo/Runway sync (may take a few minutes)…", "warn");
+        campaign = await socialApi.generateAiTikTokVideos(campaign.id, Math.min(count, 2));
+        setActive(campaign);
+        made = (campaign.tiktok_videos || []).filter((v) => /\.(mp4|webm)(\?|$)/i.test(v.url)).length;
+      } else if (made === 0) {
+        pushLocalLog("Falling back to server preview creative…", "warn");
+        campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
+        setActive(campaign);
+      }
+
+      setLocalCreativeProgress(100);
+      pushLocalLog(`Done — ${made || (campaign.tiktok_videos || []).length} file(s)`, made ? "success" : "warn");
+      return campaign;
     },
     onSuccess: (data) => {
       setActive(data);
+      setLocalCreativeBusy(false);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       qc.invalidateQueries({ queryKey: ["social-video-providers"] });
       qc.invalidateQueries({ queryKey: ["campaign-creatives", data.id] });
-      setError("");
+      const playable = (data.tiktok_videos || []).some((v) => isPlayableVideo(v.url)) || isPlayableVideo(data.tiktok_video_url || "");
+      if (!playable) {
+        setError("No playable video was created. Allow camera/mic permissions are not needed — try again, or use Chrome/Edge.");
+      } else {
+        setError("");
+      }
     },
-    onError: (err: Error) => setError(err.message || "AI TikTok generation failed"),
+    onError: (err: Error) => {
+      setLocalCreativeBusy(false);
+      setLocalCreativeProgress(100);
+      pushLocalLog(err.message || "Generation failed", "error");
+      setError(err.message || "AI TikTok generation failed");
+    },
   });
 
   const simulate = useMutation({
@@ -648,14 +742,18 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Generate builds the campaign image and starts TikTok video generation automatically.
-            AI video failover: Runway → Veo 3.1 → local.
+            Create playable TikTok videos (WebM) you can press Play on immediately. If Runway/Veo are configured,
+            they can upgrade quality; otherwise browser + local preview still produces usable clips.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
 
           {hasCampaign && active?.tiktok_video_url ? (
             <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
-              <p className="text-sm font-semibold">TikTok preview — press Play</p>
+              <p className="text-sm font-semibold">
+                {isPlayableVideo(active.tiktok_video_url)
+                  ? "TikTok video — press Play"
+                  : "TikTok preview image only (not a video yet — click Generate below)"}
+              </p>
               <div className="mx-auto max-w-xs overflow-hidden rounded-2xl border border-[var(--border)] bg-black">
                 {isPlayableVideo(active.tiktok_video_url) ? (
                   <video
@@ -677,36 +775,42 @@ export default function AiAutomationPage() {
             </div>
           ) : null}
 
-          {hasCampaign && active?.tiktok_generating ? (
+          {hasCampaign && (localCreativeBusy || active?.tiktok_generating) ? (
             <div className="space-y-2 rounded-xl border border-[#6F42F5]/30 bg-[#6F42F5]/5 p-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-semibold text-[#6F42F5]">Generating TikTok video…</span>
-                <span className="font-bold">{active?.creative_progress ?? 0}%</span>
+                <span className="font-bold">
+                  {localCreativeBusy ? localCreativeProgress : active?.creative_progress ?? 0}%
+                </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--muted)]">
                 <div
                   className="h-full rounded-full bg-[#6F42F5] transition-all duration-500"
-                  style={{ width: `${Math.min(100, active?.creative_progress || 0)}%` }}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      localCreativeBusy ? localCreativeProgress : active?.creative_progress || 0,
+                    )}%`,
+                  }}
                 />
               </div>
-              {(active?.creative_log || []).length ? (
-                <ul className="max-h-40 space-y-1 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 font-mono text-xs">
-                  {(active!.creative_log || []).map((line, i) => (
-                    <li
-                      key={`${line.at}-${i}`}
-                      className={cn(
-                        line.level === "error" && "text-red-600",
-                        line.level === "warn" && "text-amber-700",
-                        line.level === "success" && "text-emerald-700",
-                      )}
-                    >
-                      {line.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-[var(--muted-fg)]">Starting video providers…</p>
-              )}
+              <ul className="max-h-44 space-y-1 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 font-mono text-xs">
+                {(localCreativeLog.length
+                  ? localCreativeLog
+                  : (active?.creative_log || []).map((l) => ({ level: l.level, message: l.message }))
+                ).map((line, i) => (
+                  <li
+                    key={`${line.message}-${i}`}
+                    className={cn(
+                      line.level === "error" && "text-red-600",
+                      line.level === "warn" && "text-amber-700",
+                      line.level === "success" && "text-emerald-700",
+                    )}
+                  >
+                    {line.message}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
 
@@ -770,9 +874,9 @@ export default function AiAutomationPage() {
               onClick={() => generateAiTikToks.mutate()}
               className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
             >
-              {generateAiTikToks.isPending
-                ? "Generating…"
-                : `Generate ${tiktokCount} AI TikTok videos`}
+              {generateAiTikToks.isPending || localCreativeBusy
+                ? `Creating… ${localCreativeProgress}%`
+                : `Generate ${tiktokCount} TikTok videos`}
             </Button>
           </div>
           <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
@@ -784,9 +888,19 @@ export default function AiAutomationPage() {
             </p>
             <p>
               TikTok:{" "}
-              <span className={active?.tiktok_video_url ? "font-semibold text-emerald-700" : ""}>
+              <span
+                className={
+                  active?.tiktok_video_url && isPlayableVideo(active.tiktok_video_url)
+                    ? "font-semibold text-emerald-700"
+                    : active?.tiktok_video_url
+                      ? "font-semibold text-amber-700"
+                      : ""
+                }
+              >
                 {active?.tiktok_video_url
-                  ? `Ready (${(active.tiktok_videos || []).length || 1} file(s))`
+                  ? isPlayableVideo(active.tiktok_video_url)
+                    ? `Playable video (${(active.tiktok_videos || []).filter((v) => isPlayableVideo(v.url)).length || 1})`
+                    : "Preview only (SVG) — generate videos below"
                   : "Not created yet"}
               </span>
             </p>

@@ -233,7 +233,8 @@ class CampaignTikTokVideoView(APIView):
         count = ser.validated_data.get("count") or 1
         try:
             if mode == "ai" or (not data_url and request.data.get("count")):
-                async_mode = request.data.get("async", True)
+                # Prefer sync — daemon async threads are unreliable on Gunicorn/Railway.
+                async_mode = bool(request.data.get("async", False))
                 if async_mode:
                     campaign.creative_log_json = []
                     campaign.creative_progress = 0
@@ -242,6 +243,7 @@ class CampaignTikTokVideoView(APIView):
                     payload = CampaignService.serialize(campaign)
                     payload["ai_generation"] = {"async": True, "count": count}
                     return Response(payload, status=202)
+                MediaGenerationService.append_creative_log(campaign, f"Starting sync AI generation ×{count}")
                 batch = MediaGenerationService.generate_ai_tiktok_videos(campaign, count=count)
                 payload = CampaignService.serialize(campaign)
                 payload["ai_generation"] = batch

@@ -310,7 +310,7 @@ class MediaGenerationService:
         return url_public
 
     @staticmethod
-    def save_tiktok_video(campaign: SocialCampaign, *, data_url: str) -> str:
+    def save_tiktok_video(campaign: SocialCampaign, *, data_url: str, provider: str = "browser") -> str:
         """Persist a browser-generated WebM/MP4 data URL for TikTok simulation/publish."""
         match = re.match(r"^data:(video/[\w.+-]+);base64,(.+)$", data_url, re.DOTALL)
         if not match:
@@ -325,9 +325,19 @@ class MediaGenerationService:
         path.write_bytes(raw)
         url_public = _public_url(f"social/{filename}")
         campaign.tiktok_video_url = url_public
+        videos = list(campaign.tiktok_videos_json or [])
+        videos.append(
+            {
+                "url": url_public,
+                "provider": provider,
+                "variation": len(videos) + 1,
+                "credits_used": 0,
+            }
+        )
+        campaign.tiktok_videos_json = videos
         if campaign.media_type == "video":
             campaign.media_url = url_public
-        campaign.save(update_fields=["tiktok_video_url", "media_url", "updated_at"])
+        campaign.save(update_fields=["tiktok_video_url", "tiktok_videos_json", "media_url", "updated_at"])
         return url_public
 
     @classmethod

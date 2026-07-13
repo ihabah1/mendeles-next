@@ -241,7 +241,6 @@ def test_bootstrap_creatives_on_generate(tenant, owner_user, settings, tmp_path,
 
     monkeypatch.setattr(MediaGenerationService, "create_instagram_image", staticmethod(fake_ig))
     monkeypatch.setattr(MediaGenerationService, "create_tiktok_creative", staticmethod(fake_tt))
-    monkeypatch.setattr(MediaGenerationService, "start_ai_tiktok_async", staticmethod(lambda c, *, count=1: None))
 
     result = CampaignService.bootstrap_creatives(campaign, tiktok_count=3)
     assert result.instagram_image_url.endswith("ig.svg")
