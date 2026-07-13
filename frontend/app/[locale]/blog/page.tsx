@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Link } from "@/lib/i18n/navigation";
+import { isRtlLocale } from "@/lib/i18n/locale-content";
 import { ArticleCard } from "@/components/blog/article-card";
 import { BlogFeaturesSection } from "@/components/blog/features-section";
 import { BlogShell } from "@/components/blog/blog-shell";
@@ -179,7 +180,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
             <section id="blog-search" className="space-y-6 scroll-mt-28">
               <div
                 className={`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4 ${
-                  locale === "en" ? "text-left" : "text-right"
+                  isRtlLocale(locale) ? "text-right" : "text-left"
                 }`}
               >
                 <h2 className="text-2xl font-extrabold text-slate-900">{copy.allArticles}</h2>

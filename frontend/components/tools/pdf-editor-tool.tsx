@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PDFDocument, StandardFonts, rgb, degrees } from "pdf-lib";
 import { toolsCopy } from "@/lib/tools/copy";
@@ -26,7 +29,7 @@ export function PdfEditorTool({ locale }: { locale: string }) {
     };
   }, [previewUrl, downloadUrl]);
 
-  const he = locale !== "en" && locale !== "ar";
+  const he = contentPack(locale) === "he";
 
   async function onFile(file: File | null) {
     if (!file) return;
@@ -229,7 +232,7 @@ export function PdfEditorTool({ locale }: { locale: string }) {
           className="mt-1 min-h-24 w-full rounded-xl border px-3 py-2"
           value={coverNote}
           onChange={(e) => setCoverNote(e.target.value)}
-          dir={locale === "en" ? "ltr" : "rtl"}
+          dir={isRtlLocale(locale) ? "rtl" : "ltr"}
         />
       </label>
 

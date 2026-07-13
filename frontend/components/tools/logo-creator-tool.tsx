@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack } from "@/lib/i18n/locale-content";
+
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -89,13 +92,13 @@ export function LogoCreatorTool({ locale }: { locale: string }) {
   const copy = toolsCopy(locale);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [name, setName] = useState("Mendeles");
-  const [tagline, setTagline] = useState(locale === "en" ? "Grow with AI" : "צמיחה עם AI");
+  const [tagline, setTagline] = useState(contentPack(locale) !== "he" ? "Grow with AI" : "צמיחה עם AI");
   const [style, setStyle] = useState<StyleId>("minimal");
   const [paletteId, setPaletteId] = useState<(typeof PALETTES)[number]["id"]>("violet");
   const [pngUrl, setPngUrl] = useState<string | null>(null);
 
   const palette = useMemo(() => PALETTES.find((p) => p.id === paletteId) || PALETTES[0], [paletteId]);
-  const he = locale !== "en" && locale !== "ar";
+  const he = contentPack(locale) === "he";
 
   useEffect(() => {
     const canvas = canvasRef.current;

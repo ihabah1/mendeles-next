@@ -1,4 +1,5 @@
 import type { BlogCategory } from "@/lib/blog/types";
+import { contentPack } from "@/lib/i18n/locale-content";
 
 const HE_LABELS: Record<string, string> = {
   law: "משפט ופלילי",
@@ -115,7 +116,8 @@ function normalizeSlug(slug: string): string {
 export function localizeBlogCategory(slug: string, locale: string, _fallback = ""): string {
   if (!slug) return "";
   const key = normalizeSlug(slug);
-  const labels = locale === "en" ? EN_LABELS : locale === "ar" ? AR_LABELS : HE_LABELS;
+  const pack = contentPack(locale);
+  const labels = pack === "en" ? EN_LABELS : pack === "ar" ? AR_LABELS : HE_LABELS;
   return labels[key] ?? labels[slug.toLowerCase()] ?? key.replace(/_/g, " ");
 }
 

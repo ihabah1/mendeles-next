@@ -1,3 +1,4 @@
+import { isRtlLocale } from "@/lib/i18n/locale-content";
 import { BlogReadLink } from "@/components/blog/blog-read-link";
 import { BlogAdminSelectControl } from "@/components/blog/blog-admin-edit-controls";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
@@ -12,7 +13,7 @@ type Props = {
 
 export function HeroArticle({ post, locale = "he" }: Props) {
   const copy = editorialCopy(locale);
-  const align = locale === "en" ? "text-left" : "text-right";
+  const align = isRtlLocale(locale) ? "text-right" : "text-left";
 
   return (
     <article className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
@@ -41,7 +42,7 @@ export function HeroArticle({ post, locale = "he" }: Props) {
           <h2 className="text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl lg:text-4xl">{post.title}</h2>
           <p className="mt-3 line-clamp-3 text-sm leading-7 text-slate-600 sm:text-base">{post.meta_description}</p>
 
-          <div className={`mt-5 flex items-center gap-3 ${locale === "en" ? "" : "flex-row-reverse justify-end"}`}>
+          <div className={`mt-5 flex items-center gap-3 ${isRtlLocale(locale) ? "flex-row-reverse justify-end" : ""}`}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6F42F5] text-sm font-bold text-white">
               M
             </span>

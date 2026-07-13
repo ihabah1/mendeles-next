@@ -1,5 +1,7 @@
 "use client";
 
+import { isRtlLocale } from "@/lib/i18n/locale-content";
+
 import { Link } from "@/lib/i18n/navigation";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { useBlogAdminEdit } from "@/components/blog/blog-admin-edit-context";
@@ -52,7 +54,7 @@ export function BlogAdminEditToolbar({ locale = "he" }: { locale?: string }) {
 
   return (
     <div className="fixed bottom-5 left-1/2 z-50 w-[min(92vw,42rem)] -translate-x-1/2 rounded-2xl border border-[#6F42F5]/30 bg-white p-4 shadow-[0_16px_48px_rgba(15,23,42,0.18)]">
-      <div className={`flex flex-wrap items-center justify-between gap-3 ${locale === "en" ? "text-left" : "text-right"}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${isRtlLocale(locale) ? "text-right" : "text-left"}`}>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#6F42F5]">{copy.editModeLabel}</p>
           <p className="mt-1 truncate text-sm font-bold text-slate-900">{selectedPostTitle}</p>

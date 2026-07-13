@@ -1,5 +1,7 @@
 "use client";
 
+import { isRtlLocale, pickHeEn } from "@/lib/i18n/locale-content";
+
 import { useEffect, useState } from "react";
 import { BlogReadLink } from "@/components/blog/blog-read-link";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
@@ -27,11 +29,11 @@ export function PopularArticles({ posts, locale = "he" }: Props) {
   }, [posts]);
 
   return (
-    <section className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${locale === "en" ? "text-left" : "text-right"}`}>
-      <h2 className="text-lg font-bold text-slate-900">{locale === "en" ? "Popular articles" : "מאמרים פופולריים"}</h2>
+    <section className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${isRtlLocale(locale) ? "text-right" : "text-left"}`}>
+      <h2 className="text-lg font-bold text-slate-900">{pickHeEn(locale, "מאמרים פופולריים", "Popular articles")}</h2>
       <div className="mt-5 space-y-4">
         {!ranked.length ? (
-          <p className="text-sm text-slate-500">{locale === "en" ? "No articles yet." : "אין עדיין מאמרים."}</p>
+          <p className="text-sm text-slate-500">{pickHeEn(locale, "אין עדיין מאמרים.", "No articles yet.")}</p>
         ) : (
           ranked.map((post) => (
             <BlogReadLink

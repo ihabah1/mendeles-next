@@ -1,3 +1,5 @@
+import { contentPack } from "@/lib/i18n/locale-content";
+
 export type EditorialLocale = "he" | "en" | "ar";
 
 const COPY = {
@@ -205,19 +207,19 @@ const COPY = {
 } as const;
 
 export function editorialCopy(locale: string): (typeof COPY)[keyof typeof COPY] {
-  if (locale === "en") return COPY.en;
-  if (locale === "ar") return COPY.ar;
+  const pack = contentPack(locale);
+  if (pack === "en") return COPY.en;
+  if (pack === "ar") return COPY.ar;
   return COPY.he;
 }
 
 export function dateLocale(locale: string): string {
-  if (locale === "en") return "en-US";
-  if (locale === "ar") return "ar";
+  const pack = contentPack(locale);
+  if (pack === "en") return "en-US";
+  if (pack === "ar") return "ar";
   return "he-IL";
 }
 
 export function sortLocale(locale: string): string {
-  if (locale === "en") return "en";
-  if (locale === "ar") return "ar";
-  return "he";
+  return contentPack(locale);
 }

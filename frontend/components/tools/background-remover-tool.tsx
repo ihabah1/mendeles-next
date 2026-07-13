@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useRef, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -61,7 +64,7 @@ export function BackgroundRemoverTool({ locale }: { locale: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        {locale === "en"
+        {contentPack(locale) !== "he"
           ? "Best for photos with a bright / white background. Processing stays on your device."
           : "עובד הכי טוב על תמונות עם רקע בהיר/לבן. העיבוד נשאר במכשיר שלכם."}
       </p>

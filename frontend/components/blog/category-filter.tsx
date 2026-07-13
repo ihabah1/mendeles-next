@@ -1,3 +1,4 @@
+import { isRtlLocale } from "@/lib/i18n/locale-content";
 import { Link } from "@/lib/i18n/navigation";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCategory } from "@/lib/blog/types";
@@ -21,7 +22,7 @@ export function CategoryFilter({
   const copy = editorialCopy(locale);
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${locale === "en" ? "justify-start" : "justify-end"}`}>
+    <div className={`flex flex-wrap items-center gap-2 ${isRtlLocale(locale) ? "justify-end" : "justify-start"}`}>
       <Link
         href={blogHref({ q: query, sort })}
         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${

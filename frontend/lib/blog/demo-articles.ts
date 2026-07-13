@@ -387,7 +387,7 @@ function publishedDaysAgo(daysAgo: number): string {
 }
 
 function resolveLocale(locale: string): "he" | "en" {
-  return locale === "en" ? "en" : "he";
+  return locale === "he" ? "he" : "en";
 }
 
 function toCardPost(article: DemoArticle): BlogCardPost {

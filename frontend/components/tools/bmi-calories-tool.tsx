@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useMemo, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -16,10 +19,10 @@ export function BmiCaloriesTool({ locale }: { locale: string }) {
     const bmi = weight / (h * h);
     const bmr = sex === "m" ? 10 * weight + 6.25 * height - 5 * age + 5 : 10 * weight + 6.25 * height - 5 * age - 161;
     const tdee = bmr * activity;
-    let label = locale === "en" ? "Normal" : "תקין";
-    if (bmi < 18.5) label = locale === "en" ? "Underweight" : "חסר משקל";
-    else if (bmi >= 25 && bmi < 30) label = locale === "en" ? "Overweight" : "עודף משקל";
-    else if (bmi >= 30) label = locale === "en" ? "Obesity" : "השמנה";
+    let label = contentPack(locale) !== "he" ? "Normal" : "תקין";
+    if (bmi < 18.5) label = contentPack(locale) !== "he" ? "Underweight" : "חסר משקל";
+    else if (bmi >= 25 && bmi < 30) label = contentPack(locale) !== "he" ? "Overweight" : "עודף משקל";
+    else if (bmi >= 30) label = contentPack(locale) !== "he" ? "Obesity" : "השמנה";
     return {
       bmi: Math.round(bmi * 10) / 10,
       label,
@@ -34,32 +37,32 @@ export function BmiCaloriesTool({ locale }: { locale: string }) {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-medium">
-          {locale === "en" ? "Sex" : "מין"}
+          {contentPack(locale) !== "he" ? "Sex" : "מין"}
           <select className="mt-1 w-full rounded-xl border px-3 py-2" value={sex} onChange={(e) => setSex(e.target.value as "m" | "f")}>
-            <option value="m">{locale === "en" ? "Male" : "זכר"}</option>
-            <option value="f">{locale === "en" ? "Female" : "נקבה"}</option>
+            <option value="m">{contentPack(locale) !== "he" ? "Male" : "זכר"}</option>
+            <option value="f">{contentPack(locale) !== "he" ? "Female" : "נקבה"}</option>
           </select>
         </label>
         <label className="text-sm font-medium">
-          {locale === "en" ? "Age" : "גיל"}
+          {contentPack(locale) !== "he" ? "Age" : "גיל"}
           <input type="number" className="mt-1 w-full rounded-xl border px-3 py-2" value={age} onChange={(e) => setAge(Number(e.target.value) || 0)} />
         </label>
         <label className="text-sm font-medium">
-          {locale === "en" ? "Height (cm)" : "גובה (ס״מ)"}
+          {contentPack(locale) !== "he" ? "Height (cm)" : "גובה (ס״מ)"}
           <input type="number" className="mt-1 w-full rounded-xl border px-3 py-2" value={height} onChange={(e) => setHeight(Number(e.target.value) || 0)} />
         </label>
         <label className="text-sm font-medium">
-          {locale === "en" ? "Weight (kg)" : "משקל (ק״ג)"}
+          {contentPack(locale) !== "he" ? "Weight (kg)" : "משקל (ק״ג)"}
           <input type="number" className="mt-1 w-full rounded-xl border px-3 py-2" value={weight} onChange={(e) => setWeight(Number(e.target.value) || 0)} />
         </label>
       </div>
       <label className="block text-sm font-medium">
-        {locale === "en" ? "Activity" : "רמת פעילות"}
+        {contentPack(locale) !== "he" ? "Activity" : "רמת פעילות"}
         <select className="mt-1 w-full rounded-xl border px-3 py-2" value={activity} onChange={(e) => setActivity(Number(e.target.value))}>
-          <option value={1.2}>{locale === "en" ? "Sedentary" : "יושבני"}</option>
-          <option value={1.375}>{locale === "en" ? "Light" : "קלה"}</option>
-          <option value={1.55}>{locale === "en" ? "Moderate" : "בינונית"}</option>
-          <option value={1.725}>{locale === "en" ? "Active" : "גבוהה"}</option>
+          <option value={1.2}>{contentPack(locale) !== "he" ? "Sedentary" : "יושבני"}</option>
+          <option value={1.375}>{contentPack(locale) !== "he" ? "Light" : "קלה"}</option>
+          <option value={1.55}>{contentPack(locale) !== "he" ? "Moderate" : "בינונית"}</option>
+          <option value={1.725}>{contentPack(locale) !== "he" ? "Active" : "גבוהה"}</option>
         </select>
       </label>
       <div className="rounded-2xl bg-slate-50 p-4 text-sm">
@@ -69,16 +72,16 @@ export function BmiCaloriesTool({ locale }: { locale: string }) {
         </p>
         <ul className="mt-3 space-y-1 text-slate-700">
           <li>
-            BMR: {result.bmr} {locale === "en" ? "kcal" : "קק״ל"}
+            BMR: {result.bmr} {contentPack(locale) !== "he" ? "kcal" : "קק״ל"}
           </li>
           <li>
-            {locale === "en" ? "Maintain" : "שמירה"}: {result.maintain}
+            {contentPack(locale) !== "he" ? "Maintain" : "שמירה"}: {result.maintain}
           </li>
           <li>
-            {locale === "en" ? "Weight loss" : "ירידה"}: {result.lose}
+            {contentPack(locale) !== "he" ? "Weight loss" : "ירידה"}: {result.lose}
           </li>
           <li>
-            {locale === "en" ? "Weight gain" : "עלייה"}: {result.gain}
+            {contentPack(locale) !== "he" ? "Weight gain" : "עלייה"}: {result.gain}
           </li>
         </ul>
       </div>

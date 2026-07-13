@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import { toolsCopy } from "@/lib/tools/copy";
@@ -48,7 +51,7 @@ async function buildPdf(opts: {
   body: string;
   logoDataUrl: string | null;
 }): Promise<string> {
-  const rtl = opts.locale !== "en";
+  const rtl = isRtlLocale(opts.locale);
   const scale = 2;
   const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const logo = opts.logoDataUrl ? await loadImage(opts.logoDataUrl) : null;
@@ -164,7 +167,7 @@ function fixDocumentText(raw: string, locale: string): string {
   text = text.replace(/\s*[–—]\s*/g, " — ");
   text = text.replace(/(\S)-(\S)/g, "$1-$2");
 
-  if (locale === "en") {
+  if (contentPack(locale) !== "he") {
     text = text.replace(/(^|[.!?]\s+)([a-z])/g, (_, prefix: string, ch: string) => prefix + ch.toUpperCase());
   }
 
@@ -242,7 +245,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
 
   function applyDesign(action: "heading" | "fix" | "paragraphs" | "number") {
     if (!body.trim() && action !== "heading") {
-      setError(locale === "en" ? "Add text to design first." : "הוסיפו קודם טקסט לעיצוב.");
+      setError(contentPack(locale) !== "he" ? "Add text to design first." : "הוסיפו קודם טקסט לעיצוב.");
       return;
     }
     if (action === "heading") {
@@ -268,7 +271,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
 
   async function create() {
     if (!body.trim() && !logoDataUrl && !nature.trim()) {
-      setError(locale === "en" ? "Add text, a logo, or a document type." : "הוסיפו טקסט, לוגו או אופי מסמך.");
+      setError(contentPack(locale) !== "he" ? "Add text, a logo, or a document type." : "הוסיפו טקסט, לוגו או אופי מסמך.");
       return;
     }
     setBusy(true);
@@ -286,7 +289,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        {locale === "en"
+        {contentPack(locale) !== "he"
           ? "Build a simple document with an optional logo and download a PDF instantly. Everything stays on your device."
           : "הכינו מסמך פשוט עם לוגו אופציונלי והורידו PDF מיד. הכול נשאר במכשיר שלכם."}
       </p>
@@ -318,7 +321,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
 
       <label className="block text-sm font-medium text-slate-800">
         {copy.documentNature}
-        <span className="ms-2 font-normal text-slate-500">({locale === "en" ? "optional" : "אופציונלי"})</span>
+        <span className="ms-2 font-normal text-slate-500">({contentPack(locale) !== "he" ? "optional" : "אופציונלי"})</span>
         <input
           className="mt-1 w-full rounded-xl border px-3 py-2"
           value={nature}
@@ -340,8 +343,8 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
             setPdfUrl(null);
             setFixedNote(false);
           }}
-          placeholder={locale === "en" ? "Write your document text here…" : "כתבו כאן את טקסט המסמך…"}
-          dir={locale === "en" ? "ltr" : "rtl"}
+          placeholder={contentPack(locale) !== "he" ? "Write your document text here…" : "כתבו כאן את טקסט המסמך…"}
+          dir={isRtlLocale(locale) ? "rtl" : "ltr"}
         />
       </label>
 
@@ -387,7 +390,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
         </button>
         {fixedNote ? (
           <span className="text-sm font-medium text-emerald-700">
-            {locale === "en" ? "Text updated." : "הטקסט עודכן."}
+            {contentPack(locale) !== "he" ? "Text updated." : "הטקסט עודכן."}
           </span>
         ) : null}
       </div>

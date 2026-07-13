@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useEffect, useRef, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -19,7 +22,7 @@ export function PdfViewerTool({ locale }: { locale: string }) {
   function onFile(file: File | null) {
     if (!file) return;
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setError(locale === "en" ? "Please choose a PDF file." : "נא לבחור קובץ PDF.");
+      setError(contentPack(locale) !== "he" ? "Please choose a PDF file." : "נא לבחור קובץ PDF.");
       return;
     }
     setError("");
@@ -33,7 +36,7 @@ export function PdfViewerTool({ locale }: { locale: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        {locale === "en"
+        {contentPack(locale) !== "he"
           ? "Open a PDF and view it here. The file never leaves your device."
           : "פתחו קובץ PDF וצפו בו כאן. הקובץ לא יוצא מהמכשיר שלכם."}
       </p>

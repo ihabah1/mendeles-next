@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -44,7 +47,7 @@ export function SpeedTestTool({ locale }: { locale: string }) {
         disabled={running}
         className="rounded-full bg-[#6F42F5] px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
       >
-        {running ? copy.loading : locale === "en" ? "Start test" : "התחל בדיקה"}
+        {running ? copy.loading : contentPack(locale) !== "he" ? "Start test" : "התחל בדיקה"}
       </button>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -53,7 +56,7 @@ export function SpeedTestTool({ locale }: { locale: string }) {
           <p className="mt-1 text-2xl font-extrabold">{pingMs != null ? `${pingMs} ms` : "—"}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs uppercase text-slate-500">{locale === "en" ? "Download" : "הורדה"}</p>
+          <p className="text-xs uppercase text-slate-500">{contentPack(locale) !== "he" ? "Download" : "הורדה"}</p>
           <p className="mt-1 text-2xl font-extrabold text-[#6F42F5]">{mbps != null ? `${mbps} Mbps` : "—"}</p>
         </div>
       </div>

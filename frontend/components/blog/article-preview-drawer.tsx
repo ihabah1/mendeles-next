@@ -1,5 +1,7 @@
 "use client";
 
+import { isRtlLocale } from "@/lib/i18n/locale-content";
+
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -53,7 +55,7 @@ export function ArticlePreviewDrawer({ posts, locale = "he" }: Props) {
             {post.category}
           </span>
         </div>
-        <div className={`space-y-4 p-6 sm:p-8 ${locale === "en" ? "text-left" : "text-right"}`}>
+        <div className={`space-y-4 p-6 sm:p-8 ${isRtlLocale(locale) ? "text-right" : "text-left"}`}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F42F5]">{copy.previewLabel}</p>
           <h2 id="article-preview-title" className="text-3xl font-extrabold leading-tight text-slate-900">
             {post.title}

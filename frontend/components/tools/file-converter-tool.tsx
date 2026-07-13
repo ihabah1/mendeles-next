@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useRef, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -47,12 +50,12 @@ export function FileConverterTool({ locale }: { locale: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        {locale === "en"
+        {contentPack(locale) !== "he"
           ? "Convert JPG / PNG / WebP in the browser. PDF↔Word requires a dedicated converter service."
           : "המירו JPG / PNG / WebP בדפדפן. PDF↔Word דורש שירות המרה ייעודי."}
       </p>
       <label className="block text-sm font-medium">
-        {locale === "en" ? "Output format" : "פורמט יעד"}
+        {contentPack(locale) !== "he" ? "Output format" : "פורמט יעד"}
         <select className="mt-1 w-full rounded-xl border px-3 py-2" value={target} onChange={(e) => setTarget(e.target.value as Format)}>
           <option value="image/png">PNG</option>
           <option value="image/jpeg">JPG</option>

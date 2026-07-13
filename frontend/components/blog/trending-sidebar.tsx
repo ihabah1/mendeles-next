@@ -1,3 +1,4 @@
+import { isRtlLocale } from "@/lib/i18n/locale-content";
 import { Link } from "@/lib/i18n/navigation";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import type { BlogCategory } from "@/lib/blog/types";
@@ -14,7 +15,7 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
   const trending = [...categories].sort((a, b) => b.count - a.count).slice(0, 8);
 
   return (
-    <section className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${locale === "en" ? "text-left" : "text-right"}`}>
+    <section className={`rounded-2xl bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.05)] ${isRtlLocale(locale) ? "text-right" : "text-left"}`}>
       <h2 className="text-lg font-bold text-slate-900">{copy.trendingTopics}</h2>
       <div className="mt-5 space-y-1">
         {trending.length === 0 ? (
@@ -39,7 +40,7 @@ export function TrendingSidebar({ categories, activeCategory = "", locale = "he"
 
       <div className="mt-8 border-t border-slate-100 pt-6">
         <h3 className="text-sm font-bold text-slate-500">{copy.categoriesLabel}</h3>
-        <div className={`mt-3 flex flex-wrap gap-2 ${locale === "en" ? "justify-start" : "justify-end"}`}>
+        <div className={`mt-3 flex flex-wrap gap-2 ${isRtlLocale(locale) ? "justify-end" : "justify-start"}`}>
           {categories.map((item) => (
             <Link
               key={item.slug}

@@ -1,4 +1,5 @@
 import type { ToolSlug } from "./catalog";
+import { contentPack } from "@/lib/i18n/locale-content";
 
 type Locale = "he" | "en";
 
@@ -350,7 +351,8 @@ const AR: ToolsCopy = {
 };
 
 export function toolsCopy(locale: string): ToolsCopy {
-  if (locale === "en") return EN;
-  if (locale === "ar") return AR;
+  const pack = contentPack(locale);
+  if (pack === "en") return EN;
+  if (pack === "ar") return AR;
   return HE;
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useMemo, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -29,10 +32,10 @@ export function QrCodeTool({ locale }: { locale: string }) {
       <div className="flex flex-wrap gap-2">
         {(
           [
-            ["url", locale === "en" ? "URL" : "קישור"],
+            ["url", contentPack(locale) !== "he" ? "URL" : "קישור"],
             ["wifi", "Wi‑Fi"],
-            ["phone", locale === "en" ? "Phone" : "טלפון"],
-            ["vcard", locale === "en" ? "vCard" : "כרטיס ביקור"],
+            ["phone", contentPack(locale) !== "he" ? "Phone" : "טלפון"],
+            ["vcard", contentPack(locale) !== "he" ? "vCard" : "כרטיס ביקור"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -59,8 +62,8 @@ export function QrCodeTool({ locale }: { locale: string }) {
       ) : null}
       {kind === "vcard" ? (
         <div className="grid gap-2">
-          <input className="rounded-xl border px-3 py-2" placeholder={locale === "en" ? "Name" : "שם"} value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="rounded-xl border px-3 py-2" placeholder={locale === "en" ? "Phone" : "טלפון"} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input className="rounded-xl border px-3 py-2" placeholder={contentPack(locale) !== "he" ? "Name" : "שם"} value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="rounded-xl border px-3 py-2" placeholder={contentPack(locale) !== "he" ? "Phone" : "טלפון"} value={phone} onChange={(e) => setPhone(e.target.value)} />
           <input className="rounded-xl border px-3 py-2" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
       ) : null}

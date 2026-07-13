@@ -1,3 +1,4 @@
+import { isRtlLocale } from "@/lib/i18n/locale-content";
 import { BlogReadLink } from "@/components/blog/blog-read-link";
 import { BlogAdminSelectControl } from "@/components/blog/blog-admin-edit-controls";
 import { EditorialCardImage } from "@/components/blog/editorial-card-image";
@@ -39,7 +40,7 @@ export function FeaturedStrip({ posts, locale = "he" }: Props) {
                 {post.category}
               </span>
             </div>
-            <div className={`flex flex-1 flex-col p-5 ${locale === "en" ? "text-left" : "text-right"}`}>
+            <div className={`flex flex-1 flex-col p-5 ${isRtlLocale(locale) ? "text-right" : "text-left"}`}>
               <h3 className="line-clamp-2 text-lg font-extrabold leading-snug text-slate-900 group-hover:text-[#6F42F5]">
                 {post.title}
               </h3>

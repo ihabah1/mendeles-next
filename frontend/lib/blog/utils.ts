@@ -1,5 +1,6 @@
 import type { BlogCardPost, BlogSort } from "@/lib/blog/types";
 import { dateLocale, sortLocale } from "@/lib/blog/editorial-copy";
+import { pickHeEn } from "@/lib/i18n/locale-content";
 
 export const BLOG_ACCENT = "#6F42F5";
 export const BLOG_PAGE_SIZE = 9;
@@ -31,7 +32,7 @@ export function blogHref({
 }
 
 export function formatPublishDate(value: string | null, locale = "he"): string {
-  if (!value) return locale === "en" ? "No date" : "ללא תאריך";
+  if (!value) return pickHeEn(locale, "ללא תאריך", "No date");
   return new Date(value).toLocaleDateString(dateLocale(locale), {
     day: "numeric",
     month: "long",

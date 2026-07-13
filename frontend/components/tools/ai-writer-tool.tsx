@@ -1,5 +1,8 @@
 "use client";
 
+import { contentPack, isRtlLocale } from "@/lib/i18n/locale-content";
+
+
 import { useEffect, useState } from "react";
 import { toolsCopy } from "@/lib/tools/copy";
 
@@ -29,8 +32,8 @@ function writeUses(count: number) {
 }
 
 function generate(kind: Kind, topic: string, locale: string) {
-  const t = topic.trim() || (locale === "en" ? "your offer" : "ההצעה שלכם");
-  if (locale === "en") {
+  const t = topic.trim() || (contentPack(locale) !== "he" ? "your offer" : "ההצעה שלכם");
+  if (contentPack(locale) !== "he") {
     if (kind === "headline") return [`Discover ${t} that actually converts`, `Why ${t} is trending now`, `The smart way to grow with ${t}`];
     if (kind === "post")
       return [
@@ -83,17 +86,17 @@ export function AiWriterTool({ locale }: { locale: string }) {
   return (
     <div className="space-y-4">
       <p className="rounded-xl bg-violet-50 px-3 py-2 text-sm text-violet-900">
-        {locale === "en"
+        {contentPack(locale) !== "he"
           ? `Free uses today: ${Math.max(0, FREE_LIMIT - uses)} / ${FREE_LIMIT}`
           : `שימושים חינמיים היום: ${Math.max(0, FREE_LIMIT - uses)} / ${FREE_LIMIT}`}
       </p>
       <div className="flex flex-wrap gap-2">
         {(
           [
-            ["headline", locale === "en" ? "Headlines" : "כותרות"],
-            ["post", locale === "en" ? "Posts" : "פוסטים"],
-            ["email", locale === "en" ? "Emails" : "מיילים"],
-            ["product", locale === "en" ? "Product" : "תיאור מוצר"],
+            ["headline", contentPack(locale) !== "he" ? "Headlines" : "כותרות"],
+            ["post", contentPack(locale) !== "he" ? "Posts" : "פוסטים"],
+            ["email", contentPack(locale) !== "he" ? "Emails" : "מיילים"],
+            ["product", contentPack(locale) !== "he" ? "Product" : "תיאור מוצר"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -110,7 +113,7 @@ export function AiWriterTool({ locale }: { locale: string }) {
         className="w-full rounded-xl border px-3 py-2"
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
-        placeholder={locale === "en" ? "Topic / product / service" : "נושא / מוצר / שירות"}
+        placeholder={contentPack(locale) !== "he" ? "Topic / product / service" : "נושא / מוצר / שירות"}
       />
       <button
         type="button"
@@ -118,7 +121,7 @@ export function AiWriterTool({ locale }: { locale: string }) {
         disabled={uses >= FREE_LIMIT}
         className="rounded-full bg-[#6F42F5] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
       >
-        {locale === "en" ? "Generate" : "צור טקסט"}
+        {contentPack(locale) !== "he" ? "Generate" : "צור טקסט"}
       </button>
       {output.length ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
