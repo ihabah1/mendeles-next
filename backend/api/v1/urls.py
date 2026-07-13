@@ -64,4 +64,5 @@ urlpatterns = [
     path("client/", include("client_portal.api.v1.urls")),
     path("inbox/", include("identity.api.v1.inbox_urls")),
     path("whatsapp/", include("whatsapp.urls")),
+    path("social/", include("social.api.v1.urls")),
 ]

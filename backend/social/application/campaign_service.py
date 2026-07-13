@@ -1,0 +1,222 @@
+from __future__ import annotations
+
+from datetime import timezone as dt_timezone
+from typing import Any
+from urllib.parse import quote
+
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+from social.domain.enums import CampaignStatus, SUPPORTED_PLATFORMS
+from social.infrastructure.models import SocialCampaign
+from social.providers import get_default_publisher
+from social.providers.base import PublishPayload
+
+
+def _placeholder_media_url(prompt: str, media_type: str) -> str:
+    """Deterministic placeholder visual until a real media pipeline is wired."""
+    label = quote((prompt or "Mendeles campaign")[:80])
+    bg = "6F42F5" if media_type == "image" else "111827"
+    return f"https://placehold.co/1080x1080/{bg}/ffffff/png?text={label}"
+
+
+class CampaignService:
+    @staticmethod
+    def serialize(campaign: SocialCampaign) -> dict[str, Any]:
+        return {
+            "id": str(campaign.id),
+            "title": campaign.title,
+            "goal": campaign.goal,
+            "campaign_type": campaign.campaign_type,
+            "tone": campaign.tone,
+            "target_audience": campaign.target_audience,
+            "website_url": campaign.website_url,
+            "platforms": campaign.platforms or [],
+            "captions": campaign.captions_json or {},
+            "hashtags": campaign.hashtags_json or {},
+            "cta": campaign.cta,
+            "main_idea": campaign.main_idea,
+            "media_type": campaign.media_type,
+            "media_prompt": campaign.media_prompt,
+            "video_prompt": campaign.video_prompt,
+            "media_url": campaign.media_url,
+            "status": campaign.status,
+            "scheduled_at": campaign.scheduled_at.isoformat() if campaign.scheduled_at else None,
+            "published_at": campaign.published_at.isoformat() if campaign.published_at else None,
+            "timezone": campaign.timezone,
+            "buffer_update_ids": campaign.buffer_update_ids or {},
+            "last_error": campaign.last_error,
+            "publish_log": campaign.publish_log or [],
+            "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+        }
+
+    @staticmethod
+    def list_campaigns(tenant_id) -> list[dict[str, Any]]:
+        qs = SocialCampaign.objects.filter(tenant_id=tenant_id, deleted_at__isnull=True).order_by("-created_at")[:100]
+        return [CampaignService.serialize(c) for c in qs]
+
+    @staticmethod
+    def get_campaign(tenant_id, campaign_id) -> SocialCampaign | None:
+        return SocialCampaign.objects.filter(
+            id=campaign_id, tenant_id=tenant_id, deleted_at__isnull=True
+        ).first()
+
+    @staticmethod
+    def apply_generation(campaign: SocialCampaign, generated: dict[str, Any]) -> SocialCampaign:
+        campaign.title = generated.get("title") or campaign.title
+        campaign.main_idea = generated.get("main_idea") or ""
+        campaign.captions_json = generated.get("captions") or {}
+        campaign.hashtags_json = generated.get("hashtags") or {}
+        campaign.cta = generated.get("cta") or ""
+        campaign.media_prompt = generated.get("media_prompt") or ""
+        campaign.video_prompt = generated.get("video_prompt") or ""
+        campaign.status = CampaignStatus.READY
+        campaign.last_error = ""
+        campaign.media_url = campaign.media_url or _placeholder_media_url(
+            campaign.media_prompt, campaign.media_type
+        )
+        campaign.save()
+        return campaign
+
+    @staticmethod
+    def update_fields(campaign: SocialCampaign, data: dict[str, Any]) -> SocialCampaign:
+        mapping = {
+            "title": "title",
+            "cta": "cta",
+            "media_prompt": "media_prompt",
+            "video_prompt": "video_prompt",
+            "media_url": "media_url",
+            "timezone": "timezone",
+        }
+        for src, dest in mapping.items():
+            if src in data and data[src] is not None:
+                setattr(campaign, dest, data[src])
+        if "captions" in data and isinstance(data["captions"], dict):
+            campaign.captions_json = data["captions"]
+        if "hashtags" in data and isinstance(data["hashtags"], dict):
+            campaign.hashtags_json = data["hashtags"]
+        if "platforms" in data and isinstance(data["platforms"], list):
+            campaign.platforms = [p for p in data["platforms"] if p in SUPPORTED_PLATFORMS]
+        campaign.save()
+        return campaign
+
+    @staticmethod
+    def soft_delete(campaign: SocialCampaign) -> None:
+        campaign.soft_delete()
+
+    @staticmethod
+    def publish(
+        campaign: SocialCampaign,
+        *,
+        schedule: bool = False,
+        scheduled_at: str | None = None,
+        tz_name: str | None = None,
+    ) -> dict[str, Any]:
+        publisher = get_default_publisher()
+        log: list[dict[str, Any]] = []
+
+        def step(name: str, detail: str = "", ok: bool = True):
+            entry = {"step": name, "detail": detail, "ok": ok, "at": timezone.now().isoformat()}
+            log.append(entry)
+            return entry
+
+        if not publisher.configured():
+            campaign.status = CampaignStatus.FAILED
+            campaign.last_error = "BUFFER_ACCESS_TOKEN is not configured on the server."
+            campaign.publish_log = [step("Publishing to Buffer...", campaign.last_error, False)]
+            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            return CampaignService.serialize(campaign)
+
+        step("Generating AI...", "Campaign content ready")
+        step("Generating image...", "Using media prompt / placeholder media")
+
+        if not campaign.media_url:
+            campaign.media_url = _placeholder_media_url(campaign.media_prompt, campaign.media_type)
+            campaign.save(update_fields=["media_url", "updated_at"])
+        step("Uploading media...", campaign.media_url or "text-only")
+
+        scheduled_dt = None
+        scheduled_iso = None
+        if schedule:
+            if not scheduled_at:
+                campaign.status = CampaignStatus.FAILED
+                campaign.last_error = "scheduled_at is required when scheduling."
+                campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
+            scheduled_dt = parse_datetime(scheduled_at)
+            if scheduled_dt is None:
+                campaign.status = CampaignStatus.FAILED
+                campaign.last_error = "Invalid scheduled_at datetime."
+                campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
+            if timezone.is_naive(scheduled_dt):
+                scheduled_dt = timezone.make_aware(scheduled_dt, dt_timezone.utc)
+            scheduled_iso = scheduled_dt.astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            if tz_name:
+                campaign.timezone = tz_name
+
+        campaign.status = CampaignStatus.PUBLISHING
+        campaign.scheduled_at = scheduled_dt if schedule else None
+        campaign.last_error = ""
+        campaign.save(update_fields=["status", "scheduled_at", "timezone", "last_error", "updated_at"])
+
+        buffer_ids: dict[str, str] = {}
+        errors: list[str] = []
+        platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
+
+        for platform in platforms:
+            caption = (campaign.captions_json or {}).get(platform) or ""
+            tags = (campaign.hashtags_json or {}).get(platform) or []
+            tag_line = " ".join(tags) if tags else ""
+            cta = campaign.cta or ""
+            text_parts = [caption]
+            if tag_line and tag_line not in caption:
+                text_parts.append(tag_line)
+            if cta and cta not in caption:
+                text_parts.append(cta)
+            text = "\n\n".join(p for p in text_parts if p).strip()
+            result = publisher.publish(
+                PublishPayload(
+                    text=text,
+                    platform=platform,
+                    media_url=campaign.media_url if campaign.media_type == "image" else "",
+                    scheduled_at_iso=scheduled_iso,
+                    now=not schedule,
+                )
+            )
+            if result.ok:
+                buffer_ids[platform] = result.external_id
+                detail = result.channel_name or result.external_id or "queued"
+                step(f"Publishing to Buffer... ({platform})", detail, True)
+            else:
+                errors.append(f"{platform}: {result.error}")
+                step(f"Publishing to Buffer... ({platform})", result.error, False)
+
+        campaign.buffer_update_ids = {**(campaign.buffer_update_ids or {}), **buffer_ids}
+        campaign.publish_log = log
+
+        if errors and not buffer_ids:
+            campaign.status = CampaignStatus.FAILED
+            campaign.last_error = " | ".join(errors)
+            step("Completed", campaign.last_error, False)
+        elif errors:
+            campaign.status = CampaignStatus.SCHEDULED if schedule else CampaignStatus.PUBLISHED
+            campaign.last_error = "Partial failure: " + " | ".join(errors)
+            if schedule:
+                pass
+            else:
+                campaign.published_at = timezone.now()
+            step("Completed", "Partial success", False)
+        else:
+            if schedule:
+                campaign.status = CampaignStatus.SCHEDULED
+            else:
+                campaign.status = CampaignStatus.PUBLISHED
+                campaign.published_at = timezone.now()
+            step("Completed", "All platforms queued" if schedule else "Published", True)
+
+        campaign.publish_log = log
+        campaign.save()
+        return CampaignService.serialize(campaign)

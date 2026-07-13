@@ -59,7 +59,10 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     id: "automation",
     labelKey: "groupAutomation",
-    items: [{ href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" }],
+    items: [
+      { href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" },
+      { href: "/dashboard/ai-automation", labelKey: "aiAutomation", permission: "automation.view" },
+    ],
   },
   {
     id: "system",

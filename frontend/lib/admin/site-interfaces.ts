@@ -24,6 +24,7 @@ export const ADMIN_INTERFACE_DEFS: SiteInterfaceDef[] = [
   { id: "traffic", href: "/dashboard/traffic", permission: "ai_seo.view" },
   { id: "aiSeo", href: "/dashboard/ai-seo", permission: "ai_seo.view" },
   { id: "automation", href: "/dashboard/automation", permission: "automation.view" },
+  { id: "aiAutomation", href: "/dashboard/ai-automation", permission: "automation.view" },
   { id: "seo", href: "/dashboard/seo", permission: "seo.view" },
   { id: "roles", href: "/dashboard/roles", permission: "roles.view" },
   { id: "settings", href: "/dashboard/settings", permission: "settings.view" },

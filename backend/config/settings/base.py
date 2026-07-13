@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "automation",
     "integrations",
     "whatsapp",
+    "social.apps.SocialConfig",
 ]
 
 MIDDLEWARE = [
@@ -162,6 +163,9 @@ GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "30"))
 AI_SEO_STEP_TIMEOUT_SECONDS = int(os.environ.get("AI_SEO_STEP_TIMEOUT_SECONDS", "10"))
 AI_SEO_STEP_MAX_RETRIES = int(os.environ.get("AI_SEO_STEP_MAX_RETRIES", "3"))
 GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECONDS", "20"))
+
+# Buffer social publishing (server-side only)
+BUFFER_ACCESS_TOKEN = os.environ.get("BUFFER_ACCESS_TOKEN", "")
 
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
