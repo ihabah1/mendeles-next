@@ -726,10 +726,11 @@ export const automationApi = {
     target_locales: string[];
     skip_existing?: boolean;
     overwrite?: boolean;
+    force_new?: boolean;
     name?: string;
     page_ids?: string[];
   }) =>
-    apiFetch<AutomationJobDetail>("/api/v1/automation/site-translations/", {
+    apiFetch<AutomationJobDetail & { continued?: boolean }>("/api/v1/automation/site-translations/", {
       method: "POST",
       headers: authHeaders(),
       json: data,

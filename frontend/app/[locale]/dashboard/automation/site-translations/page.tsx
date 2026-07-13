@@ -19,6 +19,7 @@ const ALL_LOCALES = [
 ] as const;
 
 const ACTIVE = new Set(["queued", "running", "retrying"]);
+const OPEN = new Set(["queued", "running", "retrying", "paused"]);
 
 export default function SiteTranslationsPage() {
   const { hasPermission } = useAuth();
@@ -48,6 +49,15 @@ export default function SiteTranslationsPage() {
     refetchInterval: 4000,
   });
 
+  const recent = useMemo(() => jobs.data?.results || [], [jobs.data]);
+  const openJob = useMemo(() => recent.find((row) => OPEN.has(row.status)) || null, [recent]);
+
+  useEffect(() => {
+    if (!activeJobId && openJob?.id) {
+      setActiveJobId(openJob.id);
+    }
+  }, [activeJobId, openJob?.id]);
+
   const activeJob = useQuery({
     queryKey: ["automation-job", activeJobId],
     queryFn: () => automationApi.get(activeJobId!),
@@ -59,11 +69,12 @@ export default function SiteTranslationsPage() {
   });
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (forceNew = false) =>
       automationApi.createSiteTranslation({
         target_locales: locales,
         skip_existing: skipExisting,
         overwrite,
+        force_new: forceNew,
       }),
     onSuccess: (job) => {
       setError("");
@@ -71,6 +82,7 @@ export default function SiteTranslationsPage() {
       autoRun.current = true;
       qc.invalidateQueries({ queryKey: ["site-translation-jobs"] });
       qc.invalidateQueries({ queryKey: ["site-translation-preview"] });
+      qc.setQueryData(["automation-job", job.id], job);
     },
     onError: (err: Error) => setError(err.message || "Failed to create job"),
   });
@@ -132,10 +144,13 @@ export default function SiteTranslationsPage() {
     return () => window.clearTimeout(t);
   }, [job?.id, job?.status, job?.progress_percent, job?.completed_tasks, runNext.isPending, pause.isPending]);
 
-  const recent = useMemo(() => jobs.data?.results || [], [jobs.data]);
-
   function toggleLocale(code: string) {
     setLocales((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  }
+
+  function startOrContinue() {
+    // Backend reuses the open job unless force_new=true — completed steps stay completed.
+    create.mutate(false);
   }
 
   if (!canView) {
@@ -146,6 +161,16 @@ export default function SiteTranslationsPage() {
     );
   }
 
+  const primaryPending = create.isPending || resume.isPending;
+  const hasOpenJob = Boolean(openJob);
+  const primaryLabel = hasOpenJob
+    ? primaryPending
+      ? "ממשיך…"
+      : `המשך ג'וב תרגום (${openJob?.progress_percent ?? 0}%)`
+    : primaryPending
+      ? "יוצר…"
+      : "התחל ג'וב תרגום";
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-16">
       <div className="space-y-2">
@@ -154,13 +179,19 @@ export default function SiteTranslationsPage() {
         </Link>
         <h1 className="text-2xl font-bold">תרגום דפי האתר</h1>
         <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
-          ג&apos;וב שמתרגם כל דף תוכן לכל שפה (עברית, אנגלית, ספרדית, ערבית, גרמנית, סינית). אפשר להשהות (Pause) ולהמשיך מחר —
-          ההתקדמות נשמרת באחוזים.
+          ג&apos;וב שמתרגם כל דף תוכן לכל שפה (עברית, אנגלית, ספרדית, ערבית, גרמנית, סינית). אפשר להשהות (Pause) ולהמשיך —
+          יחידות שכבר הושלמו לא רצות שוב.
         </p>
       </div>
 
       <Card className="space-y-4 !rounded-2xl">
-        <h2 className="font-semibold">הגדרת ג&apos;וב חדש</h2>
+        <h2 className="font-semibold">{hasOpenJob ? "המשך ג'וב קיים" : "הגדרת ג'וב חדש"}</h2>
+        {hasOpenJob ? (
+          <p className="rounded-xl bg-[var(--muted)]/40 px-4 py-3 text-sm">
+            יש ג&apos;וב פתוח ב־{openJob?.progress_percent ?? 0}% ({openJob?.status}). לחיצה על הכפתור תמשיך משם ולא תתחיל
+            מההתחלה.
+          </p>
+        ) : null}
         <div>
           <p className="mb-2 text-sm font-medium">שפות יעד</p>
           <div className="flex flex-wrap gap-2">
@@ -205,14 +236,32 @@ export default function SiteTranslationsPage() {
             <p className="text-[var(--muted-fg)]">דילוגים על קיימים: {preview.data.skipped_existing}</p>
           </div>
         ) : null}
-        <Button
-          type="button"
-          disabled={!canCreate || locales.length === 0 || create.isPending || (preview.data?.planned_units || 0) === 0}
-          onClick={() => create.mutate()}
-          className="rounded-full bg-[#6F42F5] font-bold text-white"
-        >
-          {create.isPending ? "יוצר…" : "התחל ג'וב תרגום"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            disabled={
+              !canCreate ||
+              locales.length === 0 ||
+              primaryPending ||
+              (!hasOpenJob && (preview.data?.planned_units || 0) === 0)
+            }
+            onClick={startOrContinue}
+            className="rounded-full bg-[#6F42F5] font-bold text-white"
+          >
+            {primaryLabel}
+          </Button>
+          {hasOpenJob && canCreate ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={create.isPending || locales.length === 0 || (preview.data?.planned_units || 0) === 0}
+              onClick={() => create.mutate(true)}
+              className="rounded-full"
+            >
+              התחל ג&apos;וב חדש (מבטל את הפתוח)
+            </Button>
+          ) : null}
+        </div>
       </Card>
 
       {job ? (

@@ -277,7 +277,11 @@ class JobService:
         job.status = JobStatus.RETRYING
         job.error_message = ""
         job.finished_at = None
-        job.progress_percent = 0
+        steps_qs = job.steps.filter(deleted_at__isnull=True)
+        total = steps_qs.count() or 1
+        completed = steps_qs.filter(status=StepStatus.COMPLETED).count()
+        job.progress_percent = int(round((completed / total) * 100))
+        job.current_step_index = completed
         job.save(
             update_fields=[
                 "retry_count",
@@ -285,12 +289,13 @@ class JobService:
                 "error_message",
                 "finished_at",
                 "progress_percent",
+                "current_step_index",
                 "updated_at",
             ]
         )
         job.status = JobStatus.QUEUED
         job.save(update_fields=["status", "updated_at"])
-        AutomationLogService.log(job, f"Job retry #{job.retry_count}")
+        AutomationLogService.log(job, f"Job retry #{job.retry_count} (keeping {completed} completed step(s))")
         return job
 
     @staticmethod

@@ -92,6 +92,61 @@ def test_site_translation_run_next_pause_resume(owner_client, automation_seeded,
 
 
 @pytest.mark.django_db
+def test_site_translation_start_continues_open_job(owner_client, automation_seeded, tenant, owner_user, settings):
+    settings.GEMINI_API_KEY = ""
+    Page.objects.create(
+        tenant=tenant,
+        title="המשך",
+        slug="continue-me",
+        full_path="/continue-me",
+        locale="he",
+        page_type=PageType.LANDING_PAGE,
+        status=PageStatus.PUBLISHED,
+        created_by=owner_user,
+    )
+    first = owner_client.post(
+        "/api/v1/automation/site-translations/",
+        {"target_locales": ["en", "es", "de"], "skip_existing": True},
+        format="json",
+    )
+    assert first.status_code == 201
+    job_id = first.json()["id"]
+    assert first.json()["continued"] is False
+
+    run = owner_client.post(f"/api/v1/automation/{job_id}/run-next/")
+    assert run.status_code == 200
+    assert run.json()["completed_tasks"] == 1
+
+    pause = owner_client.post(f"/api/v1/automation/{job_id}/pause/")
+    assert pause.status_code == 200
+    assert pause.json()["status"] == JobStatus.PAUSED
+
+    # Clicking "start" again must continue the same job, not create a duplicate.
+    again = owner_client.post(
+        "/api/v1/automation/site-translations/",
+        {"target_locales": ["en", "es", "de"], "skip_existing": True},
+        format="json",
+    )
+    assert again.status_code == 200, again.content
+    body = again.json()
+    assert body["id"] == job_id
+    assert body["continued"] is True
+    assert body["status"] == JobStatus.QUEUED
+    assert body["completed_tasks"] == 1
+    assert body["progress_percent"] > 0
+
+    # Force a brand-new job only when explicitly requested.
+    forced = owner_client.post(
+        "/api/v1/automation/site-translations/",
+        {"target_locales": ["ar"], "skip_existing": True, "force_new": True},
+        format="json",
+    )
+    assert forced.status_code == 201
+    assert forced.json()["id"] != job_id
+    assert forced.json()["continued"] is False
+
+
+@pytest.mark.django_db
 def test_site_translation_service_fallback(tenant, owner_user, automation_seeded, settings):
     settings.GEMINI_API_KEY = ""
     source = Page.objects.create(
@@ -104,12 +159,13 @@ def test_site_translation_service_fallback(tenant, owner_user, automation_seeded
         status=PageStatus.DRAFT,
         created_by=owner_user,
     )
-    job = SiteTranslationService.create_job(
+    job, continued = SiteTranslationService.create_job(
         tenant.id,
         owner_user,
         target_locales=["zh"],
         skip_existing=True,
     )
+    assert continued is False
     assert job.steps.count() == 1
     JobExecutor.run_next_step(job)
     job.refresh_from_db()

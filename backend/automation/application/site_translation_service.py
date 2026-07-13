@@ -31,6 +31,40 @@ LOCALE_NAMES = {
 
 class SiteTranslationService:
     STEP_TYPE = "translate_site_page"
+    OPEN_STATUSES = (
+        JobStatus.QUEUED,
+        JobStatus.RUNNING,
+        JobStatus.PAUSED,
+        JobStatus.RETRYING,
+    )
+
+    @classmethod
+    def find_open_job(cls, tenant_id) -> AutomationJob | None:
+        return (
+            AutomationJob.objects.filter(
+                tenant_id=tenant_id,
+                job_type=JobType.TRANSLATE_SITE_PAGES,
+                status__in=cls.OPEN_STATUSES,
+                deleted_at__isnull=True,
+            )
+            .order_by("-updated_at")
+            .first()
+        )
+
+    @classmethod
+    def continue_open_job(cls, tenant_id, user, *, request=None) -> tuple[AutomationJob | None, bool]:
+        """
+        Resume/return the open translation job so work is not repeated.
+        Returns (job, continued) — continued=True when an existing job was reused.
+        """
+        from automation.application.job_service import JobService
+
+        job = cls.find_open_job(tenant_id)
+        if not job:
+            return None, False
+        if job.status == JobStatus.PAUSED:
+            job = JobService.resume_job(tenant_id, user, job.id, request=request)
+        return job, True
 
     @classmethod
     def create_job(
@@ -43,9 +77,20 @@ class SiteTranslationService:
         skip_existing: bool = True,
         overwrite: bool = False,
         name: str = "",
+        force_new: bool = False,
         request=None,
-    ) -> AutomationJob:
+    ) -> tuple[AutomationJob, bool]:
+        """Create a translation job, or continue an open one. Returns (job, continued)."""
         from automation.application.job_service import JobService
+
+        if not force_new:
+            existing, continued = cls.continue_open_job(tenant_id, user, request=request)
+            if existing:
+                AutomationLogService.log(
+                    existing,
+                    "Continued existing translation job (skipped creating a duplicate)",
+                )
+                return existing, True
 
         locales = [loc for loc in (target_locales or list(TARGET_LOCALES)) if loc in TARGET_LOCALES]
         if not locales:
@@ -55,10 +100,16 @@ class SiteTranslationService:
         if not sources:
             raise ValidationError("No source pages found to translate.")
 
+        # Pairs already completed on an open/recent incomplete job — never re-queue those.
+        already_done = cls._completed_unit_keys(tenant_id) if skip_existing and not overwrite else set()
+
         steps: list[dict] = []
         for source in sources:
             for locale in locales:
                 if locale == source.locale:
+                    continue
+                unit_key = f"{source.full_path}::{locale}"
+                if unit_key in already_done:
                     continue
                 existing = Page.objects.filter(
                     tenant_id=tenant_id,
@@ -87,6 +138,11 @@ class SiteTranslationService:
                 "Nothing to translate — target locale pages already exist (turn off skip existing to overwrite)."
             )
 
+        if force_new:
+            open_job = cls.find_open_job(tenant_id)
+            if open_job:
+                JobService.cancel_job(tenant_id, user, open_job.id, request=request)
+
         job = JobService.create_job(
             tenant_id,
             user,
@@ -110,7 +166,27 @@ class SiteTranslationService:
             request=request,
         )
         AutomationLogService.log(job, f"Queued {len(steps)} translation unit(s)")
-        return job
+        return job, False
+
+    @classmethod
+    def _completed_unit_keys(cls, tenant_id) -> set[str]:
+        """full_path::locale pairs already completed on any non-cancelled translation job."""
+        keys: set[str] = set()
+        steps = AutomationJobStep.objects.filter(
+            job__tenant_id=tenant_id,
+            job__job_type=JobType.TRANSLATE_SITE_PAGES,
+            job__deleted_at__isnull=True,
+            deleted_at__isnull=True,
+            status=StepStatus.COMPLETED,
+            step_type=cls.STEP_TYPE,
+        )
+        for step in steps.iterator():
+            cfg = step.config or {}
+            path = cfg.get("full_path")
+            locale = cfg.get("target_locale")
+            if path and locale:
+                keys.add(f"{path}::{locale}")
+        return keys
 
     @classmethod
     def _source_pages(cls, tenant_id, page_ids: list[str] | None) -> list[Page]:

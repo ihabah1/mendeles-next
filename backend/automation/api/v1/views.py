@@ -344,7 +344,7 @@ class SiteTranslationCreateView(APIView):
     def post(self, request):
         _check(request, self, "automation.create")
         data = request.data or {}
-        job = SiteTranslationService.create_job(
+        job, continued = SiteTranslationService.create_job(
             request.user.default_tenant_id,
             request.user,
             target_locales=data.get("target_locales"),
@@ -352,9 +352,12 @@ class SiteTranslationCreateView(APIView):
             skip_existing=bool(data.get("skip_existing", True)),
             overwrite=bool(data.get("overwrite", False)),
             name=data.get("name") or "",
+            force_new=bool(data.get("force_new", False)),
             request=request,
         )
-        return Response(_serialize_job(job, detail=True), status=201)
+        payload = _serialize_job(job, detail=True)
+        payload["continued"] = continued
+        return Response(payload, status=200 if continued else 201)
 
 
 class AutomationJobRunNextView(APIView):
