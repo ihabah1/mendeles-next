@@ -228,6 +228,10 @@ export default function AiAutomationPage() {
   const publish = useMutation({
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
+      if (!active.simulated_at && active.status !== "simulated") {
+        document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        throw new Error("קודם צריך לאשר סימולציה (שלב 3) — כך תראו איך הקמפיין נראה ב-3 הרשתות.");
+      }
       await saveEdits.mutateAsync();
       const scheduledAt =
         scheduleMode && scheduleDate
@@ -246,16 +250,28 @@ export default function AiAutomationPage() {
         });
       } finally {
         timers.forEach((t) => window.clearTimeout(t));
-        setPublishStep(PUBLISH_STEPS.length - 1);
       }
     },
     onSuccess: (data) => {
       setActive(data);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
-      if (data.status === "failed") setError(data.last_error || "Publish failed");
-      else setError("");
+      if (data.status === "failed") {
+        setPublishStep(-1);
+        setError(data.last_error || "Publish failed");
+        if (/simulation/i.test(data.last_error || "")) {
+          requestAnimationFrame(() => {
+            document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+      } else {
+        setPublishStep(PUBLISH_STEPS.length - 1);
+        setError("");
+      }
     },
-    onError: (err: Error) => setError(err.message || "Publish failed"),
+    onError: (err: Error) => {
+      setPublishStep(-1);
+      setError(err.message || "Publish failed");
+    },
   });
 
   const remove = useMutation({
@@ -423,8 +439,9 @@ export default function AiAutomationPage() {
         setError(data.last_error || "Simulation failed — fix the checklist items.");
       } else {
         setError("");
+        setPublishStep(-1);
         requestAnimationFrame(() => {
-          document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.getElementById("campaign-release")?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
       }
     },
@@ -978,9 +995,35 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">4 · Release to network</h2>
+      <section id="campaign-release" className="space-y-4">
+        <h2 className="text-xl font-bold">4 · שליחה לרשת</h2>
         <Card className="space-y-4 !rounded-2xl border-red-200/80 dark:border-red-900/50">
+          {!hasCampaign ? (
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p>
+          ) : !simulated ? (
+            <div className="space-y-4 rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                השליחה נעולה עד שתאשרו סימולציה בשלב 3 — שם תראו איך הקמפיין נראה בלינקדאין, אינסטגרם וטיקטוק.
+              </p>
+              <Button
+                type="button"
+                onClick={() =>
+                  document.getElementById("campaign-simulation")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+                className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+              >
+                עבור לסימולציה (שלב 3)
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              הסימולציה עברה — אפשר לשלוח את הקמפיין לרשת.
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
@@ -991,7 +1034,7 @@ export default function AiAutomationPage() {
               }}
               className="rounded-full bg-red-600 px-6 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
             >
-              {publishing ? "Sending…" : "שלח קמפיין לרשת"}
+              {publishing ? "שולח…" : "שלח קמפיין לרשת"}
             </Button>
             <Button
               type="button"
@@ -1000,18 +1043,11 @@ export default function AiAutomationPage() {
               onClick={() => setScheduleMode(true)}
               className="rounded-full"
             >
-              Schedule release
+              תזמון שליחה
             </Button>
           </div>
-          {!hasCampaign ? (
-            <p className="text-xs text-[var(--muted-fg)]">{needCampaignHint}</p>
-          ) : !simulated ? (
-            <p className="text-xs text-[var(--muted-fg)]">
-              The red release button unlocks only after a successful simulation.
-            </p>
-          ) : null}
 
-          {scheduleMode ? (
+          {scheduleMode && simulated ? (
             <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
               <label className="text-sm font-medium">
                 Date
@@ -1055,7 +1091,7 @@ export default function AiAutomationPage() {
             </div>
           ) : null}
 
-          {(publishing || publishStep >= 0) && active ? (
+          {publishing || (publishStep >= 0 && simulated && active?.status !== "failed") ? (
             <div className="space-y-2 rounded-2xl bg-[var(--muted)]/40 p-4">
               {PUBLISH_STEPS.map((step, idx) => (
                 <div key={step} className="flex items-center gap-2 text-sm">
@@ -1068,7 +1104,7 @@ export default function AiAutomationPage() {
                   <span className={idx === publishStep ? "font-bold text-red-600" : ""}>{step}</span>
                 </div>
               ))}
-              {active.publish_log?.length ? (
+              {active?.publish_log?.length ? (
                 <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-3 text-xs">
                   {active.publish_log.map((entry, i) => (
                     <li key={`${entry.at}-${i}`} className={entry.ok ? "text-emerald-700" : "text-red-600"}>
