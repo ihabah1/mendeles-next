@@ -111,10 +111,8 @@ class MediaGenerationService:
     @staticmethod
     def _persist_instagram_url(campaign: SocialCampaign, url_public: str) -> str:
         campaign.instagram_image_url = url_public
-        if not campaign.media_url or "placehold.co" in (campaign.media_url or ""):
-            campaign.media_url = url_public
-        elif "instagram" in (campaign.platforms or []) and campaign.media_type != "video":
-            campaign.media_url = url_public
+        # Always attach the designed image as campaign media after Generate.
+        campaign.media_url = url_public
         campaign.save(update_fields=["instagram_image_url", "media_url", "updated_at"])
         return url_public
 
@@ -254,7 +252,8 @@ class MediaGenerationService:
         path.write_text(svg, encoding="utf-8")
         url_public = _public_url(f"social/{filename}")
         campaign.tiktok_video_url = url_public
-        if campaign.media_type == "video" or not campaign.media_url:
+        # Keep designed campaign image as primary media when present.
+        if not campaign.instagram_image_url and (campaign.media_type == "video" or not campaign.media_url):
             campaign.media_url = url_public
         campaign.save(update_fields=["tiktok_video_url", "media_url", "updated_at"])
         return url_public
@@ -358,7 +357,10 @@ class MediaGenerationService:
                 }
             )
             campaign.tiktok_video_url = public
-            if campaign.media_type == "video" or not campaign.media_url:
+            # Never replace a designed campaign image with TikTok output on image campaigns.
+            if campaign.media_type == "video" and not campaign.instagram_image_url:
+                campaign.media_url = public
+            elif not campaign.media_url:
                 campaign.media_url = public
 
         campaign.tiktok_videos_json = videos

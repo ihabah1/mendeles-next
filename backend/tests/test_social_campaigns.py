@@ -230,22 +230,21 @@ def test_bootstrap_creatives_on_generate(tenant, owner_user, settings, tmp_path,
 
     def fake_ig(c):
         c.instagram_image_url = "http://backend.test/media/social/ig.svg"
-        c.save(update_fields=["instagram_image_url", "updated_at"])
+        c.media_url = c.instagram_image_url
+        c.save(update_fields=["instagram_image_url", "media_url", "updated_at"])
         return c.instagram_image_url
 
-    def fake_tt(c, *, count=5):
+    def fake_tt(c):
         c.tiktok_video_url = "http://backend.test/media/social/tt.svg"
-        c.tiktok_videos_json = [{"url": c.tiktok_video_url, "provider": "local", "variation": i + 1} for i in range(count)]
-        c.save(update_fields=["tiktok_video_url", "tiktok_videos_json", "updated_at"])
-        return {"ok": True, "count": count}
+        c.save(update_fields=["tiktok_video_url", "updated_at"])
+        return c.tiktok_video_url
 
     monkeypatch.setattr(MediaGenerationService, "create_instagram_image", staticmethod(fake_ig))
-    monkeypatch.setattr(MediaGenerationService, "generate_ai_tiktok_videos", classmethod(lambda cls, c, *, count=5: fake_tt(c, count=count)))
+    monkeypatch.setattr(MediaGenerationService, "create_tiktok_creative", staticmethod(fake_tt))
 
     result = CampaignService.bootstrap_creatives(campaign, tiktok_count=3)
     assert result.instagram_image_url.endswith("ig.svg")
     assert result.tiktok_video_url.endswith("tt.svg")
-    assert len(result.tiktok_videos_json) == 3
     assert result.media_url == result.instagram_image_url
 
 

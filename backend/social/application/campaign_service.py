@@ -79,47 +79,40 @@ class CampaignService:
         campaign.last_error = ""
         campaign.simulated_at = None
         campaign.simulation_log = []
-        campaign.media_url = campaign.media_url or _placeholder_media_url(
-            campaign.media_prompt, campaign.media_type
-        )
+        # Leave media empty — bootstrap_creatives creates the designed image next.
+        campaign.media_url = ""
         campaign.save()
         return campaign
 
     @staticmethod
     def bootstrap_creatives(campaign: SocialCampaign, *, tiktok_count: int = 5) -> SocialCampaign:
-        """Create Instagram + TikTok creatives immediately after text generation."""
+        """Create campaign image on Generate; TikTok gets a fast preview creative (AI videos via separate action)."""
         from social.application.media_service import MediaGenerationService
 
         platforms = campaign.platforms or []
         errors: list[str] = []
 
-        # Always create an attractive campaign image on Generate.
+        # Required: designed / AI campaign image every Generate click.
         try:
             MediaGenerationService.create_instagram_image(campaign)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"image: {exc}")
 
         if "tiktok" in platforms:
+            # Keep Generate fast — full AI video batch is the separate "Generate AI TikTok" button.
             try:
-                MediaGenerationService.generate_ai_tiktok_videos(
-                    campaign,
-                    count=max(1, min(int(tiktok_count or 5), 20)),
-                )
+                MediaGenerationService.create_tiktok_creative(campaign)
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"tiktok: {exc}")
-                try:
-                    MediaGenerationService.create_tiktok_creative(campaign)
-                except Exception as fallback_exc:  # noqa: BLE001
-                    errors.append(f"tiktok_fallback: {fallback_exc}")
 
         campaign.refresh_from_db()
-        if campaign.instagram_image_url and (
-            not campaign.media_url or "placehold.co" in (campaign.media_url or "")
-        ):
-            campaign.media_url = campaign.instagram_image_url
-            campaign.save(update_fields=["media_url", "updated_at"])
-        if errors and not (campaign.instagram_image_url or campaign.tiktok_video_url):
-            campaign.last_error = "Creative bootstrap partial: " + " | ".join(errors)
+        # Prefer the designed image as the campaign media shown after Generate.
+        if campaign.instagram_image_url:
+            if campaign.media_type != "video" or not campaign.media_url or "placehold.co" in (campaign.media_url or ""):
+                campaign.media_url = campaign.instagram_image_url
+                campaign.save(update_fields=["media_url", "updated_at"])
+        if errors and not campaign.instagram_image_url:
+            campaign.last_error = "Creative bootstrap failed: " + " | ".join(errors)
             campaign.save(update_fields=["last_error", "updated_at"])
         return campaign
 

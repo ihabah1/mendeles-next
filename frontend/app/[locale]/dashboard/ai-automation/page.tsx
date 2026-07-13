@@ -43,8 +43,8 @@ const GEN_STEPS = [
   "Generating AI...",
   "Crafting captions...",
   "Building hashtags & CTA...",
-  "Creating attractive AI image...",
-  "Generating TikTok videos...",
+  "Creating attractive campaign image...",
+  "Finishing creatives...",
 ];
 
 const PUBLISH_STEPS = [
@@ -531,6 +531,20 @@ export default function AiAutomationPage() {
       {/* Previews + edit — only when a campaign exists */}
       {hasCampaign && active ? (
         <>
+          {(active.instagram_image_url || active.media_url) && !String(active.media_url || "").includes("placehold.co") ? (
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold">Campaign image</h2>
+              <Card className="overflow-hidden !rounded-2xl !p-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={active.instagram_image_url || active.media_url}
+                  alt={active.title || "Campaign creative"}
+                  className="mx-auto max-h-[520px] w-full max-w-xl object-contain bg-[#0F172A]"
+                />
+              </Card>
+            </section>
+          ) : null}
+
           <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -618,8 +632,7 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Creatives are built automatically on Generate (AI campaign image + TikTok videos).
-            You can regenerate Instagram / TikTok here anytime.
+            Creatives: Generate always builds the campaign image. Use the buttons below for more Instagram regenerations or AI TikTok videos.
             AI video failover: Runway → Veo 3.1 → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
