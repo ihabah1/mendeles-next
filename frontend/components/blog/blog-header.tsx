@@ -63,7 +63,7 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
           >
             {copy.newsletter}
           </Link>
-          <MarketingLocaleSwitcher className="rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-[#6F42F5]/30 hover:text-[#6F42F5]" />
+          <MarketingLocaleSwitcher className="[&_button]:border-slate-200 [&_button]:bg-white [&_button]:text-slate-700 [&_button]:hover:border-[#6F42F5]/40 [&_button]:hover:text-[#6F42F5]" />
         </div>
       </div>
     </header>
