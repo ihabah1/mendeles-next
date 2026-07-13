@@ -57,23 +57,27 @@ def _wrap_text(text: str, width: int = 28) -> list[str]:
 
 
 def _campaign_image_prompt(campaign: SocialCampaign) -> str:
-    title = campaign.title or campaign.main_idea or "Mendeles growth campaign"
-    idea = campaign.main_idea or campaign.goal or ""
-    cta = campaign.cta or "Learn more"
-    url = (campaign.website_url or "https://mendeles.com").strip()
+    title = campaign.title or campaign.main_idea or "Grow leads on autopilot"
+    idea = campaign.main_idea or campaign.goal or "AI campaigns for Instagram, LinkedIn & TikTok"
+    cta = campaign.cta or "Start free"
+    url = (campaign.website_url or "https://mendeles.com").strip().replace("https://", "").replace("http://", "")
     media_prompt = (campaign.media_prompt or "").strip()
     base = media_prompt or (
-        f"Premium social ad creative for Mendeles AI growth platform. "
-        f"Campaign: {title}. Idea: {idea}. CTA: {cta}."
+        "Premium Mendeles AI growth campaign ad. Dark cinematic desk scene with a glowing laptop "
+        "showing an analytics overview dashboard (leads, campaigns, conversion), violet neon geometry, "
+        "coffee cup, notebook — polished SaaS product photography."
     )
     return (
         f"{base}\n\n"
-        "Create one square 1:1 Instagram marketing image, photorealistic-cinematic polish, "
-        "high contrast, modern SaaS / AI product vibe, deep violet (#6F42F5) and slate accents, "
-        "subtle glow, clean composition with room for headline energy. "
-        f"Brand wordmark feel: Mendeles. Website vibe: {url}. "
-        "No logos of other brands, no watermarks, no UI chrome, no tiny unreadable text, "
-        "no purple-on-white generic template look. Attractive, scroll-stopping, ad-ready."
+        "Create one finished square 1:1 Instagram marketing creative.\n"
+        "Must include readable on-image copy:\n"
+        f"- Top brand wordmark: MENDELES\n"
+        f"- Large headline: {title}\n"
+        f"- Supporting line: {idea}\n"
+        f"- White rounded CTA pill: {cta}\n"
+        f"- Footer website: {url}\n"
+        "Look: dark premium SaaS, violet #6F42F5 accents, soft neon glow frame, high contrast, ad-ready.\n"
+        "Forbidden: watermarks, other logos, purple-on-white templates, tiny illegible text, stickers, collage grids."
     )
 
 
@@ -116,68 +120,88 @@ class MediaGenerationService:
 
     @classmethod
     def _create_instagram_svg(cls, campaign: SocialCampaign) -> str:
-        """Attractive designed SVG fallback when Gemini image is unavailable."""
-        title = (campaign.title or campaign.main_idea or "Mendeles")[:120]
+        """Premium designed square creative when Gemini image is unavailable."""
+        title = (campaign.title or campaign.main_idea or "Grow leads on autopilot")[:110]
         url = (campaign.website_url or "https://mendeles.com").strip()
-        cta = (campaign.cta or "Learn more")[:80]
-        subtitle = (campaign.main_idea or campaign.goal or "")[:140]
-        title_lines = _wrap_text(title, 24)
-        sub_lines = _wrap_text(subtitle, 36)[:2]
+        url_display = url.replace("https://", "").replace("http://", "").rstrip("/")
+        cta = (campaign.cta or "Start free")[:72]
+        subtitle = (campaign.main_idea or campaign.goal or "AI campaigns for Instagram, LinkedIn & TikTok")[:150]
+        title_lines = _wrap_text(title, 22)
+        sub_lines = _wrap_text(subtitle, 34)[:2]
+
+        # Vertically balance headline block around center.
+        block_h = len(title_lines) * 70 + len(sub_lines) * 38 + 24
+        y = max(360, int(470 - block_h / 2))
 
         text_svg = ""
-        y = 420
         for line in title_lines:
             text_svg += (
                 f'<text x="540" y="{y}" text-anchor="middle" '
-                f'font-family="Georgia, \'Times New Roman\', serif" font-size="54" font-weight="700" fill="#ffffff">'
+                f'font-family="Georgia, \'Times New Roman\', serif" font-size="58" font-weight="700" fill="#FFFFFF">'
                 f"{escape(line)}</text>"
             )
-            y += 66
+            y += 70
 
         sub_svg = ""
-        sy = y + 28
+        sy = y + 18
         for line in sub_lines:
             sub_svg += (
                 f'<text x="540" y="{sy}" text-anchor="middle" '
-                f'font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#C4B5FD">'
+                f'font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#DDD6FE">'
                 f"{escape(line)}</text>"
             )
-            sy += 36
+            sy += 38
 
         svg = f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1E1B4B"/>
-      <stop offset="40%" stop-color="#5B21B6"/>
-      <stop offset="75%" stop-color="#6F42F5"/>
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#0B1026"/>
+      <stop offset="35%" stop-color="#2E1065"/>
+      <stop offset="68%" stop-color="#6F42F5"/>
       <stop offset="100%" stop-color="#0F172A"/>
     </linearGradient>
-    <radialGradient id="glow" cx="30%" cy="25%" r="55%">
-      <stop offset="0%" stop-color="#A78BFA" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#A78BFA" stop-opacity="0"/>
+    <radialGradient id="glowA" cx="22%" cy="18%" r="48%">
+      <stop offset="0%" stop-color="#C4B5FD" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#C4B5FD" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#F8FAFC"/>
-      <stop offset="100%" stop-color="#E9D5FF"/>
+    <radialGradient id="glowB" cx="82%" cy="78%" r="42%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F5F3FF"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
   <rect width="1080" height="1080" fill="url(#bg)"/>
-  <rect width="1080" height="1080" fill="url(#glow)"/>
-  <circle cx="920" cy="140" r="160" fill="#ffffff" fill-opacity="0.07"/>
-  <circle cx="120" cy="980" r="220" fill="#22D3EE" fill-opacity="0.08"/>
-  <rect x="72" y="72" width="936" height="936" rx="48" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="2"/>
-  <text x="540" y="200" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
-        font-size="28" font-weight="700" fill="#DDD6FE" letter-spacing="8">MENDELES</text>
-  <text x="540" y="250" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
-        font-size="22" fill="#A5B4FC" letter-spacing="3">AI GROWTH CAMPAIGN</text>
+  <rect width="1080" height="1080" fill="url(#glowA)"/>
+  <rect width="1080" height="1080" fill="url(#glowB)"/>
+  <polygon points="540,-40 1180,420 980,520 540,140" fill="url(#ray)" opacity="0.9"/>
+  <polygon points="-80,200 520,780 360,860 -80,360" fill="url(#ray)" opacity="0.45"/>
+  <circle cx="900" cy="160" r="150" fill="#ffffff" fill-opacity="0.06"/>
+  <circle cx="160" cy="940" r="210" fill="#A78BFA" fill-opacity="0.12" filter="url(#soft)"/>
+  <rect x="64" y="64" width="952" height="952" rx="56" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="2"/>
+  <rect x="88" y="88" width="904" height="904" rx="44" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="1"/>
+  <text x="540" y="188" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="34" font-weight="800" fill="#F8FAFC" letter-spacing="10">MENDELES</text>
+  <text x="540" y="236" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="20" font-weight="600" fill="#C4B5FD" letter-spacing="5">AI GROWTH CAMPAIGN</text>
+  <line x1="430" y1="268" x2="650" y2="268" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="2"/>
   {text_svg}
   {sub_svg}
-  <rect x="220" y="800" width="640" height="92" rx="46" fill="url(#bar)"/>
-  <text x="540" y="858" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
-        font-size="30" font-weight="700" fill="#4C1D95">{escape(cta)}</text>
+  <rect x="250" y="820" width="580" height="96" rx="48" fill="url(#cta)"/>
+  <text x="540" y="880" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="32" font-weight="800" fill="#4C1D95">{escape(cta)}</text>
   <text x="540" y="960" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
-        font-size="24" fill="#E2E8F0">{escape(url)}</text>
+        font-size="24" fill="#E2E8F0">{escape(url_display)}</text>
 </svg>
 """
         filename = f"{campaign.id}-instagram.svg"
