@@ -43,7 +43,8 @@ const GEN_STEPS = [
   "Generating AI...",
   "Crafting captions...",
   "Building hashtags & CTA...",
-  "Preparing media prompts...",
+  "Creating Instagram image...",
+  "Generating TikTok videos...",
 ];
 
 const PUBLISH_STEPS = [
@@ -126,6 +127,7 @@ export default function AiAutomationPage() {
         website_url: websiteUrl,
         media_type: mediaType,
         platforms,
+        tiktok_video_count: platforms.includes("tiktok") ? tiktokCount : undefined,
       }),
     onMutate: () => {
       setError("");
@@ -492,6 +494,20 @@ export default function AiAutomationPage() {
             </div>
           </div>
 
+          {platforms.includes("tiktok") ? (
+            <label className="block text-sm font-medium">
+              TikTok videos to create on Generate
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={tiktokCount}
+                onChange={(e) => setTiktokCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+                className="mt-1 w-28 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+              />
+            </label>
+          ) : null}
+
           <Button
             type="button"
             disabled={!canCreate || !goal.trim() || platforms.length === 0 || generate.isPending}
@@ -602,8 +618,8 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Instagram image + many Mendeles TikTok videos. AI video uses provider failover:
-            Runway → Fal → Veo → LTX → Kling → local.
+            Creatives are built automatically on Generate. You can regenerate Instagram / TikTok here anytime.
+            AI video failover: Runway → Fal → Veo → LTX → Kling → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
 

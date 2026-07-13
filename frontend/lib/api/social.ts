@@ -59,6 +59,7 @@ export type GenerateCampaignInput = {
   website_url: string;
   media_type: "image" | "video";
   platforms: SocialPlatform[];
+  tiktok_video_count?: number;
 };
 
 export type PublishInput = {

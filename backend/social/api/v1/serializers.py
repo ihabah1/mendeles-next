@@ -19,6 +19,7 @@ class GenerateCampaignSerializer(serializers.Serializer):
         child=serializers.ChoiceField(choices=[(p, p) for p in SUPPORTED_PLATFORMS]),
         allow_empty=False,
     )
+    tiktok_video_count = serializers.IntegerField(required=False, min_value=1, max_value=20, default=5)
 
 
 class UpdateCampaignSerializer(serializers.Serializer):

@@ -100,6 +100,10 @@ class CampaignListCreateView(APIView):
         try:
             generated = CampaignGenerationService.generate(data)
             CampaignService.apply_generation(campaign, generated)
+            CampaignService.bootstrap_creatives(
+                campaign,
+                tiktok_count=int(data.get("tiktok_video_count") or 5),
+            )
         except Exception as exc:
             campaign.status = CampaignStatus.FAILED
             campaign.last_error = str(exc)

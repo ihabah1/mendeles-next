@@ -207,3 +207,43 @@ def test_tiktok_simulation_auto_creates_creative(tenant, owner_user, settings, t
     assert result["status"] == CampaignStatus.SIMULATED
     assert result["tiktok_video_url"]
     assert any(s["step"] == "TikTok video" and s["ok"] for s in result["simulation_log"])
+
+
+def test_bootstrap_creatives_on_generate(tenant, owner_user, settings, tmp_path, monkeypatch):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    from social.application.campaign_service import CampaignService
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Bootstrap",
+        goal="Demos",
+        website_url="https://mendeles.com",
+        platforms=["instagram", "tiktok"],
+        media_url="https://placehold.co/1080x1080",
+        status=CampaignStatus.READY,
+    )
+
+    def fake_ig(c):
+        c.instagram_image_url = "http://backend.test/media/social/ig.svg"
+        c.save(update_fields=["instagram_image_url", "updated_at"])
+        return c.instagram_image_url
+
+    def fake_tt(c, *, count=5):
+        c.tiktok_video_url = "http://backend.test/media/social/tt.svg"
+        c.tiktok_videos_json = [{"url": c.tiktok_video_url, "provider": "local", "variation": i + 1} for i in range(count)]
+        c.save(update_fields=["tiktok_video_url", "tiktok_videos_json", "updated_at"])
+        return {"ok": True, "count": count}
+
+    monkeypatch.setattr(MediaGenerationService, "create_instagram_image", staticmethod(fake_ig))
+    monkeypatch.setattr(MediaGenerationService, "generate_ai_tiktok_videos", classmethod(lambda cls, c, *, count=5: fake_tt(c, count=count)))
+
+    result = CampaignService.bootstrap_creatives(campaign, tiktok_count=3)
+    assert result.instagram_image_url.endswith("ig.svg")
+    assert result.tiktok_video_url.endswith("tt.svg")
+    assert len(result.tiktok_videos_json) == 3
+    assert result.media_url == result.instagram_image_url

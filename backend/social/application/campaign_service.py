@@ -86,6 +86,44 @@ class CampaignService:
         return campaign
 
     @staticmethod
+    def bootstrap_creatives(campaign: SocialCampaign, *, tiktok_count: int = 5) -> SocialCampaign:
+        """Create Instagram + TikTok creatives immediately after text generation."""
+        from social.application.media_service import MediaGenerationService
+
+        platforms = campaign.platforms or []
+        errors: list[str] = []
+
+        if "instagram" in platforms or "linkedin" in platforms:
+            try:
+                MediaGenerationService.create_instagram_image(campaign)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"instagram: {exc}")
+
+        if "tiktok" in platforms:
+            try:
+                MediaGenerationService.generate_ai_tiktok_videos(
+                    campaign,
+                    count=max(1, min(int(tiktok_count or 5), 20)),
+                )
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"tiktok: {exc}")
+                try:
+                    MediaGenerationService.create_tiktok_creative(campaign)
+                except Exception as fallback_exc:  # noqa: BLE001
+                    errors.append(f"tiktok_fallback: {fallback_exc}")
+
+        campaign.refresh_from_db()
+        if campaign.instagram_image_url and (
+            not campaign.media_url or "placehold.co" in (campaign.media_url or "")
+        ):
+            campaign.media_url = campaign.instagram_image_url
+            campaign.save(update_fields=["media_url", "updated_at"])
+        if errors and not (campaign.instagram_image_url or campaign.tiktok_video_url):
+            campaign.last_error = "Creative bootstrap partial: " + " | ".join(errors)
+            campaign.save(update_fields=["last_error", "updated_at"])
+        return campaign
+
+    @staticmethod
     def update_fields(campaign: SocialCampaign, data: dict[str, Any]) -> SocialCampaign:
         mapping = {
             "title": "title",
