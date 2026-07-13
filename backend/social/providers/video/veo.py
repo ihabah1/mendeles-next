@@ -1,4 +1,4 @@
-"""Google Veo video provider (Gemini / Vertex style)."""
+"""Google Veo video provider (requires dedicated VEO_API_KEY for live generation)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,8 @@ class VeoVideoProvider(VideoProvider):
         return "veo"
 
     def is_configured(self) -> bool:
-        return bool(getattr(settings, "VEO_API_KEY", "") or getattr(settings, "GEMINI_API_KEY", ""))
+        # Do not treat GEMINI_API_KEY as Veo — that caused fake "success" with no video file.
+        return bool(getattr(settings, "VEO_API_KEY", ""))
 
     def cost_per_video(self) -> int:
         return int(getattr(settings, "VIDEO_VEO_CREDIT_COST", 1) or 1)
@@ -30,33 +31,18 @@ class VeoVideoProvider(VideoProvider):
         default_i = int(default) if default not in (None, "") else None
         return get_ledger_credits(self.name, default_i)
 
-    def _api_key(self) -> str:
-        return getattr(settings, "VEO_API_KEY", "") or getattr(settings, "GEMINI_API_KEY", "")
-
     def generate(self, request: VideoGenerationRequest) -> VideoGenerationResult:
-        api_key = self._api_key()
+        api_key = getattr(settings, "VEO_API_KEY", "")
         if not api_key:
-            raise VideoProviderNotConfigured("VEO_API_KEY / GEMINI_API_KEY is not set")
+            raise VideoProviderNotConfigured("VEO_API_KEY is not set")
 
         remaining = self.credits_remaining()
         cost = self.cost_per_video()
         if remaining is not None and remaining < cost:
             raise VideoCreditsExhausted(f"Veo credits exhausted ({remaining})")
 
-        if getattr(settings, "VIDEO_PROVIDERS_MOCK", False) or not getattr(settings, "VEO_API_KEY", ""):
-            # Until Veo long-running predict is fully wired, mock/ledger path keeps failover working.
-            if remaining is not None:
-                consume_ledger_credits(self.name, cost)
-            return VideoGenerationResult(
-                ok=True,
-                provider=self.name,
-                credits_used=cost,
-                metadata={
-                    "mock": True,
-                    "note": "Veo adapter ready — set VEO_API_KEY and disable VIDEO_PROVIDERS_MOCK for live calls",
-                    "prompt": request.prompt[:200],
-                },
-            )
+        if getattr(settings, "VIDEO_PROVIDERS_MOCK", False):
+            raise VideoProviderNotConfigured("Veo mock disabled — use a real video provider or local fallback")
 
         model = getattr(settings, "VEO_MODEL", "veo-2.0-generate-001")
         url = (
@@ -81,14 +67,23 @@ class VeoVideoProvider(VideoProvider):
                 raise VideoCreditsExhausted(str(exc)) from exc
             raise
 
+        # Long-running ops need polling + download; until fully wired, fail over instead of empty "success".
         op = created.get("name") or created.get("operation") or ""
+        video_url = ""
+        if isinstance(created.get("response"), dict):
+            video_url = created["response"].get("video_url") or ""
+        if not video_url:
+            raise RuntimeError(
+                f"Veo started operation {op or 'unknown'} but no downloadable video URL yet — failing over"
+            )
+
         if remaining is not None:
             consume_ledger_credits(self.name, cost)
         return VideoGenerationResult(
             ok=True,
             provider=self.name,
+            remote_url=video_url,
             external_id=op,
             credits_used=cost,
             metadata={"operation": created},
-            remote_url="",
         )

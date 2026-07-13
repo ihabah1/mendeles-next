@@ -9,7 +9,6 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 from django.conf import settings
-from seo.application.site_url import resolve_site_url
 
 from social.infrastructure.models import SocialCampaign
 
@@ -21,12 +20,18 @@ def _media_dir() -> Path:
 
 
 def _public_url(relative: str) -> str:
-    base = resolve_site_url(getattr(settings, "SITE_URL", "") or getattr(settings, "FRONTEND_URL", "")).rstrip("/")
-    # Prefer backend public URL when available for Buffer asset fetch.
-    backend = (getattr(settings, "BACKEND_PUBLIC_URL", "") or "").rstrip("/")
-    origin = backend or base
+    """
+    Public media URL for creatives.
+    Prefer BACKEND_PUBLIC_URL. Never point /media at the Next.js frontend host —
+    that causes 404 on mendeles.com/media/...
+    If backend public URL is missing, return a site-relative /media path (proxied by Next).
+    """
     media = settings.MEDIA_URL.rstrip("/")
-    return f"{origin}{media}/{relative.lstrip('/')}"
+    path = f"{media}/{relative.lstrip('/')}"
+    backend = (getattr(settings, "BACKEND_PUBLIC_URL", "") or "").rstrip("/")
+    if backend:
+        return f"{backend}{path}"
+    return path
 
 
 def _wrap_text(text: str, width: int = 28) -> list[str]:
@@ -231,8 +236,11 @@ class MediaGenerationService:
             elif generation.remote_url:
                 public = generation.remote_url
             else:
-                public = cls.create_tiktok_creative(campaign)
-                entry["provider"] = generation.provider or "local"
+                # Empty "success" from a vendor is not a video — fail this attempt.
+                entry["ok"] = False
+                entry["error"] = "Provider returned no video bytes or URL"
+                results.append(entry)
+                continue
 
             entry["url"] = public
             results.append(entry)
