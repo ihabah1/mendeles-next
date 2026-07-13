@@ -10,6 +10,7 @@ import { NetSalaryTool } from "@/components/tools/net-salary-tool";
 import { PasswordCheckerTool } from "@/components/tools/password-checker-tool";
 import { PdfCreatorTool } from "@/components/tools/pdf-creator-tool";
 import { PdfEditorTool } from "@/components/tools/pdf-editor-tool";
+import { PdfSignTool } from "@/components/tools/pdf-sign-tool";
 import { LogoCreatorTool } from "@/components/tools/logo-creator-tool";
 import { PdfViewerTool } from "@/components/tools/pdf-viewer-tool";
 import { QrCodeTool } from "@/components/tools/qr-code-tool";
@@ -38,6 +39,8 @@ export function ToolRenderer({ slug, locale }: { slug: ToolSlug; locale: string 
       return <PdfCreatorTool locale={locale} />;
     case "pdf-editor":
       return <PdfEditorTool locale={locale} />;
+    case "pdf-sign":
+      return <PdfSignTool locale={locale} />;
     case "logo-creator":
       return <LogoCreatorTool locale={locale} />;
     case "ai-writer":

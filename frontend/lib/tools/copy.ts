@@ -121,6 +121,11 @@ const HE: ToolsCopy = {
       short: "עריכת PDF — טקסט, עמוד שער ומחיקה",
       description: "העלו PDF, הוסיפו כותרת/הערות, מחקו עמודים והורידו גרסה מעודכנת — הכול במכשיר שלכם.",
     },
+    "pdf-sign": {
+      title: "Sign on PDF",
+      short: "חתימה על PDF — ציור או שם",
+      description: "העלו PDF, ציירו חתימה או הקלידו שם, בחרו מיקום והורידו קובץ חתום — הכול במכשיר.",
+    },
     "logo-creator": {
       title: "Logo Creator",
       short: "יצירת לוגו מהיר לעסק",
@@ -224,6 +229,11 @@ const EN: ToolsCopy = {
       short: "Edit PDF — text, cover, delete pages",
       description: "Upload a PDF, add a title/notes, remove pages, and download an updated file — all on your device.",
     },
+    "pdf-sign": {
+      title: "Sign on PDF",
+      short: "Sign a PDF — draw or type",
+      description: "Upload a PDF, draw a signature or type a name, choose placement, and download — all on your device.",
+    },
     "logo-creator": {
       title: "Logo Creator",
       short: "Quick business logo maker",
@@ -326,6 +336,11 @@ const AR: ToolsCopy = {
       title: "محرر PDF",
       short: "تعديل PDF — نص وغطاء وحذف صفحات",
       description: "ارفع PDF، أضف عنواناً/ملاحظات، احذف صفحات ونزّل نسخة محدّثة — كل ذلك على جهازك.",
+    },
+    "pdf-sign": {
+      title: "توقيع PDF",
+      short: "توقيع على PDF — رسم أو اسم",
+      description: "ارفع PDF، ارسم توقيعاً أو اكتب اسماً، اختر الموضع ونزّل الملف الموقّع — كل شيء على جهازك.",
     },
     "logo-creator": {
       title: "منشئ الشعارات",
