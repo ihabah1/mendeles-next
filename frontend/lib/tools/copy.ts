@@ -26,6 +26,10 @@ type ToolsCopy = {
   uploadLogo: string;
   createPdf: string;
   fixText: string;
+  designText: string;
+  designHeading: string;
+  designParagraphs: string;
+  designNumberSections: string;
   documentNature: string;
   documentNatureHint: string;
   documentText: string;
@@ -53,7 +57,11 @@ const HE: ToolsCopy = {
   choosePdf: "בחרו PDF",
   uploadLogo: "טעינת לוגו",
   createPdf: "יצירת PDF",
-  fixText: "תקן טקסט",
+  fixText: "מתקן טקסט",
+  designText: "Design text",
+  designHeading: "מדגיש כותרת",
+  designParagraphs: "פסקאות",
+  designNumberSections: "מספר סעיפים",
   documentNature: "אופי המסמך",
   documentNatureHint: "אופציונלי — למשל הצעת מחיר, מכתב, אישור",
   documentText: "טקסט המסמך",
@@ -107,6 +115,16 @@ const HE: ToolsCopy = {
       short: "מסמך עם לוגו וטקסט",
       description: "הכינו מסמך עם לוגו, טקסט ושדה אופי אופציונלי — והורידו PDF מיד.",
     },
+    "pdf-editor": {
+      title: "PDF Editor",
+      short: "עריכת PDF — טקסט, עמוד שער ומחיקה",
+      description: "העלו PDF, הוסיפו כותרת/הערות, מחקו עמודים והורידו גרסה מעודכנת — הכול במכשיר שלכם.",
+    },
+    "logo-creator": {
+      title: "Logo Creator",
+      short: "יצירת לוגו מהיר לעסק",
+      description: "צרו לוגו פשוט עם שם, צבעים וסגנון — והורידו PNG מיד.",
+    },
     "ai-writer": {
       title: "AI לכתיבת טקסטים",
       short: "כותרות, פוסטים, מיילים ותיאורי מוצר",
@@ -143,6 +161,10 @@ const EN: ToolsCopy = {
   uploadLogo: "Upload logo",
   createPdf: "Create PDF",
   fixText: "Fix text",
+  designText: "Design text",
+  designHeading: "Emphasize heading",
+  designParagraphs: "Paragraphs",
+  designNumberSections: "Number sections",
   documentNature: "Document type",
   documentNatureHint: "Optional — e.g. quote, letter, certificate",
   documentText: "Document text",
@@ -196,6 +218,16 @@ const EN: ToolsCopy = {
       short: "Document with logo and text",
       description: "Build a document with a logo, text, and an optional document type — then download a PDF instantly.",
     },
+    "pdf-editor": {
+      title: "PDF Editor",
+      short: "Edit PDF — text, cover, delete pages",
+      description: "Upload a PDF, add a title/notes, remove pages, and download an updated file — all on your device.",
+    },
+    "logo-creator": {
+      title: "Logo Creator",
+      short: "Quick business logo maker",
+      description: "Create a simple logo with name, colors, and style — then download a PNG instantly.",
+    },
     "ai-writer": {
       title: "AI text writer",
       short: "Headlines, posts, emails, product copy",
@@ -232,6 +264,10 @@ const AR: ToolsCopy = {
   uploadLogo: "رفع شعار",
   createPdf: "إنشاء PDF",
   fixText: "تصحيح النص",
+  designText: "Design text",
+  designHeading: "إبراز العنوان",
+  designParagraphs: "فقرات",
+  designNumberSections: "ترقيم البنود",
   documentNature: "طبيعة المستند",
   documentNatureHint: "اختياري — مثل عرض سعر، رسالة، إقرار",
   documentText: "نص المستند",
@@ -284,6 +320,16 @@ const AR: ToolsCopy = {
       title: "منشئ PDF",
       short: "مستند بشعار ونص",
       description: "أنشئ مستنداً بشعار ونص ونوع اختياري — ثم نزّل PDF فوراً.",
+    },
+    "pdf-editor": {
+      title: "محرر PDF",
+      short: "تعديل PDF — نص وغطاء وحذف صفحات",
+      description: "ارفع PDF، أضف عنواناً/ملاحظات، احذف صفحات ونزّل نسخة محدّثة — كل ذلك على جهازك.",
+    },
+    "logo-creator": {
+      title: "منشئ الشعارات",
+      short: "شعار سريع للأعمال",
+      description: "أنشئ شعاراً بسيطاً بالاسم والألوان والأسلوب — ثم نزّل PNG فوراً.",
     },
     "ai-writer": {
       title: "كاتب نصوص بالذكاء الاصطناعي",

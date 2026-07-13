@@ -175,6 +175,39 @@ function fixDocumentText(raw: string, locale: string): string {
     .trim();
 }
 
+function emphasizeHeading(raw: string): { nature: string; body: string } {
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const firstIdx = lines.findIndex((l) => l.trim());
+  if (firstIdx < 0) return { nature: "", body: "" };
+  const heading = lines[firstIdx].trim().replace(/^#+\s*/, "");
+  const rest = [...lines.slice(0, firstIdx), ...lines.slice(firstIdx + 1)].join("\n").trim();
+  return { nature: heading.slice(0, 120), body: rest };
+}
+
+function formatParagraphs(raw: string): string {
+  let text = fixDocumentText(raw, "he");
+  // Break dense blocks into paragraphs at sentence ends when there are no blank lines.
+  if (!/\n\s*\n/.test(text)) {
+    text = text.replace(/([.!?…])\s+(?=\S)/g, "$1\n\n");
+  }
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function numberSections(raw: string): string {
+  const parts = raw
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!parts.length) return raw.trim();
+  return parts
+    .map((p, i) => {
+      const cleaned = p.replace(/^\d+[\.\-\):\s]+/, "").trim();
+      return `${i + 1}. ${cleaned}`;
+    })
+    .join("\n\n");
+}
+
 export function PdfCreatorTool({ locale }: { locale: string }) {
   const copy = toolsCopy(locale);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -186,6 +219,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fixedNote, setFixedNote] = useState(false);
+  const [designOpen, setDesignOpen] = useState(false);
 
   function onLogo(file: File | null) {
     if (!file) return;
@@ -198,17 +232,38 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
     reader.readAsDataURL(file);
   }
 
-  function fixText() {
-    if (!body.trim()) {
-      setError(locale === "en" ? "Add text to fix first." : "הוסיפו קודם טקסט לתיקון.");
-      return;
-    }
-    const next = fixDocumentText(body, locale);
-    setBody(next);
+  function markUpdated() {
     setPdfUrl(null);
     setError("");
     setFixedNote(true);
+    setDesignOpen(false);
     window.setTimeout(() => setFixedNote(false), 2000);
+  }
+
+  function applyDesign(action: "heading" | "fix" | "paragraphs" | "number") {
+    if (!body.trim() && action !== "heading") {
+      setError(locale === "en" ? "Add text to design first." : "הוסיפו קודם טקסט לעיצוב.");
+      return;
+    }
+    if (action === "heading") {
+      const next = emphasizeHeading(body || nature);
+      if (next.nature) setNature(next.nature);
+      setBody(next.body);
+      markUpdated();
+      return;
+    }
+    if (action === "fix") {
+      setBody(fixDocumentText(body, locale));
+      markUpdated();
+      return;
+    }
+    if (action === "paragraphs") {
+      setBody(formatParagraphs(body));
+      markUpdated();
+      return;
+    }
+    setBody(numberSections(body));
+    markUpdated();
   }
 
   async function create() {
@@ -291,14 +346,37 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={!body.trim()}
-          onClick={fixText}
-          className="inline-flex rounded-full border border-[#6F42F5] bg-white px-5 py-2.5 text-sm font-bold text-[#6F42F5] disabled:opacity-50"
-        >
-          {copy.fixText}
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            disabled={!body.trim()}
+            onClick={() => setDesignOpen((v) => !v)}
+            className="inline-flex rounded-full border border-[#6F42F5] bg-white px-5 py-2.5 text-sm font-bold text-[#6F42F5] disabled:opacity-50"
+          >
+            {copy.designText}
+          </button>
+          {designOpen ? (
+            <div className="absolute z-20 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+              {(
+                [
+                  ["heading", copy.designHeading],
+                  ["fix", copy.fixText],
+                  ["paragraphs", copy.designParagraphs],
+                  ["number", copy.designNumberSections],
+                ] as const
+              ).map(([action, label]) => (
+                <button
+                  key={action}
+                  type="button"
+                  className="block w-full rounded-xl px-3 py-2 text-start text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  onClick={() => applyDesign(action)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           disabled={busy}

@@ -9,6 +9,8 @@ import { MortgageTool } from "@/components/tools/mortgage-tool";
 import { NetSalaryTool } from "@/components/tools/net-salary-tool";
 import { PasswordCheckerTool } from "@/components/tools/password-checker-tool";
 import { PdfCreatorTool } from "@/components/tools/pdf-creator-tool";
+import { PdfEditorTool } from "@/components/tools/pdf-editor-tool";
+import { LogoCreatorTool } from "@/components/tools/logo-creator-tool";
 import { PdfViewerTool } from "@/components/tools/pdf-viewer-tool";
 import { QrCodeTool } from "@/components/tools/qr-code-tool";
 import { SpeedTestTool } from "@/components/tools/speed-test-tool";
@@ -34,6 +36,10 @@ export function ToolRenderer({ slug, locale }: { slug: ToolSlug; locale: string 
       return <PdfViewerTool locale={locale} />;
     case "pdf-creator":
       return <PdfCreatorTool locale={locale} />;
+    case "pdf-editor":
+      return <PdfEditorTool locale={locale} />;
+    case "logo-creator":
+      return <LogoCreatorTool locale={locale} />;
     case "ai-writer":
       return <AiWriterTool locale={locale} />;
     case "bmi-calories":
