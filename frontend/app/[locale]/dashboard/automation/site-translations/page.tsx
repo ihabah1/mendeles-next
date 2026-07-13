@@ -69,7 +69,7 @@ export default function SiteTranslationsPage() {
   });
 
   const create = useMutation({
-    mutationFn: (forceNew = false) =>
+    mutationFn: (forceNew: boolean) =>
       automationApi.createSiteTranslation({
         target_locales: locales,
         skip_existing: skipExisting,
