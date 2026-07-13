@@ -5,11 +5,14 @@ from __future__ import annotations
 import base64
 import logging
 import re
+import threading
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 from django.conf import settings
+from django.db import connection
 
 from social.infrastructure.models import SocialCampaign
 
@@ -82,6 +85,54 @@ def _campaign_image_prompt(campaign: SocialCampaign) -> str:
 
 
 class MediaGenerationService:
+    @staticmethod
+    def append_creative_log(campaign: SocialCampaign, message: str, *, level: str = "info") -> None:
+        logs = list(campaign.creative_log_json or [])
+        logs.append(
+            {
+                "at": datetime.now(timezone.utc).isoformat(),
+                "level": level,
+                "message": message,
+            }
+        )
+        campaign.creative_log_json = logs[-200:]
+        campaign.save(update_fields=["creative_log_json", "updated_at"])
+
+    @staticmethod
+    def set_creative_progress(campaign: SocialCampaign, percent: int) -> None:
+        campaign.creative_progress = max(0, min(100, int(percent)))
+        campaign.save(update_fields=["creative_progress", "updated_at"])
+
+    @classmethod
+    def start_ai_tiktok_async(cls, campaign: SocialCampaign, *, count: int = 1) -> None:
+        """Run AI TikTok generation in a background thread (progress + log on campaign)."""
+        campaign_id = campaign.id
+        campaign.tiktok_generating = True
+        campaign.creative_progress = 5
+        campaign.save(update_fields=["tiktok_generating", "creative_progress", "updated_at"])
+
+        def _run() -> None:
+            try:
+                fresh = SocialCampaign.objects.filter(pk=campaign_id, deleted_at__isnull=True).first()
+                if not fresh:
+                    return
+                cls.generate_ai_tiktok_videos(fresh, count=count)
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Async TikTok generation failed for %s", campaign_id)
+                try:
+                    fresh = SocialCampaign.objects.filter(pk=campaign_id).first()
+                    if fresh:
+                        cls.append_creative_log(fresh, f"Generation failed: {exc}", level="error")
+                        fresh.tiktok_generating = False
+                        fresh.creative_progress = 100
+                        fresh.save(update_fields=["tiktok_generating", "creative_progress", "updated_at"])
+                except Exception:
+                    pass
+            finally:
+                connection.close()
+
+        threading.Thread(target=_run, daemon=True).start()
+
     @classmethod
     def create_instagram_image(cls, campaign: SocialCampaign) -> str:
         """Create an attractive square campaign image (Gemini AI, SVG fallback)."""
@@ -281,13 +332,19 @@ class MediaGenerationService:
 
     @classmethod
     def generate_ai_tiktok_videos(cls, campaign: SocialCampaign, *, count: int = 1) -> dict:
-        """Generate many Mendeles TikTok creatives via VideoProvider failover."""
+        """Generate Mendeles TikTok creatives via VideoProvider failover with live progress log."""
         from social.domain.enums import CampaignStatus
         from social.providers.video import get_video_orchestrator
         from social.providers.video.base import VideoGenerationRequest
 
         count = max(1, min(int(count or 1), 20))
         orchestrator = get_video_orchestrator()
+        cls.append_creative_log(
+            campaign,
+            f"Generating {count} TikTok video(s) — failover: {', '.join(p.name for p in orchestrator.providers)}",
+        )
+        cls.set_creative_progress(campaign, 10)
+
         base_prompt = (
             campaign.video_prompt
             or campaign.media_prompt
@@ -300,12 +357,18 @@ class MediaGenerationService:
         videos = list(campaign.tiktok_videos_json or [])
 
         for index in range(count):
+            pct = 10 + int(((index + 0.5) / count) * 80)
+            cls.set_creative_progress(campaign, pct)
+            cls.append_creative_log(campaign, f"Video {index + 1}/{count}: preparing prompt…")
+
             prompt = (
                 f"{base_prompt}\n\n"
                 f"Variation {index + 1}/{count} for Mendeles TikTok. "
                 f"Vertical 9:16, high energy, brand Mendeles, CTA: {campaign.cta or 'Learn more'}, "
                 f"website {campaign.website_url or 'https://mendeles.com'}."
             )
+            cls.append_creative_log(campaign, f"Video {index + 1}/{count}: calling video providers…")
+
             generation = orchestrator.generate(
                 VideoGenerationRequest(
                     prompt=prompt,
@@ -325,7 +388,28 @@ class MediaGenerationService:
                 "variation": index + 1,
                 "failover_attempts": (generation.metadata or {}).get("failover_attempts") or [],
             }
+
+            for attempt in entry["failover_attempts"]:
+                provider = attempt.get("provider") or "?"
+                if attempt.get("skipped"):
+                    cls.append_creative_log(
+                        campaign,
+                        f"Video {index + 1}: skipped {provider} — {attempt.get('reason') or attempt.get('error') or 'unavailable'}",
+                        level="warn",
+                    )
+                elif attempt.get("error"):
+                    cls.append_creative_log(
+                        campaign,
+                        f"Video {index + 1}: {provider} failed — {attempt.get('error')}",
+                        level="warn",
+                    )
+
             if not generation.ok:
+                cls.append_creative_log(
+                    campaign,
+                    f"Video {index + 1}: all providers failed — {generation.error or 'unknown error'}",
+                    level="error",
+                )
                 results.append(entry)
                 continue
 
@@ -342,6 +426,7 @@ class MediaGenerationService:
             else:
                 entry["ok"] = False
                 entry["error"] = "Provider returned no video bytes or URL"
+                cls.append_creative_log(campaign, f"Video {index + 1}: empty response from provider", level="error")
                 results.append(entry)
                 continue
 
@@ -357,13 +442,25 @@ class MediaGenerationService:
                 }
             )
             campaign.tiktok_video_url = public
-            # Never replace a designed campaign image with TikTok output on image campaigns.
+            cls.append_creative_log(
+                campaign,
+                f"Video {index + 1}: ready via {entry['provider']} ({public})",
+                level="success",
+            )
             if campaign.media_type == "video" and not campaign.instagram_image_url:
                 campaign.media_url = public
             elif not campaign.media_url:
                 campaign.media_url = public
 
+            cls.set_creative_progress(campaign, 10 + int(((index + 1) / count) * 85))
+
+        ok_count = sum(1 for r in results if r.get("ok"))
+        if ok_count == 0 and not campaign.tiktok_video_url:
+            cls.append_creative_log(campaign, "No AI video produced — preview creative remains available", level="warn")
+
         campaign.tiktok_videos_json = videos
+        campaign.tiktok_generating = False
+        campaign.creative_progress = 100
         campaign.simulated_at = None
         if campaign.status == CampaignStatus.SIMULATED:
             campaign.status = CampaignStatus.READY
@@ -374,12 +471,15 @@ class MediaGenerationService:
                 "media_url",
                 "simulated_at",
                 "status",
+                "tiktok_generating",
+                "creative_progress",
                 "updated_at",
             ]
         )
+        cls.append_creative_log(campaign, f"Done — {ok_count}/{count} AI video(s) generated")
         return {
-            "generated": sum(1 for r in results if r.get("ok")),
-            "failed": sum(1 for r in results if not r.get("ok")),
+            "generated": ok_count,
+            "failed": count - ok_count,
             "results": results,
             "providers": orchestrator.status(),
             "videos": videos,

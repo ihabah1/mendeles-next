@@ -86,7 +86,24 @@ export default function AiAutomationPage() {
   const [genStep, setGenStep] = useState(0);
   const [publishStep, setPublishStep] = useState(-1);
   const [error, setError] = useState("");
-  const [tiktokCount, setTiktokCount] = useState(5);
+  const [tiktokCount, setTiktokCount] = useState(1);
+
+  const creativePoll = useQuery({
+    queryKey: ["campaign-creatives", active?.id],
+    queryFn: () => socialApi.get(active!.id),
+    enabled: Boolean(active?.id) && Boolean(active?.tiktok_generating),
+    refetchInterval: 1500,
+  });
+
+  useEffect(() => {
+    if (creativePoll.data) {
+      setActive(creativePoll.data);
+    }
+  }, [creativePoll.data]);
+
+  function isPlayableVideo(url: string) {
+    return /\.(mp4|webm)(\?|$)/i.test(url);
+  }
 
   const status = useQuery({
     queryKey: ["social-status"],
@@ -137,6 +154,9 @@ export default function AiAutomationPage() {
     onSuccess: (data) => {
       setActive(data);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      if (data.platforms?.includes("tiktok")) {
+        qc.invalidateQueries({ queryKey: ["campaign-creatives", data.id] });
+      }
     },
     onError: (err: Error) => {
       setActive(null);
@@ -263,12 +283,8 @@ export default function AiAutomationPage() {
       setActive(data);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       qc.invalidateQueries({ queryKey: ["social-video-providers"] });
-      const gen = data.ai_generation as { generated?: number; failed?: number } | undefined;
-      if (gen?.failed && !gen.generated) {
-        setError("AI TikTok generation failed on all providers");
-      } else {
-        setError("");
-      }
+      qc.invalidateQueries({ queryKey: ["campaign-creatives", data.id] });
+      setError("");
     },
     onError: (err: Error) => setError(err.message || "AI TikTok generation failed"),
   });
@@ -632,10 +648,67 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Creatives: Generate always builds the campaign image. Use the buttons below for more Instagram regenerations or AI TikTok videos.
+            Generate builds the campaign image and starts TikTok video generation automatically.
             AI video failover: Runway → Veo 3.1 → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
+
+          {hasCampaign && active?.tiktok_video_url ? (
+            <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
+              <p className="text-sm font-semibold">TikTok preview — press Play</p>
+              <div className="mx-auto max-w-xs overflow-hidden rounded-2xl border border-[var(--border)] bg-black">
+                {isPlayableVideo(active.tiktok_video_url) ? (
+                  <video
+                    key={active.tiktok_video_url}
+                    src={active.tiktok_video_url}
+                    controls
+                    playsInline
+                    className="aspect-[9/16] w-full object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={active.tiktok_video_url}
+                    alt="TikTok creative"
+                    className="aspect-[9/16] w-full object-cover"
+                  />
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {hasCampaign && active?.tiktok_generating ? (
+            <div className="space-y-2 rounded-xl border border-[#6F42F5]/30 bg-[#6F42F5]/5 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-[#6F42F5]">Generating TikTok video…</span>
+                <span className="font-bold">{active?.creative_progress ?? 0}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--muted)]">
+                <div
+                  className="h-full rounded-full bg-[#6F42F5] transition-all duration-500"
+                  style={{ width: `${Math.min(100, active?.creative_progress || 0)}%` }}
+                />
+              </div>
+              {(active?.creative_log || []).length ? (
+                <ul className="max-h-40 space-y-1 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 font-mono text-xs">
+                  {(active!.creative_log || []).map((line, i) => (
+                    <li
+                      key={`${line.at}-${i}`}
+                      className={cn(
+                        line.level === "error" && "text-red-600",
+                        line.level === "warn" && "text-amber-700",
+                        line.level === "success" && "text-emerald-700",
+                      )}
+                    >
+                      {line.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-[var(--muted-fg)]">Starting video providers…</p>
+              )}
+            </div>
+          ) : null}
 
           {videoProviders.data?.providers?.length ? (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

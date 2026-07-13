@@ -40,6 +40,8 @@ class UserListView(APIView):
                     "last_name": u.last_name,
                     "is_active": u.is_active,
                     "email_verified": u.is_email_verified,
+                    "phone": u.phone or "",
+                    "preferred_locale": u.preferred_locale or "he",
                     "tenant_name": u.default_tenant.name if u.default_tenant else None,
                     "roles": PermissionService.get_user_roles(u, role_tenant_id),
                     "role_assignments": [

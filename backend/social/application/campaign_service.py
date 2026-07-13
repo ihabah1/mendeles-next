@@ -43,6 +43,9 @@ class CampaignService:
             "instagram_image_url": campaign.instagram_image_url,
             "tiktok_video_url": campaign.tiktok_video_url,
             "tiktok_videos": campaign.tiktok_videos_json or [],
+            "creative_log": campaign.creative_log_json or [],
+            "creative_progress": int(campaign.creative_progress or 0),
+            "tiktok_generating": bool(campaign.tiktok_generating),
             "simulated_at": campaign.simulated_at.isoformat() if campaign.simulated_at else None,
             "simulation_log": campaign.simulation_log or [],
             "status": campaign.status,
@@ -86,27 +89,29 @@ class CampaignService:
 
     @staticmethod
     def bootstrap_creatives(campaign: SocialCampaign, *, tiktok_count: int = 5) -> SocialCampaign:
-        """Create campaign image on Generate; TikTok gets a fast preview creative (AI videos via separate action)."""
+        """Create campaign image + TikTok preview on Generate; AI video runs in background."""
         from social.application.media_service import MediaGenerationService
 
         platforms = campaign.platforms or []
         errors: list[str] = []
 
-        # Required: designed / AI campaign image every Generate click.
         try:
             MediaGenerationService.create_instagram_image(campaign)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"image: {exc}")
 
         if "tiktok" in platforms:
-            # Keep Generate fast — full AI video batch is the separate "Generate AI TikTok" button.
             try:
                 MediaGenerationService.create_tiktok_creative(campaign)
+                MediaGenerationService.append_creative_log(
+                    campaign, "TikTok preview ready — starting AI video generation…"
+                )
+                count = max(1, min(int(tiktok_count or 1), 20))
+                MediaGenerationService.start_ai_tiktok_async(campaign, count=count)
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"tiktok: {exc}")
 
         campaign.refresh_from_db()
-        # Prefer the designed image as the campaign media shown after Generate.
         if campaign.instagram_image_url:
             if campaign.media_type != "video" or not campaign.media_url or "placehold.co" in (campaign.media_url or ""):
                 campaign.media_url = campaign.instagram_image_url

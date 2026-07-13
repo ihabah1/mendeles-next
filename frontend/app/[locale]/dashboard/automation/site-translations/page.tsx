@@ -179,8 +179,8 @@ export default function SiteTranslationsPage() {
         </Link>
         <h1 className="text-2xl font-bold">תרגום דפי האתר</h1>
         <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
-          ג&apos;וב שמתרגם כל דף תוכן לכל שפה (עברית, אנגלית, ספרדית, ערבית, גרמנית, סינית). אפשר להשהות (Pause) ולהמשיך —
-          יחידות שכבר הושלמו לא רצות שוב.
+          ג&apos;וב שמתרגם דפי תוכן, לובי ודשבורד לכל שפה. יחידות שכבר תורגמו לא ירוצו שוב.
+          אפשר להשהות (Pause) ולהמשיך — ההתקדמות נשמרת באחוזים.
         </p>
       </div>
 

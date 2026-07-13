@@ -39,6 +39,9 @@ export type SocialCampaign = {
     variation?: number;
     credits_used?: number;
   }>;
+  creative_log?: Array<{ at: string; level: string; message: string }>;
+  creative_progress?: number;
+  tiktok_generating?: boolean;
   simulated_at: string | null;
   simulation_log: SimulationLogEntry[];
   status: string;
@@ -89,6 +92,8 @@ export const socialApi = {
     }>("/api/v1/social/status/", { headers: authHeaders() }),
   list: () =>
     apiFetch<{ results: SocialCampaign[] }>("/api/v1/social/campaigns/", { headers: authHeaders() }),
+  get: (id: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/`, { headers: authHeaders() }),
   generate: (body: GenerateCampaignInput) =>
     apiFetch<SocialCampaign>("/api/v1/social/campaigns/", {
       method: "POST",

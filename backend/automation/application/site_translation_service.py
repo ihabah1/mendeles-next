@@ -18,6 +18,8 @@ from content.infrastructure.models import ContentBlock, Page
 from core.exceptions.base import ValidationError
 
 TARGET_LOCALES = ("he", "en", "es", "ar", "de", "zh")
+# Lobby + dashboard surfaces — always included when present in CMS.
+SYSTEM_SURFACE_PATHS = ("/", "/dashboard", "/lobby")
 
 LOCALE_NAMES = {
     "he": "Hebrew",
@@ -100,16 +102,17 @@ class SiteTranslationService:
         if not sources:
             raise ValidationError("No source pages found to translate.")
 
-        # Pairs already completed on an open/recent incomplete job — never re-queue those.
+        # Pairs already completed on any job — never re-queue.
         already_done = cls._completed_unit_keys(tenant_id) if skip_existing and not overwrite else set()
 
         steps: list[dict] = []
+        seen_units: set[str] = set()
         for source in sources:
             for locale in locales:
                 if locale == source.locale:
                     continue
                 unit_key = f"{source.full_path}::{locale}"
-                if unit_key in already_done:
+                if unit_key in seen_units or unit_key in already_done:
                     continue
                 existing = Page.objects.filter(
                     tenant_id=tenant_id,
@@ -119,6 +122,7 @@ class SiteTranslationService:
                 ).first()
                 if existing and skip_existing and not overwrite:
                     continue
+                seen_units.add(unit_key)
                 steps.append(
                     {
                         "name": f"{source.title[:60]} → {LOCALE_NAMES.get(locale, locale)}",
@@ -194,7 +198,6 @@ class SiteTranslationService:
         if page_ids:
             qs = qs.filter(id__in=page_ids)
 
-        # Prefer one canonical source per path (he > en > other).
         by_path: dict[str, Page] = {}
         priority = {"he": 0, "en": 1, "ar": 2}
         for page in qs:
@@ -204,7 +207,21 @@ class SiteTranslationService:
                 continue
             if priority.get(page.locale, 9) < priority.get(current.locale, 9):
                 by_path[page.full_path] = page
-        return list(by_path.values())
+
+        # Ensure lobby + dashboard pages are translated first when they exist.
+        ordered: list[Page] = []
+        for path in SYSTEM_SURFACE_PATHS:
+            if path in by_path:
+                ordered.append(by_path.pop(path))
+        dashboard_pages = sorted(
+            (p for fp, p in by_path.items() if fp.startswith("/dashboard")),
+            key=lambda p: p.full_path,
+        )
+        for page in dashboard_pages:
+            by_path.pop(page.full_path, None)
+            ordered.append(page)
+        ordered.extend(sorted(by_path.values(), key=lambda p: (p.full_path, p.locale)))
+        return ordered
 
     @classmethod
     def execute_step(cls, job: AutomationJob, step: AutomationJobStep, execution=None) -> dict[str, Any]:
@@ -375,11 +392,20 @@ class SiteTranslationService:
     def preview_units(cls, tenant_id, *, target_locales: list[str] | None = None, skip_existing: bool = True) -> dict:
         locales = [loc for loc in (target_locales or list(TARGET_LOCALES)) if loc in TARGET_LOCALES]
         sources = cls._source_pages(tenant_id, None)
+        already_done = cls._completed_unit_keys(tenant_id) if skip_existing else set()
         planned = 0
         skipped = 0
+        seen: set[str] = set()
         for source in sources:
             for locale in locales:
                 if locale == source.locale:
+                    continue
+                unit_key = f"{source.full_path}::{locale}"
+                if unit_key in seen:
+                    continue
+                seen.add(unit_key)
+                if unit_key in already_done:
+                    skipped += 1
                     continue
                 exists = Page.objects.filter(
                     tenant_id=tenant_id,

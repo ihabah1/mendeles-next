@@ -44,7 +44,13 @@ export function UsersPanel({
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [roleUser, setRoleUser] = useState<UserRow | null>(null);
   const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", role_slug: "read_only" });
-  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", is_active: true });
+  const [editForm, setEditForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    preferred_locale: "he",
+    is_active: true,
+  });
   const [roleSlug, setRoleSlug] = useState("read_only");
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["users"] });
@@ -187,9 +193,10 @@ export function UsersPanel({
                           <button type="button" className="text-xs text-[var(--success)] hover:underline" onClick={() => forceVerifyMutation.mutate(u.id)}>{t("forceVerify")}</button>
                         </>
                       )}
-                      {canEdit && <button type="button" className="text-xs text-[var(--accent)] hover:underline" onClick={() => { setEditUser(u); setEditForm({ first_name: u.first_name, last_name: u.last_name, is_active: u.is_active }); setError(null); }}>{t("edit")}</button>}
+                      {canEdit && <button type="button" className="text-xs text-[var(--accent)] hover:underline" onClick={() => { setEditUser(u); setEditForm({ first_name: u.first_name, last_name: u.last_name, phone: u.phone || "", preferred_locale: u.preferred_locale || "he", is_active: u.is_active }); setError(null); }}>{t("edit")}</button>}
                       {canChangeRoles && <button type="button" className="text-xs text-[var(--accent)] hover:underline" onClick={() => { setRoleUser(u); setRoleSlug("read_only"); setError(null); }}>{t("assignRole")}</button>}
                       {canEdit && u.is_active && <button type="button" className="text-xs text-[var(--warning)] hover:underline" onClick={() => deactivateMutation.mutate(u)}>{t("deactivate")}</button>}
+                      {canEdit && !u.is_active && <button type="button" className="text-xs text-[var(--success)] hover:underline" onClick={() => usersApi.update(u.id, { is_active: true }).then(invalidate).catch((e: Error) => setError(e.message))}>{t("reactivate")}</button>}
                       {canRemove && <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => { if (confirm(t("confirmRemove"))) removeMutation.mutate(u.id); }}>{t("remove")}</button>}
                     </div>
                   </td>
@@ -224,6 +231,21 @@ export function UsersPanel({
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }}>
             <Field label={t("firstName")}><Input required value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} /></Field>
             <Field label={t("lastName")}><Input required value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} /></Field>
+            <Field label={t("phone")}><Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></Field>
+            <Field label={t("preferredLocale")}>
+              <select
+                className="h-10 w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] px-3 text-sm"
+                value={editForm.preferred_locale}
+                onChange={(e) => setEditForm({ ...editForm, preferred_locale: e.target.value })}
+              >
+                <option value="he">עברית</option>
+                <option value="en">English</option>
+                <option value="ar">العربية</option>
+                <option value="es">Español</option>
+                <option value="de">Deutsch</option>
+                <option value="zh">中文</option>
+              </select>
+            </Field>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editForm.is_active} onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })} />{t("active")}</label>
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={updateMutation.isPending}>{tc("save")}</Button>

@@ -82,6 +82,8 @@ export type UserRow = {
   email: string;
   first_name: string;
   last_name: string;
+  phone?: string;
+  preferred_locale?: string;
   is_active: boolean;
   email_verified?: boolean;
   tenant_name?: string | null;
@@ -200,7 +202,7 @@ export const usersApi = {
       headers: authHeaders(),
       json: data,
     }),
-  update: (id: string, data: Partial<Pick<UserRow, "first_name" | "last_name" | "is_active">>) =>
+  update: (id: string, data: Partial<Pick<UserRow, "first_name" | "last_name" | "phone" | "preferred_locale" | "is_active">>) =>
     apiFetch<UserRow>(`/api/v1/users/${id}/`, {
       method: "PATCH",
       headers: authHeaders(),
