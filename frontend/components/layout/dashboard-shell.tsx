@@ -61,6 +61,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     labelKey: "groupAutomation",
     items: [
       { href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" },
+      { href: "/dashboard/automation/site-translations", labelKey: "siteTranslations", permission: "automation.view" },
       { href: "/dashboard/ai-automation", labelKey: "aiAutomation", permission: "automation.view" },
     ],
   },

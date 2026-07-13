@@ -14,10 +14,13 @@ from automation.api.v1.views import (
     AutomationJobRejectView,
     AutomationJobResumeView,
     AutomationJobRetryView,
+    AutomationJobRunNextView,
     AutomationNotificationsView,
     AutomationQueueView,
     AutomationWorkersView,
     JobTypeListView,
+    SiteTranslationCreateView,
+    SiteTranslationPreviewView,
 )
 
 urlpatterns = [
@@ -27,10 +30,21 @@ urlpatterns = [
     path("workers/", AutomationWorkersView.as_view(), name="automation-workers"),
     path("job-types/", JobTypeListView.as_view(), name="automation-job-types"),
     path("notifications/", AutomationNotificationsView.as_view(), name="automation-notifications"),
+    path(
+        "site-translations/preview/",
+        SiteTranslationPreviewView.as_view(),
+        name="automation-site-translations-preview",
+    ),
+    path(
+        "site-translations/",
+        SiteTranslationCreateView.as_view(),
+        name="automation-site-translations-create",
+    ),
     path("<uuid:job_id>/", AutomationJobDetailView.as_view(), name="automation-job-detail"),
     path("<uuid:job_id>/logs/", AutomationJobLogsView.as_view(), name="automation-job-logs"),
     path("<uuid:job_id>/progress/", AutomationJobProgressView.as_view(), name="automation-job-progress"),
     path("<uuid:job_id>/queue/", AutomationJobQueueView.as_view(), name="automation-job-queue"),
+    path("<uuid:job_id>/run-next/", AutomationJobRunNextView.as_view(), name="automation-job-run-next"),
     path("<uuid:job_id>/pause/", AutomationJobPauseView.as_view(), name="automation-job-pause"),
     path("<uuid:job_id>/resume/", AutomationJobResumeView.as_view(), name="automation-job-resume"),
     path("<uuid:job_id>/retry/", AutomationJobRetryView.as_view(), name="automation-job-retry"),

@@ -345,6 +345,7 @@
     "aiSeo": "AI SEO",
     "automation": "Automation",
     "agents": "Agents",
+    "siteTranslations": "Site translations",
     "aiAutomation": "AI Automation",
     "users": "Users",
     "emailRelease": "Release emails",
@@ -915,6 +916,11 @@
       "issues": "Issues",
       "ok": "OK",
       "fail": "Fail"
+    },
+    "siteTranslations": {
+      "title": "Site page translations",
+      "desc": "Translate every content page into Hebrew, English, Spanish, Arabic, German, and Chinese — with pause/resume and progress %.",
+      "open": "Open translation jobs"
     },
     "statuses": {
       "queued": "Queued",

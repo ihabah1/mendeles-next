@@ -2,12 +2,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from automation.application.dashboard_service import DashboardService
+from automation.application.executor import JobExecutor
 from automation.application.job_service import JobService
 from automation.application.notification_service import NotificationService
+from automation.application.site_translation_service import SiteTranslationService, TARGET_LOCALES
 from automation.application.worker_service import WorkerService
 from automation.domain.enums import JobPriority, JobStatus, JobType
 from automation.infrastructure.models import AutomationJob
-from core.exceptions.base import ForbiddenError
+from core.exceptions.base import ForbiddenError, ValidationError
 from core.pagination import StandardPagination
 from core.permissions.base import HasPermission
 
@@ -321,4 +323,54 @@ class AutomationJobRejectView(APIView):
             reason=request.data.get("reason", ""),
             request=request,
         )
+        return Response(_serialize_job(job, detail=True))
+
+
+class SiteTranslationPreviewView(APIView):
+    def get(self, request):
+        _check(request, self, "automation.view")
+        locales = request.query_params.getlist("locale") or list(TARGET_LOCALES)
+        skip = request.query_params.get("skip_existing", "true").lower() != "false"
+        return Response(
+            SiteTranslationService.preview_units(
+                request.user.default_tenant_id,
+                target_locales=locales,
+                skip_existing=skip,
+            )
+        )
+
+
+class SiteTranslationCreateView(APIView):
+    def post(self, request):
+        _check(request, self, "automation.create")
+        data = request.data or {}
+        job = SiteTranslationService.create_job(
+            request.user.default_tenant_id,
+            request.user,
+            target_locales=data.get("target_locales"),
+            page_ids=data.get("page_ids"),
+            skip_existing=bool(data.get("skip_existing", True)),
+            overwrite=bool(data.get("overwrite", False)),
+            name=data.get("name") or "",
+            request=request,
+        )
+        return Response(_serialize_job(job, detail=True), status=201)
+
+
+class AutomationJobRunNextView(APIView):
+    """Advance one translation (or other stepped) unit — supports pause between units."""
+
+    def post(self, request, job_id):
+        _check(request, self, "automation.manage")
+        job = JobService.get_job(request.user.default_tenant_id, job_id)
+        if job.status == JobStatus.PAUSED:
+            raise ValidationError("Job is paused. Resume it before continuing.")
+        if job.status == JobStatus.CANCELLED:
+            raise ValidationError("Job was cancelled.")
+        if job.status == JobStatus.COMPLETED:
+            return Response(_serialize_job(job, detail=True))
+        if job.status not in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.RETRYING}:
+            raise ValidationError(f"Cannot run next step while job is '{job.status}'.")
+        JobExecutor.run_next_step(job)
+        job = JobService.get_job(request.user.default_tenant_id, job_id)
         return Response(_serialize_job(job, detail=True))

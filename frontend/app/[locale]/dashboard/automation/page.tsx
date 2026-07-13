@@ -106,6 +106,20 @@ export default function AutomationPage() {
             </Card>
           )}
 
+          <Card>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">{t("siteTranslations.title")}</h2>
+                <p className="mt-1 text-sm text-[var(--muted-fg)]">{t("siteTranslations.desc")}</p>
+              </div>
+              <Link href="/dashboard/automation/site-translations">
+                <Button type="button" className="rounded-full bg-[#6F42F5] text-white">
+                  {t("siteTranslations.open")}
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
           {canCreate && (
             <Card>
               <h2 className="font-semibold">{t("createJob")}</h2>

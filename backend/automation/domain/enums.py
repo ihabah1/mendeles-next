@@ -46,6 +46,7 @@ class JobType(models.TextChoices):
     GENERATE_SCHEMA = "generate_schema", "Generate Schema"
     GENERATE_INTERNAL_LINKS = "generate_internal_links", "Generate Internal Links"
     GENERATE_ALT_TEXT = "generate_alt_text", "Generate ALT Text"
+    TRANSLATE_SITE_PAGES = "translate_site_pages", "Translate Site Pages"
     # Media
     GENERATE_IMAGES = "generate_images", "Generate Images"
     OPTIMIZE_IMAGES = "optimize_images", "Optimize Images"
@@ -91,6 +92,7 @@ IMPLEMENTED_JOB_TYPES = {
     JobType.GENERATE_BLOG_ARTICLE,
     JobType.GENERATE_LANDING_PAGE,
     JobType.ACCESSIBILITY_AUDIT,
+    JobType.TRANSLATE_SITE_PAGES,
 }
 
 

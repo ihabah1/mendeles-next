@@ -702,6 +702,38 @@ export const automationApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  runNext: (id: string) =>
+    apiFetch<AutomationJobDetail>(`/api/v1/automation/${id}/run-next/`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  siteTranslationPreview: (params?: { locales?: string[]; skip_existing?: boolean }) => {
+    const sp = new URLSearchParams();
+    for (const locale of params?.locales || []) sp.append("locale", locale);
+    if (params?.skip_existing === false) sp.set("skip_existing", "false");
+    const qs = sp.toString();
+    return apiFetch<{
+      source_pages: number;
+      target_locales: string[];
+      planned_units: number;
+      skipped_existing: number;
+      locale_labels: Record<string, string>;
+    }>(`/api/v1/automation/site-translations/preview/${qs ? `?${qs}` : ""}`, {
+      headers: authHeaders(),
+    });
+  },
+  createSiteTranslation: (data: {
+    target_locales: string[];
+    skip_existing?: boolean;
+    overwrite?: boolean;
+    name?: string;
+    page_ids?: string[];
+  }) =>
+    apiFetch<AutomationJobDetail>("/api/v1/automation/site-translations/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: data,
+    }),
   workers: () =>
     apiFetch<{ results: Array<Record<string, unknown>> }>("/api/v1/automation/workers/", {
       headers: authHeaders(),

@@ -196,8 +196,13 @@ class JobService:
     @staticmethod
     def pause_job(tenant_id, user, job_id: uuid.UUID, *, request=None) -> AutomationJob:
         job = JobService.get_job(tenant_id, job_id)
-        if job.status not in {JobStatus.QUEUED, JobStatus.SCHEDULED, JobStatus.RETRYING}:
-            raise ValidationError("Only queued or scheduled jobs can be paused.")
+        if job.status not in {
+            JobStatus.QUEUED,
+            JobStatus.SCHEDULED,
+            JobStatus.RETRYING,
+            JobStatus.RUNNING,
+        }:
+            raise ValidationError("Only queued, scheduled, or running jobs can be paused.")
         job.status = JobStatus.PAUSED
         job.save(update_fields=["status", "updated_at"])
         AutomationLogService.log(job, "Job paused")

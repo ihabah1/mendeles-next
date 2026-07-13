@@ -35,11 +35,20 @@ class JobExecutor:
 
         try:
             JobExecutor._run_steps(job, execution)
+            job.refresh_from_db()
             if job.status == JobStatus.WAITING_APPROVAL:
                 execution.status = JobStatus.WAITING_APPROVAL
                 execution.finished_at = timezone.now()
                 execution.duration_ms = JobExecutor._duration_ms(execution)
                 execution.save()
+                return execution
+            if job.status in {JobStatus.PAUSED, JobStatus.CANCELLED}:
+                execution.status = job.status
+                execution.finished_at = timezone.now()
+                execution.duration_ms = JobExecutor._duration_ms(execution)
+                execution.result = {"ok": True, "stopped": job.status}
+                execution.save()
+                AutomationLogService.log(job, f"Execution stopped — job is {job.status}", execution=execution)
                 return execution
 
             job.status = JobStatus.COMPLETED
@@ -126,6 +135,14 @@ class JobExecutor:
             JobExecutor._execute_step(job, next_step, execution)
             next_step.refresh_from_db()
             job.refresh_from_db()
+            if job.status in {JobStatus.PAUSED, JobStatus.CANCELLED}:
+                execution.status = job.status
+                execution.finished_at = timezone.now()
+                execution.duration_ms = JobExecutor._duration_ms(execution)
+                execution.result = {"ok": True, "stopped": job.status}
+                execution.save()
+                AutomationLogService.log(job, f"Step interrupted — job is {job.status}", execution=execution)
+                return execution
             if next_step.status == StepStatus.WAITING_APPROVAL or job.status == JobStatus.WAITING_APPROVAL:
                 execution.status = JobStatus.WAITING_APPROVAL
                 execution.finished_at = timezone.now()
@@ -224,6 +241,18 @@ class JobExecutor:
 
         total = len(steps)
         for index, step in enumerate(steps):
+            job.refresh_from_db()
+            if job.status in {JobStatus.PAUSED, JobStatus.CANCELLED}:
+                AutomationLogService.log(
+                    job,
+                    f"Stopping at step {index + 1}/{total} — job is {job.status}",
+                    execution=execution,
+                )
+                job.current_step_index = index
+                job.progress_percent = int((index / total) * 100) if total else 0
+                job.save(update_fields=["current_step_index", "progress_percent", "updated_at"])
+                return
+
             if step.status == StepStatus.COMPLETED:
                 continue
 
@@ -296,6 +325,16 @@ class JobExecutor:
             from automation.application.accessibility_audit_service import AccessibilityAuditService
 
             result = AccessibilityAuditService.run(job, execution)
+            execution.result = result
+            execution.save(update_fields=["result", "updated_at"])
+            return
+        if job_type in {JobType.TRANSLATE_SITE_PAGES.value, "translate_site_page"}:
+            from automation.application.site_translation_service import SiteTranslationService
+
+            step = job.steps.filter(status=StepStatus.RUNNING, deleted_at__isnull=True).order_by("step_order").first()
+            if not step:
+                raise RuntimeError("Translation step is not running.")
+            result = SiteTranslationService.execute_step(job, step, execution=execution)
             execution.result = result
             execution.save(update_fields=["result", "updated_at"])
             return

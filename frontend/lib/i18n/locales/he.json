@@ -308,6 +308,7 @@
     "aiSeo": "AI SEO",
     "automation": "אוטומציה",
     "agents": "סוכנים",
+    "siteTranslations": "תרגום דפי האתר",
     "aiAutomation": "AI Automation",
     "users": "משתמשים",
     "emailRelease": "שחרור מיילים",
@@ -878,6 +879,11 @@
       "issues": "בעיות",
       "ok": "תקין",
       "fail": "נכשל"
+    },
+    "siteTranslations": {
+      "title": "תרגום דפי האתר",
+      "desc": "תרגום כל דפי התוכן לעברית, אנגלית, ספרדית, ערבית, גרמנית וסינית — עם Pause/Resume ואחוזי התקדמות.",
+      "open": "פתח ג'ובי תרגום"
     },
     "statuses": {
       "queued": "בתור",
