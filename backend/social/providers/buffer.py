@@ -21,9 +21,29 @@ from social.providers.base import (
 
 logger = logging.getLogger(__name__)
 
+RATE_LIMIT_USER_MESSAGE = (
+    "Buffer חסם את ה-API ל-24 שעות (RATE_LIMIT_EXCEEDED). "
+    "זה מגבלת Buffer על מפתח הגישה — לא באג במנדלס. "
+    "המתינו לסיום חלון ה-24 שעות, הימנעו מלחיצות שליחה חוזרות, "
+    "ובדקו את מגבלות התוכנית ב-Buffer."
+)
+
 
 class BufferError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, rate_limited: bool = False):
+        super().__init__(message)
+        self.rate_limited = rate_limited
+
+
+def _looks_like_rate_limit(text: str) -> bool:
+    t = (text or "").lower()
+    return (
+        "rate_limit" in t
+        or "rate limit" in t
+        or "too many requests" in t
+        or '"code":"rate_limit_exceeded"' in t
+        or "429" in t
+    )
 
 
 class BufferPublisher(SocialPublisher):
@@ -35,12 +55,15 @@ class BufferPublisher(SocialPublisher):
     """
 
     GRAPHQL_URL = "https://api.buffer.com"
-    CACHE_TTL_SECONDS = 300
+    # Long TTL cuts discovery GraphQL traffic (orgs + channels) which burns quota fast.
+    CACHE_TTL_SECONDS = 6 * 3600
+    STALE_CACHE_MAX_SECONDS = 48 * 3600
 
     _cache_lock = threading.Lock()
     _channels_cache: list[dict[str, Any]] | None = None
     _cache_loaded_at: float = 0.0
     _organization_ids_cache: list[str] | None = None
+    _rate_limited_until: float = 0.0
 
     def __init__(self, access_token: str | None = None):
         self.access_token = (
@@ -52,11 +75,31 @@ class BufferPublisher(SocialPublisher):
     def configured(self) -> bool:
         return bool(self.access_token)
 
+    @classmethod
+    def mark_rate_limited(cls, *, hours: float = 24.0) -> None:
+        with cls._cache_lock:
+            cls._rate_limited_until = max(cls._rate_limited_until, time.time() + hours * 3600)
+
+    @classmethod
+    def is_rate_limited(cls) -> bool:
+        with cls._cache_lock:
+            return time.time() < cls._rate_limited_until
+
+    @classmethod
+    def rate_limit_message(cls) -> str:
+        return RATE_LIMIT_USER_MESSAGE
+
     # ------------------------------------------------------------------ GraphQL
+
+    def _raise_rate_limit(self, detail: str) -> None:
+        self.mark_rate_limited(hours=24)
+        raise BufferError(RATE_LIMIT_USER_MESSAGE, rate_limited=True)
 
     def _graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         if not self.access_token:
             raise BufferError("BUFFER_ACCESS_TOKEN is not configured.")
+        if self.is_rate_limited():
+            raise BufferError(RATE_LIMIT_USER_MESSAGE, rate_limited=True)
 
         payload = {"query": query}
         if variables is not None:
@@ -77,7 +120,11 @@ class BufferPublisher(SocialPublisher):
                 body = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="ignore")
+            if exc.code == 429 or _looks_like_rate_limit(detail):
+                self._raise_rate_limit(detail)
             raise BufferError(f"Buffer GraphQL HTTP {exc.code}: {detail[:500]}") from exc
+        except BufferError:
+            raise
         except Exception as exc:
             raise BufferError(f"Buffer GraphQL request failed: {exc}") from exc
 
@@ -85,6 +132,9 @@ class BufferPublisher(SocialPublisher):
             messages = "; ".join(
                 str(err.get("message") or err) for err in body["errors"][:5]
             )
+            raw = json.dumps(body.get("errors")[:3], ensure_ascii=False)
+            if _looks_like_rate_limit(messages) or _looks_like_rate_limit(raw):
+                self._raise_rate_limit(raw)
             raise BufferError(f"Buffer GraphQL error: {messages}")
         return body.get("data") or {}
 
@@ -177,10 +227,24 @@ class BufferPublisher(SocialPublisher):
         with self._cache_lock:
             cached = self.__class__._channels_cache
             loaded_at = self.__class__._cache_loaded_at
-            fresh = cached is not None and (time.time() - loaded_at) < self.CACHE_TTL_SECONDS
+            age = time.time() - loaded_at if loaded_at else 1e9
+            fresh = cached is not None and age < self.CACHE_TTL_SECONDS
+            stale_ok = cached is not None and age < self.STALE_CACHE_MAX_SECONDS
+
+        if self.is_rate_limited():
+            if stale_ok:
+                logger.warning("Buffer rate-limited — serving stale channel cache")
+                return list(cached or [])
+            raise BufferError(RATE_LIMIT_USER_MESSAGE, rate_limited=True)
 
         if force_refresh or not fresh:
-            return self.refresh_channels()
+            try:
+                return self.refresh_channels()
+            except BufferError as exc:
+                if getattr(exc, "rate_limited", False) and stale_ok:
+                    logger.warning("Buffer refresh rate-limited — serving stale channel cache")
+                    return list(cached or [])
+                raise
         return list(cached or [])
 
     def list_profiles(self) -> list[dict[str, Any]]:
@@ -254,6 +318,13 @@ class BufferPublisher(SocialPublisher):
 
     def publish(self, payload: PublishPayload) -> PublishResult:
         try:
+            if self.is_rate_limited():
+                return PublishResult(
+                    ok=False,
+                    platform=payload.platform,
+                    error=RATE_LIMIT_USER_MESSAGE,
+                )
+
             channels = self.list_channels()
             channel = self.resolve_channel(
                 payload.platform,
@@ -318,10 +389,14 @@ class BufferPublisher(SocialPublisher):
             )
             result = data.get("createPost") or {}
             if result.get("message") and not result.get("post"):
+                msg = str(result["message"])
+                if _looks_like_rate_limit(msg):
+                    self.mark_rate_limited(hours=24)
+                    msg = RATE_LIMIT_USER_MESSAGE
                 return PublishResult(
                     ok=False,
                     platform=payload.platform,
-                    error=str(result["message"]),
+                    error=msg,
                     channel_id=channel["id"],
                     channel_name=channel.get("label") or "",
                     raw=result,
@@ -337,6 +412,13 @@ class BufferPublisher(SocialPublisher):
                 raw=result,
             )
         except BufferError as exc:
+            if getattr(exc, "rate_limited", False) or _looks_like_rate_limit(str(exc)):
+                self.mark_rate_limited(hours=24)
+                return PublishResult(
+                    ok=False,
+                    platform=payload.platform,
+                    error=RATE_LIMIT_USER_MESSAGE,
+                )
             return PublishResult(ok=False, platform=payload.platform, error=str(exc))
 
     @classmethod
@@ -345,10 +427,17 @@ class BufferPublisher(SocialPublisher):
             cls._channels_cache = None
             cls._organization_ids_cache = None
             cls._cache_loaded_at = 0.0
+            cls._rate_limited_until = 0.0
 
 
 def warm_buffer_channel_cache() -> None:
-    """Best-effort channel discovery on app startup."""
+    """
+    Best-effort channel discovery — disabled by default to avoid burning Buffer quota
+    on every Gunicorn worker boot. Channels load lazily on first publish/status call.
+    Set BUFFER_WARM_CHANNELS_ON_BOOT=1 to re-enable.
+    """
+    if (os.environ.get("BUFFER_WARM_CHANNELS_ON_BOOT") or "").strip() not in {"1", "true", "yes"}:
+        return
     token = (os.environ.get("BUFFER_ACCESS_TOKEN") or "").strip()
     if not token:
         return

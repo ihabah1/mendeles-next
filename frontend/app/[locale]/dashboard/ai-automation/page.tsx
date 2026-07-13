@@ -1133,7 +1133,24 @@ export default function AiAutomationPage() {
 
       {error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-          {error}
+          {/rate_limit|too many requests|חסם את ה-api|429/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">Buffer חסם פרסום ל־24 שעות (מגבלת קצב)</p>
+              <p>{error}</p>
+              <p className="text-xs opacity-90">
+                אל תלחצו שוב על שליחה בינתיים — כל ניסיון נוסף שורף מכסה. נסו שוב מחר, או בדקו מגבלות API בחשבון Buffer.
+              </p>
+            </div>
+          ) : (
+            error
+          )}
+        </div>
+      ) : null}
+
+      {status.data?.error && /rate_limit|too many requests|חסם את ה-api|429/i.test(status.data.error) ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          <p className="font-bold">Buffer API rate limit פעיל</p>
+          <p className="mt-1 text-xs">{status.data.error}</p>
         </div>
       ) : null}
 

@@ -324,6 +324,15 @@ class CampaignService:
             else:
                 errors.append(f"{platform}: {result.error}")
                 step(f"Publishing to Buffer... ({platform})", result.error, False)
+                # Stop burning more Buffer quota once rate-limited.
+                err_l = (result.error or "").lower()
+                if "rate_limit" in err_l or "rate-limited" in err_l or "חסם את ה-api" in (result.error or ""):
+                    remaining = [p for p in platforms if p not in buffer_ids and p != platform]
+                    for skipped in remaining:
+                        skip_msg = result.error or "Buffer rate limited — skipped"
+                        errors.append(f"{skipped}: {skip_msg}")
+                        step(f"Publishing to Buffer... ({skipped})", "Skipped (rate limit)", False)
+                    break
 
         campaign.buffer_update_ids = {**(campaign.buffer_update_ids or {}), **buffer_ids}
         campaign.publish_log = log

@@ -42,20 +42,39 @@ class SocialStatusView(APIView):
         error = ""
         if publisher.configured():
             try:
-                channels = [
-                    {
-                        "id": str(ch.get("id") or ""),
-                        "service": ch.get("service") or "",
-                        "name": ch.get("name") or "",
-                        "display_name": ch.get("display_name") or "",
-                        "label": ch.get("label") or "",
-                        "type": ch.get("type") or "",
-                        "is_disconnected": bool(ch.get("is_disconnected")),
-                        "is_locked": bool(ch.get("is_locked")),
-                        "formatted_username": ch.get("formatted_username") or ch.get("label") or "",
-                    }
-                    for ch in publisher.list_channels()
-                ]
+                from social.providers.buffer import BufferPublisher
+
+                if isinstance(publisher, BufferPublisher) and publisher.is_rate_limited():
+                    error = BufferPublisher.rate_limit_message()
+                    channels = [
+                        {
+                            "id": str(ch.get("id") or ""),
+                            "service": ch.get("service") or "",
+                            "name": ch.get("name") or "",
+                            "display_name": ch.get("display_name") or "",
+                            "label": ch.get("label") or "",
+                            "type": ch.get("type") or "",
+                            "is_disconnected": bool(ch.get("is_disconnected")),
+                            "is_locked": bool(ch.get("is_locked")),
+                            "formatted_username": ch.get("formatted_username") or ch.get("label") or "",
+                        }
+                        for ch in (BufferPublisher._channels_cache or [])
+                    ]
+                else:
+                    channels = [
+                        {
+                            "id": str(ch.get("id") or ""),
+                            "service": ch.get("service") or "",
+                            "name": ch.get("name") or "",
+                            "display_name": ch.get("display_name") or "",
+                            "label": ch.get("label") or "",
+                            "type": ch.get("type") or "",
+                            "is_disconnected": bool(ch.get("is_disconnected")),
+                            "is_locked": bool(ch.get("is_locked")),
+                            "formatted_username": ch.get("formatted_username") or ch.get("label") or "",
+                        }
+                        for ch in publisher.list_channels()
+                    ]
             except Exception as exc:
                 error = str(exc)
         return Response(
