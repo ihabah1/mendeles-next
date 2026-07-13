@@ -225,25 +225,66 @@ export default function AiAutomationPage() {
     onError: (err: Error) => setError(err.message),
   });
 
+  const prepareAndSimulate = async (): Promise<SocialCampaign> => {
+    if (!active?.id) throw new Error("No campaign");
+    await saveEdits.mutateAsync();
+    const platformsSelected = active.platforms?.length ? active.platforms : platforms;
+    let campaign = active;
+    if (platformsSelected.includes("instagram") && !campaign.instagram_image_url) {
+      campaign = await socialApi.createInstagramImage(campaign.id);
+    }
+    if (platformsSelected.includes("tiktok") && !campaign.tiktok_video_url) {
+      try {
+        const dataUrl = await createTikTokPromoVideo({
+          title: campaign.title || campaign.main_idea || "Mendeles",
+          cta: campaign.cta || "Learn more",
+          websiteUrl: campaign.website_url || websiteUrl,
+        });
+        campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
+      } catch {
+        campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
+      }
+    }
+    const result = await socialApi.simulate(campaign.id);
+    if (result.status !== "simulated") {
+      throw new Error(result.last_error || "הסימולציה נכשלה — בדקו כותרות וקריאייטיבים.");
+    }
+    return result;
+  };
+
+  const simulate = useMutation({
+    mutationFn: prepareAndSimulate,
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      setPublishStep(-1);
+      setError("");
+      requestAnimationFrame(() => {
+        document.getElementById("campaign-release")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    },
+    onError: (err: Error) => setError(err.message || "Simulation failed"),
+  });
+
   const publish = useMutation({
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
-      if (!active.simulated_at && active.status !== "simulated") {
-        document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        throw new Error("קודם צריך לאשר סימולציה (שלב 3) — כך תראו איך הקמפיין נראה ב-3 הרשתות.");
-      }
-      await saveEdits.mutateAsync();
+      // Always save + simulate first so the gate never blocks with a stale "required" error.
+      setPublishStep(0);
+      const simulatedCampaign = await prepareAndSimulate();
+      setActive(simulatedCampaign);
+      const campaignId = simulatedCampaign.id;
       const scheduledAt =
         scheduleMode && scheduleDate
           ? new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString()
           : undefined;
-      setPublishStep(0);
+      setPublishStep(1);
       const timers = PUBLISH_STEPS.map((_, idx) =>
-        window.setTimeout(() => setPublishStep(idx), idx * 700),
+        window.setTimeout(() => setPublishStep(Math.max(1, idx)), idx * 700),
       );
       try {
         return await socialApi.publish({
-          campaign_id: active.id,
+          campaign_id: campaignId,
           mode: scheduleMode ? "schedule" : "now",
           scheduled_at: scheduledAt,
           timezone,
@@ -258,11 +299,6 @@ export default function AiAutomationPage() {
       if (data.status === "failed") {
         setPublishStep(-1);
         setError(data.last_error || "Publish failed");
-        if (/simulation/i.test(data.last_error || "")) {
-          requestAnimationFrame(() => {
-            document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
-        }
       } else {
         setPublishStep(PUBLISH_STEPS.length - 1);
         setError("");
@@ -407,45 +443,6 @@ export default function AiAutomationPage() {
       pushLocalLog(err.message || "Generation failed", "error");
       setError(err.message || "AI TikTok generation failed");
     },
-  });
-
-  const simulate = useMutation({
-    mutationFn: async () => {
-      if (!active?.id) throw new Error("No campaign");
-      await saveEdits.mutateAsync();
-      const platformsSelected = active.platforms?.length ? active.platforms : platforms;
-      let campaign = active;
-      if (platformsSelected.includes("instagram") && !campaign.instagram_image_url) {
-        campaign = await socialApi.createInstagramImage(campaign.id);
-      }
-      if (platformsSelected.includes("tiktok") && !campaign.tiktok_video_url) {
-        try {
-          const dataUrl = await createTikTokPromoVideo({
-            title: campaign.title || campaign.main_idea || "Mendeles",
-            cta: campaign.cta || "Learn more",
-            websiteUrl: campaign.website_url || websiteUrl,
-          });
-          campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
-        } catch {
-          campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
-        }
-      }
-      return socialApi.simulate(campaign.id);
-    },
-    onSuccess: (data) => {
-      setActive(data);
-      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
-      if (data.status !== "simulated") {
-        setError(data.last_error || "Simulation failed — fix the checklist items.");
-      } else {
-        setError("");
-        setPublishStep(-1);
-        requestAnimationFrame(() => {
-          document.getElementById("campaign-release")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
-    },
-    onError: (err: Error) => setError(err.message || "Simulation failed"),
   });
 
   const hashtagText = useMemo(() => {
@@ -1000,46 +997,62 @@ export default function AiAutomationPage() {
         <Card className="space-y-4 !rounded-2xl border-red-200/80 dark:border-red-900/50">
           {!hasCampaign ? (
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p>
-          ) : !simulated ? (
-            <div className="space-y-4 rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/30">
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                השליחה נעולה עד שתאשרו סימולציה בשלב 3 — שם תראו איך הקמפיין נראה בלינקדאין, אינסטגרם וטיקטוק.
-              </p>
-              <Button
-                type="button"
-                onClick={() =>
-                  document.getElementById("campaign-simulation")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  })
-                }
-                className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-              >
-                עבור לסימולציה (שלב 3)
-              </Button>
-            </div>
           ) : (
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-              הסימולציה עברה — אפשר לשלוח את הקמפיין לרשת.
-            </p>
+            <>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">
+                  {simulated
+                    ? "סימולציה אושרה — כך ייראה הקמפיין לפני שליחה:"
+                    : "לפני שליחה — כך ייראה הקמפיין ב־3 הרשתות. אפשר לאשר סימולציה או ללחוץ שלח (יריץ סימולציה אוטומטית):"}
+                </p>
+                <CampaignNetworkSimulator
+                  campaign={active!}
+                  platforms={active!.platforms?.length ? active!.platforms : platforms}
+                />
+              </div>
+
+              {!simulated ? (
+                <div className="flex flex-wrap gap-3 rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                  <Button
+                    type="button"
+                    disabled={!canManage || simulate.isPending || publishing}
+                    onClick={() => simulate.mutate()}
+                    className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+                  >
+                    {simulate.isPending ? "מריץ סימולציה…" : "✓ אשר סימולציה"}
+                  </Button>
+                  <p className="w-full text-xs text-amber-900 dark:text-amber-100">
+                    או לחצו ישירות על &quot;שלח קמפיין לרשת&quot; — הסימולציה תרוץ אוטומטית ואז תישלח.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  הסימולציה עברה — אפשר לשלוח את הקמפיין לרשת.
+                </p>
+              )}
+            </>
           )}
 
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              disabled={!canManage || !hasCampaign || !simulated || publishing}
+              disabled={!canManage || !hasCampaign || publishing || simulate.isPending}
               onClick={() => {
                 setScheduleMode(false);
                 publish.mutate();
               }}
               className="rounded-full bg-red-600 px-6 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
             >
-              {publishing ? "שולח…" : "שלח קמפיין לרשת"}
+              {publishing
+                ? !simulated
+                  ? "מריץ סימולציה ושולח…"
+                  : "שולח…"
+                : "שלח קמפיין לרשת"}
             </Button>
             <Button
               type="button"
               variant="outline"
-              disabled={!canManage || !hasCampaign || !simulated}
+              disabled={!canManage || !hasCampaign || publishing || simulate.isPending}
               onClick={() => setScheduleMode(true)}
               className="rounded-full"
             >
@@ -1047,7 +1060,7 @@ export default function AiAutomationPage() {
             </Button>
           </div>
 
-          {scheduleMode && simulated ? (
+          {scheduleMode ? (
             <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
               <label className="text-sm font-medium">
                 Date
@@ -1082,7 +1095,7 @@ export default function AiAutomationPage() {
               </label>
               <Button
                 type="button"
-                disabled={!canManage || !hasCampaign || !simulated || !scheduleDate || publishing}
+                disabled={!canManage || !hasCampaign || !scheduleDate || publishing || simulate.isPending}
                 onClick={() => publish.mutate()}
                 className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
               >
@@ -1091,7 +1104,7 @@ export default function AiAutomationPage() {
             </div>
           ) : null}
 
-          {publishing || (publishStep >= 0 && simulated && active?.status !== "failed") ? (
+          {publishing || (publishStep >= 0 && active?.status !== "failed" && !/simulation required/i.test(error || "")) ? (
             <div className="space-y-2 rounded-2xl bg-[var(--muted)]/40 p-4">
               {PUBLISH_STEPS.map((step, idx) => (
                 <div key={step} className="flex items-center gap-2 text-sm">
@@ -1104,7 +1117,7 @@ export default function AiAutomationPage() {
                   <span className={idx === publishStep ? "font-bold text-red-600" : ""}>{step}</span>
                 </div>
               ))}
-              {active?.publish_log?.length ? (
+              {active?.publish_log?.length && !/simulation required/i.test(active.last_error || "") ? (
                 <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-3 text-xs">
                   {active.publish_log.map((entry, i) => (
                     <li key={`${entry.at}-${i}`} className={entry.ok ? "text-emerald-700" : "text-red-600"}>
