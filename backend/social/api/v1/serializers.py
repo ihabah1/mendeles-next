@@ -44,4 +44,4 @@ class PublishCampaignSerializer(serializers.Serializer):
 
 
 class TikTokVideoUploadSerializer(serializers.Serializer):
-    data_url = serializers.CharField(required=True, allow_blank=False)
+    data_url = serializers.CharField(required=False, allow_blank=True, default="")

@@ -185,7 +185,7 @@ def test_simulation_required_before_publish(tenant, owner_user, settings, tmp_pa
     assert any(s["step"] == "Instagram image" and s["ok"] for s in simulated["simulation_log"])
 
 
-def test_tiktok_simulation_requires_video(tenant, owner_user, settings, tmp_path):
+def test_tiktok_simulation_auto_creates_creative(tenant, owner_user, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     settings.BACKEND_PUBLIC_URL = "http://backend.test"
     from social.application.campaign_service import CampaignService
@@ -204,6 +204,6 @@ def test_tiktok_simulation_requires_video(tenant, owner_user, settings, tmp_path
         status=CampaignStatus.READY,
     )
     result = CampaignService.run_simulation(campaign)
-    assert result["status"] == CampaignStatus.READY
-    assert result["simulated_at"] is None
-    assert any(s["step"] == "TikTok video" and not s["ok"] for s in result["simulation_log"])
+    assert result["status"] == CampaignStatus.SIMULATED
+    assert result["tiktok_video_url"]
+    assert any(s["step"] == "TikTok video" and s["ok"] for s in result["simulation_log"])

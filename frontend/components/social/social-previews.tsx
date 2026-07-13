@@ -94,25 +94,25 @@ export function InstagramPreview({ campaign }: Props) {
 export function TikTokPreview({ campaign }: Props) {
   const text = campaign.captions?.tiktok || "";
   const tags = hashtagsLine(campaign, "tiktok");
+  const media = campaign.tiktok_video_url || campaign.instagram_image_url || campaign.media_url;
+  const isVideo = Boolean(media && /\.(webm|mp4|mov)(\?|$)/i.test(media));
   return (
     <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[32px] border-[8px] border-zinc-900 bg-zinc-950 shadow-xl">
       <div className="relative aspect-[9/16] bg-gradient-to-b from-zinc-800 to-zinc-950">
-        {campaign.tiktok_video_url ? (
-          <video
-            src={campaign.tiktok_video_url}
-            className="absolute inset-0 h-full w-full object-cover"
-            muted
-            loop
-            playsInline
-            autoPlay
-          />
-        ) : campaign.instagram_image_url || campaign.media_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={campaign.instagram_image_url || campaign.media_url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-80"
-          />
+        {media ? (
+          isVideo ? (
+            <video
+              src={media}
+              className="absolute inset-0 h-full w-full object-cover"
+              muted
+              loop
+              playsInline
+              autoPlay
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={media} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+          )
         ) : null}
         <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black/80 to-transparent p-4">
           <p className="text-xs font-bold text-white">@mendeles</p>

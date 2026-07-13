@@ -212,7 +212,7 @@ class CampaignInstagramImageView(APIView):
 
 
 class CampaignTikTokVideoView(APIView):
-    """POST — upload browser-recorded TikTok video (data URL)."""
+    """POST — upload browser video, or auto-generate a vertical TikTok creative."""
 
     permission_classes = [IsAuthenticated, HasPermission]
     required_permission = "automation.manage"
@@ -224,8 +224,12 @@ class CampaignTikTokVideoView(APIView):
             raise NotFoundError("Campaign not found.")
         ser = TikTokVideoUploadSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+        data_url = (ser.validated_data.get("data_url") or "").strip()
         try:
-            MediaGenerationService.save_tiktok_video(campaign, data_url=ser.validated_data["data_url"])
+            if data_url:
+                MediaGenerationService.save_tiktok_video(campaign, data_url=data_url)
+            else:
+                MediaGenerationService.create_tiktok_creative(campaign)
         except Exception as exc:
             raise ValidationError(str(exc)) from exc
         campaign.simulated_at = None

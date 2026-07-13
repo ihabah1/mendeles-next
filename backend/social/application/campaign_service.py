@@ -146,11 +146,15 @@ class CampaignService:
             )
             ok &= check("Website link on creative", bool(campaign.website_url), campaign.website_url or "missing URL")
         if "tiktok" in platforms:
-            ok &= check(
-                "TikTok video",
-                bool(campaign.tiktok_video_url),
-                campaign.tiktok_video_url or "Generate TikTok video before simulation",
-            )
+            if not campaign.tiktok_video_url:
+                try:
+                    MediaGenerationService.create_tiktok_creative(campaign)
+                except Exception as exc:
+                    ok &= check("TikTok video", False, str(exc))
+                else:
+                    ok &= check("TikTok video", True, campaign.tiktok_video_url)
+            else:
+                ok &= check("TikTok video", True, campaign.tiktok_video_url)
             ok &= check(
                 "TikTok caption",
                 bool((campaign.captions_json or {}).get("tiktok")),

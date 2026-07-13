@@ -118,11 +118,11 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
     }),
-  uploadTikTokVideo: (id: string, data_url: string) =>
+  uploadTikTokVideo: (id: string, data_url = "") =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {
       method: "POST",
       headers: authHeaders(),
-      json: { data_url },
+      json: data_url ? { data_url } : {},
     }),
   publish: (body: PublishInput) =>
     apiFetch<SocialCampaign>("/api/v1/social/publish/", {

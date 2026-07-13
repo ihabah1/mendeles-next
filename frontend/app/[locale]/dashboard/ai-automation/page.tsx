@@ -223,12 +223,17 @@ export default function AiAutomationPage() {
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
       await saveEdits.mutateAsync();
-      const dataUrl = await createTikTokPromoVideo({
-        title: active.title || active.main_idea || "Mendeles",
-        cta: active.cta || "Learn more",
-        websiteUrl: active.website_url || websiteUrl,
-      });
-      return socialApi.uploadTikTokVideo(active.id, dataUrl);
+      try {
+        const dataUrl = await createTikTokPromoVideo({
+          title: active.title || active.main_idea || "Mendeles",
+          cta: active.cta || "Learn more",
+          websiteUrl: active.website_url || websiteUrl,
+        });
+        return await socialApi.uploadTikTokVideo(active.id, dataUrl);
+      } catch {
+        // Browser recording unsupported — server generates vertical creative.
+        return socialApi.uploadTikTokVideo(active.id, "");
+      }
     },
     onSuccess: (data) => {
       setActive(data);
@@ -242,7 +247,24 @@ export default function AiAutomationPage() {
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
       await saveEdits.mutateAsync();
-      return socialApi.simulate(active.id);
+      const platformsSelected = active.platforms?.length ? active.platforms : platforms;
+      let campaign = active;
+      if (platformsSelected.includes("instagram") && !campaign.instagram_image_url) {
+        campaign = await socialApi.createInstagramImage(campaign.id);
+      }
+      if (platformsSelected.includes("tiktok") && !campaign.tiktok_video_url) {
+        try {
+          const dataUrl = await createTikTokPromoVideo({
+            title: campaign.title || campaign.main_idea || "Mendeles",
+            cta: campaign.cta || "Learn more",
+            websiteUrl: campaign.website_url || websiteUrl,
+          });
+          campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
+        } catch {
+          campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
+        }
+      }
+      return socialApi.simulate(campaign.id);
     },
     onSuccess: (data) => {
       setActive(data);
