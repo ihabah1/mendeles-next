@@ -39,6 +39,7 @@ export function FeatureFlagsPanel({ data, locale }: Props) {
       invalidatePublicFeaturesCache();
       qc.invalidateQueries({ queryKey: ["control-center"] });
       qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["public-features"] });
     },
   });
 

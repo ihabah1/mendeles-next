@@ -139,6 +139,42 @@ async function buildPdf(opts: {
   return pdf.output("datauristring");
 }
 
+/** Local cleanup: spacing, punctuation, and light formatting — no server. */
+function fixDocumentText(raw: string, locale: string): string {
+  let text = raw.replace(/\u00a0/g, " ").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  text = text.replace(/[ \t]+\n/g, "\n");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  text = text.replace(/[ \t]{2,}/g, " ");
+
+  // Spaces around punctuation
+  text = text.replace(/\s+([,.;:!?…])/g, "$1");
+  text = text.replace(/([,.;:!?…])(?=[^\s\n])/g, "$1 ");
+  text = text.replace(/([(„"«])\s+/g, "$1");
+  text = text.replace(/\s+([)»"”])/g, "$1");
+
+  // Hebrew / English quotes normalization
+  text = text.replace(/"{2,}/g, '"');
+  text = text.replace(/'{2,}/g, "'");
+
+  // Duplicate punctuation
+  text = text.replace(/([.!?…]){2,}/g, "$1");
+  text = text.replace(/,{2,}/g, ",");
+
+  // Dashes
+  text = text.replace(/\s*[–—]\s*/g, " — ");
+  text = text.replace(/(\S)-(\S)/g, "$1-$2");
+
+  if (locale === "en") {
+    text = text.replace(/(^|[.!?]\s+)([a-z])/g, (_, prefix: string, ch: string) => prefix + ch.toUpperCase());
+  }
+
+  return text
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .trim();
+}
+
 export function PdfCreatorTool({ locale }: { locale: string }) {
   const copy = toolsCopy(locale);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -149,6 +185,7 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [fixedNote, setFixedNote] = useState(false);
 
   function onLogo(file: File | null) {
     if (!file) return;
@@ -159,6 +196,19 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
       setPdfUrl(null);
     };
     reader.readAsDataURL(file);
+  }
+
+  function fixText() {
+    if (!body.trim()) {
+      setError(locale === "en" ? "Add text to fix first." : "הוסיפו קודם טקסט לתיקון.");
+      return;
+    }
+    const next = fixDocumentText(body, locale);
+    setBody(next);
+    setPdfUrl(null);
+    setError("");
+    setFixedNote(true);
+    window.setTimeout(() => setFixedNote(false), 2000);
   }
 
   async function create() {
@@ -233,20 +283,36 @@ export function PdfCreatorTool({ locale }: { locale: string }) {
           onChange={(e) => {
             setBody(e.target.value);
             setPdfUrl(null);
+            setFixedNote(false);
           }}
           placeholder={locale === "en" ? "Write your document text here…" : "כתבו כאן את טקסט המסמך…"}
           dir={locale === "en" ? "ltr" : "rtl"}
         />
       </label>
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void create()}
-        className="inline-flex rounded-full bg-[#6F42F5] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-      >
-        {busy ? copy.loading : copy.createPdf}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={!body.trim()}
+          onClick={fixText}
+          className="inline-flex rounded-full border border-[#6F42F5] bg-white px-5 py-2.5 text-sm font-bold text-[#6F42F5] disabled:opacity-50"
+        >
+          {copy.fixText}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void create()}
+          className="inline-flex rounded-full bg-[#6F42F5] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+        >
+          {busy ? copy.loading : copy.createPdf}
+        </button>
+        {fixedNote ? (
+          <span className="text-sm font-medium text-emerald-700">
+            {locale === "en" ? "Text updated." : "הטקסט עודכן."}
+          </span>
+        ) : null}
+      </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 

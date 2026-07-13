@@ -26,7 +26,7 @@ export function BlogHeader({ categories, locale = "he" }: Props) {
           <nav className="flex items-center gap-2 text-sm font-semibold sm:gap-3" aria-label={copy.siteNavLabel}>
             <Link
               href="/"
-              className="rounded-lg px-2 py-1.5 text-slate-700 transition hover:bg-slate-100 hover:text-[#6F42F5]"
+              className="rounded-lg px-2 py-1.5 font-bold text-[#6F42F5] transition hover:bg-[#6F42F5]/10"
             >
               {copy.home}
             </Link>

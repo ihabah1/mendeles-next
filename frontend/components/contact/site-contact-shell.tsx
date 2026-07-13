@@ -15,7 +15,8 @@ export function WhatsAppChatShell() {
     queryKey: ["public-features"],
     queryFn: fetchPublicFeatures,
     enabled,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (!enabled) return null;
@@ -33,7 +34,8 @@ export function SiteContactShell() {
     queryKey: ["public-features"],
     queryFn: fetchPublicFeatures,
     enabled: isHome,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (!isHome) return null;

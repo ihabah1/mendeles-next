@@ -25,6 +25,7 @@ type ToolsCopy = {
   choosePdf: string;
   uploadLogo: string;
   createPdf: string;
+  fixText: string;
   documentNature: string;
   documentNatureHint: string;
   documentText: string;
@@ -52,6 +53,7 @@ const HE: ToolsCopy = {
   choosePdf: "בחרו PDF",
   uploadLogo: "טעינת לוגו",
   createPdf: "יצירת PDF",
+  fixText: "תקן טקסט",
   documentNature: "אופי המסמך",
   documentNatureHint: "אופציונלי — למשל הצעת מחיר, מכתב, אישור",
   documentText: "טקסט המסמך",
@@ -140,6 +142,7 @@ const EN: ToolsCopy = {
   choosePdf: "Choose PDF",
   uploadLogo: "Upload logo",
   createPdf: "Create PDF",
+  fixText: "Fix text",
   documentNature: "Document type",
   documentNatureHint: "Optional — e.g. quote, letter, certificate",
   documentText: "Document text",

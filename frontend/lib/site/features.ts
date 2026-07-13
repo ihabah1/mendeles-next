@@ -1,4 +1,4 @@
-import { backendBase } from "@/lib/api/backend-url";
+import { apiFetch } from "@/lib/api/client";
 import type { ContactSiteConfig } from "@/lib/contact/site-config";
 import { getContactSiteConfig } from "@/lib/contact/site-config";
 
@@ -15,15 +15,16 @@ const DEFAULT_CONTACT: ContactSiteConfig = {
   whatsappMessage: "שלום, אשמח לעזרה מבוט Mendeles",
 };
 
-const DEFAULT_FEATURES: PublicFeatures = {
-  contact_widget_home: true,
-  whatsapp_balloon: true,
+/** Fail closed: if flags cannot be loaded, do not show marketing balloons. */
+const FALLBACK_FEATURES: PublicFeatures = {
+  contact_widget_home: false,
+  whatsapp_balloon: false,
   contact: DEFAULT_CONTACT,
 };
 
 let cached: PublicFeatures | null = null;
 let cacheTs = 0;
-const CACHE_MS = 60_000;
+const CACHE_MS = 30_000;
 
 function mergeContact(remote: Partial<ContactSiteConfig> | undefined): ContactSiteConfig {
   const local = getContactSiteConfig();
@@ -35,31 +36,28 @@ function mergeContact(remote: Partial<ContactSiteConfig> | undefined): ContactSi
   };
 }
 
+type PublicFeaturesResponse = {
+  contact_widget_home?: boolean;
+  whatsapp_balloon?: boolean;
+  contact_email?: string;
+  contact_phone?: string;
+  whatsapp_number?: string;
+  whatsapp_prefill?: string;
+};
+
 export async function fetchPublicFeatures(): Promise<PublicFeatures> {
   const now = Date.now();
   if (cached && now - cacheTs < CACHE_MS) return cached;
 
   try {
-    const res = await fetch(`${backendBase()}/api/v1/settings/public/`, {
-      next: { revalidate: 60 },
-      signal: AbortSignal.timeout(8_000),
+    // Relative path — works in browser via Next `/api/v1/[...path]` proxy.
+    // Do not use backendBase() here; that resolves to localhost/private URLs in the client.
+    const data = await apiFetch<PublicFeaturesResponse>("/api/v1/settings/public/", {
+      cache: "no-store",
     });
-    if (!res.ok) {
-      cached = { ...DEFAULT_FEATURES, contact: mergeContact(undefined) };
-      cacheTs = now;
-      return cached;
-    }
-    const data = (await res.json()) as {
-      contact_widget_home?: boolean;
-      whatsapp_balloon?: boolean;
-      contact_email?: string;
-      contact_phone?: string;
-      whatsapp_number?: string;
-      whatsapp_prefill?: string;
-    };
     cached = {
-      contact_widget_home: data.contact_widget_home !== false,
-      whatsapp_balloon: data.whatsapp_balloon !== false,
+      contact_widget_home: data.contact_widget_home === true,
+      whatsapp_balloon: data.whatsapp_balloon === true,
       contact: mergeContact({
         email: data.contact_email,
         phone: data.contact_phone,
@@ -70,7 +68,7 @@ export async function fetchPublicFeatures(): Promise<PublicFeatures> {
     cacheTs = now;
     return cached;
   } catch {
-    cached = { ...DEFAULT_FEATURES, contact: mergeContact(undefined) };
+    cached = { ...FALLBACK_FEATURES, contact: mergeContact(undefined) };
     cacheTs = now;
     return cached;
   }
