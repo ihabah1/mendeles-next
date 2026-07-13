@@ -619,7 +619,7 @@ export default function AiAutomationPage() {
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
             Creatives are built automatically on Generate. You can regenerate Instagram / TikTok here anytime.
-            AI video failover: Runway → Fal → Veo → LTX → Kling → local.
+            AI video failover: Runway → Veo 3.1 → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
 

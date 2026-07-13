@@ -83,6 +83,7 @@ def test_generate_ai_tiktok_batch(tenant, owner_user, settings, tmp_path):
     settings.RUNWAY_API_KEY = ""
     settings.FAL_KEY = ""
     settings.VEO_API_KEY = ""
+    settings.GEMINI_API_KEY = ""
     settings.LTX_API_KEY = ""
     settings.KLING_API_KEY = ""
 
@@ -105,3 +106,64 @@ def test_generate_ai_tiktok_batch(tenant, owner_user, settings, tmp_path):
     assert batch["generated"] == 3
     assert len(campaign.tiktok_videos_json) == 3
     assert campaign.tiktok_video_url
+
+
+def test_default_failover_is_runway_then_veo(settings):
+    settings.VIDEO_PROVIDER_FAILOVER = ""
+    from social.providers.video import provider_order
+
+    assert provider_order()[:2] == ["runway", "veo"]
+    assert provider_order()[-1] == "local"
+
+
+def test_resolve_veo_3_1_model_aliases(settings):
+    from social.providers.video.veo import resolve_veo_model
+
+    settings.VEO_MODEL = "veo-3.1-generate"
+    assert resolve_veo_model() == "veo-3.1-generate-preview"
+    settings.VEO_MODEL = "veo-3.1-generate-preview"
+    assert resolve_veo_model() == "veo-3.1-generate-preview"
+
+
+def test_veo_polls_and_downloads(monkeypatch, settings):
+    settings.VEO_API_KEY = "test-key"
+    settings.VEO_MODEL = "veo-3.1-generate"
+    settings.VIDEO_PROVIDERS_MOCK = False
+    settings.VIDEO_VEO_CREDITS = ""
+    settings.VIDEO_PROVIDER_POLL_SECONDS = 30
+
+    from social.providers.video import veo as veo_mod
+    from social.providers.video.veo import VeoVideoProvider
+
+    calls = {"n": 0}
+
+    def fake_json(url, *, method="GET", headers=None, body=None, timeout=None):
+        if method == "POST":
+            assert "veo-3.1-generate-preview:predictLongRunning" in url
+            return {"name": "operations/veo-op-1"}
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"done": False}
+        return {
+            "done": True,
+            "response": {
+                "generateVideoResponse": {
+                    "generatedSamples": [{"video": {"uri": "https://example.com/v.mp4"}}]
+                }
+            },
+        }
+
+    def fake_bytes(url, *, headers=None, timeout=None):
+        assert url == "https://example.com/v.mp4"
+        assert headers and headers.get("x-goog-api-key") == "test-key"
+        return b"mp4-bytes", "video/mp4"
+
+    monkeypatch.setattr(veo_mod, "http_json", fake_json)
+    monkeypatch.setattr(veo_mod, "http_bytes", fake_bytes)
+    monkeypatch.setattr(veo_mod.time, "sleep", lambda *_: None)
+
+    result = VeoVideoProvider().generate(VideoGenerationRequest(prompt="Mendeles vertical promo"))
+    assert result.ok is True
+    assert result.provider == "veo"
+    assert result.video_bytes == b"mp4-bytes"
+    assert result.metadata["model"] == "veo-3.1-generate-preview"

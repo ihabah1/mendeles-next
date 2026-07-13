@@ -24,7 +24,7 @@ from social.providers.video.veo import VeoVideoProvider
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ORDER = ("runway", "fal", "veo", "ltx", "kling", "local")
+DEFAULT_ORDER = ("runway", "veo", "local")
 
 PROVIDER_CLASSES: dict[str, type[VideoProvider]] = {
     "runway": RunwayVideoProvider,

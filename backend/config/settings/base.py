@@ -174,10 +174,10 @@ BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
 # TikTok / short-form AI video providers (failover by credits)
 VIDEO_PROVIDER_FAILOVER = os.environ.get(
     "VIDEO_PROVIDER_FAILOVER",
-    "runway,fal,veo,ltx,kling,local",
+    "runway,veo,local",
 )
 VIDEO_PROVIDER_TIMEOUT_SECONDS = int(os.environ.get("VIDEO_PROVIDER_TIMEOUT_SECONDS", "60"))
-VIDEO_PROVIDER_POLL_SECONDS = int(os.environ.get("VIDEO_PROVIDER_POLL_SECONDS", "120"))
+VIDEO_PROVIDER_POLL_SECONDS = int(os.environ.get("VIDEO_PROVIDER_POLL_SECONDS", "300"))
 VIDEO_PROVIDERS_MOCK = os.environ.get("VIDEO_PROVIDERS_MOCK", "false").lower() == "true"
 RUNWAY_API_KEY = os.environ.get("RUNWAY_API_KEY", "")
 RUNWAY_MODEL = os.environ.get("RUNWAY_MODEL", "gen4_turbo")
@@ -189,7 +189,7 @@ FAL_VIDEO_MODEL = os.environ.get("FAL_VIDEO_MODEL", "fal-ai/minimax/video-01-liv
 VIDEO_FAL_CREDITS = os.environ.get("VIDEO_FAL_CREDITS", "")
 VIDEO_FAL_CREDIT_COST = int(os.environ.get("VIDEO_FAL_CREDIT_COST", "1"))
 VEO_API_KEY = os.environ.get("VEO_API_KEY", "")
-VEO_MODEL = os.environ.get("VEO_MODEL", "veo-2.0-generate-001")
+VEO_MODEL = os.environ.get("VEO_MODEL", "veo-3.1-generate-preview")
 VIDEO_VEO_CREDITS = os.environ.get("VIDEO_VEO_CREDITS", "")
 VIDEO_VEO_CREDIT_COST = int(os.environ.get("VIDEO_VEO_CREDIT_COST", "1"))
 LTX_API_KEY = os.environ.get("LTX_API_KEY", "")
