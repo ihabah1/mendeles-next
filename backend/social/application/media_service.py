@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import re
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -312,12 +311,27 @@ class MediaGenerationService:
     @staticmethod
     def save_tiktok_video(campaign: SocialCampaign, *, data_url: str, provider: str = "browser") -> str:
         """Persist a browser-generated WebM/MP4 data URL for TikTok simulation/publish."""
-        match = re.match(r"^data:(video/[\w.+-]+);base64,(.+)$", data_url, re.DOTALL)
-        if not match:
-            raise ValueError("Invalid video data URL.")
-        mime, b64 = match.group(1), match.group(2)
-        ext = "webm" if "webm" in mime else "mp4" if "mp4" in mime else "bin"
-        raw = base64.b64decode(b64)
+        # Browsers often emit: data:video/webm;codecs=vp9,opus;base64,...
+        # Parse by locating ;base64, so codec params (including commas) never break matching.
+        raw_url = (data_url or "").strip()
+        marker = ";base64,"
+        idx = raw_url.find(marker)
+        if not raw_url.startswith("data:") or idx < 0:
+            preview = raw_url[:80].replace("\n", " ")
+            raise ValueError(f"Invalid video data URL. Got prefix: {preview!r}")
+        header = raw_url[5:idx]  # after "data:"
+        b64 = raw_url[idx + len(marker) :]
+        mime_base = header.split(";", 1)[0].strip().lower()
+        if not mime_base.startswith("video/"):
+            preview = raw_url[:80].replace("\n", " ")
+            raise ValueError(f"Invalid video data URL (expected video/*). Got prefix: {preview!r}")
+        ext = "webm" if "webm" in mime_base else "mp4" if "mp4" in mime_base else "bin"
+        try:
+            raw = base64.b64decode(b64, validate=False)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Invalid base64 video payload: {exc}") from exc
+        if len(raw) < 64:
+            raise ValueError("Video file is empty or too small.")
         if len(raw) > 25 * 1024 * 1024:
             raise ValueError("Video file is too large (max 25MB).")
         filename = f"{campaign.id}-tiktok-{uuid.uuid4().hex[:8]}.{ext}"

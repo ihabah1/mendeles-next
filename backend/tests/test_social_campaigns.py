@@ -281,3 +281,35 @@ def test_create_instagram_image_uses_gemini_when_available(tenant, owner_user, s
     assert campaign.instagram_image_url == url
     assert campaign.media_url == url
     assert (tmp_path / "social").exists()
+
+
+def test_save_tiktok_video_accepts_codecs_in_data_url(tenant, owner_user, settings, tmp_path):
+    """Browser MediaRecorder emits codecs= in the data URL; upload must accept it."""
+    import base64
+
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="TikTok codecs",
+        goal="Leads",
+        website_url="https://mendeles.com",
+        platforms=["tiktok"],
+        status=CampaignStatus.READY,
+        media_type="video",
+    )
+    payload = b"\x1a\x45\xdf\xa3" + (b"\x00" * 128)  # tiny webm-like bytes
+    b64 = base64.b64encode(payload).decode("ascii")
+    data_url = f"data:video/webm;codecs=vp9,opus;base64,{b64}"
+
+    url = MediaGenerationService.save_tiktok_video(campaign, data_url=data_url, provider="browser")
+    campaign.refresh_from_db()
+    assert url.endswith(".webm")
+    assert campaign.tiktok_video_url == url
+    assert len(campaign.tiktok_videos_json or []) == 1
