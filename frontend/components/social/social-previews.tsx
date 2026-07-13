@@ -32,6 +32,16 @@ export function LinkedInPreview({ campaign }: Props) {
           {tags ? `\n\n${tags}` : ""}
           {campaign.cta ? `\n\n${campaign.cta}` : ""}
         </p>
+        {campaign.website_url ? (
+          <a
+            href={campaign.website_url}
+            target="_blank"
+            rel="noreferrer"
+            className="block truncate text-sm font-semibold text-[#0A66C2] hover:underline"
+          >
+            {campaign.website_url.replace(/^https?:\/\//, "")}
+          </a>
+        ) : null}
         {campaign.instagram_image_url || campaign.media_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { InstagramPreview, LinkedInPreview, TikTokPreview } from "@/components/social/social-previews";
+import { CampaignNetworkSimulator } from "@/components/social/campaign-network-simulator";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   socialApi,
@@ -423,6 +423,9 @@ export default function AiAutomationPage() {
         setError(data.last_error || "Simulation failed — fix the checklist items.");
       } else {
         setError("");
+        requestAnimationFrame(() => {
+          document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
       }
     },
     onError: (err: Error) => setError(err.message || "Simulation failed"),
@@ -475,13 +478,13 @@ export default function AiAutomationPage() {
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6F42F5]">Automation</p>
         <h1 className="text-3xl font-extrabold tracking-tight">AI Automation</h1>
         <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
-          Generate creatives, run a simulation, then release to the network via Buffer — nothing goes live until simulation passes.
+          Generate creatives, preview how the campaign looks on LinkedIn / Instagram / TikTok, then release — nothing goes live until simulation passes.
         </p>
         <ol className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
           {[
             { n: "1", label: "Generate" },
             { n: "2", label: "Instagram + TikTok creatives" },
-            { n: "3", label: "Simulation" },
+            { n: "3", label: "סימולציה — 3 רשתות" },
             { n: "4", label: "שלח קמפיין לרשת" },
           ].map((step) => (
             <li
@@ -664,21 +667,6 @@ export default function AiAutomationPage() {
               </Card>
             </section>
           ) : null}
-
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold">Social Preview</h2>
-                <p className="text-sm text-[var(--muted-fg)]">{active.main_idea}</p>
-              </div>
-              <span className="rounded-full bg-[var(--muted)] px-3 py-1 text-xs font-bold uppercase">{active.status}</span>
-            </div>
-            <div className="grid gap-6 lg:grid-cols-3">
-              {platforms.includes("linkedin") || active.captions?.linkedin ? <LinkedInPreview campaign={active} /> : null}
-              {platforms.includes("instagram") || active.captions?.instagram ? <InstagramPreview campaign={active} /> : null}
-              {platforms.includes("tiktok") || active.captions?.tiktok ? <TikTokPreview campaign={active} /> : null}
-            </div>
-          </section>
 
           <section className="space-y-4">
             <h2 className="text-xl font-bold">Edit Before Publish</h2>
@@ -933,43 +921,60 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">3 · Simulation</h2>
-        <Card className="space-y-4 !rounded-2xl">
-          <p className="text-sm text-[var(--muted-fg)]">
-            Dry-run checks captions and creatives. Release stays locked until this passes.
+      <section id="campaign-simulation" className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold">3 · סימולציה — כך ייראה הקמפיין</h2>
+          <p className="mt-1 text-sm text-[var(--muted-fg)]">
+            לפני השליחה לרשת: צפו איך הפוסט נראה בלינקדאין, אינסטגרם וטיקטוק. אחר כך הריצו בדיקת סימולציה כדי לפתוח את כפתור השליחה.
           </p>
-          {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
-          <Button
-            type="button"
-            disabled={!canManage || !hasCampaign || simulate.isPending}
-            onClick={() => simulate.mutate()}
-            className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-          >
-            {simulate.isPending ? "Simulating…" : "Run simulation"}
-          </Button>
-          {active?.simulation_log?.length ? (
-            <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
-              {active.simulation_log.map((entry, i) => (
-                <li key={`${entry.step}-${i}`} className="flex gap-2">
-                  <span className={entry.ok ? "text-emerald-600" : "text-red-600"}>{entry.ok ? "✓" : "✗"}</span>
-                  <span>
-                    <span className="font-semibold">{entry.step}</span>
-                    {entry.detail ? ` — ${entry.detail}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        </div>
+        <Card className="space-y-6 !rounded-2xl">
+          {!hasCampaign ? (
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p>
+          ) : active ? (
+            <>
+              <CampaignNetworkSimulator
+                campaign={active}
+                platforms={active.platforms?.length ? active.platforms : platforms}
+              />
+              <div className="border-t border-[var(--border)] pt-4 space-y-4">
+                <p className="text-sm text-[var(--muted-fg)]">
+                  בדיקת מוכנות (כותרות, קריאייטיבים, קישורים) — חובה לפני &quot;שלח קמפיין לרשת&quot;.
+                </p>
+                <Button
+                  type="button"
+                  disabled={!canManage || !hasCampaign || simulate.isPending}
+                  onClick={() => simulate.mutate()}
+                  className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+                >
+                  {simulate.isPending ? "מריץ סימולציה…" : "✓ אשר סימולציה והמשך לשליחה"}
+                </Button>
+                {active.simulation_log?.length ? (
+                  <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
+                    {active.simulation_log.map((entry, i) => (
+                      <li key={`${entry.step}-${i}`} className="flex gap-2">
+                        <span className={entry.ok ? "text-emerald-600" : "text-red-600"}>{entry.ok ? "✓" : "✗"}</span>
+                        <span>
+                          <span className="font-semibold">{entry.step}</span>
+                          {entry.detail ? ` — ${entry.detail}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {simulated ? (
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    הסימולציה עברה בהצלחה
+                    {active.simulated_at ? ` · ${formatDate(active.simulated_at)}` : ""} — אפשר לשלוח לרשת.
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    יש לאשר סימולציה לפני שליחת הקמפיין.
+                  </p>
+                )}
+              </div>
+            </>
           ) : null}
-          {simulated ? (
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-              Simulation passed{active?.simulated_at ? ` · ${formatDate(active.simulated_at)}` : ""}
-            </p>
-          ) : (
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              Simulation required before releasing the campaign.
-            </p>
-          )}
         </Card>
       </section>
 
