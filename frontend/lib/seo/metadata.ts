@@ -15,6 +15,7 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
   const meta = mergePageMetadata(settings, { ...page, path: localizedPath, locale });
   const hePath = localizePath(page.path, "he");
   const enPath = localizePath(page.path, "en");
+  const arPath = localizePath(page.path, "ar");
 
   const result: Metadata = {
     metadataBase: new URL(base),
@@ -26,6 +27,7 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
       languages: {
         "he-IL": absoluteSiteUrl(hePath, base),
         en: absoluteSiteUrl(enPath, base),
+        ar: absoluteSiteUrl(arPath, base),
         "x-default": absoluteSiteUrl(hePath, base),
       },
     },

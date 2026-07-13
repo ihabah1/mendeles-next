@@ -47,13 +47,13 @@ def localize_domain(domain: dict, locale: str) -> dict:
 def batch_locales(data: dict) -> list[str]:
     locales = data.get("locales")
     if isinstance(locales, list) and locales:
-        return [locale for locale in locales if locale in ("he", "en")]
+        return [locale for locale in locales if locale in ("he", "en", "ar")]
     mode = data.get("content_locales", "both")
     if mode == "he":
         return ["he"]
     if mode == "en":
         return ["en"]
-    return ["he", "en"]
+    return ["he", "en", "ar"]
 
 
 DOMAIN_OPTIONS = [

@@ -8,11 +8,11 @@ export const STATIC_SITEMAP_PAGES: Array<{ path: string; changefreq: string; pri
   { path: "/company", changefreq: "monthly", priority: 0.7 },
 ];
 
-export const LOCALES = ["he", "en"] as const;
+export const LOCALES = ["he", "en", "ar"] as const;
 
 export function localizeSitemapPath(path: string, locale: string): string {
   if (locale === "he") return path;
-  if (path === "/") return "/en";
+  if (path === "/") return `/${locale}`;
   return `/${locale}${path}`;
 }
 

@@ -72,6 +72,42 @@ const EN_LABELS: Record<string, string> = {
   general: "General",
 };
 
+const AR_LABELS: Record<string, string> = {
+  law: "القانون والجنائي",
+  real_estate: "العقارات",
+  insurance: "التأمين",
+  finance: "المالية",
+  medical: "الطب الخاص",
+  dentistry: "طب الأسنان",
+  beauty: "الجمال والتجميل",
+  fitness: "اللياقة والصحة",
+  home_services: "خدمات المنزل",
+  automotive: "السيارات",
+  education: "التعليم والدورات",
+  tourism: "السياحة والترفيه",
+  restaurants: "المطاعم والطعام",
+  ecommerce: "المتاجر الإلكترونية",
+  b2b: "B2B وخدمات الأعمال",
+  cyber: "الأمن السيبراني والتقنية",
+  marketing: "التسويق الرقمي",
+  events: "الفعاليات",
+  nonprofits: "الجمعيات",
+  local_business: "أعمال محلية",
+  sports: "رياضة",
+  economy: "اقتصاد",
+  current_affairs: "أخبار عاجلة",
+  world_news: "العالم",
+  international_news: "ترجمة أخبار دولية",
+  seo: "تحسين محركات البحث",
+  "digital-marketing": "التسويق الرقمي",
+  digital_marketing: "التسويق الرقمي",
+  "ai-automation": "الذكاء الاصطناعي والأتمتة",
+  ai_automation: "الذكاء الاصطناعي والأتمتة",
+  news: "أخبار",
+  business: "أعمال",
+  general: "عام",
+};
+
 function normalizeSlug(slug: string): string {
   return slug.trim().toLowerCase().replace(/-/g, "_");
 }
@@ -79,7 +115,7 @@ function normalizeSlug(slug: string): string {
 export function localizeBlogCategory(slug: string, locale: string, _fallback = ""): string {
   if (!slug) return "";
   const key = normalizeSlug(slug);
-  const labels = locale === "en" ? EN_LABELS : HE_LABELS;
+  const labels = locale === "en" ? EN_LABELS : locale === "ar" ? AR_LABELS : HE_LABELS;
   return labels[key] ?? labels[slug.toLowerCase()] ?? key.replace(/_/g, " ");
 }
 

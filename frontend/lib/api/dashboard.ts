@@ -904,7 +904,7 @@ export const aiSeoApi = {
     international_news_translation_enabled?: boolean;
     landing_design_enabled?: boolean;
     free_image_enabled?: boolean;
-    content_locales?: "both" | "he" | "en";
+    content_locales?: "both" | "he" | "en" | "ar";
     sports_translation_enabled?: boolean;
     locale?: string;
   }) =>

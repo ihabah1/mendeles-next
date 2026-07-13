@@ -39,8 +39,10 @@ export const DOMAIN_ICONS: Record<string, string> = {
   international_news: "🗞️",
 };
 
-export function pageLocale(locale?: string): "he" | "en" {
-  return locale === "en" ? "en" : "he";
+export function pageLocale(locale?: string): "he" | "en" | "ar" {
+  if (locale === "en") return "en";
+  if (locale === "ar") return "ar";
+  return "he";
 }
 
 export const TABLE_PAGE_SIZE = 4;

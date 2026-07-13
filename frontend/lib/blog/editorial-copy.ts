@@ -1,4 +1,4 @@
-export type EditorialLocale = "he" | "en";
+export type EditorialLocale = "he" | "en" | "ar";
 
 const COPY = {
   he: {
@@ -135,16 +135,89 @@ const COPY = {
       { title: "Community", description: "Expert knowledge, collaboration, and insights from growth practitioners." },
     ],
   },
+  ar: {
+    metaTitle: "Mendeles Insights — المدونة",
+    metaDescription: "رؤى وأدلة وأبحاث للنمو الرقمي — مدونة Mendeles Insights.",
+    mastheadKicker: "Mendeles Insights",
+    mastheadTitle: "أخبار Mendeles",
+    mastheadSubtitle: "أخبار ومقالات شيّقة من البلاد والعالم",
+    articles: "مقالات",
+    categories: "فئات",
+    lastUpdate: "آخر تحديث",
+    allArticles: "كل المقالات",
+    inArchive: "في الأرشيف",
+    noResults: "لا توجد مقالات تطابق عوامل التصفية الحالية.",
+    loadMore: "تحميل المزيد من المقالات",
+    featured: "مميّز",
+    readArticle: "اقرأ المقال",
+    readMore: "اقرأ المزيد",
+    readingMinutes: "دقائق قراءة",
+    noDate: "بدون تاريخ",
+    team: "فريق Mendeles",
+    search: "بحث",
+    newsletter: "الاشتراك في النشرة",
+    navLabel: "فئات المدونة",
+    siteNavLabel: "التنقل الرئيسي",
+    home: "Mendeles",
+    blog: "المدونة",
+    tools: "أدوات",
+    breaking: "عاجل",
+    sportsDesk: "قسم الرياضة",
+    sportsSubtitle: "تقارير وتحليلات مترجمة عن كرة القدم وعالم الرياضة",
+    bookmarkAdd: "حفظ إشارة",
+    bookmarkRemove: "إزالة الإشارة",
+    demoNotice: "عرض محتوى تجريبي — انشر مقالات من مساحة العمل لاستبداله.",
+    demoNoticeTitle: "معاينة مدونة تجريبية",
+    demoNoticeBody: "لا توجد مقالات منشورة في الإنتاج بعد. تُعرض مقالات تحريرية للعرض. لنشر محتوى حقيقي —",
+    demoNoticeLink: "أنشئ وانشر من مساحة العمل",
+    searchPlaceholder: "ابحث في المقالات والمواضيع والكلمات المفتاحية...",
+    allCategories: "كل الفئات",
+    sortNewest: "الأحدث أولاً",
+    sortOldest: "الأقدم أولاً",
+    sortTitle: "حسب العنوان",
+    searchButton: "بحث",
+    filterAll: "الكل",
+    trendingTopics: "مواضيع رائجة",
+    noCategories: "لا توجد فئات بعد.",
+    categoriesLabel: "فئات",
+    previewLabel: "معاينة تجريبية",
+    close: "إغلاق",
+    previewFooter: "هذه مقالة تجريبية. لنشر محتوى حقيقي في المدونة، أنشئ وانشر من",
+    workspaceLink: "مساحة العمل",
+    minShort: "د",
+    faq: "أسئلة شائعة",
+    emptyPage: "الصفحة منشورة لكن لا توجد كتل للعرض بعد.",
+    contact: "تواصل معنا",
+    learnMore: "اعرف المزيد",
+    sourceLink: "المصدر",
+    editModeLabel: "تحرير المسؤول",
+    editSelectArticle: "تحديد مقالة للتحرير",
+    editDeselectArticle: "إلغاء تحديد المقالة",
+    editClearSelection: "إلغاء",
+    openInStudio: "فتح في الاستوديو",
+    features: [
+      { title: "أدلة", description: "خطط عملية لتطبيق SEO والتسويق والأتمتة داخل المؤسسة." },
+      { title: "أبحاث", description: "تحليلات واتجاهات ورؤى مبنية على بيانات من الميدان." },
+      { title: "أدوات AI", description: "توصيات لأدوات الذكاء الاصطناعي في التسويق والمحتوى والأتمتة." },
+      { title: "مجتمع", description: "معرفة خبراء وتعاون ورؤى من ممارسي النمو." },
+    ],
+  },
 } as const;
 
 export function editorialCopy(locale: string): (typeof COPY)[keyof typeof COPY] {
-  return locale === "en" ? COPY.en : COPY.he;
+  if (locale === "en") return COPY.en;
+  if (locale === "ar") return COPY.ar;
+  return COPY.he;
 }
 
 export function dateLocale(locale: string): string {
-  return locale === "en" ? "en-US" : "he-IL";
+  if (locale === "en") return "en-US";
+  if (locale === "ar") return "ar";
+  return "he-IL";
 }
 
 export function sortLocale(locale: string): string {
-  return locale === "en" ? "en" : "he";
+  if (locale === "en") return "en";
+  if (locale === "ar") return "ar";
+  return "he";
 }

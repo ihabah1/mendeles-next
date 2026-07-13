@@ -88,8 +88,8 @@ class AccessibilityAuditService:
         if locale == "he":
             return path if path.startswith("/") else f"/{path}"
         if path == "/":
-            return "/en"
-        return f"/en{path}"
+            return f"/{locale}"
+        return f"/{locale}{path}"
 
     @classmethod
     def _absolute_url(cls, path: str) -> str:

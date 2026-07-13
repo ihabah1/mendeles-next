@@ -17,7 +17,7 @@ export function SearchToolbar({
   locale = "he",
 }: Props) {
   const copy = editorialCopy(locale);
-  const formAction = locale === "en" ? "/en/blog" : "/blog";
+  const formAction = locale === "he" ? "/blog" : `/${locale}/blog`;
 
   return (
     <form

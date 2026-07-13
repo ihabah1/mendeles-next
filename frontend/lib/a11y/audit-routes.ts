@@ -4,11 +4,12 @@ import {
   PUBLIC_INTERFACE_DEFS,
 } from "@/lib/admin/site-interfaces";
 import type { Locale } from "@/lib/i18n/routing";
+import { routing } from "@/lib/i18n/routing";
 
 export function localizePath(href: string, locale: Locale): string {
   if (locale === "he") return href;
-  if (href === "/") return "/en";
-  return `/en${href}`;
+  if (href === "/") return `/${locale}`;
+  return `/${locale}${href}`;
 }
 
 const PUBLIC_EXTRA = [{ id: "blog", href: "/blog" }];
@@ -27,7 +28,7 @@ export function localizedAuditPaths(locale: Locale, paths: string[]): string[] {
 }
 
 export function allSiteAuditPaths(): Array<{ locale: Locale; path: string }> {
-  const locales: Locale[] = ["he", "en"];
+  const locales = [...routing.locales] as Locale[];
   const publicPaths = allPublicAuditPaths();
   const adminPaths = allAdminAuditPaths();
   const entries: Array<{ locale: Locale; path: string }> = [];

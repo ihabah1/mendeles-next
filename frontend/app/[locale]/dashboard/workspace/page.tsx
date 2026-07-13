@@ -69,7 +69,7 @@ export default function WorkspacePage() {
   const [randomTopicCount, setRandomTopicCount] = useState(2);
   const [newsHotTopicsEnabled, setNewsHotTopicsEnabled] = useState(false);
   const [internationalNewsTranslationEnabled, setInternationalNewsTranslationEnabled] = useState(false);
-  const [contentLocales, setContentLocales] = useState<"both" | "he" | "en">("both");
+  const [contentLocales, setContentLocales] = useState<"both" | "he" | "en" | "ar">("both");
   const [sportsTranslationEnabled, setSportsTranslationEnabled] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleEveryMinutes, setScheduleEveryMinutes] = useState(180);

@@ -293,7 +293,9 @@ export default function AiAutomationPage() {
 
   const generating = generate.isPending || active?.status === "generating";
   const publishing = publish.isPending;
+  const hasCampaign = Boolean(active?.id);
   const simulated = Boolean(active?.simulated_at) || active?.status === "simulated";
+  const needCampaignHint = "Generate a campaign above first — then these actions unlock.";
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
@@ -303,6 +305,27 @@ export default function AiAutomationPage() {
         <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
           Generate creatives, run a simulation, then release to the network via Buffer — nothing goes live until simulation passes.
         </p>
+        <ol className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+          {[
+            { n: "1", label: "Generate" },
+            { n: "2", label: "Instagram + TikTok creatives" },
+            { n: "3", label: "Simulation" },
+            { n: "4", label: "שלח קמפיין לרשת" },
+          ].map((step) => (
+            <li
+              key={step.n}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1.5",
+                step.n === "4" ? "border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" : "bg-[var(--muted)]/40",
+              )}
+            >
+              <span className={cn("flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white", step.n === "4" ? "bg-red-600" : "bg-[#6F42F5]")}>
+                {step.n}
+              </span>
+              {step.label}
+            </li>
+          ))}
+        </ol>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span
             className={cn(
@@ -320,7 +343,7 @@ export default function AiAutomationPage() {
 
       {/* Generate */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold">Generate AI Campaign</h2>
+        <h2 className="text-xl font-bold">1 · Generate AI Campaign</h2>
         <Card className="space-y-4 !rounded-2xl">
           <label className="block text-sm font-medium">
             Campaign Goal
@@ -439,8 +462,8 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      {/* Previews + edit */}
-      {active && active.id ? (
+      {/* Previews + edit — only when a campaign exists */}
+      {hasCampaign && active ? (
         <>
           <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -522,192 +545,196 @@ export default function AiAutomationPage() {
               ) : null}
             </Card>
           </section>
+        </>
+      ) : null}
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold">Creatives</h2>
-            <Card className="space-y-4 !rounded-2xl">
-              <p className="text-sm text-[var(--muted-fg)]">
-                Create an Instagram image (with website link on the creative) and a short TikTok video before simulation.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!canManage || createIgImage.isPending}
-                  onClick={() => createIgImage.mutate()}
-                  className="rounded-full"
-                >
-                  {createIgImage.isPending ? "Creating…" : "Create Instagram image"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!canManage || createTikTok.isPending}
-                  onClick={() => createTikTok.mutate()}
-                  className="rounded-full"
-                >
-                  {createTikTok.isPending ? "Recording…" : "Create TikTok video"}
-                </Button>
-              </div>
-              <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
-                <p>
-                  Instagram:{" "}
-                  <span className={active.instagram_image_url ? "font-semibold text-emerald-700" : ""}>
-                    {active.instagram_image_url ? "Ready" : "Not created yet"}
-                  </span>
-                </p>
-                <p>
-                  TikTok:{" "}
-                  <span className={active.tiktok_video_url ? "font-semibold text-emerald-700" : ""}>
-                    {active.tiktok_video_url ? "Ready" : "Not created yet"}
-                  </span>
-                </p>
-              </div>
-            </Card>
-          </section>
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">2 · Creatives</h2>
+        <Card className="space-y-4 !rounded-2xl">
+          <p className="text-sm text-[var(--muted-fg)]">
+            Create an Instagram image (with website link on the creative) and a short TikTok video before simulation.
+          </p>
+          {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canManage || !hasCampaign || createIgImage.isPending}
+              onClick={() => createIgImage.mutate()}
+              className="rounded-full"
+            >
+              {createIgImage.isPending ? "Creating…" : "Create Instagram image"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canManage || !hasCampaign || createTikTok.isPending}
+              onClick={() => createTikTok.mutate()}
+              className="rounded-full"
+            >
+              {createTikTok.isPending ? "Recording…" : "Create TikTok video"}
+            </Button>
+          </div>
+          <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
+            <p>
+              Instagram:{" "}
+              <span className={active?.instagram_image_url ? "font-semibold text-emerald-700" : ""}>
+                {active?.instagram_image_url ? "Ready" : "Not created yet"}
+              </span>
+            </p>
+            <p>
+              TikTok:{" "}
+              <span className={active?.tiktok_video_url ? "font-semibold text-emerald-700" : ""}>
+                {active?.tiktok_video_url ? "Ready" : "Not created yet"}
+              </span>
+            </p>
+          </div>
+        </Card>
+      </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold">Simulation</h2>
-            <Card className="space-y-4 !rounded-2xl">
-              <p className="text-sm text-[var(--muted-fg)]">
-                Dry-run checks captions and creatives. Release stays locked until this passes.
-              </p>
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">3 · Simulation</h2>
+        <Card className="space-y-4 !rounded-2xl">
+          <p className="text-sm text-[var(--muted-fg)]">
+            Dry-run checks captions and creatives. Release stays locked until this passes.
+          </p>
+          {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
+          <Button
+            type="button"
+            disabled={!canManage || !hasCampaign || simulate.isPending}
+            onClick={() => simulate.mutate()}
+            className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+          >
+            {simulate.isPending ? "Simulating…" : "Run simulation"}
+          </Button>
+          {active?.simulation_log?.length ? (
+            <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
+              {active.simulation_log.map((entry, i) => (
+                <li key={`${entry.step}-${i}`} className="flex gap-2">
+                  <span className={entry.ok ? "text-emerald-600" : "text-red-600"}>{entry.ok ? "✓" : "✗"}</span>
+                  <span>
+                    <span className="font-semibold">{entry.step}</span>
+                    {entry.detail ? ` — ${entry.detail}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {simulated ? (
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              Simulation passed{active?.simulated_at ? ` · ${formatDate(active.simulated_at)}` : ""}
+            </p>
+          ) : (
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Simulation required before releasing the campaign.
+            </p>
+          )}
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">4 · Release to network</h2>
+        <Card className="space-y-4 !rounded-2xl border-red-200/80 dark:border-red-900/50">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              disabled={!canManage || !hasCampaign || !simulated || publishing}
+              onClick={() => {
+                setScheduleMode(false);
+                publish.mutate();
+              }}
+              className="rounded-full bg-red-600 px-6 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
+            >
+              {publishing ? "Sending…" : "שלח קמפיין לרשת"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canManage || !hasCampaign || !simulated}
+              onClick={() => setScheduleMode(true)}
+              className="rounded-full"
+            >
+              Schedule release
+            </Button>
+          </div>
+          {!hasCampaign ? (
+            <p className="text-xs text-[var(--muted-fg)]">{needCampaignHint}</p>
+          ) : !simulated ? (
+            <p className="text-xs text-[var(--muted-fg)]">
+              The red release button unlocks only after a successful simulation.
+            </p>
+          ) : null}
+
+          {scheduleMode ? (
+            <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
+              <label className="text-sm font-medium">
+                Date
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Time
+                <input
+                  type="time"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Timezone
+                <select
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                >
+                  <option value="Asia/Jerusalem">Asia/Jerusalem</option>
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">America/New_York</option>
+                  <option value="Europe/London">Europe/London</option>
+                </select>
+              </label>
               <Button
                 type="button"
-                disabled={!canManage || simulate.isPending}
-                onClick={() => simulate.mutate()}
-                className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+                disabled={!canManage || !hasCampaign || !simulated || !scheduleDate || publishing}
+                onClick={() => publish.mutate()}
+                className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
               >
-                {simulate.isPending ? "Simulating…" : "Run simulation"}
+                Confirm scheduled release
               </Button>
-              {active.simulation_log?.length ? (
-                <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
-                  {active.simulation_log.map((entry, i) => (
-                    <li key={`${entry.step}-${i}`} className="flex gap-2">
-                      <span className={entry.ok ? "text-emerald-600" : "text-red-600"}>{entry.ok ? "✓" : "✗"}</span>
-                      <span>
-                        <span className="font-semibold">{entry.step}</span>
-                        {entry.detail ? ` — ${entry.detail}` : ""}
-                      </span>
+            </div>
+          ) : null}
+
+          {(publishing || publishStep >= 0) && active ? (
+            <div className="space-y-2 rounded-2xl bg-[var(--muted)]/40 p-4">
+              {PUBLISH_STEPS.map((step, idx) => (
+                <div key={step} className="flex items-center gap-2 text-sm">
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      idx <= publishStep ? "bg-red-600" : "bg-slate-300",
+                    )}
+                  />
+                  <span className={idx === publishStep ? "font-bold text-red-600" : ""}>{step}</span>
+                </div>
+              ))}
+              {active.publish_log?.length ? (
+                <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-3 text-xs">
+                  {active.publish_log.map((entry, i) => (
+                    <li key={`${entry.at}-${i}`} className={entry.ok ? "text-emerald-700" : "text-red-600"}>
+                      {entry.step} {entry.detail ? `— ${entry.detail}` : ""}
                     </li>
                   ))}
                 </ul>
               ) : null}
-              {simulated ? (
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                  Simulation passed{active.simulated_at ? ` · ${formatDate(active.simulated_at)}` : ""}
-                </p>
-              ) : (
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  Simulation required before releasing the campaign.
-                </p>
-              )}
-            </Card>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold">Release to network</h2>
-            <Card className="space-y-4 !rounded-2xl">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  disabled={!canManage || !simulated || publishing}
-                  onClick={() => {
-                    setScheduleMode(false);
-                    publish.mutate();
-                  }}
-                  className="rounded-full bg-red-600 px-6 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
-                >
-                  {publishing ? "Sending…" : "שלח קמפיין לרשת"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!canManage || !simulated}
-                  onClick={() => setScheduleMode(true)}
-                  className="rounded-full"
-                >
-                  Schedule release
-                </Button>
-              </div>
-              {!simulated ? (
-                <p className="text-xs text-[var(--muted-fg)]">
-                  The red release button unlocks only after a successful simulation.
-                </p>
-              ) : null}
-
-              {scheduleMode ? (
-                <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
-                  <label className="text-sm font-medium">
-                    Date
-                    <input
-                      type="date"
-                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                    />
-                  </label>
-                  <label className="text-sm font-medium">
-                    Time
-                    <input
-                      type="time"
-                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={scheduleTime}
-                      onChange={(e) => setScheduleTime(e.target.value)}
-                    />
-                  </label>
-                  <label className="text-sm font-medium">
-                    Timezone
-                    <select
-                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                    >
-                      <option value="Asia/Jerusalem">Asia/Jerusalem</option>
-                      <option value="UTC">UTC</option>
-                      <option value="America/New_York">America/New_York</option>
-                      <option value="Europe/London">Europe/London</option>
-                    </select>
-                  </label>
-                  <Button
-                    type="button"
-                    disabled={!canManage || !simulated || !scheduleDate || publishing}
-                    onClick={() => publish.mutate()}
-                    className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
-                  >
-                    Confirm scheduled release
-                  </Button>
-                </div>
-              ) : null}
-
-              {(publishing || publishStep >= 0) && (
-                <div className="space-y-2 rounded-2xl bg-[var(--muted)]/40 p-4">
-                  {PUBLISH_STEPS.map((step, idx) => (
-                    <div key={step} className="flex items-center gap-2 text-sm">
-                      <span
-                        className={cn(
-                          "h-2 w-2 rounded-full",
-                          idx <= publishStep ? "bg-red-600" : "bg-slate-300",
-                        )}
-                      />
-                      <span className={idx === publishStep ? "font-bold text-red-600" : ""}>{step}</span>
-                    </div>
-                  ))}
-                  {active.publish_log?.length ? (
-                    <ul className="mt-3 space-y-1 border-t border-[var(--border)] pt-3 text-xs">
-                      {active.publish_log.map((entry, i) => (
-                        <li key={`${entry.at}-${i}`} className={entry.ok ? "text-emerald-700" : "text-red-600"}>
-                          {entry.step} {entry.detail ? `— ${entry.detail}` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              )}
-            </Card>
-          </section>
-        </>
-      ) : null}
+            </div>
+          ) : null}
+        </Card>
+      </section>
 
       {error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">

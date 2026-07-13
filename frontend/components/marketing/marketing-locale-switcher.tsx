@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import type { Locale } from "@/lib/i18n/routing";
 import { cn } from "@/lib/utils";
 
+const CYCLE: Locale[] = ["he", "en", "ar"];
+
 export function MarketingLocaleSwitcher({ className }: { className?: string }) {
   const t = useTranslations("common");
   const locale = useLocale() as Locale;
@@ -12,11 +14,16 @@ export function MarketingLocaleSwitcher({ className }: { className?: string }) {
   const pathname = usePathname();
 
   function switchLocale() {
-    const next: Locale = locale === "he" ? "en" : "he";
+    const idx = CYCLE.indexOf(locale);
+    const next = CYCLE[(idx + 1) % CYCLE.length];
     router.replace(pathname, { locale: next });
   }
 
-  const label = locale === "he" ? t("hebrew") : t("english");
+  const labels: Record<Locale, string> = {
+    he: t("hebrew"),
+    en: t("english"),
+    ar: t("arabic"),
+  };
 
   return (
     <button
@@ -29,7 +36,7 @@ export function MarketingLocaleSwitcher({ className }: { className?: string }) {
       aria-label={t("language")}
     >
       <span aria-hidden="true">🌐</span>
-      <span className="hidden sm:inline">{label}</span>
+      <span className="hidden sm:inline">{labels[locale] ?? locale}</span>
     </button>
   );
 }

@@ -214,6 +214,97 @@ const EN: ToolsCopy = {
   },
 };
 
+const AR: ToolsCopy = {
+  hubTitle: "أدوات مفيدة",
+  hubSubtitle: "حاسبات وأدوات مجانية للاستخدام اليومي بالعربية",
+  menuTitle: "أدوات مفيدة",
+  openTool: "فتح الأداة",
+  backToTools: "كل الأدوات",
+  backToBlog: "العودة إلى المدونة",
+  toolsNav: "أدوات",
+  disclaimer: "الأدوات مخصصة للتقدير العام فقط ولا تُعد استشارة مهنية.",
+  calculate: "احسب",
+  result: "النتيجة",
+  reset: "إعادة تعيين",
+  download: "تنزيل",
+  chooseImage: "اختر صورة",
+  choosePdf: "اختر PDF",
+  uploadLogo: "رفع شعار",
+  createPdf: "إنشاء PDF",
+  fixText: "تصحيح النص",
+  documentNature: "طبيعة المستند",
+  documentNatureHint: "اختياري — مثل عرض سعر، رسالة، إقرار",
+  documentText: "نص المستند",
+  copy: "نسخ",
+  copied: "تم النسخ",
+  loading: "جارٍ التحميل…",
+  error: "حدث خطأ. حاول مرة أخرى.",
+  tools: {
+    "net-salary": {
+      title: "حاسبة الراتب الصافي (إسرائيل)",
+      short: "تقدير إجمالي ↔ صافي",
+      description: "تقدير الراتب الصافي وفق ضريبة الدخل والتأمين الوطني وضريبة الصحة — وفق شرائح تقريبية.",
+    },
+    mortgage: {
+      title: "حاسبة الرهن العقاري",
+      short: "قسط شهري، فائدة وجدول سداد",
+      description: "احسب القسط الشهري وإجمالي الفائدة وجدول سداد أساسي للرهن العقاري.",
+    },
+    "password-checker": {
+      title: "فاحص كلمات المرور",
+      short: "قوة كلمة المرور وزمن الاختراق التقريبي",
+      description: "الفحص يعمل في المتصفح فقط — لا تُرسل كلمة المرور إلى الخادم.",
+    },
+    "speed-test": {
+      title: "اختبار سرعة الإنترنت",
+      short: "السرعة، البنغ والتأخير",
+      description: "قدّر سرعة التنزيل والبنغ مقابل نقطة نهاية قريبة.",
+    },
+    "qr-code": {
+      title: "مولّد رمز QR",
+      short: "رابط، Wi‑Fi، هاتف وبطاقة vCard",
+      description: "أنشئ رمز QR ونزّله للاستخدام المتكرر.",
+    },
+    "background-remover": {
+      title: "إزالة الخلفية",
+      short: "ارفع واحصل على PNG شفاف",
+      description: "أزل الخلفيات الفاتحة/الموحّدة محلياً لصور الأعمال والشبكات.",
+    },
+    "file-converter": {
+      title: "محوّل الملفات",
+      short: "JPG وPNG وWebP والمزيد",
+      description: "حوّل صيغ الصور الشائعة مباشرة في المتصفح.",
+    },
+    "pdf-viewer": {
+      title: "عارض PDF",
+      short: "عرض ملفات PDF في المتصفح",
+      description: "ارفع ملف PDF واعرضه في المكان — يبقى الملف على جهازك.",
+    },
+    "pdf-creator": {
+      title: "منشئ PDF",
+      short: "مستند بشعار ونص",
+      description: "أنشئ مستنداً بشعار ونص ونوع اختياري — ثم نزّل PDF فوراً.",
+    },
+    "ai-writer": {
+      title: "كاتب نصوص بالذكاء الاصطناعي",
+      short: "عناوين، منشورات، رسائل، نصوص منتجات",
+      description: "استخدامات مجانية يومية محدودة لإنشاء نصوص تسويقية بالعربية أو العبرية أو الإنجليزية.",
+    },
+    "bmi-calories": {
+      title: "حاسبة السعرات ومؤشر كتلة الجسم",
+      short: "الاحتياج اليومي وBMI وأهداف الوزن",
+      description: "احسب BMI وBMR والسعرات اليومية الموصى بها حسب النشاط.",
+    },
+    "unit-converter": {
+      title: "محوّل الوحدات والعملات",
+      short: "كم↔ميل، كغ↔رطل، ₪↔$↔€",
+      description: "تحويلات وحدات شائعة وأسعار عملات تقريبية.",
+    },
+  },
+};
+
 export function toolsCopy(locale: string): ToolsCopy {
-  return locale === "en" ? EN : HE;
+  if (locale === "en") return EN;
+  if (locale === "ar") return AR;
+  return HE;
 }
