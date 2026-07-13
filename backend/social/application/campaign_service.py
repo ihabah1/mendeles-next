@@ -42,6 +42,7 @@ class CampaignService:
             "media_url": campaign.media_url,
             "instagram_image_url": campaign.instagram_image_url,
             "tiktok_video_url": campaign.tiktok_video_url,
+            "tiktok_videos": campaign.tiktok_videos_json or [],
             "simulated_at": campaign.simulated_at.isoformat() if campaign.simulated_at else None,
             "simulation_log": campaign.simulation_log or [],
             "status": campaign.status,

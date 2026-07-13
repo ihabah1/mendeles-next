@@ -9,10 +9,12 @@ from social.api.v1.views import (
     CampaignTikTokVideoView,
     SocialPublishView,
     SocialStatusView,
+    VideoProvidersStatusView,
 )
 
 urlpatterns = [
     path("status/", SocialStatusView.as_view(), name="social-status"),
+    path("video-providers/", VideoProvidersStatusView.as_view(), name="social-video-providers"),
     path("campaigns/", CampaignListCreateView.as_view(), name="social-campaigns"),
     path("campaigns/<uuid:campaign_id>/", CampaignDetailView.as_view(), name="social-campaign-detail"),
     path(

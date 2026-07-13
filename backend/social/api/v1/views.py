@@ -212,7 +212,7 @@ class CampaignInstagramImageView(APIView):
 
 
 class CampaignTikTokVideoView(APIView):
-    """POST — upload browser video, or auto-generate a vertical TikTok creative."""
+    """POST — upload browser video, auto SVG creative, or AI multi-provider generation."""
 
     permission_classes = [IsAuthenticated, HasPermission]
     required_permission = "automation.manage"
@@ -225,7 +225,14 @@ class CampaignTikTokVideoView(APIView):
         ser = TikTokVideoUploadSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data_url = (ser.validated_data.get("data_url") or "").strip()
+        mode = ser.validated_data.get("mode") or "upload"
+        count = ser.validated_data.get("count") or 1
         try:
+            if mode == "ai" or (not data_url and request.data.get("count")):
+                batch = MediaGenerationService.generate_ai_tiktok_videos(campaign, count=count)
+                payload = CampaignService.serialize(campaign)
+                payload["ai_generation"] = batch
+                return Response(payload)
             if data_url:
                 MediaGenerationService.save_tiktok_video(campaign, data_url=data_url)
             else:
@@ -237,3 +244,17 @@ class CampaignTikTokVideoView(APIView):
             campaign.status = CampaignStatus.READY
         campaign.save(update_fields=["simulated_at", "status", "updated_at"])
         return Response(CampaignService.serialize(campaign))
+
+
+class VideoProvidersStatusView(APIView):
+    """GET — credit/status for Runway, Fal, Veo, LTX, Kling, local."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.view"
+
+    def get(self, request):
+        _check(request, self, "automation.view")
+        from social.providers.video import get_video_orchestrator
+
+        orch = get_video_orchestrator()
+        return Response({"providers": orch.status(), "failover_order": [p.name for p in orch.providers]})

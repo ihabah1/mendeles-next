@@ -85,11 +85,19 @@ export default function AiAutomationPage() {
   const [genStep, setGenStep] = useState(0);
   const [publishStep, setPublishStep] = useState(-1);
   const [error, setError] = useState("");
+  const [tiktokCount, setTiktokCount] = useState(5);
 
   const status = useQuery({
     queryKey: ["social-status"],
     queryFn: socialApi.status,
     enabled: canView,
+  });
+
+  const videoProviders = useQuery({
+    queryKey: ["social-video-providers"],
+    queryFn: socialApi.videoProviders,
+    enabled: canView,
+    refetchInterval: 15000,
   });
 
   const history = useQuery({
@@ -241,6 +249,26 @@ export default function AiAutomationPage() {
       setError("");
     },
     onError: (err: Error) => setError(err.message || "TikTok video failed"),
+  });
+
+  const generateAiTikToks = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      await saveEdits.mutateAsync();
+      return socialApi.generateAiTikTokVideos(active.id, tiktokCount);
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["social-video-providers"] });
+      const gen = data.ai_generation as { generated?: number; failed?: number } | undefined;
+      if (gen?.failed && !gen.generated) {
+        setError("AI TikTok generation failed on all providers");
+      } else {
+        setError("");
+      }
+    },
+    onError: (err: Error) => setError(err.message || "AI TikTok generation failed"),
   });
 
   const simulate = useMutation({
@@ -574,10 +602,36 @@ export default function AiAutomationPage() {
         <h2 className="text-xl font-bold">2 · Creatives</h2>
         <Card className="space-y-4 !rounded-2xl">
           <p className="text-sm text-[var(--muted-fg)]">
-            Create an Instagram image (with website link on the creative) and a short TikTok video before simulation.
+            Instagram image + many Mendeles TikTok videos. AI video uses provider failover:
+            Runway → Fal → Veo → LTX → Kling → local.
           </p>
           {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
-          <div className="flex flex-wrap gap-3">
+
+          {videoProviders.data?.providers?.length ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {videoProviders.data.providers.map((p) => (
+                <div
+                  key={p.provider}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs",
+                    p.available ? "border-emerald-300/60 bg-emerald-500/5" : "border-[var(--border)] bg-[var(--muted)]/30",
+                  )}
+                >
+                  <p className="font-bold uppercase">{p.provider}</p>
+                  <p className="text-[var(--muted-fg)]">{p.message}</p>
+                  <p>
+                    credits:{" "}
+                    {p.credits_remaining === null || p.credits_remaining === undefined
+                      ? "unknown"
+                      : p.credits_remaining}{" "}
+                    · cost {p.cost_per_video}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-end gap-3">
             <Button
               type="button"
               variant="outline"
@@ -594,7 +648,28 @@ export default function AiAutomationPage() {
               onClick={() => createTikTok.mutate()}
               className="rounded-full"
             >
-              {createTikTok.isPending ? "Recording…" : "Create TikTok video"}
+              {createTikTok.isPending ? "Recording…" : "Quick TikTok (browser)"}
+            </Button>
+            <label className="text-sm font-medium">
+              AI videos
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={tiktokCount}
+                onChange={(e) => setTiktokCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+                className="ml-2 w-20 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 py-1"
+              />
+            </label>
+            <Button
+              type="button"
+              disabled={!canManage || !hasCampaign || generateAiTikToks.isPending}
+              onClick={() => generateAiTikToks.mutate()}
+              className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
+            >
+              {generateAiTikToks.isPending
+                ? "Generating…"
+                : `Generate ${tiktokCount} AI TikTok videos`}
             </Button>
           </div>
           <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
@@ -607,10 +682,24 @@ export default function AiAutomationPage() {
             <p>
               TikTok:{" "}
               <span className={active?.tiktok_video_url ? "font-semibold text-emerald-700" : ""}>
-                {active?.tiktok_video_url ? "Ready" : "Not created yet"}
+                {active?.tiktok_video_url
+                  ? `Ready (${(active.tiktok_videos || []).length || 1} file(s))`
+                  : "Not created yet"}
               </span>
             </p>
           </div>
+          {(active?.tiktok_videos || []).length ? (
+            <ul className="max-h-40 space-y-1 overflow-auto rounded-xl border border-[var(--border)] p-3 text-xs">
+              {active!.tiktok_videos!.map((v, i) => (
+                <li key={`${v.url}-${i}`}>
+                  #{v.variation || i + 1} · {v.provider || "?"} ·{" "}
+                  <a href={v.url} target="_blank" rel="noreferrer" className="text-[#6F42F5] underline">
+                    open
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Card>
       </section>
 

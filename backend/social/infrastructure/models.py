@@ -48,6 +48,7 @@ class SocialCampaign(BaseModel):
     media_url = models.CharField(max_length=1000, blank=True, default="")
     instagram_image_url = models.CharField(max_length=1000, blank=True, default="")
     tiktok_video_url = models.CharField(max_length=1000, blank=True, default="")
+    tiktok_videos_json = models.JSONField(default=list, blank=True)
     simulated_at = models.DateTimeField(null=True, blank=True)
     simulation_log = models.JSONField(default=list, blank=True)
     status = models.CharField(

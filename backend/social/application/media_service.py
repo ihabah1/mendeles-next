@@ -169,3 +169,104 @@ class MediaGenerationService:
             campaign.media_url = url_public
         campaign.save(update_fields=["tiktok_video_url", "media_url", "updated_at"])
         return url_public
+
+    @classmethod
+    def generate_ai_tiktok_videos(cls, campaign: SocialCampaign, *, count: int = 1) -> dict:
+        """Generate many Mendeles TikTok creatives via VideoProvider failover."""
+        from social.domain.enums import CampaignStatus
+        from social.providers.video import get_video_orchestrator
+        from social.providers.video.base import VideoGenerationRequest
+
+        count = max(1, min(int(count or 1), 20))
+        orchestrator = get_video_orchestrator()
+        base_prompt = (
+            campaign.video_prompt
+            or campaign.media_prompt
+            or campaign.main_idea
+            or campaign.goal
+            or campaign.title
+            or "Mendeles AI lead generation platform promo"
+        )
+        results: list[dict] = []
+        videos = list(campaign.tiktok_videos_json or [])
+
+        for index in range(count):
+            prompt = (
+                f"{base_prompt}\n\n"
+                f"Variation {index + 1}/{count} for Mendeles TikTok. "
+                f"Vertical 9:16, high energy, brand Mendeles, CTA: {campaign.cta or 'Learn more'}, "
+                f"website {campaign.website_url or 'https://mendeles.com'}."
+            )
+            generation = orchestrator.generate(
+                VideoGenerationRequest(
+                    prompt=prompt,
+                    title=campaign.title or "Mendeles",
+                    cta=campaign.cta or "Learn more",
+                    website_url=campaign.website_url or "https://mendeles.com",
+                    aspect_ratio="9:16",
+                    duration_seconds=5,
+                    metadata={"campaign_id": str(campaign.id), "variation": index + 1},
+                )
+            )
+            entry: dict = {
+                "ok": generation.ok,
+                "provider": generation.provider,
+                "credits_used": generation.credits_used,
+                "error": generation.error,
+                "variation": index + 1,
+                "failover_attempts": (generation.metadata or {}).get("failover_attempts") or [],
+            }
+            if not generation.ok:
+                results.append(entry)
+                continue
+
+            if generation.video_bytes:
+                ext = "svg" if "svg" in (generation.content_type or "") else "mp4"
+                if "webm" in (generation.content_type or ""):
+                    ext = "webm"
+                filename = f"{campaign.id}-tiktok-ai-{uuid.uuid4().hex[:8]}.{ext}"
+                path = _media_dir() / filename
+                path.write_bytes(generation.video_bytes)
+                public = _public_url(f"social/{filename}")
+            elif generation.remote_url:
+                public = generation.remote_url
+            else:
+                public = cls.create_tiktok_creative(campaign)
+                entry["provider"] = generation.provider or "local"
+
+            entry["url"] = public
+            results.append(entry)
+            videos.append(
+                {
+                    "url": public,
+                    "provider": entry["provider"],
+                    "variation": index + 1,
+                    "credits_used": generation.credits_used,
+                    "external_id": generation.external_id,
+                }
+            )
+            campaign.tiktok_video_url = public
+            if campaign.media_type == "video" or not campaign.media_url:
+                campaign.media_url = public
+
+        campaign.tiktok_videos_json = videos
+        campaign.simulated_at = None
+        if campaign.status == CampaignStatus.SIMULATED:
+            campaign.status = CampaignStatus.READY
+        campaign.save(
+            update_fields=[
+                "tiktok_video_url",
+                "tiktok_videos_json",
+                "media_url",
+                "simulated_at",
+                "status",
+                "updated_at",
+            ]
+        )
+        return {
+            "generated": sum(1 for r in results if r.get("ok")),
+            "failed": sum(1 for r in results if not r.get("ok")),
+            "results": results,
+            "providers": orchestrator.status(),
+            "videos": videos,
+        }

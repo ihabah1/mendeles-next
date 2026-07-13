@@ -33,6 +33,12 @@ export type SocialCampaign = {
   media_url: string;
   instagram_image_url: string;
   tiktok_video_url: string;
+  tiktok_videos?: Array<{
+    url: string;
+    provider?: string;
+    variation?: number;
+    credits_used?: number;
+  }>;
   simulated_at: string | null;
   simulation_log: SimulationLogEntry[];
   status: string;
@@ -124,6 +130,27 @@ export const socialApi = {
       headers: authHeaders(),
       json: data_url ? { data_url } : {},
     }),
+  generateAiTikTokVideos: (id: string, count = 3) =>
+    apiFetch<SocialCampaign & { ai_generation?: Record<string, unknown> }>(
+      `/api/v1/social/campaigns/${id}/tiktok-video/`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        json: { mode: "ai", count },
+      },
+    ),
+  videoProviders: () =>
+    apiFetch<{
+      providers: Array<{
+        provider: string;
+        configured: boolean;
+        credits_remaining: number | null;
+        available: boolean;
+        message: string;
+        cost_per_video: number;
+      }>;
+      failover_order: string[];
+    }>("/api/v1/social/video-providers/", { headers: authHeaders() }),
   publish: (body: PublishInput) =>
     apiFetch<SocialCampaign>("/api/v1/social/publish/", {
       method: "POST",

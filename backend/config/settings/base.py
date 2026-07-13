@@ -171,6 +171,36 @@ BUFFER_ACCESS_TOKEN = os.environ.get("BUFFER_ACCESS_TOKEN", "")
 # Public backend origin for media files Buffer can fetch (e.g. https://xxx.up.railway.app)
 BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
 
+# TikTok / short-form AI video providers (failover by credits)
+VIDEO_PROVIDER_FAILOVER = os.environ.get(
+    "VIDEO_PROVIDER_FAILOVER",
+    "runway,fal,veo,ltx,kling,local",
+)
+VIDEO_PROVIDER_TIMEOUT_SECONDS = int(os.environ.get("VIDEO_PROVIDER_TIMEOUT_SECONDS", "60"))
+VIDEO_PROVIDER_POLL_SECONDS = int(os.environ.get("VIDEO_PROVIDER_POLL_SECONDS", "120"))
+VIDEO_PROVIDERS_MOCK = os.environ.get("VIDEO_PROVIDERS_MOCK", "false").lower() == "true"
+RUNWAY_API_KEY = os.environ.get("RUNWAY_API_KEY", "")
+RUNWAY_MODEL = os.environ.get("RUNWAY_MODEL", "gen4_turbo")
+RUNWAY_API_VERSION = os.environ.get("RUNWAY_API_VERSION", "2024-11-06")
+VIDEO_RUNWAY_CREDITS = os.environ.get("VIDEO_RUNWAY_CREDITS", "")
+VIDEO_RUNWAY_CREDIT_COST = int(os.environ.get("VIDEO_RUNWAY_CREDIT_COST", "1"))
+FAL_KEY = os.environ.get("FAL_KEY", "") or os.environ.get("FAL_API_KEY", "")
+FAL_VIDEO_MODEL = os.environ.get("FAL_VIDEO_MODEL", "fal-ai/minimax/video-01-live")
+VIDEO_FAL_CREDITS = os.environ.get("VIDEO_FAL_CREDITS", "")
+VIDEO_FAL_CREDIT_COST = int(os.environ.get("VIDEO_FAL_CREDIT_COST", "1"))
+VEO_API_KEY = os.environ.get("VEO_API_KEY", "")
+VEO_MODEL = os.environ.get("VEO_MODEL", "veo-2.0-generate-001")
+VIDEO_VEO_CREDITS = os.environ.get("VIDEO_VEO_CREDITS", "")
+VIDEO_VEO_CREDIT_COST = int(os.environ.get("VIDEO_VEO_CREDIT_COST", "1"))
+LTX_API_KEY = os.environ.get("LTX_API_KEY", "")
+LTX_API_BASE = os.environ.get("LTX_API_BASE", "https://api.ltx.studio/v1")
+VIDEO_LTX_CREDITS = os.environ.get("VIDEO_LTX_CREDITS", "")
+VIDEO_LTX_CREDIT_COST = int(os.environ.get("VIDEO_LTX_CREDIT_COST", "1"))
+KLING_API_KEY = os.environ.get("KLING_API_KEY", "")
+KLING_API_BASE = os.environ.get("KLING_API_BASE", "")
+VIDEO_KLING_CREDITS = os.environ.get("VIDEO_KLING_CREDITS", "")
+VIDEO_KLING_CREDIT_COST = int(os.environ.get("VIDEO_KLING_CREDIT_COST", "1"))
+
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() == "true"
 
 DEFAULT_FROM_EMAIL = resolve_from_email()
