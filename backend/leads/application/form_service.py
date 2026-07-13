@@ -3,6 +3,7 @@ import uuid
 from content.infrastructure.models import Page
 from core.exceptions.base import NotFoundError, ValidationError
 from leads.application.lead_service import LeadValidationService, _client_meta
+from leads.application.setup_service import LeadSetupService
 from leads.domain.status import LeadActivityType, LeadStatus
 from leads.infrastructure.models import FormDefinition, FormSubmission, Lead, LeadSource, LeadUTM
 
@@ -43,6 +44,7 @@ class FormService:
     def submit_public(*, form_id: uuid.UUID, data: dict, request) -> Lead:
         form = FormService.get_form(form_id)
         tenant_id = form.tenant_id
+        LeadSetupService.ensure_sources(tenant_id)
 
         honeypot = (data.get("honeypot") or "").strip()
         if honeypot:
@@ -59,7 +61,14 @@ class FormService:
         if page_id:
             landing_page = Page.objects.filter(id=page_id, tenant_id=tenant_id, deleted_at__isnull=True).first()
 
-        source = LeadSource.objects.filter(tenant_id=tenant_id, slug="landing_page_form").first()
+        source = (
+            LeadSource.objects.filter(tenant_id=tenant_id, slug="landing_page_form").first()
+            or LeadSource.objects.filter(tenant_id=tenant_id, slug="contact_widget").first()
+            or LeadSource.objects.filter(tenant_id=tenant_id).first()
+        )
+        if not source:
+            LeadSetupService.ensure_sources(tenant_id)
+            source = LeadSource.objects.filter(tenant_id=tenant_id, slug="landing_page_form").first()
         if not source:
             raise ValidationError("Lead source not configured.")
 
@@ -106,4 +115,53 @@ class FormService:
         AnalyticsHooks.form_submitted(lead, request=request)
         AnalyticsHooks.lead_created(lead, request=request)
 
+        FormService._notify_inbox(lead, request=request)
+
         return lead
+
+    @staticmethod
+    def _notify_inbox(lead: Lead, *, request) -> None:
+        """Deliver the contact submission to staff inboxes (in addition to Leads CRM)."""
+        try:
+            from identity.application.inbox_service import InboxService
+            from identity.infrastructure.models import User
+            from rbac.infrastructure.models import UserRole
+
+            role_user_ids = UserRole.objects.filter(tenant_id=lead.tenant_id).values_list("user_id", flat=True)
+            recipients = User.objects.filter(
+                id__in=role_user_ids,
+                is_active=True,
+                deleted_at__isnull=True,
+            )
+            if not recipients.exists():
+                recipients = User.objects.filter(
+                    default_tenant_id=lead.tenant_id,
+                    is_active=True,
+                    deleted_at__isnull=True,
+                )
+
+            subject = f"פנייה חדשה מטופס יצירת קשר — {lead.name or lead.email or 'ללא שם'}"
+            body_lines = [
+                "התקבלה פנייה חדשה מהאתר.",
+                "",
+                f"שם: {lead.name or '—'}",
+                f"אימייל: {lead.email or '—'}",
+                f"טלפון: {lead.phone or '—'}",
+                f"הודעה: {lead.message or '—'}",
+                f"עמוד: {lead.page_url or '—'}",
+                "",
+                f"ליד במערכת: /dashboard/leads/{lead.id}",
+            ]
+            body = "\n".join(body_lines)
+            for recipient in recipients:
+                InboxService.send_message(
+                    tenant_id=lead.tenant_id,
+                    sender=None,
+                    recipient=recipient,
+                    subject=subject,
+                    body=body,
+                    request=request,
+                )
+        except Exception:
+            # Never fail the public form submit because inbox notify failed.
+            pass

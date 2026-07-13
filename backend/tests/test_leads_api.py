@@ -60,6 +60,18 @@ def test_public_contact_form_endpoint(api_client, leads_seeded, tenant):
 
 
 @pytest.mark.django_db
+def test_public_contact_form_auto_creates_when_missing(api_client, tenant):
+    from leads.infrastructure.models import FormDefinition
+
+    FormDefinition.objects.filter(tenant=tenant).delete()
+    response = api_client.get("/api/v1/leads/public/contact-form/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["slug"] == "contact"
+    assert FormDefinition.objects.filter(tenant=tenant, slug="contact", deleted_at__isnull=True).exists()
+
+
+@pytest.mark.django_db
 def test_public_submit_creates_lead(api_client, leads_seeded, tenant):
     from leads.infrastructure.models import FormDefinition, Lead
 
@@ -78,6 +90,34 @@ def test_public_submit_creates_lead(api_client, leads_seeded, tenant):
     assert response.status_code == 201
     assert response.json()["ok"] is True
     assert Lead.objects.filter(tenant=tenant, email="lead@example.com").exists()
+
+
+@pytest.mark.django_db
+def test_public_submit_creates_inbox_message(api_client, owner_client, leads_seeded, tenant):
+    from identity.infrastructure.models import UserInboxMessage
+    from leads.infrastructure.models import FormDefinition, Lead
+
+    form = FormDefinition.objects.filter(tenant=tenant, slug="contact").first()
+    response = api_client.post(
+        "/api/v1/leads/public/submit/",
+        {
+            "formId": str(form.id),
+            "pageUrl": "https://mendeles.com/",
+            "fields": {
+                "name": "Inbox Lead",
+                "email": "inbox-lead@example.com",
+                "phone": "0500000000",
+                "message": "Please call me",
+            },
+            "honeypot": "",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    lead = Lead.objects.get(tenant=tenant, email="inbox-lead@example.com")
+    messages = UserInboxMessage.objects.filter(tenant=tenant, subject__contains="Inbox Lead")
+    assert messages.exists()
+    assert str(lead.id) in messages.first().body
 
 
 @pytest.mark.django_db

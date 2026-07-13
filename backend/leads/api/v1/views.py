@@ -226,19 +226,13 @@ class PublicContactFormView(APIView):
 
     def get(self, request):
         from tenancy.application.public_tenant import resolve_public_tenant_id
-        from leads.infrastructure.models import FormDefinition
+        from leads.application.setup_service import LeadSetupService
 
         tenant_id = resolve_public_tenant_id()
         if not tenant_id:
             return Response({"error": {"code": "not_found", "message": "Contact form not found"}}, status=404)
 
-        form = (
-            FormDefinition.objects.filter(tenant_id=tenant_id, slug="contact", deleted_at__isnull=True).first()
-            or FormDefinition.objects.filter(tenant_id=tenant_id, deleted_at__isnull=True).order_by("created_at").first()
-        )
-        if not form:
-            return Response({"error": {"code": "not_found", "message": "Contact form not found"}}, status=404)
-
+        form = LeadSetupService.get_or_create_public_contact_form(tenant_id)
         return Response({"id": str(form.id), "name": form.name, "slug": form.slug})
 
 

@@ -56,7 +56,14 @@ export function ContactCtaButton({
         if (!cancelled) setFormId(data.id);
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : t("error"));
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : t("error");
+          setLoadError(
+            msg.toLowerCase().includes("not found")
+              ? t("formUnavailable")
+              : msg,
+          );
+        }
       });
     return () => {
       cancelled = true;
