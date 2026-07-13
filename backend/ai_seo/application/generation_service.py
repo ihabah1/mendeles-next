@@ -1569,10 +1569,8 @@ class AiSeoGenerationService:
             block_config = block.get("config", {})
             if landing_theme and block.get("type") == "hero":
                 block_config = {**block_config, "theme": landing_theme}
-            if page_type == PageType.LANDING_PAGE and block.get("type") in {"hero", "cta"}:
+            if page_type in {PageType.LANDING_PAGE, PageType.BLOG} and block.get("type") in {"hero", "cta"}:
                 block_config = {**block_config, "cta_href": "#contact", "button_href": "#contact"}
-            elif page_type == PageType.BLOG and block.get("type") in {"hero", "cta"}:
-                block_config = {**block_config, "cta_href": "#faq", "button_href": "#faq"}
             BlockService.create_block(
                 page,
                 {
@@ -1582,7 +1580,7 @@ class AiSeoGenerationService:
                 },
             )
 
-        if page_type == PageType.LANDING_PAGE:
+        if page_type in {PageType.LANDING_PAGE, PageType.BLOG}:
             contact_form = FormDefinition.objects.filter(
                 tenant_id=job.tenant_id,
                 slug="contact",

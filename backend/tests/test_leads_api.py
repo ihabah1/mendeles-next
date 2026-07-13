@@ -48,6 +48,18 @@ def test_create_lead_manual(owner_client, leads_seeded):
 
 
 @pytest.mark.django_db
+def test_public_contact_form_endpoint(api_client, leads_seeded, tenant):
+    from leads.infrastructure.models import FormDefinition
+
+    form = FormDefinition.objects.filter(tenant=tenant, slug="contact").first()
+    response = api_client.get("/api/v1/leads/public/contact-form/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(form.id)
+    assert data["slug"] == "contact"
+
+
+@pytest.mark.django_db
 def test_public_submit_creates_lead(api_client, leads_seeded, tenant):
     from leads.infrastructure.models import FormDefinition, Lead
 

@@ -36,7 +36,14 @@ export function readUtmFromLocation(search: string): LeadCaptureUtm {
   };
 }
 
+export type PublicContactForm = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export const publicLeadsApi = {
+  contactForm: () => apiFetch<PublicContactForm>("/api/v1/leads/public/contact-form/"),
   submit: (payload: LeadCapturePayload) =>
     apiFetch<{ ok: boolean }>("/api/v1/leads/public/submit/", {
       method: "POST",

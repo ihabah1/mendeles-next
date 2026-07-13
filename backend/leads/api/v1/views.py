@@ -218,6 +218,30 @@ class FormListView(APIView):
         return Response({"id": str(form.id), "name": form.name, "slug": form.slug}, status=201)
 
 
+class PublicContactFormView(APIView):
+    """Return the public tenant default contact form id for CTAs / modals."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        from tenancy.application.public_tenant import resolve_public_tenant_id
+        from leads.infrastructure.models import FormDefinition
+
+        tenant_id = resolve_public_tenant_id()
+        if not tenant_id:
+            return Response({"error": {"code": "not_found", "message": "Contact form not found"}}, status=404)
+
+        form = (
+            FormDefinition.objects.filter(tenant_id=tenant_id, slug="contact", deleted_at__isnull=True).first()
+            or FormDefinition.objects.filter(tenant_id=tenant_id, deleted_at__isnull=True).order_by("created_at").first()
+        )
+        if not form:
+            return Response({"error": {"code": "not_found", "message": "Contact form not found"}}, status=404)
+
+        return Response({"id": str(form.id), "name": form.name, "slug": form.slug})
+
+
 class PublicLeadSubmitView(APIView):
     permission_classes = [AllowAny]
 

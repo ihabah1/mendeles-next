@@ -7,7 +7,7 @@ type Props = {
 
 export function MendelesInsightsLogo({ className = "", showWordmark = true }: Props) {
   return (
-    <Link href="/blog" className={`inline-flex items-center gap-3 ${className}`} aria-label="Mendeles Insights">
+    <Link href="/" className={`inline-flex items-center gap-3 ${className}`} aria-label="Mendeles Insights — Home">
       <svg viewBox="0 0 48 48" className="h-10 w-10 shrink-0" aria-hidden="true">
         <rect x="2" y="2" width="44" height="44" rx="12" fill="#6F42F5" />
         <path d="M14 32V16h5.2l4.4 9.2L28 16h5v16h-4.2V24.8L24.8 32h-2.8l-3.8-7.2V32H14z" fill="white" />

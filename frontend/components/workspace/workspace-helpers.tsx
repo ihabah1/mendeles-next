@@ -220,7 +220,7 @@ export function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
                   <p className="mt-2 text-sm text-slate-200">{textValue(config, "subheadline")}</p>
                   {textValue(config, "cta") && (
                     <a
-                      href={isLandingPage ? "#contact" : "#faq"}
+                      href="#contact"
                       className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950"
                     >
                       {textValue(config, "cta")}
@@ -254,7 +254,7 @@ export function DraftPreview({ page }: { page: AiSeoWorkspaceDraft }) {
                   <h4 className="text-lg font-semibold">{textValue(config, "headline")}</h4>
                   {textValue(config, "button") && (
                     <a
-                      href={isLandingPage ? "#contact" : "#faq"}
+                      href="#contact"
                       className="mt-3 inline-flex rounded-full bg-violet-400 px-4 py-2 text-sm font-medium text-slate-950"
                     >
                       {textValue(config, "button")}

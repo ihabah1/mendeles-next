@@ -842,7 +842,11 @@
       "success": "Thank you! We received your message.",
       "sendAnother": "Send another message",
       "error": "Could not submit the form. Please try again.",
-      "honeypot": "Leave this field empty"
+      "honeypot": "Leave this field empty",
+      "modalTitle": "Contact us",
+      "modalSubtitle": "Fill in your details and we will get back to you soon.",
+      "loadingForm": "Loading form…",
+      "close": "Close"
     }
   },
   "automation": {

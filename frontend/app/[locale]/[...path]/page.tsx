@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { BlogShell } from "@/components/blog/blog-shell";
 import { PublicArticleImage } from "@/components/blog/public-article-image";
+import { ContactCtaButton } from "@/components/leads/contact-cta-button";
 import { PublicContactFormBlock } from "@/components/leads/public-contact-form-block";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { defaultNavCategories, localizeBlogCategories } from "@/lib/blog/category-labels";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { resolvePublicImageUrl } from "@/lib/blog/public-image";
 import { backendBase } from "@/lib/api/backend-url";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import type { BlogCategory } from "@/lib/blog/types";
 
 type Props = {
   params: Promise<{ locale: string; path: string[] }>;
@@ -61,8 +65,38 @@ function blockHref(config: Record<string, unknown>, fallback: string): string {
   return textValue(config.cta_href) || textValue(config.button_href) || fallback;
 }
 
-function defaultBlockAnchor(isLandingPage: boolean, config: Record<string, unknown>): string {
-  return blockHref(config, isLandingPage ? "#contact" : "#faq");
+function shouldOpenContactForm(href: string): boolean {
+  const normalized = href.trim().toLowerCase();
+  if (!normalized || normalized === "#") return true;
+  if (normalized === "#contact" || normalized === "#faq") return true;
+  // Relative in-page anchors from generated content → contact modal
+  if (normalized.startsWith("#")) return true;
+  return false;
+}
+
+function resolveContactFormId(blocks: PublicContentBlock[]): string {
+  for (const block of blocks) {
+    if (!block.is_visible) continue;
+    if (block.block_type !== "contact_form" && block.block_type !== "form") continue;
+    const id = textValue(block.config.formId);
+    if (id) return id;
+  }
+  return "";
+}
+
+async function fetchBlogCategories(locale: string): Promise<BlogCategory[]> {
+  const url = new URL("/api/v1/content/public/pages/", backendBase());
+  url.searchParams.set("page_type", "blog");
+  url.searchParams.set("locale", locale);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return defaultNavCategories(locale);
+  const data = (await res.json()) as { categories?: Array<{ slug: string; name: string }> };
+  const categories = data.categories || [];
+  if (!categories.length) return defaultNavCategories(locale);
+  return localizeBlogCategories(
+    categories.map((item) => ({ ...item, count: 0 })),
+    locale,
+  );
 }
 
 function accentClasses(accent: string): string {
@@ -87,17 +121,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 function HeroBlock({
   config,
-  isLandingPage,
+  contactFormId,
+  pageId,
+  pageUrl,
   isBlog = false,
 }: {
   config: Record<string, unknown>;
-  isLandingPage: boolean;
+  contactFormId: string;
+  pageId: string;
+  pageUrl: string;
   isBlog?: boolean;
 }) {
   const theme = config.theme && typeof config.theme === "object" ? (config.theme as Record<string, unknown>) : {};
   const accent = textValue(theme.accent) || "cyan";
   const cta = textValue(config.cta);
-  const href = defaultBlockAnchor(isLandingPage, config);
+  const href = blockHref(config, "#contact");
   const HeadingTag = isBlog ? "h2" : "h1";
 
   return (
@@ -110,12 +148,23 @@ function HeroBlock({
         {textValue(config.subheadline) || textValue(config.description)}
       </p>
       {cta ? (
-        <a
-          href={href}
-          className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
-        >
-          {cta}
-        </a>
+        shouldOpenContactForm(href) ? (
+          <ContactCtaButton
+            label={cta}
+            formId={contactFormId}
+            pageId={pageId}
+            pageUrl={pageUrl}
+            variant="cyan"
+            className="mt-8"
+          />
+        ) : (
+          <a
+            href={href}
+            className="mt-8 inline-flex rounded-full bg-cyan-300 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+          >
+            {cta}
+          </a>
+        )
       ) : null}
     </section>
   );
@@ -227,17 +276,21 @@ function FaqBlock({
 
 function CtaBlock({
   config,
-  isLandingPage,
   locale,
+  contactFormId,
+  pageId,
+  pageUrl,
 }: {
   config: Record<string, unknown>;
-  isLandingPage: boolean;
   locale: string;
+  contactFormId: string;
+  pageId: string;
+  pageUrl: string;
 }) {
   const copy = editorialCopy(locale);
   const button = textValue(config.button) || textValue(config.cta);
   const headline = textValue(config.headline) || textValue(config.title);
-  const href = defaultBlockAnchor(isLandingPage, config);
+  const href = blockHref(config, "#contact");
   const linkLabel = button || copy.learnMore;
 
   return (
@@ -248,14 +301,23 @@ function CtaBlock({
           {textValue(config.text) || textValue(config.description)}
         </p>
       )}
-      {(button || headline) && (
-        <a
-          href={href}
-          className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
-        >
-          {linkLabel}
-        </a>
-      )}
+      {(button || headline) &&
+        (shouldOpenContactForm(href) ? (
+          <ContactCtaButton
+            label={linkLabel}
+            formId={contactFormId}
+            pageId={pageId}
+            pageUrl={pageUrl}
+            variant="dark"
+          />
+        ) : (
+          <a
+            href={href}
+            className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+          >
+            {linkLabel}
+          </a>
+        ))}
     </section>
   );
 }
@@ -264,25 +326,44 @@ function PublicBlock({
   block,
   page,
   locale,
+  contactFormId,
 }: {
   block: PublicContentBlock;
   page: PublicContentPage;
   locale: string;
+  contactFormId: string;
 }) {
   if (!block.is_visible) return null;
 
-  const isLandingPage = page.page_type === "landing_page";
   const isBlog = page.page_type === "blog";
 
   if (block.block_type === "image") return <ImageBlock config={block.config} />;
   if (block.block_type === "source_link") return <SourceLinkBlock config={block.config} locale={locale} />;
   if (block.block_type === "hero") {
-    return <HeroBlock config={block.config} isLandingPage={isLandingPage} isBlog={isBlog} />;
+    return (
+      <HeroBlock
+        config={block.config}
+        contactFormId={contactFormId}
+        pageId={page.id}
+        pageUrl={page.full_path}
+        isBlog={isBlog}
+      />
+    );
   }
   if (block.block_type === "faq") return <FaqBlock config={block.config} locale={locale} isBlog={isBlog} />;
-  if (block.block_type === "cta") return <CtaBlock config={block.config} isLandingPage={isLandingPage} locale={locale} />;
+  if (block.block_type === "cta") {
+    return (
+      <CtaBlock
+        config={block.config}
+        locale={locale}
+        contactFormId={contactFormId}
+        pageId={page.id}
+        pageUrl={page.full_path}
+      />
+    );
+  }
   if (block.block_type === "contact_form" || block.block_type === "form") {
-    const formId = textValue(block.config.formId);
+    const formId = textValue(block.config.formId) || contactFormId;
     if (!formId) return null;
     return (
       <PublicContactFormBlock
@@ -291,6 +372,7 @@ function PublicBlock({
         pageUrl={page.full_path}
         headline={textValue(block.config.headline) || editorialCopy(locale).contact}
         anchorId={textValue(block.config.anchorId) || "contact"}
+        light={isBlog}
       />
     );
   }
@@ -301,10 +383,12 @@ function BlogArticleLayout({
   page,
   locale,
   visibleBlocks,
+  contactFormId,
 }: {
   page: PublicContentPage;
   locale: string;
   visibleBlocks: PublicContentBlock[];
+  contactFormId: string;
 }) {
   const copy = editorialCopy(locale);
   return (
@@ -320,7 +404,13 @@ function BlogArticleLayout({
       </header>
       <div className="mt-10 space-y-8">
         {visibleBlocks.map((block) => (
-          <PublicBlock key={block.id} block={block} page={page} locale={locale} />
+          <PublicBlock
+            key={block.id}
+            block={block}
+            page={page}
+            locale={locale}
+            contactFormId={contactFormId}
+          />
         ))}
       </div>
     </article>
@@ -337,12 +427,19 @@ export default async function PublicContentPage({ params }: Props) {
   const visibleBlocks = page.blocks.filter((block) => block.is_visible);
   const copy = editorialCopy(locale);
   const isBlog = page.page_type === "blog";
+  const contactFormId = resolveContactFormId(visibleBlocks);
 
   if (isBlog) {
+    const categories = await fetchBlogCategories(locale);
     return (
-      <div className="min-h-screen bg-[#F4F5F8] text-slate-900">
-        <BlogArticleLayout page={page} locale={locale} visibleBlocks={visibleBlocks} />
-      </div>
+      <BlogShell categories={categories} locale={locale}>
+        <BlogArticleLayout
+          page={page}
+          locale={locale}
+          visibleBlocks={visibleBlocks}
+          contactFormId={contactFormId}
+        />
+      </BlogShell>
     );
   }
 
@@ -350,7 +447,15 @@ export default async function PublicContentPage({ params }: Props) {
     <MarketingShell>
       <article className="mx-auto max-w-5xl space-y-8 px-6 py-16">
         {visibleBlocks.length ? (
-          visibleBlocks.map((block) => <PublicBlock key={block.id} block={block} page={page} locale={locale} />)
+          visibleBlocks.map((block) => (
+            <PublicBlock
+              key={block.id}
+              block={block}
+              page={page}
+              locale={locale}
+              contactFormId={contactFormId}
+            />
+          ))
         ) : (
           <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
             <h1 className="text-3xl font-bold text-white">{page.title}</h1>
