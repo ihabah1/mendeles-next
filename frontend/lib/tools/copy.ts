@@ -21,6 +21,13 @@ type ToolsCopy = {
   result: string;
   reset: string;
   download: string;
+  chooseImage: string;
+  choosePdf: string;
+  uploadLogo: string;
+  createPdf: string;
+  documentNature: string;
+  documentNatureHint: string;
+  documentText: string;
   copy: string;
   copied: string;
   loading: string;
@@ -41,6 +48,13 @@ const HE: ToolsCopy = {
   result: "תוצאה",
   reset: "איפוס",
   download: "הורדה",
+  chooseImage: "בחרו תמונה",
+  choosePdf: "בחרו PDF",
+  uploadLogo: "טעינת לוגו",
+  createPdf: "יצירת PDF",
+  documentNature: "אופי המסמך",
+  documentNatureHint: "אופציונלי — למשל הצעת מחיר, מכתב, אישור",
+  documentText: "טקסט המסמך",
   copy: "העתק",
   copied: "הועתק",
   loading: "טוען…",
@@ -81,6 +95,16 @@ const HE: ToolsCopy = {
       short: "JPG, PNG, WebP ועוד",
       description: "המרת תמונות בין פורמטים נפוצים ישירות בדפדפן.",
     },
+    "pdf-viewer": {
+      title: "PDF Viewer",
+      short: "צפייה בקבצי PDF בדפדפן",
+      description: "העלו קובץ PDF וצפו בו במקום — הקובץ נשאר במכשיר שלכם.",
+    },
+    "pdf-creator": {
+      title: "PDF Creator",
+      short: "מסמך עם לוגו וטקסט",
+      description: "הכינו מסמך עם לוגו, טקסט ושדה אופי אופציונלי — והורידו PDF מיד.",
+    },
     "ai-writer": {
       title: "AI לכתיבת טקסטים",
       short: "כותרות, פוסטים, מיילים ותיאורי מוצר",
@@ -112,6 +136,13 @@ const EN: ToolsCopy = {
   result: "Result",
   reset: "Reset",
   download: "Download",
+  chooseImage: "Choose image",
+  choosePdf: "Choose PDF",
+  uploadLogo: "Upload logo",
+  createPdf: "Create PDF",
+  documentNature: "Document type",
+  documentNatureHint: "Optional — e.g. quote, letter, certificate",
+  documentText: "Document text",
   copy: "Copy",
   copied: "Copied",
   loading: "Loading…",
@@ -151,6 +182,16 @@ const EN: ToolsCopy = {
       title: "File converter",
       short: "JPG, PNG, WebP and more",
       description: "Convert common image formats directly in your browser.",
+    },
+    "pdf-viewer": {
+      title: "PDF Viewer",
+      short: "View PDF files in the browser",
+      description: "Upload a PDF and view it in place — the file stays on your device.",
+    },
+    "pdf-creator": {
+      title: "PDF Creator",
+      short: "Document with logo and text",
+      description: "Build a document with a logo, text, and an optional document type — then download a PDF instantly.",
     },
     "ai-writer": {
       title: "AI text writer",

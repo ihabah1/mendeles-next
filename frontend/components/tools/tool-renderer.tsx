@@ -8,6 +8,8 @@ import { FileConverterTool } from "@/components/tools/file-converter-tool";
 import { MortgageTool } from "@/components/tools/mortgage-tool";
 import { NetSalaryTool } from "@/components/tools/net-salary-tool";
 import { PasswordCheckerTool } from "@/components/tools/password-checker-tool";
+import { PdfCreatorTool } from "@/components/tools/pdf-creator-tool";
+import { PdfViewerTool } from "@/components/tools/pdf-viewer-tool";
 import { QrCodeTool } from "@/components/tools/qr-code-tool";
 import { SpeedTestTool } from "@/components/tools/speed-test-tool";
 import { UnitConverterTool } from "@/components/tools/unit-converter-tool";
@@ -28,6 +30,10 @@ export function ToolRenderer({ slug, locale }: { slug: ToolSlug; locale: string 
       return <BackgroundRemoverTool locale={locale} />;
     case "file-converter":
       return <FileConverterTool locale={locale} />;
+    case "pdf-viewer":
+      return <PdfViewerTool locale={locale} />;
+    case "pdf-creator":
+      return <PdfCreatorTool locale={locale} />;
     case "ai-writer":
       return <AiWriterTool locale={locale} />;
     case "bmi-calories":
