@@ -1078,6 +1078,13 @@
     "whatsappBotAria": "Open WhatsApp chat with the Mendeles support bot",
     "whatsappBotPrefill": "Hi, I'd like help from the Mendeles bot",
     "formCta": "Contact form",
+    "formTitle": "Send a message",
+    "formSubtitle": "Fill in your details — the message will be sent to the Mendeles team.",
+    "formLoading": "Loading form…",
+    "formLoadError": "Could not load the form right now. Try again or send an email.",
+    "back": "Back",
+    "mailtoHint": "This opens your local email app (for example Outlook).",
+    "mailtoAlt": "Or email {email} directly — this opens Outlook / your local mail app.",
     "open": "Open contact",
     "close": "Close contact",
     "configureHint": "Set NEXT_PUBLIC_CONTACT_* or NEXT_PUBLIC_WHATSAPP_NUMBER"

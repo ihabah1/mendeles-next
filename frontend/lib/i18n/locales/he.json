@@ -1041,6 +1041,13 @@
     "whatsappBotAria": "פתח שיחת WhatsApp עם בוט התמיכה של Mendeles",
     "whatsappBotPrefill": "שלום, אשמח לעזרה מבוט Mendeles",
     "formCta": "טופס יצירת קשר",
+    "formTitle": "שליחת הודעה",
+    "formSubtitle": "מלאו את הפרטים — ההודעה תישלח לצוות Mendeles.",
+    "formLoading": "טוען טופס…",
+    "formLoadError": "לא ניתן לטעון את הטופס כרגע. נסו שוב או שלחו מייל.",
+    "back": "חזרה",
+    "mailtoHint": "לחיצה תפתח את תוכנת המייל במחשב שלכם (למשל Outlook).",
+    "mailtoAlt": "או שלחו ישירות מתוכנת המייל שלכם אל {email} — ייפתח Outlook / אפליקציית מייל מקומית.",
     "open": "פתח צור קשר",
     "close": "סגור צור קשר",
     "configureHint": "הגדירו NEXT_PUBLIC_CONTACT_* או NEXT_PUBLIC_WHATSAPP_NUMBER"
