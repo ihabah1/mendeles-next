@@ -361,9 +361,28 @@ html.a11y-high-contrast video {
 .dashboard-cc aside {
   background: #0d111a;
   border-color: #2a3140;
+  color: #e5e7eb;
+}
+
+.dashboard-cc aside a,
+.dashboard-cc aside button,
+.dashboard-cc aside nav a,
+.dashboard-cc aside nav button {
+  color: #d1d5db;
+}
+
+.dashboard-cc aside a:hover,
+.dashboard-cc aside button:hover {
+  color: #ffffff;
+  background: rgba(124, 77, 255, 0.12);
+}
+
+.dashboard-cc aside .text-\[var\(--muted-fg\)\] {
+  color: #9ca3af !important;
 }
 
 .dashboard-cc aside a.bg-\[var\(--muted\)\] {
-  background: rgba(124, 77, 255, 0.18) !important;
-  color: #e9d5ff !important;
+  background: rgba(124, 77, 255, 0.28) !important;
+  color: #f5f3ff !important;
+  font-weight: 600;
 }

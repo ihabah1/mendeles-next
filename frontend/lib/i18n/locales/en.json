@@ -348,6 +348,7 @@
     "emailRelease": "Release emails",
     "roles": "Roles",
     "settings": "Settings",
+    "whatsapp": "WhatsApp",
     "seo": "SEO",
     "audit": "Audit log",
     "reports": "Reports",
@@ -1093,5 +1094,40 @@
     "body": "Message",
     "send": "Send",
     "sent": "Message sent"
+  },
+  "whatsappChat": {
+    "title": "Mendeles",
+    "subtitle": "AI assistant",
+    "welcome": "Hi! Welcome to Mendeles. How can we help you today?",
+    "notConnected": "WhatsApp is not connected yet.",
+    "fabTooltip": "Chat with Mendeles AI",
+    "fabAria": "Open Mendeles chat",
+    "close": "Close chat",
+    "inputLabel": "Message",
+    "inputPlaceholder": "Type a message…",
+    "send": "Send"
+  },
+  "whatsappDashboard": {
+    "title": "WhatsApp",
+    "subtitle": "Evolution API connection and health monitoring",
+    "backToDashboard": "Dashboard",
+    "noAccess": "You do not have permission to manage WhatsApp",
+    "connectionTitle": "Connection",
+    "notConnected": "WhatsApp is not connected yet.",
+    "provider": "Provider",
+    "connectionStatus": "Connection status",
+    "instance": "Instance",
+    "phoneNumber": "Phone number",
+    "qrStatus": "QR status",
+    "health": "Health",
+    "lastSync": "Last sync",
+    "configured": "Configured",
+    "yes": "Yes",
+    "no": "No",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "refreshStatus": "Refresh status",
+    "qrTitle": "QR code",
+    "qrAlt": "WhatsApp QR code"
   }
 }

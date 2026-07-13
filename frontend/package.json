@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "playwright test",
+    "test:unit": "vitest run",
     "test:a11y": "playwright test e2e/a11y.spec.ts",
     "audit:lighthouse": "node scripts/a11y-lighthouse.mjs"
   },
@@ -33,14 +34,19 @@
     "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "chrome-launcher": "^1.2.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.5.0",
+    "jsdom": "^26.1.0",
     "lighthouse": "^13.4.0",
     "tailwindcss": "^4.1.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
   }
 }

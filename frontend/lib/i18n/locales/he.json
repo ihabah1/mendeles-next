@@ -311,6 +311,7 @@
     "emailRelease": "שחרור מיילים",
     "roles": "תפקידים",
     "settings": "הגדרות",
+    "whatsapp": "WhatsApp",
     "seo": "SEO",
     "audit": "יומן פעולות",
     "reports": "דוחות",
@@ -1056,5 +1057,40 @@
     "body": "תוכן",
     "send": "שלח",
     "sent": "ההודעה נשלחה"
+  },
+  "whatsappChat": {
+    "title": "Mendeles",
+    "subtitle": "עוזר AI",
+    "welcome": "שלום! ברוכים הבאים ל-Mendeles. איך נוכל לעזור?",
+    "notConnected": "WhatsApp עדיין לא מחובר.",
+    "fabTooltip": "שיחה עם Mendeles AI",
+    "fabAria": "פתח צ'אט Mendeles",
+    "close": "סגור צ'אט",
+    "inputLabel": "הודעה",
+    "inputPlaceholder": "כתבו הודעה…",
+    "send": "שלח"
+  },
+  "whatsappDashboard": {
+    "title": "WhatsApp",
+    "subtitle": "חיבור Evolution API וניטור תקינות",
+    "backToDashboard": "לוח בקרה",
+    "noAccess": "אין הרשאה לניהול WhatsApp",
+    "connectionTitle": "חיבור",
+    "notConnected": "WhatsApp עדיין לא מחובר.",
+    "provider": "ספק",
+    "connectionStatus": "סטטוס חיבור",
+    "instance": "Instance",
+    "phoneNumber": "מספר טלפון",
+    "qrStatus": "סטטוס QR",
+    "health": "תקינות",
+    "lastSync": "סנכרון אחרון",
+    "configured": "מוגדר",
+    "yes": "כן",
+    "no": "לא",
+    "connect": "התחבר",
+    "disconnect": "התנתק",
+    "refreshStatus": "רענן סטטוס",
+    "qrTitle": "קוד QR",
+    "qrAlt": "קוד QR ל-WhatsApp"
   }
 }

@@ -1,9 +1,5 @@
-from django.urls import path
-
-from whatsapp.views import WhatsAppSimulateView, WhatsAppStatusView, WhatsAppWebhookView
+from django.urls import include, path
 
 urlpatterns = [
-    path("webhook/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook"),
-    path("status/", WhatsAppStatusView.as_view(), name="whatsapp-status"),
-    path("simulate/", WhatsAppSimulateView.as_view(), name="whatsapp-simulate"),
+    path("", include("whatsapp.api.v1.urls")),
 ]

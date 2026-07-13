@@ -21,6 +21,7 @@ const ADMIN_NAV = [
   { href: "/dashboard/users?tab=inbox", labelKey: "messages", permission: "users.view" },
   { href: "/dashboard/audit", labelKey: "reports", permission: "audit.view" },
   { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
+  { href: "/dashboard/whatsapp", labelKey: "whatsapp", permission: "integrations.view" },
   { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
   { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
   { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },
@@ -98,8 +99,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "rounded-md px-3 py-2 text-sm whitespace-nowrap",
-                navIsActive(pathname, tab, item.href) ? "bg-[var(--muted)] font-semibold" : "hover:bg-[var(--muted)]",
+                "rounded-md px-3 py-2 text-sm whitespace-nowrap text-[var(--foreground)]",
+                navIsActive(pathname, tab, item.href)
+                  ? "bg-[var(--muted)] font-semibold"
+                  : "text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
               )}
             >
               {t(item.labelKey as "overview")}
@@ -108,7 +111,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => logout()}
-            className="rounded-md px-3 py-2 text-start text-sm hover:bg-[var(--muted)] md:mt-4"
+            className="rounded-md px-3 py-2 text-start text-sm text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] md:mt-4"
           >
             {t("logout")}
           </button>
