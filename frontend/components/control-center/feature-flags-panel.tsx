@@ -14,6 +14,12 @@ const FLAG_LABELS: Record<string, { he: string; en: string; hintHe: string; hint
     hintHe: "הצג או הסתר את בלון יצירת הקשר בדף הראשי",
     hintEn: "Show or hide the contact widget on the public homepage",
   },
+  whatsapp_balloon: {
+    he: "בלון WhatsApp",
+    en: "WhatsApp balloon",
+    hintHe: "הצג או הסתר את כפתור הצ'אט הירוק של WhatsApp בדפי האתר",
+    hintEn: "Show or hide the green WhatsApp chat button on public pages",
+  },
 };
 
 type Props = { data: ControlCenterData; locale: string };

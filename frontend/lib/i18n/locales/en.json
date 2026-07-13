@@ -547,7 +547,9 @@
     "recentActivity": "Recent activity",
     "audit24h": "{n} events in 24h",
     "contactWidgetFlag": "Contact balloon on homepage",
-    "contactWidgetFlagHint": "Show or hide the contact widget on the public homepage"
+    "contactWidgetFlagHint": "Show or hide the contact widget on the public homepage",
+    "whatsappBalloonFlag": "WhatsApp balloon",
+    "whatsappBalloonFlagHint": "Show or hide the green WhatsApp chat button on public pages"
   },
   "siteLinks": {
     "title": "Site interfaces",

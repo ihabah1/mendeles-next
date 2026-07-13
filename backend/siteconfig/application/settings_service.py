@@ -18,14 +18,20 @@ DEFAULT_SETTINGS = {
     "analytics.gtm_id": "",
     "analytics.fb_pixel": "",
     "features.contact_widget_home": "true",
+    "features.whatsapp_balloon": "true",
 }
 
-PUBLIC_FEATURE_KEYS = ("features.contact_widget_home",)
+PUBLIC_FEATURE_KEYS = ("features.contact_widget_home", "features.whatsapp_balloon")
 
 FEATURE_FLAG_DEFINITIONS = [
     {
         "key": "features.contact_widget_home",
         "slug": "contact_widget_home",
+        "default": True,
+    },
+    {
+        "key": "features.whatsapp_balloon",
+        "slug": "whatsapp_balloon",
         "default": True,
     },
 ]
@@ -111,6 +117,10 @@ class SettingsService:
         return {
             "contact_widget_home": _setting_bool(
                 settings.get("features.contact_widget_home"),
+                default=True,
+            ),
+            "whatsapp_balloon": _setting_bool(
+                settings.get("features.whatsapp_balloon"),
                 default=True,
             ),
             "contact_email": email,

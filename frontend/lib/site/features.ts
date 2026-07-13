@@ -4,6 +4,7 @@ import { getContactSiteConfig } from "@/lib/contact/site-config";
 
 export type PublicFeatures = {
   contact_widget_home: boolean;
+  whatsapp_balloon: boolean;
   contact: ContactSiteConfig;
 };
 
@@ -16,6 +17,7 @@ const DEFAULT_CONTACT: ContactSiteConfig = {
 
 const DEFAULT_FEATURES: PublicFeatures = {
   contact_widget_home: true,
+  whatsapp_balloon: true,
   contact: DEFAULT_CONTACT,
 };
 
@@ -49,6 +51,7 @@ export async function fetchPublicFeatures(): Promise<PublicFeatures> {
     }
     const data = (await res.json()) as {
       contact_widget_home?: boolean;
+      whatsapp_balloon?: boolean;
       contact_email?: string;
       contact_phone?: string;
       whatsapp_number?: string;
@@ -56,6 +59,7 @@ export async function fetchPublicFeatures(): Promise<PublicFeatures> {
     };
     cached = {
       contact_widget_home: data.contact_widget_home !== false,
+      whatsapp_balloon: data.whatsapp_balloon !== false,
       contact: mergeContact({
         email: data.contact_email,
         phone: data.contact_phone,

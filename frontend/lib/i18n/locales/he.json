@@ -510,7 +510,9 @@
     "recentActivity": "פעילות אחרונה",
     "audit24h": "{n} אירועים ב-24 שעות",
     "contactWidgetFlag": "בלון \"צור קשר\" בדף הבית",
-    "contactWidgetFlagHint": "הצג או הסתר את בלון יצירת הקשר בדף הראשי של האתר"
+    "contactWidgetFlagHint": "הצג או הסתר את בלון יצירת הקשר בדף הראשי של האתר",
+    "whatsappBalloonFlag": "בלון WhatsApp",
+    "whatsappBalloonFlagHint": "הצג או הסתר את כפתור הצ'אט הירוק של WhatsApp בדפי האתר"
   },
   "siteLinks": {
     "title": "מפת ממשקים",

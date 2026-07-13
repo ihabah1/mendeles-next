@@ -7,10 +7,21 @@ import { WhatsAppFab } from "@/components/contact/whatsapp-fab";
 import { isMarketingPage } from "@/lib/contact/marketing-pages";
 import { fetchPublicFeatures } from "@/lib/site/features";
 
-/** WhatsApp chat FAB on all public marketing pages. */
+/** WhatsApp chat FAB on marketing pages — gated by feature flag. */
 export function WhatsAppChatShell() {
   const pathname = usePathname();
-  if (!isMarketingPage(pathname)) return null;
+  const enabled = isMarketingPage(pathname);
+  const features = useQuery({
+    queryKey: ["public-features"],
+    queryFn: fetchPublicFeatures,
+    enabled,
+    staleTime: 60_000,
+  });
+
+  if (!enabled) return null;
+  if (features.isLoading || features.isError) return null;
+  if (!features.data?.whatsapp_balloon) return null;
+
   return <WhatsAppFab />;
 }
 
@@ -29,5 +40,5 @@ export function SiteContactShell() {
   if (features.isLoading || features.isError) return null;
   if (!features.data?.contact_widget_home) return null;
 
-  return <ContactWidget contact={features.data.contact} stacked />;
+  return <ContactWidget contact={features.data.contact} stacked={Boolean(features.data.whatsapp_balloon)} />;
 }

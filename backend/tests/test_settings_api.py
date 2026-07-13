@@ -34,6 +34,7 @@ def test_public_features_default_enabled(api_client):
     assert response.status_code == 200
     body = response.json()
     assert body["contact_widget_home"] is True
+    assert body["whatsapp_balloon"] is True
     assert body["contact_email"] == "mendelessupport@gmail.com"
     assert body["contact_phone"] == ""
     assert body["whatsapp_number"] == "972537985362"
@@ -53,3 +54,18 @@ def test_owner_can_toggle_contact_widget(owner_client, owner_user):
     public = owner_client.get("/api/v1/settings/public/")
     assert public.status_code == 200
     assert public.json()["contact_widget_home"] is False
+
+
+@pytest.mark.django_db
+def test_owner_can_toggle_whatsapp_balloon(owner_client):
+    response = owner_client.patch(
+        "/api/v1/settings/",
+        {"features.whatsapp_balloon": "false"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.json()["features.whatsapp_balloon"] == "false"
+
+    public = owner_client.get("/api/v1/settings/public/")
+    assert public.status_code == 200
+    assert public.json()["whatsapp_balloon"] is False
