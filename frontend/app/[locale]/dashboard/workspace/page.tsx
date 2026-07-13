@@ -911,10 +911,11 @@ export default function WorkspacePage() {
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-sm">
                   <span className="mb-1 block text-slate-400">שפות תוכן</span>
-                  <select className={selectClass} value={contentLocales} onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en")}>
+                  <select className={selectClass} value={contentLocales} onChange={(e) => setContentLocales(e.target.value as "both" | "he" | "en" | "ar")}>
                     <option value="both">עברית + אנגלית</option>
                     <option value="he">עברית בלבד</option>
                     <option value="en">אנגלית בלבד</option>
+                    <option value="ar">ערבית בלבד</option>
                   </select>
                 </label>
                 <label className="block text-sm">
