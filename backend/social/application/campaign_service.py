@@ -226,7 +226,21 @@ class CampaignService:
             )
             ok &= check("Website link on creative", bool(campaign.website_url), campaign.website_url or "missing URL")
         if "tiktok" in platforms:
-            if not campaign.tiktok_video_url:
+            site_promos = [
+                item
+                for item in (campaign.tiktok_videos_json or [])
+                if isinstance(item, dict) and item.get("provider") == "site_promo" and item.get("url")
+            ]
+            if site_promos:
+                titles = ", ".join(
+                    str(item.get("title") or item.get("promo_id") or "promo") for item in site_promos
+                )
+                ok &= check(
+                    "TikTok site promo video",
+                    True,
+                    f"Using {len(site_promos)} site promo video(s): {titles}",
+                )
+            elif not campaign.tiktok_video_url:
                 try:
                     MediaGenerationService.create_tiktok_creative(campaign)
                 except Exception as exc:

@@ -402,6 +402,11 @@ export default function AiAutomationPage() {
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       setUseSitePromoVideos(true);
       setError("");
+      requestAnimationFrame(() => {
+        document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      // Refresh readiness checklist so the sim log shows site promo usage.
+      void simulate.mutateAsync().catch(() => undefined);
     },
     onError: (err: Error) => setError(err.message || "Failed to attach site promo videos"),
   });
@@ -1055,9 +1060,13 @@ export default function AiAutomationPage() {
                 }
               >
                 {active?.tiktok_video_url
-                  ? isPlayableVideo(active.tiktok_video_url)
-                    ? `Playable video (${(active.tiktok_videos || []).filter((v) => isPlayableVideo(v.url)).length || 1})`
-                    : "Preview only (SVG) — generate videos below"
+                  ? (active.tiktok_videos || []).some((v) => v.provider === "site_promo")
+                    ? `Site promo video(s) · ${
+                        (active.tiktok_videos || []).filter((v) => v.provider === "site_promo").length
+                      }`
+                    : isPlayableVideo(active.tiktok_video_url)
+                      ? `Playable video (${(active.tiktok_videos || []).filter((v) => isPlayableVideo(v.url)).length || 1})`
+                      : "Preview only (SVG) — generate videos below"
                   : "Not created yet"}
               </span>
             </p>
@@ -1096,15 +1105,41 @@ export default function AiAutomationPage() {
               <div className="border-t border-[var(--border)] pt-4 space-y-4">
                 <p className="text-sm text-[var(--muted-fg)]">
                   בדיקת מוכנות (כותרות, קריאייטיבים, קישורים) — חובה לפני &quot;שלח קמפיין לרשת&quot;.
+                  {(active.tiktok_videos || []).some((v) => v.provider === "site_promo") ? (
+                    <span className="mt-1 block font-semibold text-emerald-700 dark:text-emerald-300">
+                      הסרטונים שסומנו: סרטוני תדמית מהאתר יופיעו בסימולציית TikTok למעלה.
+                    </span>
+                  ) : null}
                 </p>
-                <Button
-                  type="button"
-                  disabled={!canManage || !hasCampaign || simulate.isPending}
-                  onClick={() => simulate.mutate()}
-                  className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-                >
-                  {simulate.isPending ? "מריץ סימולציה…" : "✓ אשר סימולציה והמשך לשליחה"}
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    type="button"
+                    disabled={!canManage || !hasCampaign || simulate.isPending}
+                    onClick={() => simulate.mutate()}
+                    className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+                  >
+                    {simulate.isPending && !simulated
+                      ? "מריץ סימולציה…"
+                      : "✓ אשר סימולציה והמשך לשליחה"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManage || !hasCampaign || simulate.isPending}
+                    onClick={() => {
+                      simulate.mutate(undefined, {
+                        onSuccess: () => {
+                          document
+                            .getElementById("campaign-simulation")
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        },
+                      });
+                    }}
+                    className="rounded-full"
+                  >
+                    {simulate.isPending ? "מרענן…" : "רענן סימולציה"}
+                  </Button>
+                </div>
                 {active.simulation_log?.length ? (
                   <ul className="space-y-2 rounded-2xl border border-[var(--border)] p-4 text-sm">
                     {active.simulation_log.map((entry, i) => (
@@ -1163,14 +1198,34 @@ export default function AiAutomationPage() {
                   >
                     {simulate.isPending ? "מריץ סימולציה…" : "✓ אשר סימולציה"}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManage || simulate.isPending || publishing}
+                    onClick={() => simulate.mutate()}
+                    className="rounded-full"
+                  >
+                    רענן סימולציה
+                  </Button>
                   <p className="w-full text-xs text-amber-900 dark:text-amber-100">
                     או לחצו ישירות על &quot;שלח קמפיין לרשת&quot; — הסימולציה תרוץ אוטומטית ואז תישלח.
                   </p>
                 </div>
               ) : (
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                  הסימולציה עברה — אפשר לשלוח את הקמפיין לרשת.
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    הסימולציה עברה — אפשר לשלוח את הקמפיין לרשת.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManage || simulate.isPending || publishing}
+                    onClick={() => simulate.mutate()}
+                    className="rounded-full"
+                  >
+                    {simulate.isPending ? "מרענן…" : "רענן סימולציה"}
+                  </Button>
+                </div>
               )}
             </>
           )}

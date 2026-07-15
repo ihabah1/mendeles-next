@@ -36,6 +36,8 @@ export type SocialCampaign = {
   tiktok_videos?: Array<{
     url: string;
     provider?: string;
+    promo_id?: string;
+    title?: string;
     variation?: number;
     credits_used?: number;
   }>;

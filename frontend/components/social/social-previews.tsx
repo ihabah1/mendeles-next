@@ -104,18 +104,27 @@ export function InstagramPreview({ campaign }: Props) {
 export function TikTokPreview({ campaign }: Props) {
   const text = campaign.captions?.tiktok || "";
   const tags = hashtagsLine(campaign, "tiktok");
+  const promoVideos = (campaign.tiktok_videos || []).filter((v) => v?.provider === "site_promo" && v.url);
+  const fromPromo = promoVideos[0]?.url;
   const fromList = [...(campaign.tiktok_videos || [])]
     .reverse()
     .find((v) => v?.url && /\.(webm|mp4|mov)(\?|$)/i.test(v.url))?.url;
   const media =
+    fromPromo ||
     fromList ||
     campaign.tiktok_video_url ||
     campaign.instagram_image_url ||
     campaign.media_url;
   const isVideo = Boolean(media && /\.(webm|mp4|mov)(\?|$)/i.test(media));
+  const isSitePromo = promoVideos.length > 0;
   return (
     <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[32px] border-[8px] border-zinc-900 bg-zinc-950 shadow-xl">
       <div className="relative aspect-[9/16] bg-gradient-to-b from-zinc-800 to-zinc-950">
+        {isSitePromo ? (
+          <div className="absolute start-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            סרטון תדמית
+          </div>
+        ) : null}
         {media ? (
           isVideo ? (
             <video
@@ -135,6 +144,12 @@ export function TikTokPreview({ campaign }: Props) {
         ) : null}
         <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black/80 to-transparent p-4">
           <p className="text-xs font-bold text-white">@mendeles</p>
+          {isSitePromo ? (
+            <p className="text-[10px] font-semibold text-emerald-300">
+              מקור: סרטון תדמית מהאתר
+              {promoVideos[0]?.title ? ` · ${promoVideos[0].title}` : ""}
+            </p>
+          ) : null}
           <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-white/90">
             {text}
             {tags ? `\n${tags}` : ""}
