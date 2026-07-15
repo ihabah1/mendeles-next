@@ -1141,6 +1141,21 @@ export default function AiAutomationPage() {
                 אל תלחצו שוב על שליחה בינתיים — כל ניסיון נוסף שורף מכסה. נסו שוב מחר, או בדקו מגבלות API בחשבון Buffer.
               </p>
             </div>
+          ) : /image url is not accessible|unable to connect to the server/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">Buffer לא הצליח לטעון את התמונה</p>
+              <p>
+                כתובת הקריאייטיב לא נגישה מבחוץ (או שזו קובץ SVG). מנסים כעת לפרסם עם תמונת PNG ציבורית — צרו מחדש
+                קריאייטיב ואז שלחו שוב אחרי הפריסה.
+              </p>
+              <p className="text-xs opacity-80">{error}</p>
+            </div>
+          ) : /instagram posts require a type|require a type \(post/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">חסר סוג פוסט לאינסטגרם</p>
+              <p>תוקן בשרת (סוג: post). פרסמו מחדש אחרי העדכון.</p>
+              <p className="text-xs opacity-80">{error}</p>
+            </div>
           ) : (
             error
           )}

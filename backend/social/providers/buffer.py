@@ -353,8 +353,12 @@ class BufferPublisher(SocialPublisher):
                 due_at = payload.scheduled_at_iso
 
             assets: list[dict[str, Any]] = []
-            if payload.media_url:
-                assets.append({"image": {"url": payload.media_url}})
+            media_url = (payload.media_url or "").strip()
+            if media_url:
+                if (payload.media_kind or "image").lower() == "video":
+                    assets.append({"video": {"url": media_url}})
+                else:
+                    assets.append({"image": {"url": media_url}})
 
             variables: dict[str, Any] = {
                 "input": {
@@ -367,6 +371,19 @@ class BufferPublisher(SocialPublisher):
             }
             if due_at:
                 variables["input"]["dueAt"] = due_at
+
+            # Instagram requires an explicit post type (post / story / reel).
+            platform_key = (payload.platform or "").strip().lower()
+            if platform_key == "instagram":
+                ig_type = (payload.instagram_type or "post").strip().lower()
+                if ig_type not in {"post", "story", "reel"}:
+                    ig_type = "post"
+                variables["input"]["metadata"] = {
+                    "instagram": {
+                        "type": ig_type,
+                        "shouldShareToFeed": True,
+                    }
+                }
 
             data = self._graphql(
                 """

@@ -127,6 +127,59 @@ def test_publish_uses_graphql_create_post(monkeypatch):
     assert calls["variables"]["input"]["assets"][0]["image"]["url"] == "https://cdn.example/a.png"
 
 
+def test_publish_instagram_includes_post_type_metadata(monkeypatch):
+    BufferPublisher.clear_cache()
+    publisher = BufferPublisher(access_token="test-token")
+    channels = [
+        {
+            "id": "ig1",
+            "service": "instagram",
+            "name": "mendeles",
+            "display_name": "Mendeles",
+            "label": "Mendeles",
+            "descriptor": "Instagram Business",
+            "type": "business",
+            "is_disconnected": False,
+            "is_locked": False,
+        }
+    ]
+    monkeypatch.setattr(publisher, "list_channels", lambda force_refresh=False: channels)
+    calls = {}
+
+    def fake_graphql(query, variables=None):
+        calls["variables"] = variables
+        return {"createPost": {"post": {"id": "igpost1", "text": "hi", "status": "buffer"}}}
+
+    monkeypatch.setattr(publisher, "_graphql", fake_graphql)
+    result = publisher.publish(
+        PublishPayload(
+            text="Hello IG",
+            platform="instagram",
+            now=True,
+            media_url="https://mendeles.com/media/social/a.png",
+            media_kind="image",
+            instagram_type="post",
+        )
+    )
+    assert result.ok
+    meta = calls["variables"]["input"]["metadata"]["instagram"]
+    assert meta["type"] == "post"
+    assert meta["shouldShareToFeed"] is True
+    assert calls["variables"]["input"]["assets"][0]["image"]["url"].endswith("/media/social/a.png")
+
+
+def test_public_media_url_rewrites_to_frontend(settings):
+    from social.application.media_service import public_media_url_for_buffer
+
+    settings.FRONTEND_URL = "https://mendeles.com"
+    settings.BACKEND_PUBLIC_URL = "https://api.example.railway.app"
+    assert (
+        public_media_url_for_buffer("https://api.example.railway.app/media/social/x.png")
+        == "https://mendeles.com/media/social/x.png"
+    )
+    assert public_media_url_for_buffer("/media/social/y.jpg") == "https://mendeles.com/media/social/y.jpg"
+
+
 def test_publish_missing_platform_lists_connected(monkeypatch):
     BufferPublisher.clear_cache()
     publisher = BufferPublisher(access_token="test-token")

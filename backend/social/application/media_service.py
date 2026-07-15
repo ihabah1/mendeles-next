@@ -39,6 +39,97 @@ def _public_url(relative: str) -> str:
     return path
 
 
+def public_media_url_for_buffer(url: str) -> str:
+    """
+    Absolute URL Buffer can fetch from the public internet.
+    Prefer the frontend /media proxy (FRONTEND_URL) so Buffer does not need
+    to reach the private Railway API host.
+    """
+    from urllib.parse import urlparse
+
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    frontend = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/")
+    backend = (getattr(settings, "BACKEND_PUBLIC_URL", "") or "").rstrip("/")
+    media_prefix = (settings.MEDIA_URL or "/media/").rstrip("/")
+
+    if raw.startswith("http://") or raw.startswith("https://"):
+        parsed = urlparse(raw)
+        path = parsed.path or ""
+        query = f"?{parsed.query}" if parsed.query else ""
+        # Any /media/... host → public frontend proxy (Buffer crawls the open web).
+        if frontend and path.startswith("/media"):
+            return f"{frontend}{path}{query}"
+        if backend and frontend and raw.startswith(backend + media_prefix):
+            return frontend + raw[len(backend) :]
+        if backend and frontend and raw.startswith(backend + "/media"):
+            return frontend + raw[len(backend) :]
+        return raw
+
+    path = raw if raw.startswith("/") else f"/{raw.lstrip('/')}"
+    if frontend:
+        return f"{frontend}{path}"
+    if backend:
+        return f"{backend}{path}"
+    return path
+
+def _buffer_placeholder_png(label: str) -> str:
+    from urllib.parse import quote
+
+    text = quote((label or "Mendeles")[:80])
+    return f"https://placehold.co/1080x1080/6F42F5/ffffff/png?text={text}"
+
+
+def ensure_buffer_image_url(campaign: SocialCampaign) -> str:
+    """
+    Return a Buffer-safe raster image URL (not SVG / not relative).
+    Regenerates a PNG when the current creative is SVG-only.
+    """
+    candidates = [
+        campaign.instagram_image_url,
+        campaign.media_url,
+    ]
+    for candidate in candidates:
+        url = public_media_url_for_buffer(candidate or "")
+        if not url:
+            continue
+        lower = url.lower().split("?", 1)[0]
+        if lower.endswith(".svg"):
+            continue
+        if any(lower.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")) or "placehold.co" in lower:
+            return url
+        # Unknown extension but absolute http(s) — still try it.
+        if url.startswith("http"):
+            return url
+
+    # SVG-only / missing: try AI/PNG generation.
+    try:
+        MediaGenerationService.create_instagram_image(campaign)
+        campaign.refresh_from_db()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Buffer image regenerate failed: %s", exc)
+
+    url = public_media_url_for_buffer(campaign.instagram_image_url or campaign.media_url or "")
+    lower = (url or "").lower().split("?", 1)[0]
+    if url and not lower.endswith(".svg"):
+        return url
+
+    return _buffer_placeholder_png(campaign.title or campaign.main_idea or "Mendeles")
+
+
+def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
+    """Return a public MP4/MOV URL for TikTok (Buffer often rejects WebM)."""
+    candidates = [campaign.tiktok_video_url]
+    for item in campaign.tiktok_videos_json or []:
+        if isinstance(item, dict) and item.get("url"):
+            candidates.append(str(item["url"]))
+    for candidate in candidates:
+        url = public_media_url_for_buffer(candidate or "")
+        lower = (url or "").lower().split("?", 1)[0]
+        if url and (lower.endswith(".mp4") or lower.endswith(".mov")):
+            return url
+    return ""
 def _wrap_text(text: str, width: int = 28) -> list[str]:
     words = (text or "").split()
     if not words:

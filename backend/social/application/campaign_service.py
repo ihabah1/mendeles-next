@@ -249,6 +249,12 @@ class CampaignService:
         step("Simulation passed", campaign.simulated_at.isoformat())
         step("Preparing media...", "Using simulated creatives")
 
+        from social.application.media_service import (
+            ensure_buffer_image_url,
+            ensure_buffer_video_url,
+            public_media_url_for_buffer,
+        )
+
         if not campaign.media_url:
             campaign.media_url = (
                 campaign.instagram_image_url
@@ -256,7 +262,17 @@ class CampaignService:
                 or _placeholder_media_url(campaign.media_prompt, campaign.media_type)
             )
             campaign.save(update_fields=["media_url", "updated_at"])
-        step("Uploading media...", campaign.media_url or "text-only")
+
+        buffer_image = ensure_buffer_image_url(campaign)
+        buffer_video = ensure_buffer_video_url(campaign)
+        if buffer_image and (
+            not campaign.media_url
+            or str(campaign.media_url).lower().endswith(".svg")
+            or not str(campaign.media_url).startswith("http")
+        ):
+            campaign.media_url = buffer_image
+            campaign.save(update_fields=["media_url", "updated_at"])
+        step("Uploading media...", buffer_image or buffer_video or campaign.media_url or "text-only")
 
         scheduled_dt = None
         scheduled_iso = None
@@ -300,19 +316,30 @@ class CampaignService:
             if cta and cta not in caption:
                 text_parts.append(cta)
             text = "\n\n".join(p for p in text_parts if p).strip()
-            media_for_platform = ""
-            if platform == "instagram":
-                media_for_platform = campaign.instagram_image_url or campaign.media_url
-            elif platform == "linkedin":
-                media_for_platform = campaign.instagram_image_url or campaign.media_url
+
+            media_for_platform = buffer_image
+            media_kind = "image"
+            if platform == "tiktok" and buffer_video:
+                # Prefer real video for TikTok; Buffer rejects SVG / relative hosts.
+                media_for_platform = buffer_video
+                media_kind = "video"
             elif platform == "tiktok":
-                # Buffer GraphQL image asset; vertical video URL kept for simulation preview.
-                media_for_platform = campaign.instagram_image_url or ""
+                media_for_platform = buffer_image
+                media_kind = "image"
+            elif platform in {"instagram", "linkedin"}:
+                media_for_platform = buffer_image
+                media_kind = "image"
+
+            # Last-chance absolutize (covers any leftover relative paths).
+            media_for_platform = public_media_url_for_buffer(media_for_platform)
+
             result = publisher.publish(
                 PublishPayload(
                     text=text,
                     platform=platform,
                     media_url=media_for_platform,
+                    media_kind=media_kind,
+                    instagram_type="post",
                     scheduled_at_iso=scheduled_iso,
                     now=not schedule,
                 )

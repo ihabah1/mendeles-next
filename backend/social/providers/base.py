@@ -12,6 +12,8 @@ class PublishPayload:
     text: str
     platform: str
     media_url: str = ""
+    media_kind: str = "image"  # image | video
+    instagram_type: str = "post"  # post | story | reel
     scheduled_at_iso: str | None = None
     now: bool = True
     channel_name: str | None = None
