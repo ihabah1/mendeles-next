@@ -97,6 +97,8 @@ export default function AiAutomationPage() {
   const [tiktokCount, setTiktokCount] = useState(1);
   const [selectedPromoIds, setSelectedPromoIds] = useState<PromoVideoId[]>([]);
   const [useSitePromoVideos, setUseSitePromoVideos] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -181,6 +183,7 @@ export default function AiAutomationPage() {
     },
     onSuccess: async (data) => {
       setActive(data);
+      setWizardStep(2);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       if (data.platforms?.includes("tiktok") && data.id) {
         qc.invalidateQueries({ queryKey: ["campaign-creatives", data.id] });
@@ -198,12 +201,8 @@ export default function AiAutomationPage() {
           const updated = await socialApi.uploadTikTokVideo(data.id, dataUrl);
           setActive(updated);
           setLocalCreativeProgress(100);
-          pushLocalLog("Playable TikTok video ready — press Play", "success");
-        } catch (err) {
-          pushLocalLog(
-            `Auto TikTok video failed: ${err instanceof Error ? err.message : "error"} — use Generate videos below`,
-            "warn",
-          );
+        } catch {
+          /* optional */
         } finally {
           setLocalCreativeBusy(false);
         }
@@ -364,6 +363,40 @@ export default function AiAutomationPage() {
       setError("");
     },
     onError: (err: Error) => setError(err.message || "Instagram image failed"),
+  });
+
+  /** One-click: generate PNG creative + re-run simulation so publish is unblocked. */
+  const fixPngAndResim = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      await saveEdits.mutateAsync();
+      let campaign = await socialApi.createInstagramImage(active.id);
+      setActive(campaign);
+      if (!isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
+        throw new Error(
+          "Gemini לא החזיר PNG (קיבלנו SVG). בדקו GEMINI_API_KEY בשרת, ואז לחצו שוב על «צור תמונת PNG ותקן».",
+        );
+      }
+      if (useSitePromoVideos && selectedPromoIds.length > 0) {
+        campaign = await socialApi.attachSitePromoVideos(campaign.id, selectedPromoIds);
+        setActive(campaign);
+      }
+      const simulated = await socialApi.simulate(campaign.id);
+      if (simulated.status !== "simulated") {
+        throw new Error(simulated.last_error || "הסימולציה נכשלה אחרי יצירת PNG.");
+      }
+      return simulated;
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      setError("");
+      setWizardStep(3);
+      requestAnimationFrame(() => {
+        document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    },
+    onError: (err: Error) => setError(err.message || "יצירת PNG נכשלה"),
   });
 
   const createTikTok = useMutation({
@@ -529,37 +562,66 @@ export default function AiAutomationPage() {
   const publishing = publish.isPending;
   const hasCampaign = Boolean(active?.id);
   const simulated = Boolean(active?.simulated_at) || active?.status === "simulated";
-  const needCampaignHint = "Generate a campaign above first — then these actions unlock.";
+  const hasPng = isRasterCreative(active?.instagram_image_url || active?.media_url);
+  const hasTikTokMedia =
+    Boolean(active && isPlayableVideo(bestTikTokVideoUrl(active))) ||
+    (active?.tiktok_videos || []).some((v) => v.provider === "site_promo");
+  const pngBlocked = /חסרה תמונת PNG|Campaign PNG|Create Instagram image/i.test(error || "");
+  const needCampaignHint = "צרו קמפיין בשלב 1 — ואז הפעולות כאן ייפתחו.";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 pb-16">
-      <header className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6F42F5]">Automation</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">AI Automation</h1>
-        <p className="max-w-2xl text-sm text-[var(--muted-fg)]">
-          Generate creatives, preview how the campaign looks on LinkedIn / Instagram / TikTok, then release — nothing goes live until simulation passes.
-        </p>
-        <ol className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+    <div className="mx-auto max-w-5xl space-y-6 pb-16">
+      <header className="space-y-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6F42F5]">Automation</p>
+          <h1 className="text-3xl font-extrabold tracking-tight">אוטומציית קמפיין</h1>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted-fg)]">
+            ארבעה שלבים פשוטים: יצירה → קריאייטיבים → סימולציה → שליחה.
+          </p>
+        </div>
+        <nav className="grid gap-2 sm:grid-cols-4" aria-label="שלבי קמפיין">
           {[
-            { n: "1", label: "Generate" },
-            { n: "2", label: "Instagram + TikTok creatives" },
-            { n: "3", label: "סימולציה — 3 רשתות" },
-            { n: "4", label: "שלח קמפיין לרשת" },
-          ].map((step) => (
-            <li
-              key={step.n}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1.5",
-                step.n === "4" ? "border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" : "bg-[var(--muted)]/40",
-              )}
-            >
-              <span className={cn("flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white", step.n === "4" ? "bg-red-600" : "bg-[#6F42F5]")}>
-                {step.n}
-              </span>
-              {step.label}
-            </li>
-          ))}
-        </ol>
+            { n: 1 as const, label: "יצירה", hint: "פרטי הקמפיין" },
+            { n: 2 as const, label: "קריאייטיבים", hint: "תמונה + טיקטוק" },
+            { n: 3 as const, label: "סימולציה", hint: "תצוגה מקדימה" },
+            { n: 4 as const, label: "שליחה", hint: "פרסום לרשת" },
+          ].map((s) => {
+            const locked = s.n > 1 && !hasCampaign;
+            const done =
+              (s.n === 1 && hasCampaign) ||
+              (s.n === 2 && hasCampaign && hasPng && (hasTikTokMedia || !(active?.platforms || platforms).includes("tiktok"))) ||
+              (s.n === 3 && simulated) ||
+              (s.n === 4 && (active?.status === "published" || active?.status === "scheduled"));
+            return (
+              <button
+                key={s.n}
+                type="button"
+                disabled={locked}
+                onClick={() => setWizardStep(s.n)}
+                className={cn(
+                  "rounded-2xl border px-3 py-3 text-start transition",
+                  wizardStep === s.n
+                    ? "border-[#6F42F5] bg-[#6F42F5]/10 shadow-sm"
+                    : "border-[var(--border)] bg-[var(--background)] hover:border-[#6F42F5]/40",
+                  locked && "opacity-40",
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white",
+                      done ? "bg-emerald-600" : wizardStep === s.n ? "bg-[#6F42F5]" : "bg-slate-400",
+                    )}
+                  >
+                    {done ? "✓" : s.n}
+                  </span>
+                  <span className="font-bold">{s.label}</span>
+                </span>
+                <span className="mt-1 block text-xs text-[var(--muted-fg)]">{s.hint}</span>
+              </button>
+            );
+          })}
+        </nav>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span
             className={cn(
@@ -569,15 +631,56 @@ export default function AiAutomationPage() {
                 : "bg-amber-500/15 text-amber-800 dark:text-amber-200",
             )}
           >
-            Buffer: {status.data?.buffer_configured ? "Connected" : "Not configured"}
+            Buffer: {status.data?.buffer_configured ? "מחובר" : "לא מוגדר"}
           </span>
-          {status.data?.error ? <span className="text-red-600">{status.data.error}</span> : null}
+          {hasCampaign ? (
+            <span className="rounded-full bg-[var(--muted)] px-3 py-1 font-semibold">
+              {hasPng ? "PNG ✓" : "חסר PNG"} · {hasTikTokMedia ? "וידאו ✓" : "אין וידאו"} ·{" "}
+              {simulated ? "סימולציה ✓" : "טרם אושר"}
+            </span>
+          ) : null}
         </div>
       </header>
 
-      {/* Generate */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">1 · Generate AI Campaign</h2>
+      {error ? (
+        <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+          {pngBlocked || /חסרה תמונת PNG|Campaign PNG|Create Instagram image/i.test(error) ? (
+            <div className="space-y-3">
+              <div>
+                <p className="font-bold text-base">חסרה תמונת PNG — אפשר לתקן בלחיצה אחת</p>
+                <p className="mt-1 text-sm opacity-90">
+                  ניצור תמונת קמפיין ב־PNG ונריץ סימולציה מחדש כדי לאפשר שליחה.
+                </p>
+              </div>
+              <Button
+                type="button"
+                disabled={!canManage || !hasCampaign || fixPngAndResim.isPending}
+                onClick={() => fixPngAndResim.mutate()}
+                className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+              >
+                {fixPngAndResim.isPending ? "יוצר PNG ומריץ סימולציה…" : "צור תמונת PNG ותקן עכשיו"}
+              </Button>
+              <p className="text-xs opacity-70">{error}</p>
+            </div>
+          ) : /internal server error|upstream_html_error|שגיאת שרת פנימית/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">שגיאת שרת בפרסום</p>
+              <p>{error}</p>
+            </div>
+          ) : /rate_limit|too many requests|חסם את ה-api|429/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">Buffer חסם פרסום ל־24 שעות</p>
+              <p>{error}</p>
+            </div>
+          ) : (
+            <p>{error}</p>
+          )}
+        </div>
+      ) : null}
+
+      {/* STEP 1 — Generate (was below; keep id for scroll) */}
+      <section id="campaign-generate" className={cn("space-y-4", wizardStep !== 1 && "hidden")}>
+        <h2 className="text-xl font-bold">1 · יצירת קמפיין</h2>
         <Card className="space-y-4 !rounded-2xl">
           <label className="block text-sm font-medium">
             Campaign Goal
@@ -690,14 +793,21 @@ export default function AiAutomationPage() {
             </label>
           ) : null}
 
-          <Button
-            type="button"
-            disabled={!canCreate || !goal.trim() || platforms.length === 0 || generate.isPending}
-            onClick={() => generate.mutate()}
-            className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-          >
-            {generate.isPending ? "Generating…" : "Generate Campaign"}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              disabled={!canCreate || !goal.trim() || platforms.length === 0 || generate.isPending}
+              onClick={() => generate.mutate()}
+              className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
+            >
+              {generate.isPending ? "יוצר קמפיין…" : "צור קמפיין"}
+            </Button>
+            {hasCampaign ? (
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(2)}>
+                המשך לקריאייטיבים →
+              </Button>
+            ) : null}
+          </div>
 
           {generating ? (
             <div className="space-y-2 rounded-2xl border border-[#6F42F5]/20 bg-[#6F42F5]/5 p-4">
@@ -710,25 +820,60 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      {/* Previews + edit — only when a campaign exists */}
+      {/* STEP 2 — Creatives + edit */}
+      <div className={cn(wizardStep !== 2 && "hidden")}>
       {hasCampaign && active ? (
         <>
-          {(active.instagram_image_url || active.media_url) && !String(active.media_url || "").includes("placehold.co") ? (
-            <section className="space-y-3">
-              <h2 className="text-xl font-bold">Campaign image</h2>
-              <Card className="overflow-hidden !rounded-2xl !p-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+          <section className="mb-4 space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold">2 · קריאייטיבים</h2>
+                <p className="text-sm text-[var(--muted-fg)]">תמונת PNG לשליחה + סרטון טיקטוק (תדמית או יצירה).</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(1)}>
+                  ← חזרה
+                </Button>
+                <Button type="button" className="rounded-full bg-[#6F42F5] text-white" onClick={() => setWizardStep(3)}>
+                  המשך לסימולציה →
+                </Button>
+              </div>
+            </div>
+
+            <Card className="space-y-4 !rounded-2xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
+                <div>
+                  <p className="font-bold">תמונת קמפיין (PNG)</p>
+                  <p className="text-xs text-[var(--muted-fg)]">
+                    {hasPng ? "מוכן לשליחה ל-Buffer" : "חובה לפני שליחה — SVG לא נשלח"}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  disabled={!canManage || fixPngAndResim.isPending || createIgImage.isPending}
+                  onClick={() => fixPngAndResim.mutate()}
+                  className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
+                >
+                  {fixPngAndResim.isPending || createIgImage.isPending
+                    ? "יוצר…"
+                    : hasPng
+                      ? "רענן תמונת PNG"
+                      : "צור תמונת PNG ותקן"}
+                </Button>
+              </div>
+              {(active.instagram_image_url || active.media_url) && !String(active.media_url || "").includes("placehold.co") ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={active.instagram_image_url || active.media_url}
                   alt={active.title || "Campaign creative"}
-                  className="mx-auto max-h-[520px] w-full max-w-xl object-contain bg-[#0F172A]"
+                  className="mx-auto max-h-[360px] w-full max-w-md rounded-xl object-contain bg-[#0F172A]"
                 />
-              </Card>
-            </section>
-          ) : null}
+              ) : null}
+            </Card>
+          </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-bold">Edit Before Publish</h2>
+            <h2 className="text-lg font-bold">עריכת טקסטים</h2>
             <Card className="space-y-4 !rounded-2xl">
               <label className="block text-sm font-medium">
                 Campaign title
@@ -787,24 +932,16 @@ export default function AiAutomationPage() {
               </label>
               {canManage ? (
                 <Button type="button" variant="outline" onClick={() => saveEdits.mutate()} disabled={saveEdits.isPending}>
-                  {saveEdits.isPending ? "Saving…" : "Save edits"}
+                  {saveEdits.isPending ? "שומר…" : "שמור טקסטים"}
                 </Button>
               ) : null}
             </Card>
           </section>
-        </>
-      ) : null}
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">2 · Creatives</h2>
-        <Card className="space-y-4 !rounded-2xl">
-          <p className="text-sm text-[var(--muted-fg)]">
-            Create playable TikTok videos (WebM) you can press Play on immediately. If Runway/Veo are configured,
-            they can upgrade quality; otherwise browser + local preview still produces usable clips.
-          </p>
-          {!hasCampaign ? <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p> : null}
-
-          {hasCampaign && bestTikTokVideoUrl(active) ? (
+          <section className="space-y-4">
+            <h3 className="text-lg font-bold">טיקטוק</h3>
+            <Card className="space-y-4 !rounded-2xl">
+          {bestTikTokVideoUrl(active) ? (
             <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
               <p className="text-sm font-semibold">
                 {isPlayableVideo(bestTikTokVideoUrl(active))
@@ -875,7 +1012,9 @@ export default function AiAutomationPage() {
           ) : null}
 
           {videoProviders.data?.providers?.length ? (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <details className="rounded-xl border border-[var(--border)] p-3 text-xs">
+              <summary className="cursor-pointer font-semibold text-[var(--muted-fg)]">מתקדם: ספקי וידאו AI</summary>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {videoProviders.data.providers.map((p) => (
                 <div
                   key={p.provider}
@@ -895,7 +1034,8 @@ export default function AiAutomationPage() {
                   </p>
                 </div>
               ))}
-            </div>
+              </div>
+            </details>
           ) : null}
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/20 p-4 space-y-3">
@@ -987,11 +1127,11 @@ export default function AiAutomationPage() {
             <Button
               type="button"
               variant="outline"
-              disabled={!canManage || !hasCampaign || createIgImage.isPending}
-              onClick={() => createIgImage.mutate()}
+              disabled={!canManage || !hasCampaign || createIgImage.isPending || fixPngAndResim.isPending}
+              onClick={() => fixPngAndResim.mutate()}
               className="rounded-full"
             >
-              {createIgImage.isPending ? "Creating…" : "Create AI campaign image"}
+              {createIgImage.isPending || fixPngAndResim.isPending ? "יוצר PNG…" : "צור / רענן תמונת PNG"}
             </Button>
             <Button
               type="button"
@@ -1086,7 +1226,28 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      <section id="campaign-simulation" className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(1)}>
+            ← חזרה
+          </Button>
+          <Button
+            type="button"
+            className="rounded-full bg-[#6F42F5] text-white"
+            onClick={() => {
+              setWizardStep(3);
+              document.getElementById("campaign-simulation")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            המשך לסימולציה →
+          </Button>
+        </div>
+        </>
+      ) : (
+        <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p>
+      )}
+      </div>
+
+      <section id="campaign-simulation" className={cn("space-y-4", wizardStep !== 3 && "hidden")}>
         <div>
           <h2 className="text-xl font-bold">3 · סימולציה — כך ייראה הקמפיין</h2>
           <p className="mt-1 text-sm text-[var(--muted-fg)]">
@@ -1115,13 +1276,32 @@ export default function AiAutomationPage() {
                   <Button
                     type="button"
                     disabled={!canManage || !hasCampaign || simulate.isPending}
-                    onClick={() => simulate.mutate()}
+                    onClick={() => {
+                      simulate.mutate(undefined, {
+                        onSuccess: () => {
+                          setWizardStep(4);
+                          document
+                            .getElementById("campaign-release")
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        },
+                      });
+                    }}
                     className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
                   >
                     {simulate.isPending && !simulated
                       ? "מריץ סימולציה…"
                       : "✓ אשר סימולציה והמשך לשליחה"}
                   </Button>
+                  {!hasPng ? (
+                    <Button
+                      type="button"
+                      disabled={!canManage || fixPngAndResim.isPending}
+                      onClick={() => fixPngAndResim.mutate()}
+                      className="rounded-full bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+                    >
+                      {fixPngAndResim.isPending ? "מתקן…" : "צור PNG ותקן"}
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
@@ -1138,6 +1318,9 @@ export default function AiAutomationPage() {
                     className="rounded-full"
                   >
                     {simulate.isPending ? "מרענן…" : "רענן סימולציה"}
+                  </Button>
+                  <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(4)}>
+                    לשליחה →
                   </Button>
                 </div>
                 {active.simulation_log?.length ? (
@@ -1169,8 +1352,13 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      <section id="campaign-release" className="space-y-4">
-        <h2 className="text-xl font-bold">4 · שליחה לרשת</h2>
+      <section id="campaign-release" className={cn("space-y-4", wizardStep !== 4 && "hidden")}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl font-bold">4 · שליחה לרשת</h2>
+          <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(3)}>
+            ← חזרה לסימולציה
+          </Button>
+        </div>
         <Card className="space-y-4 !rounded-2xl border-red-200/80 dark:border-red-900/50">
           {!hasCampaign ? (
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{needCampaignHint}</p>
@@ -1179,13 +1367,22 @@ export default function AiAutomationPage() {
               <div className="space-y-2">
                 <p className="text-sm font-semibold">
                   {simulated
-                    ? "סימולציה אושרה — כך ייראה הקמפיין לפני שליחה:"
-                    : "לפני שליחה — כך ייראה הקמפיין ב־3 הרשתות. אפשר לאשר סימולציה או ללחוץ שלח (יריץ סימולציה אוטומטית):"}
+                    ? "סימולציה אושרה — מוכנים לשליחה."
+                    : "מומלץ לאשר סימולציה בשלב 3 לפני שליחה (או שהשליחה תריץ אותה אוטומטית)."}
                 </p>
-                <CampaignNetworkSimulator
-                  campaign={active!}
-                  platforms={active!.platforms?.length ? active!.platforms : platforms}
-                />
+                {!hasPng ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+                    <p className="font-semibold text-amber-900 dark:text-amber-100">חסרה תמונת PNG</p>
+                    <Button
+                      type="button"
+                      disabled={!canManage || fixPngAndResim.isPending}
+                      onClick={() => fixPngAndResim.mutate()}
+                      className="rounded-full bg-[#6F42F5] font-bold text-white"
+                    >
+                      {fixPngAndResim.isPending ? "מתקן…" : "צור תמונת PNG ותקן"}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               {!simulated ? (
@@ -1328,55 +1525,6 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      {error ? (
-        <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-          {/חסרה תמונת PNG|Campaign PNG|Create Instagram image/i.test(error) ? (
-            <div className="space-y-1">
-              <p className="font-bold">נדרשת תמונת PNG לפני שליחה</p>
-              <p>
-                SVG או תמונת מילוי (placeholder) לא נשלחים ל-Buffer. לחצו Create Instagram image עד שמופיע Ready
-                (PNG), ואז סימולציה מחדש.
-              </p>
-              <p className="text-xs opacity-80">{error}</p>
-            </div>
-          ) : /internal server error|upstream_html_error|שגיאת שרת פנימית/i.test(error) ? (
-            <div className="space-y-1">
-              <p className="font-bold">שגיאת שרת בפרסום</p>
-              <p>{error}</p>
-              <p className="text-xs opacity-90">
-                בלוגי ה-backend חפשו: social_publish_crash / social_publish_step / buffer_create_post /
-                unhandled_api_error
-              </p>
-            </div>
-          ) : /rate_limit|too many requests|חסם את ה-api|429/i.test(error) ? (
-            <div className="space-y-1">
-              <p className="font-bold">Buffer חסם פרסום ל־24 שעות (מגבלת קצב)</p>
-              <p>{error}</p>
-              <p className="text-xs opacity-90">
-                אל תלחצו שוב על שליחה בינתיים — כל ניסיון נוסף שורף מכסה. נסו שוב מחר, או בדקו מגבלות API בחשבון Buffer.
-              </p>
-            </div>
-          ) : /image url is not accessible|unable to connect to the server/i.test(error) ? (
-            <div className="space-y-1">
-              <p className="font-bold">Buffer לא הצליח לטעון את התמונה</p>
-              <p>
-                כתובת הקריאייטיב לא נגישה מבחוץ (או שזו קובץ SVG). מנסים כעת לפרסם עם תמונת PNG ציבורית — צרו מחדש
-                קריאייטיב ואז שלחו שוב אחרי הפריסה.
-              </p>
-              <p className="text-xs opacity-80">{error}</p>
-            </div>
-          ) : /instagram posts require a type|require a type \(post/i.test(error) ? (
-            <div className="space-y-1">
-              <p className="font-bold">חסר סוג פוסט לאינסטגרם</p>
-              <p>תוקן בשרת (סוג: post). פרסמו מחדש אחרי העדכון.</p>
-              <p className="text-xs opacity-80">{error}</p>
-            </div>
-          ) : (
-            error
-          )}
-        </div>
-      ) : null}
-
       {status.data?.error && /rate_limit|too many requests|חסם את ה-api|429/i.test(status.data.error) ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-bold">Buffer API rate limit פעיל</p>
@@ -1386,7 +1534,7 @@ export default function AiAutomationPage() {
 
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold">Campaign History</h2>
+        <h2 className="text-xl font-bold">היסטוריית קמפיינים</h2>
         <Card className="overflow-x-auto !rounded-2xl !p-0">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="border-b border-[var(--border)] bg-[var(--muted)]/40 text-xs uppercase tracking-wide text-[var(--muted-fg)]">
@@ -1428,6 +1576,7 @@ export default function AiAutomationPage() {
                         onClick={() => {
                           setActive(row);
                           setError("");
+                          setWizardStep(2);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
                       >
