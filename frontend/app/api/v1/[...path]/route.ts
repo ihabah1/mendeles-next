@@ -27,11 +27,36 @@ async function proxy(request: NextRequest) {
       redirect: "manual",
     });
 
+    const contentType = upstream.headers.get("content-type") || "";
     const responseHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
       if (key.toLowerCase() === "transfer-encoding") return;
       responseHeaders.append(key, value);
     });
+
+    // If Django/Gunicorn returns HTML 5xx, convert to JSON so the UI can show a clear error.
+    if (upstream.status >= 500 && contentType.includes("text/html")) {
+      const html = await upstream.text();
+      console.error("api_proxy_upstream_html_error", {
+        target,
+        status: upstream.status,
+        snippet: html.slice(0, 400),
+      });
+      return NextResponse.json(
+        {
+          error: {
+            code: "upstream_html_error",
+            message: `שגיאת שרת פנימית מה-backend (${upstream.status})`,
+            details: {
+              backend: backendBase(),
+              path: request.nextUrl.pathname,
+              snippet: html.replace(/\s+/g, " ").slice(0, 240),
+            },
+          },
+        },
+        { status: upstream.status },
+      );
+    }
 
     return new NextResponse(upstream.body, {
       status: upstream.status,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import timezone as dt_timezone
 from typing import Any
 from urllib.parse import quote
@@ -11,6 +12,8 @@ from social.domain.enums import CampaignStatus, SUPPORTED_PLATFORMS
 from social.infrastructure.models import SocialCampaign
 from social.providers import get_default_publisher
 from social.providers.base import PublishPayload
+
+logger = logging.getLogger(__name__)
 
 
 def _placeholder_media_url(prompt: str, media_type: str) -> str:
@@ -224,12 +227,58 @@ class CampaignService:
         scheduled_at: str | None = None,
         tz_name: str | None = None,
     ) -> dict[str, Any]:
+        try:
+            return CampaignService._publish_inner(
+                campaign,
+                schedule=schedule,
+                scheduled_at=scheduled_at,
+                tz_name=tz_name,
+            )
+        except Exception as exc:  # noqa: BLE001 — never return HTML 500 for publish
+            logger.exception(
+                "social_publish_crash campaign_id=%s schedule=%s platforms=%s",
+                getattr(campaign, "id", None),
+                schedule,
+                getattr(campaign, "platforms", None),
+            )
+            msg = f"Publish crashed: {type(exc).__name__}: {exc}"
+            try:
+                campaign.status = CampaignStatus.FAILED
+                campaign.last_error = msg[:2000]
+                campaign.publish_log = list(campaign.publish_log or []) + [
+                    {
+                        "step": "Publishing to Buffer...",
+                        "detail": msg[:500],
+                        "ok": False,
+                        "at": timezone.now().isoformat(),
+                    }
+                ]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            except Exception:  # noqa: BLE001
+                logger.exception("social_publish_crash_persist_failed campaign_id=%s", getattr(campaign, "id", None))
+            return CampaignService.serialize(campaign)
+
+    @staticmethod
+    def _publish_inner(
+        campaign: SocialCampaign,
+        *,
+        schedule: bool = False,
+        scheduled_at: str | None = None,
+        tz_name: str | None = None,
+    ) -> dict[str, Any]:
         publisher = get_default_publisher()
         log: list[dict[str, Any]] = []
 
         def step(name: str, detail: str = "", ok: bool = True):
             entry = {"step": name, "detail": detail, "ok": ok, "at": timezone.now().isoformat()}
             log.append(entry)
+            logger.info(
+                "social_publish_step campaign_id=%s ok=%s step=%s detail=%s",
+                campaign.id,
+                ok,
+                name,
+                (detail or "")[:300],
+            )
             return entry
 
         if not campaign.simulated_at:
@@ -263,14 +312,23 @@ class CampaignService:
             )
             campaign.save(update_fields=["media_url", "updated_at"])
 
-        buffer_image = ensure_buffer_image_url(campaign)
+        # Never run Gemini during Buffer publish — use public raster / placeholder only.
+        buffer_image = ensure_buffer_image_url(campaign, allow_ai_regen=False)
         buffer_video = ensure_buffer_video_url(campaign)
+        logger.info(
+            "social_publish_media campaign_id=%s image=%s video=%s ig=%s media=%s",
+            campaign.id,
+            (buffer_image or "")[:180],
+            (buffer_video or "")[:180],
+            (campaign.instagram_image_url or "")[:120],
+            (campaign.media_url or "")[:120],
+        )
         if buffer_image and (
             not campaign.media_url
             or str(campaign.media_url).lower().endswith(".svg")
             or not str(campaign.media_url).startswith("http")
         ):
-            campaign.media_url = buffer_image
+            campaign.media_url = buffer_image[:1000]
             campaign.save(update_fields=["media_url", "updated_at"])
         step("Uploading media...", buffer_image or buffer_video or campaign.media_url or "text-only")
 
@@ -320,7 +378,6 @@ class CampaignService:
             media_for_platform = buffer_image
             media_kind = "image"
             if platform == "tiktok" and buffer_video:
-                # Prefer real video for TikTok; Buffer rejects SVG / relative hosts.
                 media_for_platform = buffer_video
                 media_kind = "video"
             elif platform == "tiktok":
@@ -330,8 +387,15 @@ class CampaignService:
                 media_for_platform = buffer_image
                 media_kind = "image"
 
-            # Last-chance absolutize (covers any leftover relative paths).
             media_for_platform = public_media_url_for_buffer(media_for_platform)
+            logger.info(
+                "social_publish_platform campaign_id=%s platform=%s kind=%s media=%s text_len=%s",
+                campaign.id,
+                platform,
+                media_kind,
+                (media_for_platform or "")[:180],
+                len(text),
+            )
 
             result = publisher.publish(
                 PublishPayload(
@@ -351,7 +415,6 @@ class CampaignService:
             else:
                 errors.append(f"{platform}: {result.error}")
                 step(f"Publishing to Buffer... ({platform})", result.error, False)
-                # Stop burning more Buffer quota once rate-limited.
                 err_l = (result.error or "").lower()
                 if "rate_limit" in err_l or "rate-limited" in err_l or "חסם את ה-api" in (result.error or ""):
                     remaining = [p for p in platforms if p not in buffer_ids and p != platform]

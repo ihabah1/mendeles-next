@@ -36,13 +36,23 @@ def api_exception_handler(exc, context):
         }
         return response
 
-    logger.exception("unhandled_api_error", exc_info=exc)
+    logger.error(
+        "unhandled_api_error path=%s view=%s type=%s message=%s",
+        getattr(context.get("request"), "path", None) if context.get("request") else None,
+        getattr(context.get("view"), "__class__", type(None)).__name__ if context.get("view") else None,
+        type(exc).__name__,
+        str(exc)[:500],
+        exc_info=exc,
+    )
     return Response(
         {
             "error": {
                 "code": "internal_error",
-                "message": "שגיאת שרת פנימית",
-                "details": {},
+                "message": f"שגיאת שרת פנימית ({type(exc).__name__})",
+                "details": {
+                    "exception_type": type(exc).__name__,
+                    "exception_message": str(exc)[:500],
+                },
             }
         },
         status=500,

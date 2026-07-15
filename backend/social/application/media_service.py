@@ -81,10 +81,11 @@ def _buffer_placeholder_png(label: str) -> str:
     return f"https://placehold.co/1080x1080/6F42F5/ffffff/png?text={text}"
 
 
-def ensure_buffer_image_url(campaign: SocialCampaign) -> str:
+def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = False) -> str:
     """
     Return a Buffer-safe raster image URL (not SVG / not relative).
-    Regenerates a PNG when the current creative is SVG-only.
+    During publish (allow_ai_regen=False) never call Gemini — it can time out and
+    kill the worker with an HTML 500. Fall back to a public PNG placeholder instead.
     """
     candidates = [
         campaign.instagram_image_url,
@@ -96,26 +97,47 @@ def ensure_buffer_image_url(campaign: SocialCampaign) -> str:
             continue
         lower = url.lower().split("?", 1)[0]
         if lower.endswith(".svg"):
+            logger.info(
+                "buffer_media_skip_svg campaign_id=%s url=%s",
+                campaign.id,
+                url[:180],
+            )
             continue
         if any(lower.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")) or "placehold.co" in lower:
+            logger.info(
+                "buffer_media_image campaign_id=%s url=%s",
+                campaign.id,
+                url[:180],
+            )
             return url
-        # Unknown extension but absolute http(s) — still try it.
         if url.startswith("http"):
+            logger.info(
+                "buffer_media_image_unknown_ext campaign_id=%s url=%s",
+                campaign.id,
+                url[:180],
+            )
             return url
 
-    # SVG-only / missing: try AI/PNG generation.
-    try:
-        MediaGenerationService.create_instagram_image(campaign)
-        campaign.refresh_from_db()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Buffer image regenerate failed: %s", exc)
+    if allow_ai_regen:
+        try:
+            logger.info("buffer_media_regen_start campaign_id=%s", campaign.id)
+            MediaGenerationService.create_instagram_image(campaign)
+            campaign.refresh_from_db()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Buffer image regenerate failed campaign_id=%s: %s", campaign.id, exc)
 
-    url = public_media_url_for_buffer(campaign.instagram_image_url or campaign.media_url or "")
-    lower = (url or "").lower().split("?", 1)[0]
-    if url and not lower.endswith(".svg"):
-        return url
+        url = public_media_url_for_buffer(campaign.instagram_image_url or campaign.media_url or "")
+        lower = (url or "").lower().split("?", 1)[0]
+        if url and not lower.endswith(".svg"):
+            return url
 
-    return _buffer_placeholder_png(campaign.title or campaign.main_idea or "Mendeles")
+    placeholder = _buffer_placeholder_png(campaign.title or campaign.main_idea or "Mendeles")
+    logger.warning(
+        "buffer_media_placeholder campaign_id=%s reason=no_raster_creative url=%s",
+        campaign.id,
+        placeholder[:180],
+    )
+    return placeholder
 
 
 def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
@@ -128,7 +150,13 @@ def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
         url = public_media_url_for_buffer(candidate or "")
         lower = (url or "").lower().split("?", 1)[0]
         if url and (lower.endswith(".mp4") or lower.endswith(".mov")):
+            logger.info(
+                "buffer_media_video campaign_id=%s url=%s",
+                campaign.id,
+                url[:180],
+            )
             return url
+    logger.info("buffer_media_video_none campaign_id=%s", campaign.id)
     return ""
 def _wrap_text(text: str, width: int = 28) -> list[str]:
     words = (text or "").split()

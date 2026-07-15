@@ -1133,7 +1133,16 @@ export default function AiAutomationPage() {
 
       {error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-          {/rate_limit|too many requests|חסם את ה-api|429/i.test(error) ? (
+          {/internal server error|upstream_html_error|שגיאת שרת פנימית/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">שגיאת שרת בפרסום</p>
+              <p>{error}</p>
+              <p className="text-xs opacity-90">
+                בלוגי ה-backend חפשו: social_publish_crash / social_publish_step / buffer_create_post /
+                unhandled_api_error
+              </p>
+            </div>
+          ) : /rate_limit|too many requests|חסם את ה-api|429/i.test(error) ? (
             <div className="space-y-1">
               <p className="font-bold">Buffer חסם פרסום ל־24 שעות (מגבלת קצב)</p>
               <p>{error}</p>

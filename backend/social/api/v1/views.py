@@ -2,6 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import logging
+
 from core.exceptions.base import ForbiddenError, NotFoundError, ValidationError
 from core.permissions.base import HasPermission
 from social.api.v1.serializers import (
@@ -16,6 +18,8 @@ from social.application.media_service import MediaGenerationService
 from social.domain.enums import CampaignStatus
 from social.infrastructure.models import SocialCampaign
 from social.providers import get_default_publisher
+
+logger = logging.getLogger(__name__)
 
 
 def _tenant_id(request):
@@ -176,11 +180,23 @@ class SocialPublishView(APIView):
         campaign = CampaignService.get_campaign(_tenant_id(request), data["campaign_id"])
         if not campaign:
             raise NotFoundError("Campaign not found.")
+        logger.info(
+            "social_publish_request campaign_id=%s mode=%s user_id=%s",
+            campaign.id,
+            data.get("mode"),
+            getattr(request.user, "id", None),
+        )
         result = CampaignService.publish(
             campaign,
             schedule=data["mode"] == "schedule",
             scheduled_at=data.get("scheduled_at") or None,
             tz_name=data.get("timezone") or None,
+        )
+        logger.info(
+            "social_publish_response campaign_id=%s status=%s error=%s",
+            campaign.id,
+            result.get("status"),
+            (result.get("last_error") or "")[:300],
         )
         return Response(result)
 

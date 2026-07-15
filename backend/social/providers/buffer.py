@@ -385,6 +385,15 @@ class BufferPublisher(SocialPublisher):
                     }
                 }
 
+            logger.info(
+                "buffer_create_post platform=%s channel=%s mode=%s assets=%s metadata=%s",
+                payload.platform,
+                channel.get("id"),
+                mode,
+                assets,
+                variables["input"].get("metadata"),
+            )
+
             data = self._graphql(
                 """
                 mutation CreatePost($input: CreatePostInput!) {
