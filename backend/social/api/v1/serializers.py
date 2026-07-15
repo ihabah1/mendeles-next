@@ -46,5 +46,10 @@ class PublishCampaignSerializer(serializers.Serializer):
 
 class TikTokVideoUploadSerializer(serializers.Serializer):
     data_url = serializers.CharField(required=False, allow_blank=True, default="")
-    mode = serializers.ChoiceField(choices=["upload", "ai"], required=False, default="upload")
+    mode = serializers.ChoiceField(choices=["upload", "ai", "promo"], required=False, default="upload")
     count = serializers.IntegerField(required=False, min_value=1, max_value=20, default=1)
+    promo_ids = serializers.ListField(
+        child=serializers.CharField(allow_blank=False),
+        required=False,
+        allow_empty=False,
+    )

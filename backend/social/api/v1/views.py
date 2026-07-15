@@ -266,7 +266,17 @@ class CampaignTikTokVideoView(APIView):
         data_url = (ser.validated_data.get("data_url") or "").strip()
         mode = ser.validated_data.get("mode") or "upload"
         count = ser.validated_data.get("count") or 1
+        promo_ids = ser.validated_data.get("promo_ids") or []
         try:
+            if mode == "promo":
+                if not promo_ids:
+                    raise ValidationError("Select at least one site promo video (promo_ids).")
+                MediaGenerationService.attach_site_promo_videos(campaign, list(promo_ids))
+                campaign.simulated_at = None
+                if campaign.status == CampaignStatus.SIMULATED:
+                    campaign.status = CampaignStatus.READY
+                campaign.save(update_fields=["simulated_at", "status", "updated_at"])
+                return Response(CampaignService.serialize(campaign))
             if mode == "ai" or (not data_url and request.data.get("count")):
                 # Prefer sync — daemon async threads are unreliable on Gunicorn/Railway.
                 async_mode = bool(request.data.get("async", False))

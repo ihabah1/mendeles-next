@@ -440,6 +440,76 @@ class MediaGenerationService:
         campaign.save(update_fields=["tiktok_video_url", "media_url", "updated_at"])
         return url_public
 
+    @classmethod
+    def attach_site_promo_videos(cls, campaign: SocialCampaign, promo_ids: list[str]) -> list[str]:
+        """
+        Attach public site promo MP4s (landing page demos) as TikTok creatives.
+        Buffer fetches them from FRONTEND_URL/videos/... — no re-upload needed.
+        """
+        from django.conf import settings
+
+        allowed = {
+            "logo": {"path": "/videos/logo.mp4", "title": "Your brand, ready to grow"},
+            "landing-page": {
+                "path": "/videos/landing-page.mp4",
+                "title": "Landing page, assembled automatically",
+            },
+            "seo-settings": {
+                "path": "/videos/seo-settings.mp4",
+                "title": "Full SEO out of the box",
+            },
+        }
+        ids = [str(x).strip() for x in (promo_ids or []) if str(x).strip()]
+        if not ids:
+            raise ValueError("Select at least one site promo video.")
+        unknown = [x for x in ids if x not in allowed]
+        if unknown:
+            raise ValueError(f"Unknown promo video id(s): {', '.join(unknown)}")
+
+        frontend = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/")
+        if not frontend:
+            raise ValueError("FRONTEND_URL is not configured — cannot attach site promo videos.")
+
+        # Replace previous site-promo entries; keep AI/browser uploads.
+        keep = [
+            item
+            for item in (campaign.tiktok_videos_json or [])
+            if isinstance(item, dict) and item.get("provider") != "site_promo"
+        ]
+        attached: list[str] = []
+        for pid in ids:
+            meta = allowed[pid]
+            url = f"{frontend}{meta['path']}"
+            keep.append(
+                {
+                    "url": url,
+                    "provider": "site_promo",
+                    "promo_id": pid,
+                    "title": meta["title"],
+                    "variation": len(keep) + 1,
+                    "credits_used": 0,
+                }
+            )
+            attached.append(url)
+
+        campaign.tiktok_videos_json = keep
+        campaign.tiktok_video_url = attached[0]
+        if campaign.media_type == "video" or not campaign.media_url:
+            campaign.media_url = attached[0]
+        campaign.save(update_fields=["tiktok_video_url", "tiktok_videos_json", "media_url", "updated_at"])
+        cls.append_creative_log(
+            campaign,
+            f"Attached {len(attached)} site promo video(s) for TikTok: {', '.join(ids)}",
+            level="success",
+        )
+        logger.info(
+            "tiktok_site_promo_attached campaign_id=%s count=%s urls=%s",
+            campaign.id,
+            len(attached),
+            attached,
+        )
+        return attached
+
     @staticmethod
     def save_tiktok_video(campaign: SocialCampaign, *, data_url: str, provider: str = "browser") -> str:
         """Persist a browser-generated WebM/MP4 data URL for TikTok simulation/publish."""

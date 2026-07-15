@@ -12,6 +12,7 @@ import {
   type SocialPlatform,
 } from "@/lib/api/social";
 import { createTikTokPromoVideo } from "@/lib/social/create-tiktok-video";
+import { PROMO_VIDEOS, type PromoVideoId } from "@/lib/marketing/promo-videos";
 import { cn } from "@/lib/utils";
 
 const CAMPAIGN_TYPES = [
@@ -94,6 +95,8 @@ export default function AiAutomationPage() {
   const [publishStep, setPublishStep] = useState(-1);
   const [error, setError] = useState("");
   const [tiktokCount, setTiktokCount] = useState(1);
+  const [selectedPromoIds, setSelectedPromoIds] = useState<PromoVideoId[]>([]);
+  const [useSitePromoVideos, setUseSitePromoVideos] = useState(false);
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -250,16 +253,20 @@ export default function AiAutomationPage() {
         );
       }
     }
-    if (platformsSelected.includes("tiktok") && !campaign.tiktok_video_url) {
-      try {
-        const dataUrl = await createTikTokPromoVideo({
-          title: campaign.title || campaign.main_idea || "Mendeles",
-          cta: campaign.cta || "Learn more",
-          websiteUrl: campaign.website_url || websiteUrl,
-        });
-        campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
-      } catch {
-        campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
+    if (platformsSelected.includes("tiktok")) {
+      if (useSitePromoVideos && selectedPromoIds.length > 0) {
+        campaign = await socialApi.attachSitePromoVideos(campaign.id, selectedPromoIds);
+      } else if (!isPlayableVideo(campaign.tiktok_video_url || "")) {
+        try {
+          const dataUrl = await createTikTokPromoVideo({
+            title: campaign.title || campaign.main_idea || "Mendeles",
+            cta: campaign.cta || "Learn more",
+            websiteUrl: campaign.website_url || websiteUrl,
+          });
+          campaign = await socialApi.uploadTikTokVideo(campaign.id, dataUrl);
+        } catch {
+          campaign = await socialApi.uploadTikTokVideo(campaign.id, "");
+        }
       }
     }
     const result = await socialApi.simulate(campaign.id);
@@ -381,6 +388,22 @@ export default function AiAutomationPage() {
       setError("");
     },
     onError: (err: Error) => setError(err.message || "TikTok video failed"),
+  });
+
+  const attachSitePromos = useMutation({
+    mutationFn: async () => {
+      if (!active?.id) throw new Error("No campaign");
+      if (!selectedPromoIds.length) throw new Error("בחרו לפחות סרטון תדמית אחד.");
+      await saveEdits.mutateAsync();
+      return socialApi.attachSitePromoVideos(active.id, selectedPromoIds);
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      setUseSitePromoVideos(true);
+      setError("");
+    },
+    onError: (err: Error) => setError(err.message || "Failed to attach site promo videos"),
   });
 
   const generateAiTikToks = useMutation({
@@ -870,6 +893,91 @@ export default function AiAutomationPage() {
             </div>
           ) : null}
 
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/20 p-4 space-y-3">
+            <label className="flex items-start gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-[var(--border)]"
+                checked={useSitePromoVideos}
+                disabled={!canManage || !hasCampaign}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setUseSitePromoVideos(on);
+                  if (on && selectedPromoIds.length === 0) {
+                    setSelectedPromoIds(PROMO_VIDEOS.map((v) => v.id));
+                  }
+                }}
+              />
+              <span>
+                Use site promo videos for TikTok
+                <span className="mt-0.5 block text-xs font-normal text-[var(--muted-fg)]">
+                  Alternative to AI/browser clips — attach the Mendeles landing demos from the website.
+                </span>
+              </span>
+            </label>
+
+            {useSitePromoVideos ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {PROMO_VIDEOS.map((video) => {
+                    const checked = selectedPromoIds.includes(video.id);
+                    return (
+                      <label
+                        key={video.id}
+                        className={cn(
+                          "cursor-pointer overflow-hidden rounded-xl border bg-[var(--background)] transition",
+                          checked ? "border-[#6F42F5] ring-1 ring-[#6F42F5]/40" : "border-[var(--border)]",
+                        )}
+                      >
+                        <div className="aspect-video bg-black">
+                          <video
+                            className="h-full w-full object-cover"
+                            src={video.src}
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                        </div>
+                        <div className="flex items-start gap-2 p-3">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 rounded border-[var(--border)]"
+                            checked={checked}
+                            disabled={!canManage || !hasCampaign}
+                            onChange={(e) => {
+                              setSelectedPromoIds((prev) =>
+                                e.target.checked
+                                  ? [...prev, video.id]
+                                  : prev.filter((id) => id !== video.id),
+                              );
+                            }}
+                          />
+                          <span className="text-xs font-medium leading-snug">{video.title}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    !canManage ||
+                    !hasCampaign ||
+                    !selectedPromoIds.length ||
+                    attachSitePromos.isPending
+                  }
+                  onClick={() => attachSitePromos.mutate()}
+                  className="rounded-full"
+                >
+                  {attachSitePromos.isPending
+                    ? "Attaching…"
+                    : `Attach ${selectedPromoIds.length || 0} promo video(s) to TikTok`}
+                </Button>
+              </>
+            ) : null}
+          </div>
+
           <div className="flex flex-wrap items-end gap-3">
             <Button
               type="button"
@@ -883,7 +991,7 @@ export default function AiAutomationPage() {
             <Button
               type="button"
               variant="outline"
-              disabled={!canManage || !hasCampaign || createTikTok.isPending}
+              disabled={!canManage || !hasCampaign || createTikTok.isPending || useSitePromoVideos}
               onClick={() => createTikTok.mutate()}
               className="rounded-full"
             >
@@ -902,7 +1010,12 @@ export default function AiAutomationPage() {
             </label>
             <Button
               type="button"
-              disabled={!canManage || !hasCampaign || generateAiTikToks.isPending}
+              disabled={
+                !canManage ||
+                !hasCampaign ||
+                generateAiTikToks.isPending ||
+                useSitePromoVideos
+              }
               onClick={() => generateAiTikToks.mutate()}
               className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
             >

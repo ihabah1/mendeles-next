@@ -433,3 +433,26 @@ def test_save_tiktok_video_accepts_codecs_in_data_url(tenant, owner_user, settin
     assert url.endswith(".webm")
     assert campaign.tiktok_video_url == url
     assert len(campaign.tiktok_videos_json or []) == 1
+
+def test_attach_site_promo_videos(tenant, owner_user, settings):
+    settings.FRONTEND_URL = "https://mendeles.com"
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Promo attach",
+        platforms=["tiktok"],
+        status=CampaignStatus.READY,
+        media_type="video",
+    )
+    urls = MediaGenerationService.attach_site_promo_videos(campaign, ["logo", "landing-page"])
+    campaign.refresh_from_db()
+    assert urls == [
+        "https://mendeles.com/videos/logo.mp4",
+        "https://mendeles.com/videos/landing-page.mp4",
+    ]
+    assert campaign.tiktok_video_url == urls[0]
+    assert all(v.get("provider") == "site_promo" for v in campaign.tiktok_videos_json)

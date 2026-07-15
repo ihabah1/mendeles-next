@@ -136,6 +136,12 @@ export const socialApi = {
       headers: authHeaders(),
       json: data_url ? { data_url } : {},
     }),
+  attachSitePromoVideos: (id: string, promo_ids: string[]) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { mode: "promo", promo_ids },
+    }),
   generateAiTikTokVideos: (id: string, count = 3) =>
     apiFetch<SocialCampaign & { ai_generation?: Record<string, unknown> }>(
       `/api/v1/social/campaigns/${id}/tiktok-video/`,
