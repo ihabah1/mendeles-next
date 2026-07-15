@@ -158,7 +158,12 @@ class CampaignService:
     @staticmethod
     def run_simulation(campaign: SocialCampaign) -> dict[str, Any]:
         """Validate creatives + captions before allowing real Buffer publish."""
-        from social.application.media_service import MediaGenerationService
+        from social.application.media_service import (
+            MediaGenerationService,
+            is_real_raster_image_url,
+            public_media_url_for_buffer,
+            MISSING_PNG_MESSAGE,
+        )
 
         log: list[dict[str, Any]] = []
         platforms = campaign.platforms or []
@@ -169,16 +174,51 @@ class CampaignService:
 
         ok = True
         ok &= check("Campaign content", bool(campaign.title and campaign.captions_json), campaign.title or "missing title")
-        if "instagram" in platforms:
-            if not campaign.instagram_image_url:
+
+        needs_png = any(p in platforms for p in ("instagram", "linkedin"))
+        if "tiktok" in platforms:
+            # Photo fallback for TikTok when no MP4 — still needs a real PNG.
+            from social.application.media_service import ensure_buffer_video_url
+
+            has_mp4 = bool(ensure_buffer_video_url(campaign))
+            if not has_mp4:
+                needs_png = True
+
+        if needs_png:
+            if "instagram" in platforms and not campaign.instagram_image_url:
                 try:
                     MediaGenerationService.create_instagram_image(campaign)
+                    campaign.refresh_from_db()
                 except Exception as exc:
                     ok &= check("Instagram image", False, str(exc))
-                else:
-                    ok &= check("Instagram image", True, campaign.instagram_image_url)
-            else:
-                ok &= check("Instagram image", True, campaign.instagram_image_url)
+
+            png_url = ""
+            for candidate in (campaign.instagram_image_url, campaign.media_url):
+                public = public_media_url_for_buffer(candidate or "")
+                if is_real_raster_image_url(public):
+                    png_url = public
+                    break
+
+            if not png_url and (campaign.instagram_image_url or "").lower().endswith(".svg"):
+                # One regen attempt during simulation (may still yield SVG without Gemini).
+                try:
+                    MediaGenerationService.create_instagram_image(campaign)
+                    campaign.refresh_from_db()
+                except Exception as exc:
+                    ok &= check("Campaign PNG creative", False, str(exc))
+                for candidate in (campaign.instagram_image_url, campaign.media_url):
+                    public = public_media_url_for_buffer(candidate or "")
+                    if is_real_raster_image_url(public):
+                        png_url = public
+                        break
+
+            ok &= check(
+                "Campaign PNG creative",
+                bool(png_url),
+                png_url or MISSING_PNG_MESSAGE,
+            )
+
+        if "instagram" in platforms:
             ok &= check(
                 "Instagram caption",
                 bool((campaign.captions_json or {}).get("instagram")),
@@ -215,7 +255,9 @@ class CampaignService:
         else:
             campaign.simulated_at = None
             campaign.status = CampaignStatus.READY
-            campaign.last_error = "Simulation failed — fix the issues below before releasing."
+            failed = [e for e in log if not e.get("ok")]
+            detail = (failed[0].get("detail") if failed else "") or "Simulation failed — fix the issues below before releasing."
+            campaign.last_error = str(detail)[:2000]
         campaign.save()
         return CampaignService.serialize(campaign)
 
@@ -299,22 +341,31 @@ class CampaignService:
         step("Preparing media...", "Using simulated creatives")
 
         from social.application.media_service import (
+            MISSING_PNG_MESSAGE,
             ensure_buffer_image_url,
             ensure_buffer_video_url,
             public_media_url_for_buffer,
         )
 
         if not campaign.media_url:
-            campaign.media_url = (
-                campaign.instagram_image_url
-                or campaign.tiktok_video_url
-                or _placeholder_media_url(campaign.media_prompt, campaign.media_type)
-            )
-            campaign.save(update_fields=["media_url", "updated_at"])
+            campaign.media_url = campaign.instagram_image_url or campaign.tiktok_video_url or ""
+            if campaign.media_url:
+                campaign.save(update_fields=["media_url", "updated_at"])
 
-        # Never run Gemini during Buffer publish — use public raster / placeholder only.
+        # Never run Gemini during Buffer publish — real PNG only (no placehold fallback).
         buffer_image = ensure_buffer_image_url(campaign, allow_ai_regen=False)
         buffer_video = ensure_buffer_video_url(campaign)
+        platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
+        needs_image = any(p in platforms for p in ("linkedin", "instagram")) or (
+            "tiktok" in platforms and not buffer_video
+        )
+        if needs_image and not buffer_image:
+            campaign.status = CampaignStatus.FAILED
+            campaign.last_error = MISSING_PNG_MESSAGE
+            campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
+            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            return CampaignService.serialize(campaign)
+
         logger.info(
             "social_publish_media campaign_id=%s image=%s video=%s ig=%s media=%s",
             campaign.id,

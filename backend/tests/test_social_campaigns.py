@@ -208,6 +208,7 @@ def test_publish_missing_platform_lists_connected(monkeypatch):
 def test_simulation_required_before_publish(tenant, owner_user, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
     from social.application.campaign_service import CampaignService
     from social.domain.enums import CampaignStatus
     from social.infrastructure.models import SocialCampaign
@@ -232,15 +233,77 @@ def test_simulation_required_before_publish(tenant, owner_user, settings, tmp_pa
     assert blocked["status"] == CampaignStatus.FAILED
     assert "Simulation required" in blocked["last_error"]
 
+    # Without a real PNG (Gemini unavailable → SVG), simulation must fail the PNG gate.
     simulated = CampaignService.run_simulation(campaign)
-    assert simulated["status"] == CampaignStatus.SIMULATED
-    assert simulated["instagram_image_url"]
-    assert any(s["step"] == "Instagram image" and s["ok"] for s in simulated["simulation_log"])
+    assert simulated["status"] == CampaignStatus.READY
+    assert any(s["step"] == "Campaign PNG creative" and not s["ok"] for s in simulated["simulation_log"])
+
+    # Real PNG creative unlocks simulation.
+    media_dir = tmp_path / "social"
+    media_dir.mkdir(parents=True, exist_ok=True)
+    png = media_dir / "demo.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    campaign.instagram_image_url = "http://backend.test/media/social/demo.png"
+    campaign.media_url = campaign.instagram_image_url
+    campaign.save(update_fields=["instagram_image_url", "media_url", "updated_at"])
+    simulated_ok = CampaignService.run_simulation(campaign)
+    assert simulated_ok["status"] == CampaignStatus.SIMULATED
+    assert any(s["step"] == "Campaign PNG creative" and s["ok"] for s in simulated_ok["simulation_log"])
+
+
+def test_publish_blocks_without_png(tenant, owner_user, settings, tmp_path, monkeypatch):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
+    monkeypatch.setenv("BUFFER_ACCESS_TOKEN", "tok")
+    from django.utils import timezone as dj_tz
+
+    from social.application.campaign_service import CampaignService
+    from social.application.media_service import MISSING_PNG_MESSAGE
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+    from social.providers.buffer import BufferPublisher
+
+    BufferPublisher.clear_cache()
+    publisher = BufferPublisher(access_token="tok")
+    monkeypatch.setattr("social.application.campaign_service.get_default_publisher", lambda: publisher)
+    monkeypatch.setattr(
+        publisher,
+        "list_channels",
+        lambda force_refresh=False: [
+            {
+                "id": "li1",
+                "service": "linkedin",
+                "name": "x",
+                "display_name": "x",
+                "label": "x",
+                "type": "page",
+                "is_disconnected": False,
+                "is_locked": False,
+            }
+        ],
+    )
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="No PNG",
+        platforms=["linkedin"],
+        captions_json={"linkedin": "hi"},
+        instagram_image_url="http://backend.test/media/social/x.svg",
+        media_url="http://backend.test/media/social/x.svg",
+        status=CampaignStatus.SIMULATED,
+        simulated_at=dj_tz.now(),
+    )
+    result = CampaignService.publish(campaign, schedule=False)
+    assert result["status"] == CampaignStatus.FAILED
+    assert "PNG" in result["last_error"] or MISSING_PNG_MESSAGE[:20] in result["last_error"]
 
 
 def test_tiktok_simulation_auto_creates_creative(tenant, owner_user, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     settings.BACKEND_PUBLIC_URL = "http://backend.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
     from social.application.campaign_service import CampaignService
     from social.domain.enums import CampaignStatus
     from social.infrastructure.models import SocialCampaign
@@ -254,12 +317,16 @@ def test_tiktok_simulation_auto_creates_creative(tenant, owner_user, settings, t
         platforms=["tiktok"],
         captions_json={"tiktok": "Hook caption"},
         hashtags_json={"tiktok": ["#mendeles"]},
+        # Photo posts without MP4 still need a real PNG for Buffer.
+        instagram_image_url="http://backend.test/media/social/demo.png",
+        media_url="http://backend.test/media/social/demo.png",
         status=CampaignStatus.READY,
     )
     result = CampaignService.run_simulation(campaign)
     assert result["status"] == CampaignStatus.SIMULATED
     assert result["tiktok_video_url"]
     assert any(s["step"] == "TikTok video" and s["ok"] for s in result["simulation_log"])
+    assert any(s["step"] == "Campaign PNG creative" and s["ok"] for s in result["simulation_log"])
 
 
 def test_bootstrap_creatives_on_generate(tenant, owner_user, settings, tmp_path, monkeypatch):

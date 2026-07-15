@@ -64,6 +64,13 @@ function formatDate(value: string | null | undefined) {
   }
 }
 
+/** Real Buffer-ready raster only — SVG and placehold fillers are blocked. */
+function isRasterCreative(url: string | null | undefined) {
+  if (!url) return false;
+  if (/placehold\.co/i.test(url)) return false;
+  return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(url);
+}
+
 export default function AiAutomationPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("automation.view");
@@ -230,8 +237,18 @@ export default function AiAutomationPage() {
     await saveEdits.mutateAsync();
     const platformsSelected = active.platforms?.length ? active.platforms : platforms;
     let campaign = active;
-    if (platformsSelected.includes("instagram") && !campaign.instagram_image_url) {
+    const needsPng =
+      platformsSelected.includes("instagram") ||
+      platformsSelected.includes("linkedin") ||
+      (platformsSelected.includes("tiktok") && !isPlayableVideo(campaign.tiktok_video_url || ""));
+
+    if (needsPng && !isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
       campaign = await socialApi.createInstagramImage(campaign.id);
+      if (!isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
+        throw new Error(
+          "חסרה תמונת PNG. Create Instagram image חייב להחזיר PNG (לא SVG). בדקו ש-Gemini מוגדר, ואז נסו שוב.",
+        );
+      }
     }
     if (platformsSelected.includes("tiktok") && !campaign.tiktok_video_url) {
       try {
@@ -897,8 +914,20 @@ export default function AiAutomationPage() {
           <div className="grid gap-3 text-xs text-[var(--muted-fg)] md:grid-cols-2">
             <p>
               Instagram:{" "}
-              <span className={active?.instagram_image_url ? "font-semibold text-emerald-700" : ""}>
-                {active?.instagram_image_url ? "Ready" : "Not created yet"}
+              <span
+                className={
+                  isRasterCreative(active?.instagram_image_url || active?.media_url)
+                    ? "font-semibold text-emerald-700"
+                    : active?.instagram_image_url
+                      ? "font-semibold text-amber-700"
+                      : ""
+                }
+              >
+                {isRasterCreative(active?.instagram_image_url || active?.media_url)
+                  ? "Ready (PNG)"
+                  : active?.instagram_image_url
+                    ? "SVG only — generate PNG before publish"
+                    : "Not created yet"}
               </span>
             </p>
             <p>
@@ -1133,7 +1162,16 @@ export default function AiAutomationPage() {
 
       {error ? (
         <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-          {/internal server error|upstream_html_error|שגיאת שרת פנימית/i.test(error) ? (
+          {/חסרה תמונת PNG|Campaign PNG|Create Instagram image/i.test(error) ? (
+            <div className="space-y-1">
+              <p className="font-bold">נדרשת תמונת PNG לפני שליחה</p>
+              <p>
+                SVG או תמונת מילוי (placeholder) לא נשלחים ל-Buffer. לחצו Create Instagram image עד שמופיע Ready
+                (PNG), ואז סימולציה מחדש.
+              </p>
+              <p className="text-xs opacity-80">{error}</p>
+            </div>
+          ) : /internal server error|upstream_html_error|שגיאת שרת פנימית/i.test(error) ? (
             <div className="space-y-1">
               <p className="font-bold">שגיאת שרת בפרסום</p>
               <p>{error}</p>

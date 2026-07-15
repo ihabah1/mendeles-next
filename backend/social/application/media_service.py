@@ -81,11 +81,31 @@ def _buffer_placeholder_png(label: str) -> str:
     return f"https://placehold.co/1080x1080/6F42F5/ffffff/png?text={text}"
 
 
+def is_real_raster_image_url(url: str) -> bool:
+    """True for real PNG/JPEG/WebP/GIF — rejects SVG and placehold.co fillers."""
+    raw = (url or "").strip()
+    if not raw:
+        return False
+    lower = raw.lower()
+    if "placehold.co" in lower:
+        return False
+    path = lower.split("?", 1)[0]
+    if path.endswith(".svg"):
+        return False
+    return any(path.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif"))
+
+
+MISSING_PNG_MESSAGE = (
+    "חסרה תמונת PNG לקמפיין. לחצו על Create Instagram image (חייבת להיות PNG, לא SVG), "
+    "ואז הריצו סימולציה מחדש לפני שליחה. Placeholder לא נשלח ל-Buffer."
+)
+
+
 def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = False) -> str:
     """
-    Return a Buffer-safe raster image URL (not SVG / not relative).
-    During publish (allow_ai_regen=False) never call Gemini — it can time out and
-    kill the worker with an HTML 500. Fall back to a public PNG placeholder instead.
+    Return a Buffer-safe real raster image URL (not SVG / not placehold).
+    During publish (allow_ai_regen=False) never call Gemini.
+    Returns "" when no real creative exists — callers must block publish.
     """
     candidates = [
         campaign.instagram_image_url,
@@ -93,30 +113,20 @@ def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = 
     ]
     for candidate in candidates:
         url = public_media_url_for_buffer(candidate or "")
-        if not url:
+        if not is_real_raster_image_url(url):
+            if url and str(url).lower().split("?", 1)[0].endswith(".svg"):
+                logger.info(
+                    "buffer_media_skip_svg campaign_id=%s url=%s",
+                    campaign.id,
+                    url[:180],
+                )
             continue
-        lower = url.lower().split("?", 1)[0]
-        if lower.endswith(".svg"):
-            logger.info(
-                "buffer_media_skip_svg campaign_id=%s url=%s",
-                campaign.id,
-                url[:180],
-            )
-            continue
-        if any(lower.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")) or "placehold.co" in lower:
-            logger.info(
-                "buffer_media_image campaign_id=%s url=%s",
-                campaign.id,
-                url[:180],
-            )
-            return url
-        if url.startswith("http"):
-            logger.info(
-                "buffer_media_image_unknown_ext campaign_id=%s url=%s",
-                campaign.id,
-                url[:180],
-            )
-            return url
+        logger.info(
+            "buffer_media_image campaign_id=%s url=%s",
+            campaign.id,
+            url[:180],
+        )
+        return url
 
     if allow_ai_regen:
         try:
@@ -127,17 +137,16 @@ def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = 
             logger.warning("Buffer image regenerate failed campaign_id=%s: %s", campaign.id, exc)
 
         url = public_media_url_for_buffer(campaign.instagram_image_url or campaign.media_url or "")
-        lower = (url or "").lower().split("?", 1)[0]
-        if url and not lower.endswith(".svg"):
+        if is_real_raster_image_url(url):
             return url
 
-    placeholder = _buffer_placeholder_png(campaign.title or campaign.main_idea or "Mendeles")
     logger.warning(
-        "buffer_media_placeholder campaign_id=%s reason=no_raster_creative url=%s",
+        "buffer_media_missing_png campaign_id=%s ig=%s media=%s",
         campaign.id,
-        placeholder[:180],
+        (campaign.instagram_image_url or "")[:120],
+        (campaign.media_url or "")[:120],
     )
-    return placeholder
+    return ""
 
 
 def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
