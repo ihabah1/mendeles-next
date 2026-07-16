@@ -67,6 +67,13 @@ export function LinkedInPreview({ campaign }: Props) {
 export function InstagramPreview({ campaign }: Props) {
   const text = campaign.captions?.instagram || "";
   const tags = hashtagsLine(campaign, "instagram");
+  const primaryVideo = campaign.campaign_video_url || campaign.tiktok_video_url;
+  const video = /\.(mp4|mov)(\?|$)/i.test(primaryVideo || "")
+    ? primaryVideo
+    : [...(campaign.tiktok_videos || [])]
+        .reverse()
+        .find((item) => /\.(mp4|mov)(\?|$)/i.test(item.url || ""))?.url || "";
+  const useVideo = campaign.instagram_media_type === "video" && /\.(mp4|mov)(\?|$)/i.test(video || "");
   return (
     <div className="mx-auto w-full max-w-[320px] overflow-hidden rounded-[28px] border-[8px] border-zinc-900 bg-white shadow-xl dark:border-zinc-700">
       <div className="flex items-center gap-2 border-b px-3 py-2">
@@ -75,7 +82,18 @@ export function InstagramPreview({ campaign }: Props) {
         </div>
         <p className="text-xs font-bold">mendeles</p>
       </div>
-      {campaign.instagram_image_url || campaign.media_url ? (
+      {useVideo ? (
+        <video
+          key={video}
+          src={video}
+          className="aspect-square w-full bg-black object-cover"
+          muted
+          loop
+          playsInline
+          autoPlay
+          controls
+        />
+      ) : campaign.instagram_image_url || campaign.media_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={campaign.instagram_image_url || campaign.media_url}

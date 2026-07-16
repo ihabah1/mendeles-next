@@ -44,6 +44,8 @@ class CampaignService:
             "video_prompt": campaign.video_prompt,
             "media_url": campaign.media_url,
             "instagram_image_url": campaign.instagram_image_url,
+            "instagram_media_type": campaign.instagram_media_type,
+            "campaign_video_url": campaign.tiktok_video_url,
             "tiktok_video_url": campaign.tiktok_video_url,
             "tiktok_videos": campaign.tiktok_videos_json or [],
             "creative_log": campaign.creative_log_json or [],
@@ -132,6 +134,7 @@ class CampaignService:
             "media_prompt": "media_prompt",
             "video_prompt": "video_prompt",
             "media_url": "media_url",
+            "instagram_media_type": "instagram_media_type",
             "timezone": "timezone",
         }
         for src, dest in mapping.items():
@@ -144,7 +147,20 @@ class CampaignService:
         if "platforms" in data and isinstance(data["platforms"], list):
             campaign.platforms = [p for p in data["platforms"] if p in SUPPORTED_PLATFORMS]
         # Edits invalidate prior simulation.
-        if any(k in data for k in ("title", "captions", "hashtags", "cta", "media_prompt", "video_prompt", "media_url", "platforms")):
+        if any(
+            k in data
+            for k in (
+                "title",
+                "captions",
+                "hashtags",
+                "cta",
+                "media_prompt",
+                "video_prompt",
+                "media_url",
+                "instagram_media_type",
+                "platforms",
+            )
+        ):
             campaign.simulated_at = None
             if campaign.status == CampaignStatus.SIMULATED:
                 campaign.status = CampaignStatus.READY
@@ -160,6 +176,7 @@ class CampaignService:
         """Validate creatives + captions before allowing real Buffer publish."""
         from social.application.media_service import (
             MediaGenerationService,
+            ensure_buffer_video_url,
             is_real_raster_image_url,
             public_media_url_for_buffer,
             MISSING_PNG_MESSAGE,
@@ -175,13 +192,16 @@ class CampaignService:
         ok = True
         ok &= check("Campaign content", bool(campaign.title and campaign.captions_json), campaign.title or "missing title")
 
-        needs_png = any(p in platforms for p in ("instagram", "linkedin"))
+        buffer_video = ensure_buffer_video_url(campaign)
+        instagram_uses_video = (
+            "instagram" in platforms and campaign.instagram_media_type == "video"
+        )
+        needs_png = "linkedin" in platforms or (
+            "instagram" in platforms and not instagram_uses_video
+        )
         if "tiktok" in platforms:
             # Photo fallback for TikTok when no MP4 — still needs a real PNG.
-            from social.application.media_service import ensure_buffer_video_url
-
-            has_mp4 = bool(ensure_buffer_video_url(campaign))
-            if not has_mp4:
+            if not buffer_video:
                 needs_png = True
 
         if needs_png:
@@ -219,6 +239,12 @@ class CampaignService:
             )
 
         if "instagram" in platforms:
+            if instagram_uses_video:
+                ok &= check(
+                    "Instagram video",
+                    bool(buffer_video),
+                    buffer_video or "Upload an MP4/MOV campaign video before simulation.",
+                )
             ok &= check(
                 "Instagram caption",
                 bool((campaign.captions_json or {}).get("instagram")),
@@ -370,12 +396,23 @@ class CampaignService:
         buffer_image = ensure_buffer_image_url(campaign, allow_ai_regen=False)
         buffer_video = ensure_buffer_video_url(campaign)
         platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
-        needs_image = any(p in platforms for p in ("linkedin", "instagram")) or (
+        instagram_uses_video = (
+            "instagram" in platforms and campaign.instagram_media_type == "video"
+        )
+        needs_image = "linkedin" in platforms or (
+            "instagram" in platforms and not instagram_uses_video
+        ) or (
             "tiktok" in platforms and not buffer_video
         )
         if needs_image and not buffer_image:
             campaign.status = CampaignStatus.FAILED
             campaign.last_error = MISSING_PNG_MESSAGE
+            campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
+            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            return CampaignService.serialize(campaign)
+        if instagram_uses_video and not buffer_video:
+            campaign.status = CampaignStatus.FAILED
+            campaign.last_error = "Instagram video is selected, but no public MP4/MOV campaign video is available."
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
@@ -448,6 +485,9 @@ class CampaignService:
             elif platform == "tiktok":
                 media_for_platform = buffer_image
                 media_kind = "image"
+            elif platform == "instagram" and instagram_uses_video:
+                media_for_platform = buffer_video
+                media_kind = "video"
             elif platform in {"instagram", "linkedin"}:
                 media_for_platform = buffer_image
                 media_kind = "image"
@@ -468,7 +508,7 @@ class CampaignService:
                     platform=platform,
                     media_url=media_for_platform,
                     media_kind=media_kind,
-                    instagram_type="post",
+                    instagram_type="reel" if platform == "instagram" and media_kind == "video" else "post",
                     scheduled_at_iso=scheduled_iso,
                     now=not schedule,
                 )

@@ -32,6 +32,8 @@ export type SocialCampaign = {
   video_prompt: string;
   media_url: string;
   instagram_image_url: string;
+  instagram_media_type: "image" | "video";
+  campaign_video_url: string;
   tiktok_video_url: string;
   tiktok_videos?: Array<{
     url: string;
@@ -110,6 +112,7 @@ export const socialApi = {
     media_prompt: string;
     video_prompt: string;
     media_url: string;
+    instagram_media_type: "image" | "video";
     timezone: string;
   }>) =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/`, {
@@ -132,6 +135,12 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  generateAiCampaignImage: (id: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/instagram-image/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { mode: "ai" },
+    }),
   uploadInstagramPng: (id: string, data_url: string) =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/instagram-image/`, {
       method: "POST",
@@ -143,6 +152,12 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
       json: data_url ? { data_url } : {},
+    }),
+  uploadCampaignVideo: (id: string, data_url: string, use_for_instagram = true) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/campaign-video/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { data_url, mode: "manual", use_for_instagram },
     }),
   attachSitePromoVideos: (id: string, promo_ids: string[]) =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {

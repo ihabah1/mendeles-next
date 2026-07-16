@@ -26,17 +26,13 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     id: "control",
     labelKey: "groupControl",
-    items: [
-      { href: "/dashboard", labelKey: "overview", permission: null },
-      { href: "/dashboard?tab=flags", labelKey: "featureFlags", permission: "settings.view" },
-    ],
+    items: [{ href: "/dashboard", labelKey: "overview", permission: null }],
   },
   {
     id: "people",
     labelKey: "groupPeople",
     items: [
       { href: "/dashboard/users", labelKey: "users", permission: "users.view" },
-      { href: "/dashboard/users?tab=inbox", labelKey: "messages", permission: "users.view" },
       { href: "/dashboard/leads", labelKey: "leads", permission: "leads.view" },
       { href: "/dashboard/requests", labelKey: "creationRequests", permission: "tenants.view" },
       { href: "/dashboard/whatsapp", labelKey: "whatsapp", permission: "integrations.view" },
@@ -46,14 +42,11 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     id: "content",
     labelKey: "groupContent",
     items: [
+      { href: "/dashboard/ai-automation", labelKey: "aiAutomation", permission: "automation.view" },
       { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
       { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
       { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },
-      { href: "/dashboard/workspace", labelKey: "workspace", permission: "ai_seo.view" },
       { href: "/dashboard/ai-seo", labelKey: "aiSeo", permission: "ai_seo.view" },
-      { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
-      { href: "/dashboard/seo", labelKey: "seo", permission: "seo.view" },
-      { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
     ],
   },
   {
@@ -62,16 +55,8 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard/automation", labelKey: "agents", permission: "automation.view" },
       { href: "/dashboard/automation/site-translations", labelKey: "siteTranslations", permission: "automation.view" },
-      { href: "/dashboard/ai-automation", labelKey: "aiAutomation", permission: "automation.view" },
-    ],
-  },
-  {
-    id: "system",
-    labelKey: "groupSystem",
-    items: [
       { href: "/dashboard/settings", labelKey: "settings", permission: "settings.view" },
-      { href: "/dashboard/roles", labelKey: "roles", permission: "roles.view" },
-      { href: "/dashboard/audit", labelKey: "reports", permission: "audit.view" },
+      { href: "/dashboard/links", labelKey: "siteLinks", permission: "tenants.view" },
     ],
   },
 ];
@@ -142,22 +127,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = readOpenGroups();
     const next: Record<string, boolean> = {};
+    const activeGroup = ADMIN_NAV_GROUPS.find((group) => groupContainsActive(group, pathname, tab))?.id;
+    const storedGroup = ADMIN_NAV_GROUPS.find((group) => stored[group.id])?.id;
+    const openGroup = activeGroup || storedGroup || "control";
     for (const group of ADMIN_NAV_GROUPS) {
-      const active = groupContainsActive(group, pathname, tab);
-      if (active) {
-        next[group.id] = true;
-      } else if (typeof stored[group.id] === "boolean") {
-        next[group.id] = stored[group.id];
-      } else {
-        next[group.id] = group.id === "control" || group.id === "people";
-      }
+      next[group.id] = group.id === openGroup;
     }
     setOpenGroups(next);
   }, [pathname, tab]);
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
+      const opening = !prev[id];
+      const next = Object.fromEntries(
+        ADMIN_NAV_GROUPS.map((group) => [group.id, opening && group.id === id]),
+      );
       try {
         localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(next));
       } catch {
@@ -169,7 +153,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn("min-h-screen md:flex", isControlCenter && !clientMode && "dashboard-cc")}>
-      <aside className="flex w-full flex-col border-b border-[var(--border)] md:w-72 md:border-b-0 md:border-e">
+      <aside className="flex w-full flex-col border-b border-[var(--border)] md:w-64 md:border-b-0 md:border-e">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] p-4 md:block">
           <div>
             <div className="text-lg font-bold">Mendeles</div>

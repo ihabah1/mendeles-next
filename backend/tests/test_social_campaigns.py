@@ -170,6 +170,47 @@ def test_publish_instagram_includes_post_type_metadata(monkeypatch):
     assert calls["variables"]["input"]["assets"][0]["image"]["url"].endswith("/media/social/a.png")
 
 
+def test_publish_instagram_reel_uses_video_asset(monkeypatch):
+    BufferPublisher.clear_cache()
+    publisher = BufferPublisher(access_token="test-token")
+    monkeypatch.setattr(
+        publisher,
+        "list_channels",
+        lambda force_refresh=False: [
+            {
+                "id": "ig1",
+                "service": "instagram",
+                "name": "mendeles",
+                "display_name": "Mendeles",
+                "label": "Mendeles",
+                "type": "business",
+                "is_disconnected": False,
+                "is_locked": False,
+            }
+        ],
+    )
+    calls = {}
+
+    def fake_graphql(query, variables=None):
+        calls["variables"] = variables
+        return {"createPost": {"post": {"id": "reel1", "text": "hi", "status": "buffer"}}}
+
+    monkeypatch.setattr(publisher, "_graphql", fake_graphql)
+    result = publisher.publish(
+        PublishPayload(
+            text="Hello reel",
+            platform="instagram",
+            now=True,
+            media_url="https://mendeles.com/media/social/campaign.mp4",
+            media_kind="video",
+            instagram_type="reel",
+        )
+    )
+    assert result.ok
+    assert calls["variables"]["input"]["assets"][0]["video"]["url"].endswith("campaign.mp4")
+    assert calls["variables"]["input"]["metadata"]["instagram"]["type"] == "reel"
+
+
 def test_public_media_url_rewrites_to_frontend(settings):
     from social.application.media_service import public_media_url_for_buffer
 
@@ -435,6 +476,103 @@ def test_save_tiktok_video_accepts_codecs_in_data_url(tenant, owner_user, settin
     assert url.endswith(".webm")
     assert campaign.tiktok_video_url == url
     assert len(campaign.tiktok_videos_json or []) == 1
+
+
+def test_manual_campaign_video_can_replace_instagram_image(tenant, owner_user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "https://api.example.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
+
+    from social.application.campaign_service import CampaignService
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Instagram reel",
+        website_url="https://mendeles.com",
+        platforms=["instagram"],
+        captions_json={"instagram": "A video campaign"},
+        status=CampaignStatus.READY,
+    )
+    payload = b"\x00\x00\x00\x18ftypmp42" + (b"\x00" * 128)
+    data_url = "data:video/mp4;base64," + base64.b64encode(payload).decode("ascii")
+
+    url = MediaGenerationService.save_tiktok_video(
+        campaign,
+        data_url=data_url,
+        provider="manual",
+        use_for_instagram=True,
+    )
+    campaign.refresh_from_db()
+
+    assert url.endswith(".mp4")
+    assert campaign.instagram_media_type == "video"
+    assert campaign.tiktok_videos_json[-1]["provider"] == "manual"
+    serialized = CampaignService.serialize(campaign)
+    assert serialized["campaign_video_url"] == url
+
+    simulated = CampaignService.run_simulation(campaign)
+    assert simulated["status"] == CampaignStatus.SIMULATED
+    assert any(item["step"] == "Instagram video" and item["ok"] for item in simulated["simulation_log"])
+    assert not any(item["step"] == "Campaign PNG creative" for item in simulated["simulation_log"])
+
+
+def test_campaign_publish_selects_instagram_video_reel(tenant, owner_user, settings, monkeypatch):
+    settings.FRONTEND_URL = "https://mendeles.com"
+
+    from django.utils import timezone as dj_tz
+
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Publish reel",
+        platforms=["instagram"],
+        captions_json={"instagram": "Watch this"},
+        instagram_media_type="video",
+        tiktok_video_url="https://mendeles.com/media/social/manual.mp4",
+        status=CampaignStatus.SIMULATED,
+        simulated_at=dj_tz.now(),
+    )
+    publisher = BufferPublisher(access_token="test-token")
+    monkeypatch.setattr(
+        publisher,
+        "list_channels",
+        lambda force_refresh=False: [
+            {
+                "id": "ig1",
+                "service": "instagram",
+                "name": "mendeles",
+                "display_name": "Mendeles",
+                "label": "Mendeles",
+                "type": "business",
+                "is_disconnected": False,
+                "is_locked": False,
+            }
+        ],
+    )
+    calls = {}
+
+    def fake_graphql(query, variables=None):
+        calls["variables"] = variables
+        return {"createPost": {"post": {"id": "reel42", "text": "Watch this", "status": "buffer"}}}
+
+    monkeypatch.setattr(publisher, "_graphql", fake_graphql)
+    monkeypatch.setattr("social.application.campaign_service.get_default_publisher", lambda: publisher)
+
+    result = CampaignService.publish(campaign, schedule=False)
+
+    assert result["status"] == CampaignStatus.PUBLISHED
+    assert result["buffer_update_ids"]["instagram"] == "reel42"
+    assert calls["variables"]["input"]["assets"][0]["video"]["url"].endswith("manual.mp4")
+    assert calls["variables"]["input"]["metadata"]["instagram"]["type"] == "reel"
+
 
 def test_attach_site_promo_videos(tenant, owner_user, settings):
     settings.FRONTEND_URL = "https://mendeles.com"

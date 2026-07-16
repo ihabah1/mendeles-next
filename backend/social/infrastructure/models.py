@@ -47,6 +47,11 @@ class SocialCampaign(BaseModel):
     video_prompt = models.TextField(blank=True, default="")
     media_url = models.CharField(max_length=1000, blank=True, default="")
     instagram_image_url = models.CharField(max_length=1000, blank=True, default="")
+    instagram_media_type = models.CharField(
+        max_length=20,
+        choices=[("image", "Image"), ("video", "Video")],
+        default="image",
+    )
     tiktok_video_url = models.CharField(max_length=1000, blank=True, default="")
     tiktok_videos_json = models.JSONField(default=list, blank=True)
     creative_log_json = models.JSONField(default=list, blank=True)

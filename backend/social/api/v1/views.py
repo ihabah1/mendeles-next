@@ -244,7 +244,8 @@ class CampaignInstagramImageView(APIView):
             if data_url:
                 MediaGenerationService.save_instagram_png(campaign, data_url=data_url)
             else:
-                MediaGenerationService.create_instagram_image(campaign)
+                mode = str((request.data or {}).get("mode") or "").strip().lower()
+                MediaGenerationService.create_instagram_image(campaign, require_ai=mode == "ai")
         except Exception as exc:
             raise ValidationError(str(exc)) from exc
         campaign.simulated_at = None
@@ -269,6 +270,7 @@ class CampaignTikTokVideoView(APIView):
         ser.is_valid(raise_exception=True)
         data_url = (ser.validated_data.get("data_url") or "").strip()
         mode = ser.validated_data.get("mode") or "upload"
+        use_for_instagram = bool(ser.validated_data.get("use_for_instagram"))
         count = ser.validated_data.get("count") or 1
         promo_ids = ser.validated_data.get("promo_ids") or []
         try:
@@ -298,7 +300,12 @@ class CampaignTikTokVideoView(APIView):
                 payload["ai_generation"] = batch
                 return Response(payload)
             if data_url:
-                MediaGenerationService.save_tiktok_video(campaign, data_url=data_url)
+                MediaGenerationService.save_tiktok_video(
+                    campaign,
+                    data_url=data_url,
+                    provider="manual" if mode == "manual" else "browser",
+                    use_for_instagram=use_for_instagram,
+                )
             else:
                 MediaGenerationService.create_tiktok_creative(campaign)
         except Exception as exc:

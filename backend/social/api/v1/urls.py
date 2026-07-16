@@ -33,6 +33,11 @@ urlpatterns = [
         name="social-campaign-tiktok-video",
     ),
     path(
+        "campaigns/<uuid:campaign_id>/campaign-video/",
+        CampaignTikTokVideoView.as_view(),
+        name="social-campaign-video",
+    ),
+    path(
         "campaigns/<uuid:campaign_id>/republish/",
         CampaignRepublishView.as_view(),
         name="social-campaign-republish",

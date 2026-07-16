@@ -261,14 +261,22 @@ class MediaGenerationService:
         threading.Thread(target=_run, daemon=True).start()
 
     @classmethod
-    def create_instagram_image(cls, campaign: SocialCampaign) -> str:
+    def create_instagram_image(cls, campaign: SocialCampaign, *, require_ai: bool = False) -> str:
         """Create an attractive square campaign image (Gemini AI, SVG fallback)."""
+        ai_error = "Gemini image generation is not configured."
         try:
             from ai_seo.application.gemini_service import GeminiService
 
             if GeminiService.configured():
+                prompt = _campaign_image_prompt(campaign)
+                if require_ai:
+                    prompt += (
+                        "\n\nCreate a genuinely fresh visual composition for this request. "
+                        "Do not reuse a generic dashboard layout or a previous arrangement. "
+                        f"Creative variation token: {uuid.uuid4().hex}."
+                    )
                 raw, mime = GeminiService.generate_image(
-                    _campaign_image_prompt(campaign),
+                    prompt,
                     aspect_ratio="1:1",
                 )
                 ext = "png"
@@ -281,9 +289,13 @@ class MediaGenerationService:
                 path.write_bytes(raw)
                 url_public = _public_url(f"social/{filename}")
                 return cls._persist_instagram_url(campaign, url_public)
+            ai_error = "Gemini image generation is not configured."
         except Exception as exc:  # noqa: BLE001 — always fall back to designed SVG
+            ai_error = str(exc)
             logger.warning("AI campaign image failed, using designed SVG: %s", exc)
 
+        if require_ai:
+            raise ValueError(f"AI image generation failed: {ai_error}")
         return cls._create_instagram_svg(campaign)
 
     @classmethod
@@ -541,7 +553,13 @@ class MediaGenerationService:
         return attached
 
     @staticmethod
-    def save_tiktok_video(campaign: SocialCampaign, *, data_url: str, provider: str = "browser") -> str:
+    def save_tiktok_video(
+        campaign: SocialCampaign,
+        *,
+        data_url: str,
+        provider: str = "browser",
+        use_for_instagram: bool = False,
+    ) -> str:
         """Persist a browser-generated WebM/MP4 data URL for TikTok simulation/publish."""
         # Browsers often emit: data:video/webm;codecs=vp9,opus;base64,...
         # Parse by locating ;base64, so codec params (including commas) never break matching.
@@ -557,7 +575,17 @@ class MediaGenerationService:
         if not mime_base.startswith("video/"):
             preview = raw_url[:80].replace("\n", " ")
             raise ValueError(f"Invalid video data URL (expected video/*). Got prefix: {preview!r}")
-        ext = "webm" if "webm" in mime_base else "mp4" if "mp4" in mime_base else "bin"
+        ext = (
+            "webm"
+            if "webm" in mime_base
+            else "mp4"
+            if "mp4" in mime_base
+            else "mov"
+            if "quicktime" in mime_base or "mov" in mime_base
+            else "bin"
+        )
+        if use_for_instagram and ext not in {"mp4", "mov"}:
+            raise ValueError("Instagram video must be an MP4 or MOV file.")
         try:
             raw = base64.b64decode(b64, validate=False)
         except Exception as exc:  # noqa: BLE001
@@ -581,9 +609,19 @@ class MediaGenerationService:
             }
         )
         campaign.tiktok_videos_json = videos
-        if campaign.media_type == "video":
+        if use_for_instagram:
+            campaign.instagram_media_type = "video"
+        if campaign.media_type == "video" or use_for_instagram:
             campaign.media_url = url_public
-        campaign.save(update_fields=["tiktok_video_url", "tiktok_videos_json", "media_url", "updated_at"])
+        campaign.save(
+            update_fields=[
+                "tiktok_video_url",
+                "tiktok_videos_json",
+                "instagram_media_type",
+                "media_url",
+                "updated_at",
+            ]
+        )
         return url_public
 
     @classmethod

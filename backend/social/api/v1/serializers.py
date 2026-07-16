@@ -30,6 +30,7 @@ class UpdateCampaignSerializer(serializers.Serializer):
     media_prompt = serializers.CharField(required=False, allow_blank=True)
     video_prompt = serializers.CharField(required=False, allow_blank=True)
     media_url = serializers.URLField(required=False, allow_blank=True)
+    instagram_media_type = serializers.ChoiceField(choices=["image", "video"], required=False)
     platforms = serializers.ListField(
         child=serializers.ChoiceField(choices=[(p, p) for p in SUPPORTED_PLATFORMS]),
         required=False,
@@ -46,7 +47,8 @@ class PublishCampaignSerializer(serializers.Serializer):
 
 class TikTokVideoUploadSerializer(serializers.Serializer):
     data_url = serializers.CharField(required=False, allow_blank=True, default="")
-    mode = serializers.ChoiceField(choices=["upload", "ai", "promo"], required=False, default="upload")
+    mode = serializers.ChoiceField(choices=["upload", "manual", "ai", "promo"], required=False, default="upload")
+    use_for_instagram = serializers.BooleanField(required=False, default=False)
     count = serializers.IntegerField(required=False, min_value=1, max_value=20, default=1)
     promo_ids = serializers.ListField(
         child=serializers.CharField(allow_blank=False),

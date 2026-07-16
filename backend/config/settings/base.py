@@ -97,6 +97,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# A 25MB campaign video expands to roughly 34MB when sent as a base64 JSON data URL.
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.environ.get("DATA_UPLOAD_MAX_MEMORY_SIZE", str(40 * 1024 * 1024))
+)
 
 CORS_ALLOWED_ORIGINS = [
     o.strip()

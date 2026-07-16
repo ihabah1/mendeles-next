@@ -103,7 +103,7 @@ export function CampaignNetworkSimulator({ campaign, platforms, className }: Pro
         {showInstagram ? (
           <figure className="space-y-2">
             <figcaption className="text-center text-xs font-bold uppercase tracking-wide text-pink-600">
-              Instagram · כך יופיע בפרופיל
+              Instagram · {campaign.instagram_media_type === "video" ? "כך יופיע כ־Reel" : "כך יופיע בפרופיל"}
             </figcaption>
             <InstagramPreview campaign={campaign} />
           </figure>
