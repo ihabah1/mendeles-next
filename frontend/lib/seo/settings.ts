@@ -11,7 +11,7 @@ export const DEFAULT_SEO_SETTINGS: SEOSettings = {
   default_language: "he",
   robots_policy: "index,follow",
   canonical_base_url: getSiteUrl(),
-  default_og_image: "",
+  default_og_image: "/opengraph-image",
   default_twitter_image: "",
   organization_name: "Mendeles",
   organization_logo: "",
