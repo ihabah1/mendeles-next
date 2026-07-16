@@ -14,6 +14,7 @@ import { PopularArticles } from "@/components/blog/popular-articles";
 import { SearchToolbar } from "@/components/blog/search-toolbar";
 import { SportsSection } from "@/components/blog/sports-section";
 import { TrendingSidebar } from "@/components/blog/trending-sidebar";
+import { PageSchemas } from "@/components/seo/page-schemas";
 import { ToolsMenu } from "@/components/tools/tools-menu";
 import {
   filterDemoPosts,
@@ -163,6 +164,7 @@ export default async function BlogPage({ params, searchParams }: Props) {
 
   return (
     <BlogShell categories={categoryCounts} previewPosts={usingDemo ? getEditorialDemoPosts(locale) : []} locale={locale} editable={!usingDemo}>
+      <PageSchemas />
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {usingDemo ? <DemoNotice locale={locale} /> : null}
 

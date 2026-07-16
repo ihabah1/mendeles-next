@@ -6,11 +6,16 @@ import { PublicArticleImage } from "@/components/blog/public-article-image";
 import { ContactCtaButton } from "@/components/leads/contact-cta-button";
 import { PublicContactFormBlock } from "@/components/leads/public-contact-form-block";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { JsonLd } from "@/components/seo/json-ld";
 import { defaultNavCategories, localizeBlogCategories } from "@/lib/blog/category-labels";
 import { editorialCopy } from "@/lib/blog/editorial-copy";
 import { resolvePublicImageUrl } from "@/lib/blog/public-image";
 import { backendBase } from "@/lib/api/backend-url";
+import { localizePath } from "@/lib/seo/canonical";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { articleSchema, breadcrumbSchema, organizationSchema } from "@/lib/seo/schema";
+import { DEFAULT_SEO_SETTINGS, fetchPublicSEO } from "@/lib/seo/settings";
+import { absoluteSiteUrl } from "@/lib/seo/site-url";
 import type { BlogCategory } from "@/lib/blog/types";
 
 type Props = {
@@ -33,6 +38,8 @@ type PublicContentPage = {
   page_type: string;
   meta_title: string;
   meta_description: string;
+  published_at: string | null;
+  updated_at: string;
   blocks: PublicContentBlock[];
 };
 
@@ -50,6 +57,16 @@ async function fetchPublicPage(locale: string, path: string[]): Promise<PublicCo
 
 function textValue(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function articleImage(page: PublicContentPage): string | undefined {
+  const block = page.blocks.find((item) => item.block_type === "image" && item.is_visible);
+  const url = textValue(block?.config.url);
+  if (!url) return undefined;
+  return resolvePublicImageUrl(url, {
+    matched_domain: textValue(block?.config.matched_domain),
+    seed: page.id,
+  });
 }
 
 function stripHtml(value: unknown): string {
@@ -431,8 +448,35 @@ export default async function PublicContentPage({ params }: Props) {
 
   if (isBlog) {
     const categories = await fetchBlogCategories(locale);
+    const bundle = await fetchPublicSEO();
+    const settings = {
+      ...(bundle?.settings ?? DEFAULT_SEO_SETTINGS),
+      default_language: locale,
+    };
+    const articleUrl = absoluteSiteUrl(localizePath(page.full_path, locale));
+    const schemas = [
+      organizationSchema(settings),
+      articleSchema(settings, {
+        title: page.title,
+        description: page.meta_description || page.title,
+        url: articleUrl,
+        image: articleImage(page),
+        datePublished: page.published_at || undefined,
+        dateModified: page.updated_at || page.published_at || undefined,
+      }),
+      breadcrumbSchema(settings, [
+        { name: "Home", path: localizePath("/", locale), url: absoluteSiteUrl(localizePath("/", locale)) },
+        {
+          name: "Blog",
+          path: localizePath("/blog", locale),
+          url: absoluteSiteUrl(localizePath("/blog", locale)),
+        },
+        { name: page.title, path: localizePath(page.full_path, locale), url: articleUrl },
+      ]),
+    ];
     return (
       <BlogShell categories={categories} locale={locale}>
+        <JsonLd data={schemas} />
         <BlogArticleLayout
           page={page}
           locale={locale}

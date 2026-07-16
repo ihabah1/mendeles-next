@@ -1,6 +1,6 @@
 import type { BreadcrumbItem, SEOSettings } from "./types";
 import { buildCanonicalUrl } from "./canonical";
-import { resolveSiteUrl } from "./site-url";
+import { resolveSiteUrl, sanitizeSeoUrl } from "./site-url";
 
 export function organizationSchema(settings: SEOSettings) {
   const base = resolveSiteUrl(settings.canonical_base_url);
@@ -40,6 +40,41 @@ export function breadcrumbSchema(settings: SEOSettings, items: BreadcrumbItem[])
         item: full,
       };
     }),
+  };
+}
+
+export function articleSchema(settings: SEOSettings, article: {
+  title: string;
+  description: string;
+  url: string;
+  image?: string;
+  datePublished?: string;
+  dateModified?: string;
+  authorName?: string;
+}) {
+  const base = resolveSiteUrl(settings.canonical_base_url);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: article.title,
+    description: article.description,
+    image: article.image ? [sanitizeSeoUrl(article.image, base)] : undefined,
+    datePublished: article.datePublished,
+    dateModified: article.dateModified || article.datePublished,
+    author: {
+      "@type": "Organization",
+      name: article.authorName || settings.organization_name || settings.site_name,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: settings.organization_name || settings.site_name,
+      logo: settings.organization_logo
+        ? { "@type": "ImageObject", url: sanitizeSeoUrl(settings.organization_logo, base) }
+        : undefined,
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": article.url },
+    url: article.url,
+    inLanguage: settings.default_language || "he",
   };
 }
 
