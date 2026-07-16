@@ -21,6 +21,12 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
     metadataBase: new URL(base),
     title: meta.title,
     description: meta.description,
+    keywords: meta.keywords
+      ? meta.keywords
+          .split(",")
+          .map((keyword) => keyword.trim())
+          .filter(Boolean)
+      : undefined,
     authors: meta.author ? [{ name: meta.author }] : undefined,
     alternates: {
       canonical: meta.canonical,

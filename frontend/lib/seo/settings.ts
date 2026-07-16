@@ -87,7 +87,7 @@ export function mergePageMetadata(settings: SEOSettings, page: {
   return {
     title,
     description,
-    keywords: "",
+    keywords: page.keywords || normalizedSettings.default_keywords,
     author: page.author || normalizedSettings.default_author,
     language: locale,
     canonical,
