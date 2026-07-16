@@ -1,4 +1,5 @@
 import { SYSTEM_LOCALE_CODES } from "@/lib/i18n/system-locales";
+import { TOOL_SLUGS } from "@/lib/tools/catalog";
 import type { SitemapEntry } from "./types";
 
 /** Static page registry — mirrors backend SitemapService static pages. */
@@ -7,6 +8,12 @@ export const STATIC_SITEMAP_PAGES: Array<{ path: string; changefreq: string; pri
   { path: "/solutions", changefreq: "weekly", priority: 0.9 },
   { path: "/industries", changefreq: "weekly", priority: 0.9 },
   { path: "/company", changefreq: "monthly", priority: 0.7 },
+  { path: "/blog/tools", changefreq: "monthly", priority: 0.7 },
+  ...TOOL_SLUGS.map((slug) => ({
+    path: `/blog/tools/${slug}`,
+    changefreq: "monthly",
+    priority: 0.7,
+  })),
 ];
 
 export const LOCALES = SYSTEM_LOCALE_CODES;

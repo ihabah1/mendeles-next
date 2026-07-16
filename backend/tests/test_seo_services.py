@@ -88,6 +88,13 @@ def test_sitemap_includes_static_pages(tenant, monkeypatch):
     for locale in SUPPORTED_LOCALES:
         expected = "https://example.com/" if locale == "he" else f"https://example.com/{locale}"
         assert expected in locs
+    tool_entries = [
+        entry
+        for entry in SitemapService.static_entries(tenant.id)
+        if "/blog/tools" in entry["loc"]
+    ]
+    assert len(tool_entries) == 16 * len(SUPPORTED_LOCALES)
+    assert any("/blog/tools/pdf-editor" in entry["loc"] for entry in tool_entries)
 
 
 @pytest.mark.django_db

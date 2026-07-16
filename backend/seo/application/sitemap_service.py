@@ -13,6 +13,7 @@ STATIC_PAGES = [
     {"path": "/industries", "changefreq": "weekly", "priority": 0.9},
     {"path": "/company", "changefreq": "monthly", "priority": 0.7},
     {"path": "/blog", "changefreq": "weekly", "priority": 0.8},
+    {"path": "/blog/tools", "changefreq": "monthly", "priority": 0.7},
     {"path": "/accessibility", "changefreq": "monthly", "priority": 0.5},
     {"path": "/login", "changefreq": "yearly", "priority": 0.3},
     {"path": "/register", "changefreq": "yearly", "priority": 0.3},
@@ -44,6 +45,26 @@ INDUSTRY_SLUGS = [
     "agencies",
     "affiliate-marketers",
 ]
+
+# Keep in sync with frontend/lib/tools/catalog.ts TOOL_SLUGS.
+TOOL_SLUGS = [
+    "net-salary",
+    "mortgage",
+    "password-checker",
+    "speed-test",
+    "qr-code",
+    "background-remover",
+    "file-converter",
+    "pdf-viewer",
+    "pdf-creator",
+    "pdf-editor",
+    "pdf-sign",
+    "logo-creator",
+    "ai-writer",
+    "bmi-calories",
+    "unit-converter",
+]
+
 
 class SitemapService:
     """Scalable sitemap engine — static now, hooks for future dynamic content."""
@@ -83,6 +104,10 @@ class SitemapService:
             for locale in SUPPORTED_LOCALES:
                 path = f"/industries/{slug}"
                 entries.append(cls._entry(tenant_id, path, changefreq="monthly", priority=0.8, locale=locale))
+        for slug in TOOL_SLUGS:
+            for locale in SUPPORTED_LOCALES:
+                path = f"/blog/tools/{slug}"
+                entries.append(cls._entry(tenant_id, path, changefreq="monthly", priority=0.7, locale=locale))
         return entries
 
     @classmethod

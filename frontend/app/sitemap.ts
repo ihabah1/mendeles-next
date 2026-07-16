@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { backendBase } from "@/lib/api/backend-url";
 import { buildStaticSitemapEntries } from "@/lib/seo/sitemap-registry";
-import { DEFAULT_SEO_SETTINGS, fetchPublicSEO } from "@/lib/seo/settings";
 import { getSiteUrl, sanitizeSeoUrl } from "@/lib/seo/site-url";
 import type { SitemapEntry } from "@/lib/seo/types";
 
