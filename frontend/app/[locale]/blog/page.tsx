@@ -113,9 +113,14 @@ async function fetchBlogFeed(locale: string, q = "", category = ""): Promise<Blo
   if (q) url.searchParams.set("q", q);
   if (category) url.searchParams.set("category", category);
 
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return { results: [], categories: [] };
-  return (await res.json()) as BlogFeed;
+  try {
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return { results: [], categories: [] };
+    return (await res.json()) as BlogFeed;
+  } catch {
+    // Keep the static editorial fallback available during backend outages.
+    return { results: [], categories: [] };
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

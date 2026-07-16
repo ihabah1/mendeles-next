@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
-import { connection } from "next/server";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import { routing, type Locale } from "@/lib/i18n/routing";
@@ -24,7 +23,6 @@ export function generateStaticParams() {
 }
 
 export default async function LocaleLayout({ children, params }: Props) {
-  await connection();
   const { locale } = await params;
   if (!routing.locales.includes(locale as Locale)) {
     notFound();

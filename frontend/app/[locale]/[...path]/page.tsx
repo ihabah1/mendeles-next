@@ -22,6 +22,13 @@ type Props = {
   params: Promise<{ locale: string; path: string[] }>;
 };
 
+export const revalidate = 60;
+
+export function generateStaticParams(): Array<{ path: string[] }> {
+  // Public content paths are generated on first request, then kept fresh via ISR.
+  return [];
+}
+
 type PublicContentBlock = {
   id: string;
   block_type: string;
@@ -49,7 +56,7 @@ async function fetchPublicPage(locale: string, path: string[]): Promise<PublicCo
   url.searchParams.set("path", fullPath);
   url.searchParams.set("locale", locale);
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { next: { revalidate: 60 } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to load public content page (${res.status})`);
   return (await res.json()) as PublicContentPage;
@@ -105,15 +112,19 @@ async function fetchBlogCategories(locale: string): Promise<BlogCategory[]> {
   const url = new URL("/api/v1/content/public/pages/", backendBase());
   url.searchParams.set("page_type", "blog");
   url.searchParams.set("locale", locale);
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return defaultNavCategories(locale);
-  const data = (await res.json()) as { categories?: Array<{ slug: string; name: string }> };
-  const categories = data.categories || [];
-  if (!categories.length) return defaultNavCategories(locale);
-  return localizeBlogCategories(
-    categories.map((item) => ({ ...item, count: 0 })),
-    locale,
-  );
+  try {
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return defaultNavCategories(locale);
+    const data = (await res.json()) as { categories?: Array<{ slug: string; name: string }> };
+    const categories = data.categories || [];
+    if (!categories.length) return defaultNavCategories(locale);
+    return localizeBlogCategories(
+      categories.map((item) => ({ ...item, count: 0 })),
+      locale,
+    );
+  } catch {
+    return defaultNavCategories(locale);
+  }
 }
 
 function accentClasses(accent: string): string {
