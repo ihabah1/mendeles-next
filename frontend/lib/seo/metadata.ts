@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SYSTEM_LOCALE_CODES } from "@/lib/i18n/system-locales";
 import { localizePath } from "./canonical";
 import { DEFAULT_SEO_SETTINGS, fetchPublicSEO, mergePageMetadata } from "./settings";
 import { absoluteSiteUrl, getSiteUrl } from "./site-url";
@@ -14,8 +15,13 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
 
   const meta = mergePageMetadata(settings, { ...page, path: localizedPath, locale });
   const hePath = localizePath(page.path, "he");
-  const enPath = localizePath(page.path, "en");
-  const arPath = localizePath(page.path, "ar");
+  const languageAlternates = Object.fromEntries(
+    SYSTEM_LOCALE_CODES.map((code) => [
+      code,
+      absoluteSiteUrl(localizePath(page.path, code), base),
+    ]),
+  );
+  languageAlternates["x-default"] = absoluteSiteUrl(hePath, base);
 
   const result: Metadata = {
     metadataBase: new URL(base),
@@ -30,12 +36,7 @@ export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
     authors: meta.author ? [{ name: meta.author }] : undefined,
     alternates: {
       canonical: meta.canonical,
-      languages: {
-        "he-IL": absoluteSiteUrl(hePath, base),
-        en: absoluteSiteUrl(enPath, base),
-        ar: absoluteSiteUrl(arPath, base),
-        "x-default": absoluteSiteUrl(hePath, base),
-      },
+      languages: languageAlternates,
     },
     robots: meta.robots,
     openGraph: {

@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from seo.application.canonical_service import CanonicalService
 from seo.application.settings_service import SEOSettingsService
+from seo.constants import SUPPORTED_LOCALES
 from seo.infrastructure.models import SEOSlug
 
 
@@ -44,9 +45,6 @@ INDUSTRY_SLUGS = [
     "affiliate-marketers",
 ]
 
-LOCALES = ["he", "en", "ar"]
-
-
 class SitemapService:
     """Scalable sitemap engine — static now, hooks for future dynamic content."""
 
@@ -67,7 +65,7 @@ class SitemapService:
     def static_entries(cls, tenant_id) -> list[dict]:
         entries = []
         for page in STATIC_PAGES:
-            for locale in LOCALES:
+            for locale in SUPPORTED_LOCALES:
                 entries.append(
                     cls._entry(
                         tenant_id,
@@ -78,11 +76,11 @@ class SitemapService:
                     )
                 )
         for slug in SOLUTION_SLUGS:
-            for locale in LOCALES:
+            for locale in SUPPORTED_LOCALES:
                 path = f"/solutions/{slug}"
                 entries.append(cls._entry(tenant_id, path, changefreq="monthly", priority=0.8, locale=locale))
         for slug in INDUSTRY_SLUGS:
-            for locale in LOCALES:
+            for locale in SUPPORTED_LOCALES:
                 path = f"/industries/{slug}"
                 entries.append(cls._entry(tenant_id, path, changefreq="monthly", priority=0.8, locale=locale))
         return entries

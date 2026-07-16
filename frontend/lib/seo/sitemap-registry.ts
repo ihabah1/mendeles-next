@@ -1,3 +1,4 @@
+import { SYSTEM_LOCALE_CODES } from "@/lib/i18n/system-locales";
 import type { SitemapEntry } from "./types";
 
 /** Static page registry — mirrors backend SitemapService static pages. */
@@ -8,7 +9,7 @@ export const STATIC_SITEMAP_PAGES: Array<{ path: string; changefreq: string; pri
   { path: "/company", changefreq: "monthly", priority: 0.7 },
 ];
 
-export const LOCALES = ["he", "en", "ar"] as const;
+export const LOCALES = SYSTEM_LOCALE_CODES;
 
 export function localizeSitemapPath(path: string, locale: string): string {
   if (locale === "he") return path;
