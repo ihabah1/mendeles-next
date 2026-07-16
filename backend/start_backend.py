@@ -53,7 +53,7 @@ def main() -> int:
     run_setup("ensure_superuser")
 
     worker_id = os.getenv("AUTOMATION_WORKER_ID") or f"railway-{socket.gethostname()}"
-    poll_seconds = os.getenv("AUTOMATION_POLL_SECONDS", "15")
+    poll_seconds = os.getenv("AUTOMATION_POLL_SECONDS", "60")
     port = os.getenv("PORT", "8000")
 
     children.extend(
@@ -77,7 +77,17 @@ def main() -> int:
                     "--bind",
                     f"0.0.0.0:{port}",
                     "--workers",
-                    os.getenv("GUNICORN_WORKERS", "2"),
+                    os.getenv("GUNICORN_WORKERS", "1"),
+                    "--worker-class",
+                    "gthread",
+                    "--threads",
+                    os.getenv("GUNICORN_THREADS", "4"),
+                    "--max-requests",
+                    os.getenv("GUNICORN_MAX_REQUESTS", "1000"),
+                    "--max-requests-jitter",
+                    "100",
+                    "--timeout",
+                    os.getenv("GUNICORN_TIMEOUT", "120"),
                 ]
             ),
         ]

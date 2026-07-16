@@ -8,3 +8,7 @@ startCommand = "python start_backend.py"
 restartPolicyType = "ON_FAILURE"
 healthcheckPath = "/api/v1/health/"
 healthcheckTimeout = 300
+
+# Prevent unexpected memory spikes from increasing usage-based billing.
+[deploy.limitOverride.containers]
+memoryBytes = 536870912

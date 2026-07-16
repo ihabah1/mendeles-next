@@ -4,7 +4,7 @@ import logging
 import time
 
 from django.core.management.base import BaseCommand
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 
@@ -31,8 +31,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--poll-seconds",
             type=float,
-            default=15,
-            help="Seconds between queue polls in watch mode (default: 15).",
+            default=60,
+            help="Seconds between queue polls in watch mode (default: 60).",
         )
 
     def handle(self, *args, **options):
@@ -69,6 +69,9 @@ class Command(BaseCommand):
 
             if not watch:
                 return
+            # The worker is idle most of the time. Do not keep a dedicated
+            # PostgreSQL connection (and its server-side memory) while sleeping.
+            connections.close_all()
             time.sleep(poll_seconds)
 
     @staticmethod
