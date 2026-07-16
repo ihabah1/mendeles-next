@@ -517,7 +517,8 @@ class AiSeoGenerationService:
         ).order_by("-created_at")[:30]
         return {
             "domains": DOMAIN_OPTIONS,
-            "gemini_configured": GeminiService.configured(),
+            "gemini_configured": GeminiService.configured(tenant_id=tenant_id),
+            "gemini_enabled": GeminiService.enabled(tenant_id),
             "jobs": [AiSeoGenerationService.serialize_job(job) for job in jobs],
             "drafts": [AiSeoGenerationService.serialize_page(page) for page in pages],
             "history": AiSeoGenerationService.run_history(tenant_id),
@@ -1013,7 +1014,8 @@ class AiSeoGenerationService:
 
     @classmethod
     def create_batch(cls, tenant_id, user, data: dict, *, request=None) -> list[AutomationJob]:
-        if not GeminiService.configured():
+        GeminiService.assert_enabled(tenant_id)
+        if not GeminiService.configured(tenant_id=tenant_id):
             raise RuntimeError("GEMINI_API_KEY is not configured.")
 
         requested_domain_values = data.get("domains") or []
@@ -1173,7 +1175,7 @@ class AiSeoGenerationService:
             sports_translation_enabled=bool(config.get("sports_translation_enabled")),
             international_news_translation_enabled=bool(config.get("international_news_translation_enabled")),
         )
-        result = GeminiService.generate_json(prompt)
+        result = GeminiService.generate_json(prompt, tenant_id=job.tenant_id)
         return cls._create_page_from_payload(job, result)
 
     @classmethod
@@ -1230,7 +1232,7 @@ class AiSeoGenerationService:
                 sports_translation_enabled=bool(config.get("sports_translation_enabled")),
                 international_news_translation_enabled=bool(config.get("international_news_translation_enabled")),
             )
-            result = GeminiService.generate_json(prompt)
+            result = GeminiService.generate_json(prompt, tenant_id=job.tenant_id)
             job.config = {**config, "gemini_payload": result}
             job.save(update_fields=["config", "updated_at"])
             AutomationLogService.log(
@@ -1780,6 +1782,7 @@ Locale: {locale}.
 
     @classmethod
     def regenerate(cls, tenant_id, user, data: dict, *, request=None) -> AutomationJob:
+        GeminiService.assert_enabled(tenant_id)
         page = PageService.get_page(tenant_id, data["page_id"])
         source_config = cls._source_config_for_page(page)
         selected_keywords = data.get("keywords") or source_config.get("keywords") or []

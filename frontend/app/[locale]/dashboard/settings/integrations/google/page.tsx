@@ -10,12 +10,42 @@ import { Card } from "@/components/ui/card";
 import { integrationsApi, type GoogleIntegrationDashboard } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
 
-const STATUS_ICON: Record<string, string> = {
-  connected: "🟢",
-  waiting_authorization: "🟡",
-  config_required: "🟡",
-  not_connected: "🔴",
-  error: "🔴",
+const STATUS_STYLE: Record<string, { badge: string; dot: string; card: string }> = {
+  connected: {
+    badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    dot: "bg-emerald-500",
+    card: "border-emerald-500/30",
+  },
+  available: {
+    badge: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    dot: "bg-sky-500",
+    card: "border-sky-500/30",
+  },
+  property_required: {
+    badge: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+    dot: "bg-amber-500",
+    card: "border-amber-500/30",
+  },
+  waiting_authorization: {
+    badge: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+    dot: "bg-amber-500",
+    card: "border-amber-500/30",
+  },
+  config_required: {
+    badge: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+    dot: "bg-amber-500",
+    card: "border-amber-500/30",
+  },
+  not_connected: {
+    badge: "border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    dot: "bg-slate-500",
+    card: "border-[var(--border)]",
+  },
+  error: {
+    badge: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
+    dot: "bg-red-500",
+    card: "border-red-500/30",
+  },
 };
 
 type ServiceKey = "search_console" | "analytics" | "trends";
@@ -142,22 +172,38 @@ export default function GoogleIntegrationsPage() {
 
       {data?.services.map((svc) => {
         const key = svc.service_type as ServiceKey;
-        const icon = STATUS_ICON[svc.status] || "🔴";
         const isOAuth = key !== "trends";
         const props = propertyLists[key] ?? [];
-        const statusText =
-          key === "trends" && svc.status === "connected" && !svc.last_sync_at
+        const visualStatus =
+          key === "trends"
+            ? svc.last_error
+              ? "error"
+              : svc.last_sync_at
+                ? "connected"
+                : "available"
+            : svc.connected_account && !svc.property_id
+              ? "property_required"
+              : svc.status;
+        const statusStyle = STATUS_STYLE[visualStatus] || STATUS_STYLE.error;
+        const statusLabel =
+          visualStatus === "available"
             ? t("google.trendsAvailable")
-            : t(`google.status.${svc.status}`);
+            : visualStatus === "property_required"
+              ? t("google.propertyRequiredTitle")
+              : t(`google.status.${visualStatus}`);
 
         return (
-          <Card key={svc.service_type}>
+          <Card key={svc.service_type} className={statusStyle.card}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {icon} {t(`google.services.${key}`)}
-                </h2>
-                <p className="text-sm text-[var(--muted-fg)]">{statusText}</p>
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">{t(`google.services.${key}`)}</h2>
+                <span
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${statusStyle.badge}`}
+                  role="status"
+                >
+                  <span className={`h-2 w-2 rounded-full ${statusStyle.dot}`} aria-hidden />
+                  {statusLabel}
+                </span>
               </div>
               {canManage && (
                 <div className="flex flex-wrap gap-2">
@@ -244,7 +290,7 @@ export default function GoogleIntegrationsPage() {
 
             {key === "trends" && canManage && (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm sm:col-span-2">
+                <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-sm sm:col-span-2">
                   <p className="font-medium">{t("google.trendsNoOAuthTitle")}</p>
                   <p className="mt-1 text-xs text-[var(--muted-fg)]">{t("google.trendsNoOAuthBody")}</p>
                 </div>
@@ -297,7 +343,7 @@ export default function GoogleIntegrationsPage() {
               </div>
             )}
 
-            {isOAuth && svc.status === "waiting_authorization" && (
+            {isOAuth && visualStatus === "property_required" && (
               <div className="mt-4 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-sm">
                 <p className="font-medium">{t("google.propertyRequiredTitle")}</p>
                 <p className="mt-1 text-xs text-[var(--muted-fg)]">{t("google.propertyRequiredBody")}</p>

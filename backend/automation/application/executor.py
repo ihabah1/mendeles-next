@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from automation.application.log_service import AutomationLogService
 from automation.domain.enums import (
+    GEMINI_JOB_TYPES,
     IMPLEMENTED_JOB_TYPES,
     JobStatus,
     JobType,
@@ -218,6 +219,8 @@ class JobExecutor:
 
     @staticmethod
     def _schedule_auto_retry_if_available(job: AutomationJob, step: AutomationJobStep, reason: str) -> bool:
+        if "disabled by the system feature flag" in reason.lower():
+            return False
         if job.job_type not in {JobType.GENERATE_BLOG_ARTICLE, JobType.GENERATE_LANDING_PAGE}:
             return False
         from ai_seo.application.generation_service import AiSeoGenerationService
@@ -310,6 +313,14 @@ class JobExecutor:
 
     @staticmethod
     def _run_handler(job: AutomationJob, job_type: str, execution: AutomationExecution) -> None:
+        if (
+            job_type in GEMINI_JOB_TYPES
+            or job_type == "translate_site_page"
+            or job_type == "ai_seo.ai"
+        ):
+            from ai_seo.application.gemini_service import GeminiService
+
+            GeminiService.assert_enabled(job.tenant_id)
         if job_type.startswith("ai_seo."):
             from ai_seo.application.generation_service import AiSeoGenerationService
 

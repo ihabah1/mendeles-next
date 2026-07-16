@@ -95,6 +95,10 @@ class VeoVideoProvider(VideoProvider):
         return get_ledger_credits(self.name, default_i)
 
     def generate(self, request: VideoGenerationRequest) -> VideoGenerationResult:
+        from ai_seo.application.gemini_service import GeminiService
+
+        tenant_id = (request.metadata or {}).get("tenant_id")
+        GeminiService.assert_enabled(tenant_id)
         api_key = self._api_key()
         if not api_key:
             raise VideoProviderNotConfigured("VEO_API_KEY (or GEMINI_API_KEY) is not set")
@@ -132,7 +136,7 @@ class VeoVideoProvider(VideoProvider):
         if not op:
             raise RuntimeError(f"Veo did not return an operation name: {created}")
 
-        status = self._poll_operation(op, headers)
+        status = self._poll_operation(op, headers, tenant_id=tenant_id)
         if status.get("error"):
             raise RuntimeError(f"Veo operation failed: {status.get('error')}")
 
@@ -154,6 +158,7 @@ class VeoVideoProvider(VideoProvider):
         if not video_uri:
             raise RuntimeError(f"Veo operation done but no video URI: {status}")
 
+        GeminiService.assert_enabled(tenant_id)
         raw, ctype = http_bytes(
             video_uri,
             headers=headers,
@@ -175,10 +180,19 @@ class VeoVideoProvider(VideoProvider):
             metadata={"model": model, "operation": op},
         )
 
-    def _poll_operation(self, operation_name: str, headers: dict[str, str]) -> dict[str, Any]:
+    def _poll_operation(
+        self,
+        operation_name: str,
+        headers: dict[str, str],
+        *,
+        tenant_id,
+    ) -> dict[str, Any]:
+        from ai_seo.application.gemini_service import GeminiService
+
         deadline = time.time() + int(getattr(settings, "VIDEO_PROVIDER_POLL_SECONDS", 300))
         url = f"{self.API_BASE}/{operation_name.lstrip('/')}"
         while time.time() < deadline:
+            GeminiService.assert_enabled(tenant_id)
             status = http_json(url, headers=headers)
             if status.get("done") is True:
                 return status

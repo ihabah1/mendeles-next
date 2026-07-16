@@ -125,7 +125,7 @@ def test_resolve_veo_3_1_model_aliases(settings):
     assert resolve_veo_model() == "veo-3.1-generate-preview"
 
 
-def test_veo_polls_and_downloads(monkeypatch, settings):
+def test_veo_polls_and_downloads(monkeypatch, settings, tenant):
     settings.VEO_API_KEY = "test-key"
     settings.VEO_MODEL = "veo-3.1-generate"
     settings.VIDEO_PROVIDERS_MOCK = False
@@ -162,7 +162,12 @@ def test_veo_polls_and_downloads(monkeypatch, settings):
     monkeypatch.setattr(veo_mod, "http_bytes", fake_bytes)
     monkeypatch.setattr(veo_mod.time, "sleep", lambda *_: None)
 
-    result = VeoVideoProvider().generate(VideoGenerationRequest(prompt="Mendeles vertical promo"))
+    result = VeoVideoProvider().generate(
+        VideoGenerationRequest(
+            prompt="Mendeles vertical promo",
+            metadata={"tenant_id": str(tenant.id)},
+        )
+    )
     assert result.ok is True
     assert result.provider == "veo"
     assert result.video_bytes == b"mp4-bytes"

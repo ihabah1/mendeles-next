@@ -304,7 +304,12 @@ class SiteTranslationService:
                 for b in blocks
             ],
         }
-        translated = cls._translate_payload(payload, source_locale=source.locale, target_locale=target_locale)
+        translated = cls._translate_payload(
+            payload,
+            tenant_id=source.tenant_id,
+            source_locale=source.locale,
+            target_locale=target_locale,
+        )
 
         existing = Page.objects.filter(
             tenant_id=source.tenant_id,
@@ -381,7 +386,14 @@ class SiteTranslationService:
         }
 
     @classmethod
-    def _translate_payload(cls, payload: dict, *, source_locale: str, target_locale: str) -> dict:
+    def _translate_payload(
+        cls,
+        payload: dict,
+        *,
+        tenant_id,
+        source_locale: str,
+        target_locale: str,
+    ) -> dict:
         from ai_seo.application.gemini_service import GeminiError, GeminiService
 
         lang = LOCALE_NAMES.get(target_locale, target_locale)
@@ -396,9 +408,9 @@ class SiteTranslationService:
             "- Keep the same number of blocks and nested structure.\n\n"
             f"INPUT:\n{json.dumps(payload, ensure_ascii=False)}"
         )
-        if GeminiService.configured():
+        if GeminiService.configured(tenant_id=tenant_id):
             try:
-                result = GeminiService.generate_json(prompt)
+                result = GeminiService.generate_json(prompt, tenant_id=tenant_id)
                 if isinstance(result, dict) and result.get("title"):
                     if "blocks" not in result:
                         result["blocks"] = payload.get("blocks") or []

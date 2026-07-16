@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = {
     "analytics.fb_pixel": "",
     "features.contact_widget_home": "true",
     "features.whatsapp_balloon": "true",
+    "features.gemini_ai": "true",
 }
 
 PUBLIC_FEATURE_KEYS = ("features.contact_widget_home", "features.whatsapp_balloon")
@@ -32,6 +33,11 @@ FEATURE_FLAG_DEFINITIONS = [
     {
         "key": "features.whatsapp_balloon",
         "slug": "whatsapp_balloon",
+        "default": True,
+    },
+    {
+        "key": "features.gemini_ai",
+        "slug": "gemini_ai",
         "default": True,
     },
 ]
@@ -66,6 +72,13 @@ def _whatsapp_number_from_env() -> str:
 
 class SettingsService:
     @staticmethod
+    def is_gemini_enabled(tenant_id) -> bool:
+        if not tenant_id:
+            return False
+        settings = SettingsService.get_tenant_settings(tenant_id)
+        return _setting_bool(settings.get("features.gemini_ai"), default=True)
+
+    @staticmethod
     def get_tenant_settings(tenant_id) -> dict:
         stored = {
             s.key: s.value
@@ -84,7 +97,35 @@ class SettingsService:
                 key=key,
                 defaults={"value": value, "updated_by": user},
             )
+        if "features.gemini_ai" in updates and not _setting_bool(
+            updates.get("features.gemini_ai"),
+            default=True,
+        ):
+            SettingsService.pause_gemini_jobs(tenant_id)
         return SettingsService.get_tenant_settings(tenant_id)
+
+    @staticmethod
+    def pause_gemini_jobs(tenant_id) -> int:
+        from django.utils import timezone
+
+        from automation.domain.enums import GEMINI_JOB_TYPES, JobStatus
+        from automation.infrastructure.models import AutomationJob
+
+        return AutomationJob.objects.filter(
+            tenant_id=tenant_id,
+            job_type__in=GEMINI_JOB_TYPES,
+            status__in=[
+                JobStatus.QUEUED,
+                JobStatus.SCHEDULED,
+                JobStatus.RUNNING,
+                JobStatus.RETRYING,
+            ],
+            deleted_at__isnull=True,
+        ).update(
+            status=JobStatus.PAUSED,
+            error_message="Gemini AI paused by feature flag.",
+            updated_at=timezone.now(),
+        )
 
     @staticmethod
     def get_public_features(tenant_id) -> dict:

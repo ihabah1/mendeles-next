@@ -708,6 +708,7 @@ export default function AiAutomationPage() {
     (!campaignNeedsPng || hasPng) &&
     (!instagramUsesVideo || hasCampaignVideo) &&
     (!campaignPlatforms.includes("tiktok") || hasTikTokMedia);
+  const geminiEnabled = status.data?.gemini_enabled !== false;
   const isPublished = active?.status === "published";
   const isScheduled = active?.status === "scheduled";
   const publishedPlatforms = Object.keys(active?.buffer_update_ids || {});
@@ -778,6 +779,11 @@ export default function AiAutomationPage() {
           >
             Buffer: {status.data?.buffer_configured ? "מחובר" : "לא מוגדר"}
           </span>
+          {!geminiEnabled ? (
+            <span className="rounded-full bg-slate-500/15 px-3 py-1 font-semibold text-slate-700 dark:text-slate-300">
+              Gemini AI מושבת
+            </span>
+          ) : null}
           {hasCampaign ? (
             <span className="rounded-full bg-[var(--muted)] px-3 py-1 font-semibold">
               {instagramUsesVideo
@@ -1012,11 +1018,15 @@ export default function AiAutomationPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    disabled={!canManage || createAiImage.isPending || saveEdits.isPending}
+                    disabled={!canManage || !geminiEnabled || createAiImage.isPending || saveEdits.isPending}
                     onClick={() => createAiImage.mutate()}
                     className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
                   >
-                    {createAiImage.isPending ? "מעצב תמונה ב־AI…" : "✨ צור תמונה ייחודית ב־AI"}
+                    {createAiImage.isPending
+                      ? "מעצב תמונה ב־AI…"
+                      : geminiEnabled
+                        ? "✨ צור תמונה ייחודית ב־AI"
+                        : "Gemini AI מושבת"}
                   </Button>
                   <Button
                     type="button"

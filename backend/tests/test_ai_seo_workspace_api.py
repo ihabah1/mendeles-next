@@ -230,7 +230,7 @@ def test_ai_seo_workspace_random_topics_and_history(owner_client, settings):
 def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף בדיקה",
             "meta_title": "דף בדיקה",
@@ -275,7 +275,7 @@ def test_ai_seo_workspace_run_job_processes_steps(owner_client, settings, monkey
 def test_ai_seo_workspace_auto_publishes_generated_page(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף פרסום אוטומטי",
             "meta_title": "דף פרסום אוטומטי",
@@ -310,7 +310,7 @@ def test_ai_seo_workspace_auto_publishes_generated_page(owner_client, settings, 
 def test_ai_seo_workspace_schedules_next_recurring_job(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף מחזורי",
             "meta_title": "דף מחזורי",
@@ -402,7 +402,7 @@ def test_ai_seo_workspace_scheduled_automation_for_pending_recurring_batch(owner
 def test_ai_seo_workspace_schedules_recurring_without_auto_publish(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף מחזורי ללא פרסום",
             "meta_title": "דף מחזורי ללא פרסום",
@@ -489,7 +489,7 @@ def test_ai_seo_workspace_delete_page(owner_client, tenant, owner_user):
 def test_ai_seo_workspace_regenerate_reuses_original_keywords(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף בדיקה",
             "meta_title": "דף בדיקה",
@@ -531,7 +531,7 @@ def test_ai_seo_workspace_regenerate_reuses_original_keywords(owner_client, sett
 def test_ai_seo_workspace_run_next_processes_one_step_at_a_time(owner_client, settings, monkeypatch):
     settings.GEMINI_API_KEY = "test-key"
 
-    def fake_generate_json(prompt):
+    def fake_generate_json(prompt, **kwargs):
         return {
             "title": "דף תור",
             "meta_title": "דף תור",
@@ -567,7 +567,7 @@ def test_ai_seo_workspace_retry_failed_step(owner_client, settings, monkeypatch)
     settings.GEMINI_API_KEY = "test-key"
     settings.AI_SEO_STEP_MAX_RETRIES = 0
 
-    def broken_generate_json(prompt):
+    def broken_generate_json(prompt, **kwargs):
         raise RuntimeError("Gemini timeout")
 
     monkeypatch.setattr(
@@ -597,7 +597,7 @@ def test_ai_seo_workspace_auto_retries_failed_step(owner_client, settings, monke
     settings.GEMINI_API_KEY = "test-key"
     settings.AI_SEO_STEP_MAX_RETRIES = 3
 
-    def broken_generate_json(prompt):
+    def broken_generate_json(prompt, **kwargs):
         raise RuntimeError("Gemini timeout")
 
     monkeypatch.setattr(

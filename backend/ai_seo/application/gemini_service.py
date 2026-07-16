@@ -16,6 +16,10 @@ class GeminiError(RuntimeError):
     pass
 
 
+class GeminiFeatureDisabled(GeminiError):
+    pass
+
+
 class GeminiService:
     FALLBACK_MODELS = (
         "gemini-2.5-flash-lite",
@@ -28,17 +32,33 @@ class GeminiService:
     )
 
     @classmethod
-    def configured(cls) -> bool:
-        return bool(getattr(settings, "GEMINI_API_KEY", ""))
+    def enabled(cls, tenant_id) -> bool:
+        from siteconfig.application.settings_service import SettingsService
+
+        return SettingsService.is_gemini_enabled(tenant_id)
 
     @classmethod
-    def generate_json(cls, prompt: str) -> dict:
+    def assert_enabled(cls, tenant_id) -> None:
+        if not cls.enabled(tenant_id):
+            raise GeminiFeatureDisabled(
+                "Gemini AI is disabled by the system feature flag."
+            )
+
+    @classmethod
+    def configured(cls, tenant_id=None) -> bool:
+        has_key = bool(getattr(settings, "GEMINI_API_KEY", ""))
+        return has_key and (tenant_id is None or cls.enabled(tenant_id))
+
+    @classmethod
+    def generate_json(cls, prompt: str, *, tenant_id) -> dict:
+        cls.assert_enabled(tenant_id)
         api_key = getattr(settings, "GEMINI_API_KEY", "")
         if not api_key:
             raise GeminiError("GEMINI_API_KEY is not configured.")
 
         errors = []
         for model in cls._candidate_models():
+            cls.assert_enabled(tenant_id)
             try:
                 return cls._generate_json_with_model(api_key, model, prompt)
             except urllib.error.HTTPError as exc:
@@ -56,14 +76,22 @@ class GeminiService:
         raise GeminiError("No Gemini model completed generateContent. Tried: " + " | ".join(errors))
 
     @classmethod
-    def generate_image(cls, prompt: str, *, aspect_ratio: str = "1:1") -> tuple[bytes, str]:
+    def generate_image(
+        cls,
+        prompt: str,
+        *,
+        tenant_id,
+        aspect_ratio: str = "1:1",
+    ) -> tuple[bytes, str]:
         """Generate a campaign creative image. Returns (bytes, mime_type)."""
+        cls.assert_enabled(tenant_id)
         api_key = getattr(settings, "GEMINI_API_KEY", "")
         if not api_key:
             raise GeminiError("GEMINI_API_KEY is not configured.")
 
         errors: list[str] = []
         for model in cls._image_models():
+            cls.assert_enabled(tenant_id)
             try:
                 return cls._generate_image_with_model(api_key, model, prompt, aspect_ratio=aspect_ratio)
             except urllib.error.HTTPError as exc:

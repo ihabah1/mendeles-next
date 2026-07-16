@@ -435,7 +435,12 @@ def test_create_instagram_image_uses_gemini_when_available(tenant, owner_user, s
     monkeypatch.setattr(
         GeminiService,
         "generate_image",
-        classmethod(lambda cls, prompt, *, aspect_ratio="1:1": (b"\x89PNG-fake", "image/png")),
+        classmethod(
+            lambda cls, prompt, *, tenant_id, aspect_ratio="1:1": (
+                b"\x89PNG-fake",
+                "image/png",
+            )
+        ),
     )
 
     url = MediaGenerationService.create_instagram_image(campaign)

@@ -67,13 +67,13 @@ def _fallback_campaign(payload: dict[str, Any]) -> dict[str, Any]:
 
 class CampaignGenerationService:
     @staticmethod
-    def generate(payload: dict[str, Any]) -> dict[str, Any]:
+    def generate(payload: dict[str, Any], *, tenant_id=None) -> dict[str, Any]:
         platforms = [p for p in (payload.get("platforms") or []) if p in SUPPORTED_PLATFORMS]
         if not platforms:
             platforms = list(SUPPORTED_PLATFORMS)
         payload = {**payload, "platforms": platforms}
 
-        if not GeminiService.configured():
+        if not GeminiService.configured(tenant_id=tenant_id):
             return _fallback_campaign(payload)
 
         media_type = payload.get("media_type") or "image"
@@ -112,7 +112,7 @@ Only include caption/hashtag keys for selected platforms: {platforms}.
 Keep captions native to each platform. Hebrew or English to match the goal language.
 """
         try:
-            data = GeminiService.generate_json(prompt)
+            data = GeminiService.generate_json(prompt, tenant_id=tenant_id)
         except GeminiError:
             return _fallback_campaign(payload)
 

@@ -41,6 +41,8 @@ class SocialStatusView(APIView):
 
     def get(self, request):
         _check(request, self, "automation.view")
+        from ai_seo.application.gemini_service import GeminiService
+
         publisher = get_default_publisher()
         channels = []
         error = ""
@@ -84,6 +86,7 @@ class SocialStatusView(APIView):
         return Response(
             {
                 "buffer_configured": publisher.configured(),
+                "gemini_enabled": GeminiService.enabled(_tenant_id(request)),
                 "channels": channels,
                 # Back-compat for older UI
                 "profiles": channels,
@@ -121,7 +124,7 @@ class CampaignListCreateView(APIView):
             status=CampaignStatus.GENERATING,
         )
         try:
-            generated = CampaignGenerationService.generate(data)
+            generated = CampaignGenerationService.generate(data, tenant_id=tenant_id)
             CampaignService.apply_generation(campaign, generated)
             CampaignService.bootstrap_creatives(
                 campaign,

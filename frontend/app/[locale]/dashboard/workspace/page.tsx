@@ -627,6 +627,7 @@ export default function WorkspacePage() {
   const selectedResearchDomainValues = Array.from(new Set(selectedResearchRows.map((row) => row.category_value).filter(Boolean)));
   const canScheduleResearchJobs = selectedResearchRows.length > 0 && (selectedDomains.length > 0 || selectedResearchDomainValues.length > 0);
   const geminiReady = workspace.data?.gemini_configured;
+  const geminiEnabled = workspace.data?.gemini_enabled !== false;
   const scheduledAutomation = workspace.data?.scheduled_automation ?? null;
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
   const allDomainsSelected = domains.length > 0 && selectedDomains.length === domains.length;
@@ -740,8 +741,14 @@ export default function WorkspacePage() {
 
         {!geminiReady && (
           <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
-            <p className="font-medium text-amber-200">Gemini לא מוגדר ב-backend.</p>
-            <p className="mt-1 text-sm text-amber-100/80">הוסף `GEMINI_API_KEY` ב-Railway ובצע Redeploy.</p>
+            <p className="font-medium text-amber-200">
+              {geminiEnabled ? "Gemini לא מוגדר ב-backend." : "Gemini AI מושבת במתג המערכת."}
+            </p>
+            <p className="mt-1 text-sm text-amber-100/80">
+              {geminiEnabled
+                ? "הוסף `GEMINI_API_KEY` ב-Railway ובצע Redeploy."
+                : "כל יצירת התוכן, האוטומציות והסוכנים המשתמשים ב-Gemini הושהו."}
+            </p>
           </div>
         )}
 

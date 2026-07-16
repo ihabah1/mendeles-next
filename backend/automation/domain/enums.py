@@ -95,6 +95,12 @@ IMPLEMENTED_JOB_TYPES = {
     JobType.TRANSLATE_SITE_PAGES,
 }
 
+GEMINI_JOB_TYPES = {
+    JobType.GENERATE_BLOG_ARTICLE.value,
+    JobType.GENERATE_LANDING_PAGE.value,
+    JobType.TRANSLATE_SITE_PAGES.value,
+}
+
 
 class ScheduleType(models.TextChoices):
     NOW = "now", "Run Now"

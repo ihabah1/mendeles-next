@@ -267,7 +267,7 @@ class MediaGenerationService:
         try:
             from ai_seo.application.gemini_service import GeminiService
 
-            if GeminiService.configured():
+            if GeminiService.configured(tenant_id=campaign.tenant_id):
                 prompt = _campaign_image_prompt(campaign)
                 if require_ai:
                     prompt += (
@@ -277,6 +277,7 @@ class MediaGenerationService:
                     )
                 raw, mime = GeminiService.generate_image(
                     prompt,
+                    tenant_id=campaign.tenant_id,
                     aspect_ratio="1:1",
                 )
                 ext = "png"
@@ -289,7 +290,10 @@ class MediaGenerationService:
                 path.write_bytes(raw)
                 url_public = _public_url(f"social/{filename}")
                 return cls._persist_instagram_url(campaign, url_public)
-            ai_error = "Gemini image generation is not configured."
+            if not GeminiService.enabled(campaign.tenant_id):
+                ai_error = "Gemini AI is disabled by the system feature flag."
+            else:
+                ai_error = "Gemini image generation is not configured."
         except Exception as exc:  # noqa: BLE001 — always fall back to designed SVG
             ai_error = str(exc)
             logger.warning("AI campaign image failed, using designed SVG: %s", exc)
@@ -671,7 +675,11 @@ class MediaGenerationService:
                     website_url=campaign.website_url or "https://mendeles.com",
                     aspect_ratio="9:16",
                     duration_seconds=5,
-                    metadata={"campaign_id": str(campaign.id), "variation": index + 1},
+                    metadata={
+                        "campaign_id": str(campaign.id),
+                        "tenant_id": str(campaign.tenant_id),
+                        "variation": index + 1,
+                    },
                 )
             )
             entry: dict = {

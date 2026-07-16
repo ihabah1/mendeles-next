@@ -20,6 +20,12 @@ const FLAG_LABELS: Record<string, { he: string; en: string; hintHe: string; hint
     hintHe: "הצג או הסתר את כפתור הצ'אט הירוק של WhatsApp בדפי האתר",
     hintEn: "Show or hide the green WhatsApp chat button on public pages",
   },
+  gemini_ai: {
+    he: "Gemini AI — מתג ראשי",
+    en: "Gemini AI — master switch",
+    hintHe: "כיבוי המתג חוסם קריאות Gemini בכל המערכת ומשהה אוטומציות וסוכנים פעילים",
+    hintEn: "Disabling this blocks Gemini calls system-wide and pauses active AI automations and agents",
+  },
 };
 
 type Props = { data: ControlCenterData; locale: string };

@@ -80,6 +80,7 @@ export const socialApi = {
   status: () =>
     apiFetch<{
       buffer_configured: boolean;
+      gemini_enabled: boolean;
       channels?: Array<{
         id: string;
         service: string;

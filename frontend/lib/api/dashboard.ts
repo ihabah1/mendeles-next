@@ -1123,6 +1123,7 @@ export type AiSeoWorkspaceQueueStats = {
 export type AiSeoWorkspace = {
   domains: AiSeoWorkspaceDomain[];
   gemini_configured: boolean;
+  gemini_enabled: boolean;
   jobs: AiSeoWorkspaceJob[];
   drafts: AiSeoWorkspaceDraft[];
   history: AiSeoWorkspaceHistory[];

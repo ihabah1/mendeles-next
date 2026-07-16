@@ -1,9 +1,13 @@
 import pytest
 
-from ai_seo.application.gemini_service import GeminiError, GeminiService
+from ai_seo.application.gemini_service import (
+    GeminiError,
+    GeminiFeatureDisabled,
+    GeminiService,
+)
 
 
-def test_gemini_service_falls_back_after_timeout(settings, monkeypatch):
+def test_gemini_service_falls_back_after_timeout(settings, monkeypatch, tenant):
     settings.GEMINI_API_KEY = "test-key"
     settings.GEMINI_MODEL = "gemini-2.5-flash"
     calls = []
@@ -16,13 +20,13 @@ def test_gemini_service_falls_back_after_timeout(settings, monkeypatch):
 
     monkeypatch.setattr(GeminiService, "_generate_json_with_model", fake_generate)
 
-    result = GeminiService.generate_json("prompt")
+    result = GeminiService.generate_json("prompt", tenant_id=tenant.id)
 
     assert result["title"] == "ok"
     assert calls == ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
 
 
-def test_gemini_service_reports_all_timeout_failures(settings, monkeypatch):
+def test_gemini_service_reports_all_timeout_failures(settings, monkeypatch, tenant):
     settings.GEMINI_API_KEY = "test-key"
     settings.GEMINI_MODEL = "gemini-2.5-flash"
 
@@ -32,13 +36,13 @@ def test_gemini_service_reports_all_timeout_failures(settings, monkeypatch):
     monkeypatch.setattr(GeminiService, "_generate_json_with_model", fake_generate)
 
     with pytest.raises(GeminiError) as exc:
-        GeminiService.generate_json("prompt")
+        GeminiService.generate_json("prompt", tenant_id=tenant.id)
 
     assert "No Gemini model completed generateContent" in str(exc.value)
     assert "gemini-2.5-flash: timeout" in str(exc.value)
 
 
-def test_gemini_generate_image_returns_bytes(settings, monkeypatch):
+def test_gemini_generate_image_returns_bytes(settings, monkeypatch, tenant):
     settings.GEMINI_API_KEY = "test-key"
     settings.GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
 
@@ -48,6 +52,33 @@ def test_gemini_generate_image_returns_bytes(settings, monkeypatch):
         return b"png-bytes", "image/png"
 
     monkeypatch.setattr(GeminiService, "_generate_image_with_model", fake_image)
-    raw, mime = GeminiService.generate_image("Attractive Mendeles campaign ad")
+    raw, mime = GeminiService.generate_image(
+        "Attractive Mendeles campaign ad",
+        tenant_id=tenant.id,
+    )
     assert raw == b"png-bytes"
     assert mime == "image/png"
+
+
+def test_gemini_feature_flag_blocks_api_before_network(settings, monkeypatch, tenant):
+    from siteconfig.infrastructure.models import SystemSetting
+
+    settings.GEMINI_API_KEY = "test-key"
+    SystemSetting.objects.create(
+        tenant=tenant,
+        key="features.gemini_ai",
+        value="false",
+    )
+    called = False
+
+    def fake_generate(api_key, model, prompt):
+        nonlocal called
+        called = True
+        return {"title": "should not run"}
+
+    monkeypatch.setattr(GeminiService, "_generate_json_with_model", fake_generate)
+
+    with pytest.raises(GeminiFeatureDisabled):
+        GeminiService.generate_json("prompt", tenant_id=tenant.id)
+
+    assert called is False

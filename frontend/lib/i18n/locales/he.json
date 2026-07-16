@@ -953,11 +953,11 @@
         "trends": "Google Trends"
       },
       "status": {
-        "connected": "מחובר",
-        "waiting_authorization": "ממתין לאישור",
-        "config_required": "נדרשת הגדרה",
+        "connected": "מחובר ומוכן",
+        "waiting_authorization": "ממתין לאישור Google",
+        "config_required": "נדרשת הגדרת שרת",
         "not_connected": "לא מחובר",
-        "error": "שגיאה"
+        "error": "תקלה — נדרשת בדיקה"
       }
     }
   },
