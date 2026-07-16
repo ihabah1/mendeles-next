@@ -1,3 +1,5 @@
+import base64
+
 from social.application.generation_service import CampaignGenerationService
 from social.providers.base import PLATFORM_ALIASES, PLATFORM_SERVICE_MAP, PublishPayload
 from social.providers.buffer import BufferPublisher
@@ -456,3 +458,29 @@ def test_attach_site_promo_videos(tenant, owner_user, settings):
     ]
     assert campaign.tiktok_video_url == urls[0]
     assert all(v.get("provider") == "site_promo" for v in campaign.tiktok_videos_json)
+
+
+def test_save_browser_rasterized_instagram_png(tenant, owner_user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "https://api.example.test"
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Browser PNG",
+        platforms=["instagram"],
+        status=CampaignStatus.READY,
+    )
+    png_bytes = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 128)
+    data_url = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
+
+    url = MediaGenerationService.save_instagram_png(campaign, data_url=data_url)
+    campaign.refresh_from_db()
+
+    assert url.startswith("https://api.example.test/media/social/")
+    assert url.endswith(".png")
+    assert campaign.instagram_image_url == url
+    assert campaign.media_url == url

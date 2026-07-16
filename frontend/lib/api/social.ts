@@ -132,6 +132,12 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  uploadInstagramPng: (id: string, data_url: string) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/instagram-image/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: { data_url },
+    }),
   uploadTikTokVideo: (id: string, data_url = "") =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {
       method: "POST",

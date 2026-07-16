@@ -286,6 +286,36 @@ class MediaGenerationService:
 
         return cls._create_instagram_svg(campaign)
 
+    @classmethod
+    def save_instagram_png(cls, campaign: SocialCampaign, *, data_url: str) -> str:
+        """Persist a browser-rasterized PNG creative without relying on Gemini."""
+        raw_url = (data_url or "").strip()
+        marker = ";base64,"
+        idx = raw_url.find(marker)
+        if not raw_url.startswith("data:image/png") or idx < 0:
+            raise ValueError("Invalid PNG data URL.")
+
+        try:
+            raw = base64.b64decode(raw_url[idx + len(marker) :], validate=True)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Invalid PNG base64 payload: {exc}") from exc
+
+        if len(raw) < 64 or not raw.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ValueError("Uploaded creative is not a valid PNG file.")
+        if len(raw) > 12 * 1024 * 1024:
+            raise ValueError("PNG creative is too large (max 12MB).")
+
+        filename = f"{campaign.id}-instagram-browser-{uuid.uuid4().hex[:8]}.png"
+        (_media_dir() / filename).write_bytes(raw)
+        url_public = _public_url(f"social/{filename}")
+        logger.info(
+            "instagram_png_uploaded campaign_id=%s bytes=%s url=%s",
+            campaign.id,
+            len(raw),
+            url_public,
+        )
+        return cls._persist_instagram_url(campaign, url_public)
+
     @staticmethod
     def _persist_instagram_url(campaign: SocialCampaign, url_public: str) -> str:
         campaign.instagram_image_url = url_public

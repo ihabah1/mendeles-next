@@ -72,6 +72,66 @@ function isRasterCreative(url: string | null | undefined) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(url);
 }
 
+function browserReadableCreativeUrl(url: string): string {
+  const parsed = new URL(url, window.location.origin);
+  // Django media is exposed through the public same-origin Next.js proxy.
+  if (parsed.pathname.startsWith("/media/")) {
+    return `${parsed.pathname}${parsed.search}`;
+  }
+  return parsed.toString();
+}
+
+async function rasterizeCreativeToPng(url: string): Promise<string> {
+  const response = await fetch(browserReadableCreativeUrl(url), {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`לא ניתן לטעון את הקריאייטיב להמרה (HTTP ${response.status}).`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = objectUrl;
+    await image.decode();
+
+    const width = image.naturalWidth || 1080;
+    const height = image.naturalHeight || 1080;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("הדפדפן לא הצליח לפתוח Canvas להמרת PNG.");
+    context.drawImage(image, 0, 0, width, height);
+
+    const png = canvas.toDataURL("image/png");
+    if (!png.startsWith("data:image/png;base64,")) {
+      throw new Error("המרת SVG ל-PNG נכשלה.");
+    }
+    return png;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function createGuaranteedPng(campaignId: string): Promise<SocialCampaign> {
+  let campaign = await socialApi.createInstagramImage(campaignId);
+  if (isRasterCreative(campaign.instagram_image_url || campaign.media_url)) return campaign;
+
+  const source = campaign.instagram_image_url || campaign.media_url;
+  if (!source) throw new Error("לא נוצר קריאייטיב שאפשר להמיר ל-PNG.");
+
+  const pngDataUrl = await rasterizeCreativeToPng(source);
+  campaign = await socialApi.uploadInstagramPng(campaignId, pngDataUrl);
+  if (!isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
+    throw new Error("השרת לא שמר את תמונת ה-PNG.");
+  }
+  return campaign;
+}
+
 export default function AiAutomationPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("automation.view");
@@ -245,12 +305,7 @@ export default function AiAutomationPage() {
       (platformsSelected.includes("tiktok") && !isPlayableVideo(campaign.tiktok_video_url || ""));
 
     if (needsPng && !isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
-      campaign = await socialApi.createInstagramImage(campaign.id);
-      if (!isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
-        throw new Error(
-          "חסרה תמונת PNG. Create Instagram image חייב להחזיר PNG (לא SVG). בדקו ש-Gemini מוגדר, ואז נסו שוב.",
-        );
-      }
+      campaign = await createGuaranteedPng(campaign.id);
     }
     if (platformsSelected.includes("tiktok")) {
       if (useSitePromoVideos && selectedPromoIds.length > 0) {
@@ -355,7 +410,7 @@ export default function AiAutomationPage() {
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
       await saveEdits.mutateAsync();
-      return socialApi.createInstagramImage(active.id);
+      return createGuaranteedPng(active.id);
     },
     onSuccess: (data) => {
       setActive(data);
@@ -370,13 +425,8 @@ export default function AiAutomationPage() {
     mutationFn: async () => {
       if (!active?.id) throw new Error("No campaign");
       await saveEdits.mutateAsync();
-      let campaign = await socialApi.createInstagramImage(active.id);
+      let campaign = await createGuaranteedPng(active.id);
       setActive(campaign);
-      if (!isRasterCreative(campaign.instagram_image_url || campaign.media_url)) {
-        throw new Error(
-          "Gemini לא החזיר PNG (קיבלנו SVG). בדקו GEMINI_API_KEY בשרת, ואז לחצו שוב על «צור תמונת PNG ותקן».",
-        );
-      }
       if (useSitePromoVideos && selectedPromoIds.length > 0) {
         campaign = await socialApi.attachSitePromoVideos(campaign.id, selectedPromoIds);
         setActive(campaign);

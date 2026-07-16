@@ -240,7 +240,11 @@ class CampaignInstagramImageView(APIView):
         if not campaign:
             raise NotFoundError("Campaign not found.")
         try:
-            MediaGenerationService.create_instagram_image(campaign)
+            data_url = str((request.data or {}).get("data_url") or "").strip()
+            if data_url:
+                MediaGenerationService.save_instagram_png(campaign, data_url=data_url)
+            else:
+                MediaGenerationService.create_instagram_image(campaign)
         except Exception as exc:
             raise ValidationError(str(exc)) from exc
         campaign.simulated_at = None
