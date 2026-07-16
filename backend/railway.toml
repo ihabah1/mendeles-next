@@ -4,7 +4,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh -c 'python manage.py migrate && python manage.py seed_rbac && python manage.py ensure_superuser && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2'"
+startCommand = "python start_backend.py"
 restartPolicyType = "ON_FAILURE"
 healthcheckPath = "/api/v1/health/"
 healthcheckTimeout = 300

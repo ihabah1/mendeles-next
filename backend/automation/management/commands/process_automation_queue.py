@@ -1,6 +1,10 @@
 """Process queued automation jobs."""
 
+import logging
+import time
+
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
 from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 
@@ -10,6 +14,8 @@ from automation.application.worker_service import WorkerService
 from automation.domain.enums import PRIORITY_ORDER, JobStatus, NotificationType
 from automation.infrastructure.models import AutomationJob, AutomationQueue
 
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     help = "Process queued automation jobs (database-backed worker)"
@@ -17,10 +23,56 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--worker-id", type=str, default="")
         parser.add_argument("--limit", type=int, default=5)
+        parser.add_argument(
+            "--watch",
+            action="store_true",
+            help="Keep polling the database instead of exiting after one batch.",
+        )
+        parser.add_argument(
+            "--poll-seconds",
+            type=float,
+            default=15,
+            help="Seconds between queue polls in watch mode (default: 15).",
+        )
 
     def handle(self, *args, **options):
         worker = WorkerService.register_or_heartbeat(options["worker_id"] or None)
-        limit = options["limit"]
+        limit = max(1, options["limit"])
+        watch = bool(options["watch"])
+        poll_seconds = max(1.0, float(options["poll_seconds"]))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Automation worker {worker.worker_id} started "
+                f"({'continuous' if watch else 'single batch'}, limit={limit})"
+            )
+        )
+
+        while True:
+            close_old_connections()
+            try:
+                worker = WorkerService.register_or_heartbeat(worker.worker_id)
+                processed = self._process_batch(worker, limit)
+                if processed or not watch:
+                    self.stdout.write(
+                        self.style.SUCCESS(f"Processed {processed} job(s) as {worker.worker_id}")
+                    )
+            except Exception as exc:  # noqa: BLE001 — a worker must survive a bad poll
+                logger.exception("automation_worker_poll_failed worker_id=%s", worker.worker_id)
+                self.stderr.write(
+                    self.style.ERROR(
+                        f"Worker poll failed ({type(exc).__name__}): {exc}"
+                    )
+                )
+                close_old_connections()
+                if not watch:
+                    raise
+
+            if not watch:
+                return
+            time.sleep(poll_seconds)
+
+    @staticmethod
+    def _process_batch(worker, limit: int) -> int:
         AutomationJob.objects.filter(
             status=JobStatus.SCHEDULED,
             scheduled_at__lte=timezone.now(),
@@ -80,4 +132,4 @@ class Command(BaseCommand):
 
         worker.last_heartbeat = timezone.now()
         worker.save(update_fields=["last_heartbeat", "updated_at"])
-        self.stdout.write(self.style.SUCCESS(f"Processed {processed} job(s) as {worker.worker_id}"))
+        return processed
