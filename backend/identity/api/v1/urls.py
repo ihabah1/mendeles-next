@@ -3,6 +3,9 @@ from django.urls import path
 from identity.api.v1.views import (
     EmailStatusView,
     ForgotPasswordView,
+    GoogleLoginCallbackView,
+    GoogleLoginCompleteView,
+    GoogleLoginStartView,
     LoginView,
     LogoutView,
     MeView,
@@ -16,6 +19,9 @@ from identity.api.v1.views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="auth-register"),
     path("login/", LoginView.as_view(), name="auth-login"),
+    path("google/", GoogleLoginStartView.as_view(), name="auth-google-start"),
+    path("google/callback/", GoogleLoginCallbackView.as_view(), name="auth-google-callback"),
+    path("google/complete/", GoogleLoginCompleteView.as_view(), name="auth-google-complete"),
     path("refresh/", RefreshView.as_view(), name="auth-refresh"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("me/", MeView.as_view(), name="auth-me"),

@@ -329,6 +329,12 @@
     "missingVerifyToken": "Missing verification token",
     "resendVerification": "Resend verification email",
     "goToLogin": "Go to login"
+    "continueWithGoogle": "Continue with Google",
+    "orContinueWithEmail": "or continue with email",
+    "googleSigningIn": "Signing in with Google…",
+    "googlePleaseWait": "One moment while we finish signing you in.",
+    "googleMissingTicket": "Missing Google sign-in ticket",
+    "googleUnavailable": "Google sign-in is not available right now"
   },
   "nav": {
     "dashboard": "Dashboard",

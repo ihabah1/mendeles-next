@@ -1,3 +1,6 @@
+from django.http import HttpResponseRedirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +11,7 @@ from core.ratelimit import enforce_rate_limit
 from identity.api.cookies import clear_refresh_cookie, get_refresh_from_request, set_refresh_cookie
 from identity.api.v1.serializers import (
     ForgotPasswordSerializer,
+    GoogleLoginCompleteSerializer,
     LoginSerializer,
     RegisterSerializer,
     ResendVerificationSerializer,
@@ -16,6 +20,12 @@ from identity.api.v1.serializers import (
     VerifyEmailSerializer,
 )
 from identity.application.auth_service import AuthService
+from identity.application.google_login_service import (
+    GoogleLoginError,
+    GoogleLoginService,
+    frontend_google_callback_url,
+    google_login_configured,
+)
 
 
 class RegisterView(APIView):
@@ -51,6 +61,77 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = AuthService.login(request=request, **serializer.validated_data)
+        response = Response(
+            {
+                "access": result["access"],
+                "expires_in": result["expires_in"],
+                "user": result["user"],
+            }
+        )
+        set_refresh_cookie(response, result["refresh"])
+        return response
+
+
+class GoogleLoginStartView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {
+                "configured": google_login_configured(),
+            }
+        )
+
+    def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-google-start", rate="30/m"):
+            return blocked
+        try:
+            result = GoogleLoginService.begin()
+        except GoogleLoginError as exc:
+            return Response(
+                {"error": {"code": "google_login_unavailable", "message": str(exc), "details": {}}},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(result)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class GoogleLoginCallbackView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        error = request.query_params.get("error", "")
+        if error:
+            return HttpResponseRedirect(frontend_google_callback_url(error=error))
+        state = request.query_params.get("state", "")
+        code = request.query_params.get("code", "")
+        if not state or not code:
+            return HttpResponseRedirect(frontend_google_callback_url(error="missing_code"))
+        try:
+            ticket = GoogleLoginService.handle_callback(state=state, code=code)
+        except GoogleLoginError as exc:
+            return HttpResponseRedirect(frontend_google_callback_url(error=str(exc)))
+        return HttpResponseRedirect(frontend_google_callback_url(ticket=ticket))
+
+
+class GoogleLoginCompleteView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if blocked := enforce_rate_limit(request, group="auth-google-complete", rate="30/m"):
+            return blocked
+        serializer = GoogleLoginCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = GoogleLoginService.complete(
+                ticket=serializer.validated_data["ticket"],
+                request=request,
+            )
+        except GoogleLoginError as exc:
+            return Response(
+                {"error": {"code": "google_login_failed", "message": str(exc), "details": {}}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         response = Response(
             {
                 "access": result["access"],

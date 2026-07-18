@@ -42,6 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name="users",
     )
     preferred_locale = models.CharField(max_length=10, default="he")
+    google_sub = models.CharField(max_length=255, blank=True, null=True, unique=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -58,6 +59,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=["email"]),
             models.Index(fields=["default_tenant"]),
             models.Index(fields=["deleted_at"]),
+            models.Index(fields=["google_sub"]),
         ]
 
     @property
@@ -71,9 +73,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         if len(freed_email) > 255:
             freed_email = f"deleted.{self.id.hex}@purged.local"
         self.email = freed_email
+        self.google_sub = None
         self.deleted_at = timezone.now()
         self.is_active = False
-        self.save(update_fields=["email", "deleted_at", "is_active", "updated_at"])
+        self.save(update_fields=["email", "google_sub", "deleted_at", "is_active", "updated_at"])
 
     def __str__(self) -> str:
         return self.email
@@ -160,3 +163,24 @@ class RefreshToken(models.Model):
         from django.utils import timezone
 
         return self.revoked_at is None and self.expires_at > timezone.now()
+
+
+class OAuthLoginState(models.Model):
+    """Short-lived Google Sign-In state + one-time completion ticket."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    state = models.CharField(max_length=64, unique=True, db_index=True)
+    ticket = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="oauth_login_states",
+    )
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "oauth_login_states"

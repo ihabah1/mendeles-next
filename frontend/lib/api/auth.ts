@@ -46,6 +46,20 @@ export const authApi = {
       json: body,
     }),
 
+  googleStatus: () =>
+    apiFetch<{ configured: boolean }>("/api/v1/auth/google/"),
+
+  googleStart: () =>
+    apiFetch<{ auth_url: string; configured: boolean }>("/api/v1/auth/google/", {
+      method: "POST",
+    }),
+
+  googleComplete: (ticket: string) =>
+    apiFetch<{ access: string; expires_in: number; user: AuthUser }>("/api/v1/auth/google/complete/", {
+      method: "POST",
+      json: { ticket },
+    }),
+
   refresh: () =>
     apiFetch<{ access: string; expires_in: number }>("/api/v1/auth/refresh/", { method: "POST" }),
 

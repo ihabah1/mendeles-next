@@ -14,6 +14,10 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+class GoogleLoginCompleteSerializer(serializers.Serializer):
+    ticket = serializers.CharField(max_length=128)
+
+
 class VerifyEmailSerializer(serializers.Serializer):
     token = serializers.CharField()
 

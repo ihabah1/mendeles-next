@@ -8,6 +8,7 @@ type AuthState = {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  completeGoogleLogin: (ticket: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   hasPermission: (perm: string) => boolean;
@@ -41,6 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }, []);
 
+  const completeGoogleLogin = useCallback(async (ticket: string) => {
+    const res = await authApi.googleComplete(ticket);
+    setAccessToken(res.access);
+    setUser(res.user);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -55,12 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       login,
+      completeGoogleLogin,
       logout,
       refreshSession,
       hasPermission: (perm: string) =>
         !!(user?.permissions.includes(perm) || user?.roles.includes("super_admin")),
     }),
-    [user, loading, login, logout, refreshSession],
+    [user, loading, login, completeGoogleLogin, logout, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
