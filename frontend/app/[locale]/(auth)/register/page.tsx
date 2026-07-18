@@ -70,13 +70,8 @@ export default function RegisterPage() {
       <Card className="w-full">
         <h1 className="mb-2 text-2xl font-bold">{t("register")}</h1>
         <p className="mb-6 text-sm text-slate-500">{t("registerHint")}</p>
-        <div className="mb-4 space-y-3">
+        <div className="mb-4">
           <GoogleSignInButton onError={setError} />
-          <div className="flex items-center gap-3 text-xs text-[var(--muted-fg)]">
-            <span className="h-px flex-1 bg-[var(--border)]" />
-            <span>{t("orContinueWithEmail")}</span>
-            <span className="h-px flex-1 bg-[var(--border)]" />
-          </div>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
           {FIELDS.map(({ key, type, autoComplete }) => (

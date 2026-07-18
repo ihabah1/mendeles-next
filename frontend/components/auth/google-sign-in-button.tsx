@@ -31,7 +31,9 @@ export function GoogleSignInButton({ onError }: Props) {
     };
   }, []);
 
-  if (configured === false) return null;
+  // Render nothing until the server confirms Google Sign-In is configured,
+  // so the button never flashes and then disappears.
+  if (configured !== true) return null;
 
   async function startGoogleLogin() {
     setLoading(true);
@@ -46,16 +48,23 @@ export function GoogleSignInButton({ onError }: Props) {
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      disabled={loading || configured === null}
-      onClick={startGoogleLogin}
-      className="flex w-full items-center justify-center gap-2 border-[var(--border)] bg-white text-slate-800 hover:bg-slate-50 dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--muted)]"
-    >
-      <GoogleGlyph />
-      {loading ? "…" : t("continueWithGoogle")}
-    </Button>
+    <div className="space-y-3">
+      <Button
+        type="button"
+        variant="outline"
+        disabled={loading}
+        onClick={startGoogleLogin}
+        className="flex w-full items-center justify-center gap-2 border-[var(--border)] bg-white text-slate-800 hover:bg-slate-50 dark:bg-transparent dark:text-[var(--foreground)] dark:hover:bg-[var(--muted)]"
+      >
+        <GoogleGlyph />
+        {loading ? "…" : t("continueWithGoogle")}
+      </Button>
+      <div className="flex items-center gap-3 text-xs text-[var(--muted-fg)]">
+        <span className="h-px flex-1 bg-[var(--border)]" />
+        <span>{t("orContinueWithEmail")}</span>
+        <span className="h-px flex-1 bg-[var(--border)]" />
+      </div>
+    </div>
   );
 }
 

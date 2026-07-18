@@ -56,9 +56,10 @@ def google_login_client_secret() -> str:
 
 
 def google_login_redirect_uri() -> str:
-    explicit = getattr(settings, "GOOGLE_LOGIN_REDIRECT_URI", "").strip().rstrip("/")
+    """Return the OAuth redirect URI. Always with a trailing slash (Django URL)."""
+    explicit = getattr(settings, "GOOGLE_LOGIN_REDIRECT_URI", "").strip()
     if explicit:
-        return explicit
+        return explicit.rstrip("/") + "/"
     backend = getattr(settings, "BACKEND_PUBLIC_URL", "").rstrip("/")
     if backend:
         return f"{backend}/api/v1/auth/google/callback/"
