@@ -328,7 +328,7 @@
     "missingToken": "Missing token",
     "missingVerifyToken": "Missing verification token",
     "resendVerification": "Resend verification email",
-    "goToLogin": "Go to login"
+    "goToLogin": "Go to login",
     "continueWithGoogle": "Continue with Google",
     "orContinueWithEmail": "or continue with email",
     "googleSigningIn": "Signing in with Google…",

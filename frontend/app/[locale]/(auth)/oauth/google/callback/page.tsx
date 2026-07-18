@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { getAuthErrorMessage, useAuth } from "@/lib/auth/auth-context";
 
-export default function GoogleOAuthCallbackPage() {
+function GoogleOAuthCallbackInner() {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -66,5 +66,18 @@ export default function GoogleOAuthCallbackPage() {
         ) : null}
       </Card>
     </div>
+  );
+}
+
+export default function GoogleOAuthCallbackPage() {
+  const tc = useTranslations("common");
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">{tc("loading")}</div>
+      }
+    >
+      <GoogleOAuthCallbackInner />
+    </Suspense>
   );
 }

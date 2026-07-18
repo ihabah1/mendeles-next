@@ -486,7 +486,7 @@
     "missingToken": "رمز مفقود",
     "missingVerifyToken": "رمز التحقق مفقود",
     "resendVerification": "إعادة إرسال البريد الإلكتروني للتحقق",
-    "goToLogin": "اذهب لتسجيل الدخول"
+    "goToLogin": "اذهب لتسجيل الدخول",
     "continueWithGoogle": "Continue with Google",
     "orContinueWithEmail": "or continue with email",
     "googleSigningIn": "Signing in with Google…",
