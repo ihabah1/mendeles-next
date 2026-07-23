@@ -55,11 +55,26 @@ def google_login_client_secret() -> str:
     ).strip()
 
 
+def _frontend_oauth_callback_path() -> str:
+    base = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    return f"{base}/oauth/google/callback" if base else ""
+
+
 def google_login_redirect_uri() -> str:
-    """Return the OAuth redirect URI. Always with a trailing slash (Django URL)."""
+    """OAuth redirect URI — frontend callback on the public site domain.
+
+    Google Console must list this exact URI. Legacy backend callback URLs are
+    rewritten to the frontend path so Railway hosts are not required in Console.
+    """
     explicit = getattr(settings, "GOOGLE_LOGIN_REDIRECT_URI", "").strip()
+    frontend = _frontend_oauth_callback_path()
     if explicit:
-        return explicit.rstrip("/") + "/"
+        normalized = explicit.rstrip("/")
+        if "/api/v1/auth/google/callback" in normalized and frontend:
+            return frontend
+        return normalized
+    if frontend:
+        return frontend
     backend = getattr(settings, "BACKEND_PUBLIC_URL", "").rstrip("/")
     if backend:
         return f"{backend}/api/v1/auth/google/callback/"
@@ -71,8 +86,7 @@ def google_login_configured() -> bool:
 
 
 def frontend_google_callback_url(*, error: str = "", ticket: str = "") -> str:
-    base = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
-    path = f"{base}/oauth/google/callback"
+    path = _frontend_oauth_callback_path() or "http://localhost:3000/oauth/google/callback"
     params: dict[str, str] = {}
     if error:
         params["error"] = error[:200]
@@ -107,20 +121,21 @@ class GoogleLoginService:
         if not google_login_configured():
             raise GoogleLoginError("Google Sign-In is not configured on the server.")
         state = secrets.token_urlsafe(24)
-        OAuthLoginState.objects.create(
-            state=state,
-            expires_at=timezone.now() + STATE_TTL,
-        )
         flow = cls._flow()
         auth_url, _ = flow.authorization_url(
             access_type="online",
-            include_granted_scopes="true",
             prompt="select_account",
             state=state,
+        )
+        OAuthLoginState.objects.create(
+            state=state,
+            code_verifier=getattr(flow, "code_verifier", None) or "",
+            expires_at=timezone.now() + STATE_TTL,
         )
         return {
             "auth_url": auth_url,
             "configured": True,
+            "redirect_uri": google_login_redirect_uri(),
         }
 
     @classmethod
@@ -131,6 +146,8 @@ class GoogleLoginService:
             raise GoogleLoginError("Invalid or expired Google sign-in state.")
 
         flow = cls._flow()
+        if record.code_verifier:
+            flow.code_verifier = record.code_verifier
         try:
             flow.fetch_token(code=code)
         except Exception as exc:  # noqa: BLE001

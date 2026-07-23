@@ -25,6 +25,7 @@ from identity.application.google_login_service import (
     GoogleLoginService,
     frontend_google_callback_url,
     google_login_configured,
+    google_login_redirect_uri,
 )
 
 
@@ -79,6 +80,7 @@ class GoogleLoginStartView(APIView):
         return Response(
             {
                 "configured": google_login_configured(),
+                "redirect_uri": google_login_redirect_uri() if google_login_configured() else "",
             }
         )
 
@@ -122,11 +124,13 @@ class GoogleLoginCompleteView(APIView):
             return blocked
         serializer = GoogleLoginCompleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         try:
-            result = GoogleLoginService.complete(
-                ticket=serializer.validated_data["ticket"],
-                request=request,
-            )
+            if data.get("ticket"):
+                result = GoogleLoginService.complete(ticket=data["ticket"], request=request)
+            else:
+                ticket = GoogleLoginService.handle_callback(state=data["state"], code=data["code"])
+                result = GoogleLoginService.complete(ticket=ticket, request=request)
         except GoogleLoginError as exc:
             return Response(
                 {"error": {"code": "google_login_failed", "message": str(exc), "details": {}}},

@@ -15,7 +15,25 @@ class LoginSerializer(serializers.Serializer):
 
 
 class GoogleLoginCompleteSerializer(serializers.Serializer):
-    ticket = serializers.CharField(max_length=128)
+    ticket = serializers.CharField(max_length=128, required=False, allow_blank=True)
+    code = serializers.CharField(max_length=2048, required=False, allow_blank=True)
+    state = serializers.CharField(max_length=128, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        ticket = (attrs.get("ticket") or "").strip()
+        code = (attrs.get("code") or "").strip()
+        state = (attrs.get("state") or "").strip()
+        if ticket:
+            attrs["ticket"] = ticket
+            attrs.pop("code", None)
+            attrs.pop("state", None)
+            return attrs
+        if code and state:
+            attrs["code"] = code
+            attrs["state"] = state
+            attrs.pop("ticket", None)
+            return attrs
+        raise serializers.ValidationError("Provide ticket, or code and state.")
 
 
 class VerifyEmailSerializer(serializers.Serializer):

@@ -171,6 +171,7 @@ class OAuthLoginState(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     state = models.CharField(max_length=64, unique=True, db_index=True)
     ticket = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    code_verifier = models.CharField(max_length=128, blank=True, default="")
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

@@ -19,12 +19,23 @@ function GoogleOAuthCallbackInner() {
   useEffect(() => {
     const oauthError = searchParams.get("error");
     const ticket = searchParams.get("ticket");
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
+
     if (oauthError) {
       setError(oauthError);
       setLoading(false);
       return;
     }
-    if (!ticket) {
+
+    const payload =
+      ticket
+        ? { ticket }
+        : code && state
+          ? { code, state }
+          : null;
+
+    if (!payload) {
       setError(t("googleMissingTicket"));
       setLoading(false);
       return;
@@ -33,7 +44,7 @@ function GoogleOAuthCallbackInner() {
     let cancelled = false;
     (async () => {
       try {
-        await completeGoogleLogin(ticket);
+        await completeGoogleLogin(payload);
         if (!cancelled) router.replace("/dashboard");
       } catch (err) {
         if (!cancelled) {
