@@ -43,6 +43,13 @@ class PublishCampaignSerializer(serializers.Serializer):
     mode = serializers.ChoiceField(choices=["now", "schedule"], default="now")
     scheduled_at = serializers.CharField(required=False, allow_blank=True, default="")
     timezone = serializers.CharField(required=False, allow_blank=True, default="Asia/Jerusalem")
+    auto_release = serializers.BooleanField(required=False, default=False)
+
+
+class PlatformMediaUploadSerializer(serializers.Serializer):
+    platform = serializers.ChoiceField(choices=[(p, p) for p in SUPPORTED_PLATFORMS])
+    kind = serializers.ChoiceField(choices=["image", "video"])
+    data_url = serializers.CharField(required=True, allow_blank=False)
 
 
 class TikTokVideoUploadSerializer(serializers.Serializer):

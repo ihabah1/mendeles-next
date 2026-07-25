@@ -515,9 +515,11 @@ def test_manual_campaign_video_can_replace_instagram_image(tenant, owner_user, s
 
     assert url.endswith(".mp4")
     assert campaign.instagram_media_type == "video"
+    assert campaign.instagram_video_url == url
     assert campaign.tiktok_videos_json[-1]["provider"] == "manual"
     serialized = CampaignService.serialize(campaign)
     assert serialized["campaign_video_url"] == url
+    assert serialized["instagram_video_url"] == url
 
     simulated = CampaignService.run_simulation(campaign)
     assert simulated["status"] == CampaignStatus.SIMULATED
@@ -627,3 +629,121 @@ def test_save_browser_rasterized_instagram_png(tenant, owner_user, settings, tmp
     assert url.endswith(".png")
     assert campaign.instagram_image_url == url
     assert campaign.media_url == url
+
+
+def test_save_platform_media_per_network(tenant, owner_user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "https://api.example.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
+
+    from django.utils import timezone
+
+    from social.application.campaign_service import CampaignService
+    from social.application.media_service import MediaGenerationService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Per platform",
+        website_url="https://mendeles.com",
+        platforms=["linkedin", "instagram", "tiktok"],
+        captions_json={
+            "linkedin": "LI",
+            "instagram": "IG",
+            "tiktok": "TT",
+        },
+        status=CampaignStatus.SIMULATED,
+        simulated_at=timezone.now(),
+    )
+    png = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 128)
+    png_url = "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+    mp4 = b"\x00\x00\x00\x18ftypmp42" + (b"\x00" * 128)
+    mp4_url = "data:video/mp4;base64," + base64.b64encode(mp4).decode("ascii")
+
+    MediaGenerationService.save_platform_media(
+        campaign, platform="linkedin", kind="image", data_url=png_url
+    )
+    MediaGenerationService.save_platform_media(
+        campaign, platform="instagram", kind="video", data_url=mp4_url
+    )
+    MediaGenerationService.save_platform_media(
+        campaign, platform="tiktok", kind="video", data_url=mp4_url
+    )
+    campaign.refresh_from_db()
+
+    assert campaign.linkedin_image_url.endswith(".png")
+    assert campaign.instagram_video_url.endswith(".mp4")
+    assert campaign.instagram_media_type == "video"
+    assert campaign.tiktok_video_url.endswith(".mp4")
+    assert campaign.simulated_at is None
+
+    serialized = CampaignService.serialize(campaign)
+    assert serialized["linkedin_image_url"]
+    assert serialized["instagram_video_url"]
+    assert serialized["tiktok_video_url"]
+
+
+def test_auto_release_runs_simulation_then_schedules(tenant, owner_user, settings, tmp_path, monkeypatch):
+    settings.MEDIA_ROOT = tmp_path
+    settings.BACKEND_PUBLIC_URL = "https://api.example.test"
+    settings.FRONTEND_URL = "https://mendeles.com"
+    settings.BUFFER_ACCESS_TOKEN = "token"
+
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+    from social.providers.base import PublishResult
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Auto release",
+        website_url="https://mendeles.com",
+        platforms=["linkedin"],
+        captions_json={"linkedin": "Hello LinkedIn"},
+        linkedin_image_url="https://mendeles.com/media/social/li.png",
+        media_url="https://mendeles.com/media/social/li.png",
+        status=CampaignStatus.READY,
+    )
+
+    class FakePublisher:
+        def configured(self):
+            return True
+
+        def publish(self, payload):
+            assert payload.scheduled_at_iso
+            return PublishResult(ok=True, platform="linkedin", external_id="buf-1", channel_name="linkedin")
+
+    monkeypatch.setattr(
+        "social.application.campaign_service.get_default_publisher",
+        lambda: FakePublisher(),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.is_real_raster_image_url",
+        lambda url: bool(url) and url.endswith(".png"),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.public_media_url_for_buffer",
+        lambda url: url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_buffer_image_url",
+        lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.campaign_service.CampaignService.bootstrap_creatives",
+        lambda campaign, tiktok_count=5: campaign,
+    )
+
+    result = CampaignService.publish(
+        campaign,
+        schedule=True,
+        scheduled_at="2030-01-15T10:00:00Z",
+        tz_name="Asia/Jerusalem",
+        auto_release=True,
+    )
+    assert result["status"] == CampaignStatus.SCHEDULED
+    assert result["simulated_at"]
+    assert result["buffer_update_ids"].get("linkedin") == "buf-1"

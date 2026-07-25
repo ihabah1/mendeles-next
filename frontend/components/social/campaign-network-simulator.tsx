@@ -95,7 +95,7 @@ export function CampaignNetworkSimulator({ campaign, platforms, className }: Pro
         {showLinkedIn ? (
           <figure className="space-y-2">
             <figcaption className="text-center text-xs font-bold uppercase tracking-wide text-[#0A66C2]">
-              LinkedIn · כך יופיע בפיד
+              LinkedIn · {campaign.linkedin_video_url ? "כך יופיע עם וידאו" : "כך יופיע בפיד"}
             </figcaption>
             <LinkedInPreview campaign={campaign} />
           </figure>

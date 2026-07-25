@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ async function videoFileToDataUrl(file: File): Promise<string> {
     file.type ||
     (extension === "mov" ? "video/quicktime" : extension === "mp4" ? "video/mp4" : "");
   if (!["video/mp4", "video/quicktime"].includes(mime)) {
-    throw new Error("לאינסטגרם ניתן להעלות קובץ MP4 או MOV בלבד.");
+    throw new Error("ניתן להעלות קובץ וידאו MP4 או MOV בלבד.");
   }
   if (file.size > 25 * 1024 * 1024) {
     throw new Error("קובץ הווידאו גדול מדי. הגודל המרבי הוא 25MB.");
@@ -135,6 +135,24 @@ async function videoFileToDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => reject(new Error("קריאת קובץ הווידאו נכשלה."));
     reader.readAsDataURL(new Blob([file], { type: mime }));
+  });
+}
+
+async function imageFileToDataUrl(file: File): Promise<string> {
+  const mime = file.type || "";
+  if (!["image/png", "image/jpeg", "image/webp"].includes(mime)) {
+    throw new Error("ניתן להעלות תמונת PNG, JPEG או WebP בלבד.");
+  }
+  if (file.size > 12 * 1024 * 1024) {
+    throw new Error("קובץ התמונה גדול מדי. הגודל המרבי הוא 12MB.");
+  }
+  if (file.size < 64) throw new Error("קובץ התמונה ריק או לא תקין.");
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("קריאת קובץ התמונה נכשלה."));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -181,7 +199,6 @@ export default function AiAutomationPage() {
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [manualVideoName, setManualVideoName] = useState("");
-  const manualVideoInputRef = useRef<HTMLInputElement>(null);
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -220,6 +237,7 @@ export default function AiAutomationPage() {
 
   function bestInstagramVideoUrl(campaign: SocialCampaign | null | undefined) {
     if (!campaign) return "";
+    if (isBufferVideo(campaign.instagram_video_url || "")) return campaign.instagram_video_url || "";
     if (isBufferVideo(campaign.campaign_video_url || campaign.tiktok_video_url || "")) {
       return campaign.campaign_video_url || campaign.tiktok_video_url;
     }
@@ -228,6 +246,22 @@ export default function AiAutomationPage() {
         .reverse()
         .find((video) => isBufferVideo(video.url))?.url || ""
     );
+  }
+
+  function platformImageUrl(campaign: SocialCampaign, platform: SocialPlatform) {
+    if (platform === "linkedin") {
+      return campaign.linkedin_image_url || campaign.instagram_image_url || campaign.media_url || "";
+    }
+    if (platform === "instagram") {
+      return campaign.instagram_image_url || campaign.media_url || "";
+    }
+    return campaign.media_url || campaign.instagram_image_url || "";
+  }
+
+  function platformVideoUrl(campaign: SocialCampaign, platform: SocialPlatform) {
+    if (platform === "linkedin") return campaign.linkedin_video_url || "";
+    if (platform === "instagram") return bestInstagramVideoUrl(campaign);
+    return bestTikTokVideoUrl(campaign);
   }
 
   function pushLocalLog(message: string, level = "info") {
@@ -481,22 +515,76 @@ export default function AiAutomationPage() {
     onError: (err: Error) => setError(err.message || "יצירת תמונת AI נכשלה"),
   });
 
-  const uploadManualVideo = useMutation({
-    mutationFn: async (file: File) => {
+  const uploadPlatformMedia = useMutation({
+    mutationFn: async (input: { platform: SocialPlatform; kind: "image" | "video"; file: File }) => {
       if (!active?.id) throw new Error("No campaign");
-      const dataUrl = await videoFileToDataUrl(file);
-      setManualVideoName(file.name);
-      return socialApi.uploadCampaignVideo(active.id, dataUrl, true);
+      const data_url =
+        input.kind === "video"
+          ? await videoFileToDataUrl(input.file)
+          : await imageFileToDataUrl(input.file);
+      setManualVideoName(input.file.name);
+      return socialApi.uploadPlatformMedia(active.id, {
+        platform: input.platform,
+        kind: input.kind,
+        data_url,
+      });
     },
     onSuccess: (data) => {
       setActive(data);
-      setMediaType("video");
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       setError("");
     },
+    onError: (err: Error) => setError(err.message || "העלאת המדיה נכשלה"),
+  });
+
+  const autoRelease = useMutation({
+    mutationFn: async () => {
+      if (!scheduleDate) throw new Error("בחרו תאריך ושעה לתזמון האוטומטי.");
+      if (!goal.trim() || platforms.length === 0) {
+        throw new Error("מלאו מטרה ובחרו לפחות רשת אחת.");
+      }
+      setPublishStep(0);
+      let campaign = active?.id ? active : null;
+      if (!campaign?.id) {
+        campaign = await socialApi.generate({
+          goal,
+          campaign_type: campaignType,
+          tone,
+          target_audience: audience,
+          website_url: websiteUrl,
+          media_type: mediaType,
+          platforms,
+          tiktok_video_count: platforms.includes("tiktok") ? tiktokCount : undefined,
+        });
+        setActive(campaign);
+      }
+      const scheduledAt = new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString();
+      setPublishStep(2);
+      return socialApi.publish({
+        campaign_id: campaign.id,
+        mode: "schedule",
+        scheduled_at: scheduledAt,
+        timezone,
+        auto_release: true,
+      });
+    },
+    onSuccess: (data) => {
+      setActive(data);
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      if (data.status === "failed") {
+        setPublishStep(-1);
+        setError(data.last_error || "התזמון האוטומטי נכשל");
+        if (!data.simulated_at) setWizardStep(3);
+        else setWizardStep(4);
+      } else {
+        setPublishStep(PUBLISH_STEPS.length - 1);
+        setError("");
+        setWizardStep(4);
+      }
+    },
     onError: (err: Error) => {
-      setManualVideoName("");
-      setError(err.message || "העלאת הווידאו נכשלה");
+      setPublishStep(-1);
+      setError(err.message || "התזמון האוטומטי נכשל");
     },
   });
 
@@ -722,15 +810,15 @@ export default function AiAutomationPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6F42F5]">Automation</p>
           <h1 className="text-3xl font-extrabold tracking-tight">אוטומציית קמפיין</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted-fg)]">
-            ארבעה שלבים פשוטים: יצירה → קריאייטיבים → סימולציה → שליחה.
+            פלואו פשוט: יצירת תוכן → מדיה לפי רשת → סימולציה → אישור ושחרור. או תזמון אוטומטי בלחיצה אחת.
           </p>
         </div>
         <nav className="grid gap-2 sm:grid-cols-4" aria-label="שלבי קמפיין">
           {[
-            { n: 1 as const, label: "יצירה", hint: "פרטי הקמפיין" },
-            { n: 2 as const, label: "קריאייטיבים", hint: "תמונה + טיקטוק" },
+            { n: 1 as const, label: "תוכן", hint: "יצירה / טעינה" },
+            { n: 2 as const, label: "מדיה", hint: "תמונה/וידאו לרשת" },
             { n: 3 as const, label: "סימולציה", hint: "תצוגה מקדימה" },
-            { n: 4 as const, label: "שליחה", hint: "פרסום לרשת" },
+            { n: 4 as const, label: "אישור ושחרור", hint: "פרסום או תזמון" },
           ].map((s) => {
             const locked = s.n > 1 && !hasCampaign;
             const done =
@@ -847,7 +935,7 @@ export default function AiAutomationPage() {
 
       {/* STEP 1 — Generate (was below; keep id for scroll) */}
       <section id="campaign-generate" className={cn("space-y-4", wizardStep !== 1 && "hidden")}>
-        <h2 className="text-xl font-bold">1 · יצירת קמפיין</h2>
+        <h2 className="text-xl font-bold">1 · יצירת תוכן</h2>
         <Card className="space-y-4 !rounded-2xl">
           <label className="block text-sm font-medium">
             Campaign Goal
@@ -971,9 +1059,60 @@ export default function AiAutomationPage() {
             </Button>
             {hasCampaign ? (
               <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(2)}>
-                המשך לקריאייטיבים →
+                המשך למדיה →
               </Button>
             ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-emerald-300/60 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p className="font-bold text-emerald-900 dark:text-emerald-100">תזמון קמפיין אוטומטי</p>
+            <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-200/80">
+              לחיצה אחת: יוצר תוכן (אם צריך), מריץ סימולציה ברקע ומתזמן — בלי לעבור על שלבי אישור ידניים.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <label className="block text-sm font-medium">
+                תאריך
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                שעה
+                <input
+                  type="time"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                אזור זמן
+                <input
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                />
+              </label>
+            </div>
+            <Button
+              type="button"
+              disabled={
+                !canManage ||
+                !goal.trim() ||
+                platforms.length === 0 ||
+                !scheduleDate ||
+                generate.isPending ||
+                autoRelease.isPending ||
+                publish.isPending
+              }
+              onClick={() => autoRelease.mutate()}
+              className="mt-3 rounded-full bg-emerald-600 px-6 font-bold text-white hover:bg-emerald-700"
+            >
+              {autoRelease.isPending ? "מתזמן אוטומטית…" : "תזמן קמפיין אוטומטית"}
+            </Button>
           </div>
 
           {generating ? (
@@ -987,15 +1126,17 @@ export default function AiAutomationPage() {
         </Card>
       </section>
 
-      {/* STEP 2 — Creatives + edit */}
+      {/* STEP 2 — Per-platform media + captions */}
       <div className={cn(wizardStep !== 2 && "hidden")}>
       {hasCampaign && active ? (
         <>
           <section className="mb-4 space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold">2 · קריאייטיבים</h2>
-                <p className="text-sm text-[var(--muted-fg)]">תמונת PNG לשליחה + סרטון טיקטוק (תדמית או יצירה).</p>
+                <h2 className="text-xl font-bold">2 · מדיה לפי רשת</h2>
+                <p className="text-sm text-[var(--muted-fg)]">
+                  טענו תמונה או סרטון בנפרד לכל רשת שנבחרה. אפשר גם ליצור PNG ב־AI לאינסטגרם.
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(1)}>
@@ -1007,137 +1148,165 @@ export default function AiAutomationPage() {
               </div>
             </div>
 
-            <Card className="space-y-4 !rounded-2xl">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
-                <div>
-                  <p className="font-bold">תמונת קמפיין מעוצבת</p>
-                  <p className="text-xs text-[var(--muted-fg)]">
-                    צרו תמונה ייחודית ב־AI לפי הקמפיין, או PNG מעוצב כגיבוי.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    disabled={!canManage || !geminiEnabled || createAiImage.isPending || saveEdits.isPending}
-                    onClick={() => createAiImage.mutate()}
-                    className="rounded-full bg-[#6F42F5] font-bold text-white hover:bg-[#5a32d4]"
-                  >
-                    {createAiImage.isPending
-                      ? "מעצב תמונה ב־AI…"
-                      : geminiEnabled
-                        ? "✨ צור תמונה ייחודית ב־AI"
-                        : "Gemini AI מושבת"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!canManage || createIgImage.isPending || createAiImage.isPending}
-                    onClick={() => createIgImage.mutate()}
-                    className="rounded-full"
-                  >
-                    {createIgImage.isPending ? "יוצר PNG…" : hasPng ? "רענן PNG" : "צור PNG מעוצב"}
-                  </Button>
-                </div>
-              </div>
-              <label className="block text-sm font-medium">
-                כיוון עיצובי לתמונה
-                <textarea
-                  className="mt-1 min-h-20 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                  value={active.media_prompt || ""}
-                  onChange={(e) => setActive({ ...active, media_prompt: e.target.value })}
-                  placeholder="לדוגמה: צילום מוצר קולנועי, תאורת ניאון סגולה, תחושת פרימיום, בלי לוגואים זרים…"
-                />
-              </label>
-              {isRasterCreative(active.instagram_image_url || active.media_url) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={active.instagram_image_url || active.media_url}
-                  alt={active.title || "Campaign creative"}
-                  className="mx-auto max-h-[360px] w-full max-w-md rounded-xl object-contain bg-[#0F172A]"
-                />
-              ) : null}
-            </Card>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {(
+                [
+                  {
+                    id: "linkedin" as const,
+                    title: "LinkedIn",
+                    hint: "תמונה או סרטון לפוסט",
+                  },
+                  {
+                    id: "instagram" as const,
+                    title: "Instagram",
+                    hint: "תמונה בפיד או Reel",
+                  },
+                  {
+                    id: "tiktok" as const,
+                    title: "TikTok",
+                    hint: "סרטון (או תמונה כגיבוי)",
+                  },
+                ] as const
+              )
+                .filter((card) => active.platforms?.includes(card.id))
+                .map((card) => {
+                  const imageUrl = platformImageUrl(active, card.id);
+                  const videoUrl = platformVideoUrl(active, card.id);
+                  return (
+                    <Card key={card.id} className="space-y-3 !rounded-2xl">
+                      <div>
+                        <p className="font-bold">{card.title}</p>
+                        <p className="text-xs text-[var(--muted-fg)]">{card.hint}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <label className="inline-flex cursor-pointer items-center">
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                            className="sr-only"
+                            disabled={!canManage || uploadPlatformMedia.isPending}
+                            onChange={(event) => {
+                              const file = event.currentTarget.files?.[0];
+                              event.currentTarget.value = "";
+                              if (file) {
+                                uploadPlatformMedia.mutate({
+                                  platform: card.id,
+                                  kind: "image",
+                                  file,
+                                });
+                              }
+                            }}
+                          />
+                          <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-bold">
+                            טען תמונה
+                          </span>
+                        </label>
+                        <label className="inline-flex cursor-pointer items-center">
+                          <input
+                            type="file"
+                            accept=".mp4,.mov,video/mp4,video/quicktime"
+                            className="sr-only"
+                            disabled={!canManage || uploadPlatformMedia.isPending}
+                            onChange={(event) => {
+                              const file = event.currentTarget.files?.[0];
+                              event.currentTarget.value = "";
+                              if (file) {
+                                uploadPlatformMedia.mutate({
+                                  platform: card.id,
+                                  kind: "video",
+                                  file,
+                                });
+                              }
+                            }}
+                          />
+                          <span className="rounded-full bg-[#6F42F5] px-3 py-1.5 text-xs font-bold text-white">
+                            טען סרטון
+                          </span>
+                        </label>
+                      </div>
+                      {card.id === "instagram" ? (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!canManage || !geminiEnabled || createAiImage.isPending}
+                            onClick={() => createAiImage.mutate()}
+                            className="rounded-full text-xs"
+                          >
+                            {createAiImage.isPending ? "AI…" : "צור תמונה ב־AI"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!canManage || createIgImage.isPending}
+                            onClick={() => createIgImage.mutate()}
+                            className="rounded-full text-xs"
+                          >
+                            {createIgImage.isPending ? "PNG…" : "PNG מעוצב"}
+                          </Button>
+                          <div className="flex w-full flex-wrap gap-2 pt-1">
+                            {(["image", "video"] as const).map((kind) => {
+                              const selected = (active.instagram_media_type || "image") === kind;
+                              const videoUnavailable = kind === "video" && !bestInstagramVideoUrl(active);
+                              return (
+                                <button
+                                  key={kind}
+                                  type="button"
+                                  disabled={videoUnavailable}
+                                  onClick={() => setActive({ ...active, instagram_media_type: kind })}
+                                  className={cn(
+                                    "rounded-full px-3 py-1 text-xs font-bold transition disabled:opacity-40",
+                                    selected
+                                      ? "bg-[#6F42F5] text-white"
+                                      : "border border-[var(--border)] bg-[var(--background)]",
+                                  )}
+                                >
+                                  {kind === "image" ? "תמונה בפיד" : "וידאו כ־Reel"}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                      {videoUrl && /\.(mp4|mov)(\?|$)/i.test(videoUrl) ? (
+                        <video
+                          key={videoUrl}
+                          src={videoUrl}
+                          controls
+                          playsInline
+                          className="max-h-48 w-full rounded-xl bg-black object-contain"
+                        />
+                      ) : isRasterCreative(imageUrl) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={imageUrl}
+                          alt={`${card.title} creative`}
+                          className="max-h-48 w-full rounded-xl object-contain bg-[#0F172A]"
+                        />
+                      ) : (
+                        <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-[var(--border)] text-xs text-[var(--muted-fg)]">
+                          אין מדיה עדיין
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+            </div>
 
-            <Card className="space-y-4 !rounded-2xl">
-              <div>
-                <p className="font-bold">וידאו ידני לקמפיין</p>
-                <p className="text-xs text-[var(--muted-fg)]">
-                  העלו MP4 או MOV עד 25MB. ניתן להשתמש בו כ־Instagram Reel במקום התמונה וגם כווידאו לקמפיין.
-                </p>
-              </div>
-              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#6F42F5]/35 bg-[#6F42F5]/5 px-5 py-7 text-center">
-                <Button
-                  type="button"
-                  disabled={!canManage || uploadManualVideo.isPending}
-                  onClick={() => manualVideoInputRef.current?.click()}
-                  className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-                >
-                  {uploadManualVideo.isPending ? "מעלה וידאו…" : "טען סרטון מהמחשב"}
-                </Button>
-                <span className="mt-1 text-xs text-[var(--muted-fg)]">
-                  {manualVideoName || "MP4 / MOV · עד 25MB"}
-                </span>
-                <input
-                  ref={manualVideoInputRef}
-                  type="file"
-                  accept=".mp4,.mov,video/mp4,video/quicktime"
-                  className="sr-only"
-                  disabled={!canManage || uploadManualVideo.isPending}
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    event.currentTarget.value = "";
-                    if (file) uploadManualVideo.mutate(file);
-                  }}
-                />
-              </div>
-
-              {active.platforms?.includes("instagram") ? (
-                <div className="rounded-xl border border-[var(--border)] p-4">
-                  <p className="mb-2 text-sm font-bold">מה לשלוח לאינסטגרם?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(["image", "video"] as const).map((kind) => {
-                      const selected = (active.instagram_media_type || "image") === kind;
-                      const videoUnavailable =
-                        kind === "video" &&
-                        !bestInstagramVideoUrl(active);
-                      return (
-                        <button
-                          key={kind}
-                          type="button"
-                          disabled={videoUnavailable}
-                          onClick={() => setActive({ ...active, instagram_media_type: kind })}
-                          className={cn(
-                            "rounded-full px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40",
-                            selected
-                              ? "bg-[#6F42F5] text-white"
-                              : "border border-[var(--border)] bg-[var(--background)]",
-                          )}
-                        >
-                          {kind === "image" ? "תמונה בפיד" : "וידאו כ־Reel"}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {bestInstagramVideoUrl(active) ? (
-                <video
-                  key={bestInstagramVideoUrl(active)}
-                  src={bestInstagramVideoUrl(active)}
-                  controls
-                  playsInline
-                  className="mx-auto max-h-[420px] w-full max-w-sm rounded-2xl bg-black object-contain"
-                />
-              ) : null}
-            </Card>
+            {manualVideoName ? (
+              <p className="text-xs text-[var(--muted-fg)]">קובץ אחרון שהועלה: {manualVideoName}</p>
+            ) : null}
+            {uploadPlatformMedia.isPending ? (
+              <p className="text-sm font-medium text-[#6F42F5]">מעלה מדיה…</p>
+            ) : null}
           </section>
 
           <section className="space-y-4">
             <h2 className="text-lg font-bold">עריכת טקסטים</h2>
             <Card className="space-y-4 !rounded-2xl">
               <label className="block text-sm font-medium">
-                Campaign title
+                כותרת קמפיין
                 <input
                   className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
                   value={active.title}
@@ -1199,8 +1368,17 @@ export default function AiAutomationPage() {
             </Card>
           </section>
 
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold">טיקטוק</h3>
+          <section className="space-y-3">
+            <button
+              type="button"
+              className="text-sm font-bold text-[#6F42F5] underline-offset-2 hover:underline"
+              onClick={() => setShowAdvanced((v) => !v)}
+            >
+              {showAdvanced ? "הסתר כלים מתקדמים לטיקטוק ▲" : "הצג כלים מתקדמים לטיקטוק (תדמית / AI) ▼"}
+            </button>
+            {showAdvanced ? (
+            <>
+            <h3 className="text-lg font-bold">טיקטוק — מתקדם</h3>
             <Card className="space-y-4 !rounded-2xl">
           {bestTikTokVideoUrl(active) ? (
             <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4">
@@ -1491,6 +1669,8 @@ export default function AiAutomationPage() {
             </ul>
           ) : null}
         </Card>
+            </>
+            ) : null}
       </section>
 
         <div className="flex flex-wrap gap-2">
@@ -1621,7 +1801,7 @@ export default function AiAutomationPage() {
 
       <section id="campaign-release" className={cn("space-y-4", wizardStep !== 4 && "hidden")}>
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-xl font-bold">4 · שליחה לרשת</h2>
+          <h2 className="text-xl font-bold">4 · אישור ושחרור</h2>
           <Button type="button" variant="outline" className="rounded-full" onClick={() => setWizardStep(3)}>
             ← חזרה לסימולציה
           </Button>

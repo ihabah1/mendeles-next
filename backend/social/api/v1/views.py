@@ -8,6 +8,7 @@ from core.exceptions.base import ForbiddenError, NotFoundError, ValidationError
 from core.permissions.base import HasPermission
 from social.api.v1.serializers import (
     GenerateCampaignSerializer,
+    PlatformMediaUploadSerializer,
     PublishCampaignSerializer,
     TikTokVideoUploadSerializer,
     UpdateCampaignSerializer,
@@ -194,6 +195,7 @@ class SocialPublishView(APIView):
             schedule=data["mode"] == "schedule",
             scheduled_at=data.get("scheduled_at") or None,
             tz_name=data.get("timezone") or None,
+            auto_release=bool(data.get("auto_release")),
         )
         logger.info(
             "social_publish_response campaign_id=%s status=%s error=%s",
@@ -255,6 +257,32 @@ class CampaignInstagramImageView(APIView):
         if campaign.status == CampaignStatus.SIMULATED:
             campaign.status = CampaignStatus.READY
         campaign.save(update_fields=["simulated_at", "status", "updated_at"])
+        return Response(CampaignService.serialize(campaign))
+
+
+class CampaignPlatformMediaView(APIView):
+    """POST — upload image or video for a specific platform (linkedin/instagram/tiktok)."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def post(self, request, campaign_id):
+        _check(request, self, "automation.manage")
+        campaign = CampaignService.get_campaign(_tenant_id(request), campaign_id)
+        if not campaign:
+            raise NotFoundError("Campaign not found.")
+        ser = PlatformMediaUploadSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            MediaGenerationService.save_platform_media(
+                campaign,
+                platform=ser.validated_data["platform"],
+                kind=ser.validated_data["kind"],
+                data_url=ser.validated_data["data_url"],
+            )
+        except Exception as exc:
+            raise ValidationError(str(exc)) from exc
+        campaign.refresh_from_db()
         return Response(CampaignService.serialize(campaign))
 
 

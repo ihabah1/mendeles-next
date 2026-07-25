@@ -108,6 +108,7 @@ def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = 
     Returns "" when no real creative exists — callers must block publish.
     """
     candidates = [
+        getattr(campaign, "linkedin_image_url", "") or "",
         campaign.instagram_image_url,
         campaign.media_url,
     ]
@@ -149,22 +150,68 @@ def ensure_buffer_image_url(campaign: SocialCampaign, *, allow_ai_regen: bool = 
     return ""
 
 
-def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
-    """Return a public MP4/MOV URL for TikTok (Buffer often rejects WebM)."""
-    candidates = [campaign.tiktok_video_url]
-    for item in campaign.tiktok_videos_json or []:
-        if isinstance(item, dict) and item.get("url"):
-            candidates.append(str(item["url"]))
+def _is_buffer_video_url(url: str) -> bool:
+    public = public_media_url_for_buffer(url or "")
+    lower = (public or "").lower().split("?", 1)[0]
+    return bool(public and (lower.endswith(".mp4") or lower.endswith(".mov")))
+
+
+def resolve_platform_image_url(campaign: SocialCampaign, platform: str) -> str:
+    """Prefer platform-specific image, then shared Instagram/media fallbacks."""
+    if platform == "linkedin":
+        candidates = [
+            getattr(campaign, "linkedin_image_url", "") or "",
+            campaign.instagram_image_url,
+            campaign.media_url,
+        ]
+    elif platform == "instagram":
+        candidates = [campaign.instagram_image_url, campaign.media_url]
+    else:
+        candidates = [campaign.media_url, campaign.instagram_image_url]
     for candidate in candidates:
         url = public_media_url_for_buffer(candidate or "")
-        lower = (url or "").lower().split("?", 1)[0]
-        if url and (lower.endswith(".mp4") or lower.endswith(".mov")):
-            logger.info(
-                "buffer_media_video campaign_id=%s url=%s",
-                campaign.id,
-                url[:180],
-            )
+        if is_real_raster_image_url(url):
             return url
+    return ""
+
+
+def resolve_platform_video_url(campaign: SocialCampaign, platform: str) -> str:
+    """Prefer platform-specific video, then shared TikTok/campaign video fallbacks."""
+    if platform == "linkedin":
+        candidates = [getattr(campaign, "linkedin_video_url", "") or ""]
+    elif platform == "instagram":
+        candidates = [
+            getattr(campaign, "instagram_video_url", "") or "",
+            campaign.tiktok_video_url,
+        ]
+        for item in campaign.tiktok_videos_json or []:
+            if isinstance(item, dict) and item.get("url"):
+                candidates.append(str(item["url"]))
+    else:  # tiktok
+        candidates = [campaign.tiktok_video_url]
+        for item in campaign.tiktok_videos_json or []:
+            if isinstance(item, dict) and item.get("url"):
+                candidates.append(str(item["url"]))
+    for candidate in candidates:
+        if _is_buffer_video_url(candidate):
+            return public_media_url_for_buffer(candidate)
+    return ""
+
+
+def ensure_buffer_video_url(campaign: SocialCampaign) -> str:
+    """Return a public MP4/MOV URL for TikTok / shared campaign video (Buffer-safe)."""
+    url = resolve_platform_video_url(campaign, "tiktok")
+    if url:
+        logger.info(
+            "buffer_media_video campaign_id=%s url=%s",
+            campaign.id,
+            url[:180],
+        )
+        return url
+    # Also accept Instagram-dedicated video as shared campaign video.
+    ig = resolve_platform_video_url(campaign, "instagram")
+    if ig:
+        return ig
     logger.info("buffer_media_video_none campaign_id=%s", campaign.id)
     return ""
 def _wrap_text(text: str, width: int = 28) -> list[str]:
@@ -615,6 +662,7 @@ class MediaGenerationService:
         campaign.tiktok_videos_json = videos
         if use_for_instagram:
             campaign.instagram_media_type = "video"
+            campaign.instagram_video_url = url_public
         if campaign.media_type == "video" or use_for_instagram:
             campaign.media_url = url_public
         campaign.save(
@@ -622,9 +670,128 @@ class MediaGenerationService:
                 "tiktok_video_url",
                 "tiktok_videos_json",
                 "instagram_media_type",
+                "instagram_video_url",
                 "media_url",
                 "updated_at",
             ]
+        )
+        return url_public
+
+    @classmethod
+    def save_platform_media(
+        cls,
+        campaign: SocialCampaign,
+        *,
+        platform: str,
+        kind: str,
+        data_url: str,
+    ) -> str:
+        """Persist a per-platform image or video upload and invalidate simulation."""
+        from social.domain.enums import CampaignStatus, SUPPORTED_PLATFORMS
+
+        platform = (platform or "").strip().lower()
+        kind = (kind or "").strip().lower()
+        if platform not in SUPPORTED_PLATFORMS:
+            raise ValueError(f"Unsupported platform: {platform}")
+        if kind not in {"image", "video"}:
+            raise ValueError("kind must be image or video")
+
+        raw_url = (data_url or "").strip()
+        marker = ";base64,"
+        idx = raw_url.find(marker)
+        if not raw_url.startswith("data:") or idx < 0:
+            raise ValueError("Invalid media data URL.")
+        header = raw_url[5:idx]
+        b64 = raw_url[idx + len(marker) :]
+        mime_base = header.split(";", 1)[0].strip().lower()
+
+        try:
+            raw = base64.b64decode(b64, validate=False)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Invalid base64 media payload: {exc}") from exc
+        if len(raw) < 64:
+            raise ValueError("Media file is empty or too small.")
+
+        if kind == "image":
+            if not mime_base.startswith("image/"):
+                raise ValueError("Expected an image data URL.")
+            if "png" in mime_base:
+                ext = "png"
+            elif "jpeg" in mime_base or "jpg" in mime_base:
+                ext = "jpg"
+            elif "webp" in mime_base:
+                ext = "webp"
+            else:
+                raise ValueError("Image must be PNG, JPEG, or WebP.")
+            if len(raw) > 12 * 1024 * 1024:
+                raise ValueError("Image is too large (max 12MB).")
+        else:
+            if not mime_base.startswith("video/"):
+                raise ValueError("Expected a video data URL.")
+            if "mp4" in mime_base:
+                ext = "mp4"
+            elif "quicktime" in mime_base or "mov" in mime_base:
+                ext = "mov"
+            else:
+                raise ValueError("Video must be MP4 or MOV.")
+            if len(raw) > 25 * 1024 * 1024:
+                raise ValueError("Video is too large (max 25MB).")
+
+        filename = f"{campaign.id}-{platform}-{kind}-{uuid.uuid4().hex[:8]}.{ext}"
+        (_media_dir() / filename).write_bytes(raw)
+        url_public = _public_url(f"social/{filename}")
+
+        update_fields = ["simulated_at", "updated_at"]
+        campaign.simulated_at = None
+        if campaign.status == CampaignStatus.SIMULATED:
+            campaign.status = CampaignStatus.READY
+            update_fields.append("status")
+
+        if platform == "linkedin" and kind == "image":
+            campaign.linkedin_image_url = url_public
+            update_fields.append("linkedin_image_url")
+            if not campaign.media_url:
+                campaign.media_url = url_public
+                update_fields.append("media_url")
+        elif platform == "linkedin" and kind == "video":
+            campaign.linkedin_video_url = url_public
+            update_fields.append("linkedin_video_url")
+        elif platform == "instagram" and kind == "image":
+            campaign.instagram_image_url = url_public
+            campaign.instagram_media_type = "image"
+            campaign.media_url = url_public
+            update_fields.extend(["instagram_image_url", "instagram_media_type", "media_url"])
+        elif platform == "instagram" and kind == "video":
+            campaign.instagram_video_url = url_public
+            campaign.instagram_media_type = "video"
+            update_fields.extend(["instagram_video_url", "instagram_media_type"])
+        elif platform == "tiktok" and kind == "video":
+            campaign.tiktok_video_url = url_public
+            videos = list(campaign.tiktok_videos_json or [])
+            videos.append(
+                {
+                    "url": url_public,
+                    "provider": "manual",
+                    "variation": len(videos) + 1,
+                    "credits_used": 0,
+                }
+            )
+            campaign.tiktok_videos_json = videos
+            if campaign.media_type == "video":
+                campaign.media_url = url_public
+                update_fields.append("media_url")
+            update_fields.extend(["tiktok_video_url", "tiktok_videos_json"])
+        elif platform == "tiktok" and kind == "image":
+            campaign.media_url = url_public
+            update_fields.append("media_url")
+
+        campaign.save(update_fields=list(dict.fromkeys(update_fields)))
+        logger.info(
+            "platform_media_saved campaign_id=%s platform=%s kind=%s url=%s",
+            campaign.id,
+            platform,
+            kind,
+            url_public[:180],
         )
         return url_public
 

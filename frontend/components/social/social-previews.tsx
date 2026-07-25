@@ -14,6 +14,10 @@ function hashtagsLine(campaign: SocialCampaign, platform: SocialPlatform) {
 export function LinkedInPreview({ campaign }: Props) {
   const text = campaign.captions?.linkedin || "";
   const tags = hashtagsLine(campaign, "linkedin");
+  const video = campaign.linkedin_video_url || "";
+  const useVideo = /\.(mp4|mov)(\?|$)/i.test(video);
+  const image =
+    campaign.linkedin_image_url || campaign.instagram_image_url || campaign.media_url || "";
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm dark:bg-zinc-900">
       <div className="border-b border-[var(--border)] bg-[#0A66C2]/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#0A66C2]">
@@ -42,13 +46,20 @@ export function LinkedInPreview({ campaign }: Props) {
             {campaign.website_url.replace(/^https?:\/\//, "")}
           </a>
         ) : null}
-        {campaign.instagram_image_url || campaign.media_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={campaign.instagram_image_url || campaign.media_url}
-            alt=""
-            className="h-48 w-full rounded-xl object-cover"
+        {useVideo ? (
+          <video
+            key={video}
+            src={video}
+            className="h-48 w-full rounded-xl bg-black object-cover"
+            muted
+            loop
+            playsInline
+            autoPlay
+            controls
           />
+        ) : image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" className="h-48 w-full rounded-xl object-cover" />
         ) : (
           <div className="flex h-48 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-400 dark:bg-zinc-800">
             Image placeholder
@@ -67,7 +78,8 @@ export function LinkedInPreview({ campaign }: Props) {
 export function InstagramPreview({ campaign }: Props) {
   const text = campaign.captions?.instagram || "";
   const tags = hashtagsLine(campaign, "instagram");
-  const primaryVideo = campaign.campaign_video_url || campaign.tiktok_video_url;
+  const primaryVideo =
+    campaign.instagram_video_url || campaign.campaign_video_url || campaign.tiktok_video_url;
   const video = /\.(mp4|mov)(\?|$)/i.test(primaryVideo || "")
     ? primaryVideo
     : [...(campaign.tiktok_videos || [])]

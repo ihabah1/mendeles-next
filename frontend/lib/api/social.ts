@@ -31,7 +31,10 @@ export type SocialCampaign = {
   media_prompt: string;
   video_prompt: string;
   media_url: string;
+  linkedin_image_url?: string;
+  linkedin_video_url?: string;
   instagram_image_url: string;
+  instagram_video_url?: string;
   instagram_media_type: "image" | "video";
   campaign_video_url: string;
   tiktok_video_url: string;
@@ -74,6 +77,7 @@ export type PublishInput = {
   mode: "now" | "schedule";
   scheduled_at?: string;
   timezone?: string;
+  auto_release?: boolean;
 };
 
 export const socialApi = {
@@ -159,6 +163,15 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
       json: { data_url, mode: "manual", use_for_instagram },
+    }),
+  uploadPlatformMedia: (
+    id: string,
+    body: { platform: SocialPlatform; kind: "image" | "video"; data_url: string },
+  ) =>
+    apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/platform-media/`, {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
     }),
   attachSitePromoVideos: (id: string, promo_ids: string[]) =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/tiktok-video/`, {

@@ -4,6 +4,7 @@ from social.api.v1.views import (
     CampaignDetailView,
     CampaignInstagramImageView,
     CampaignListCreateView,
+    CampaignPlatformMediaView,
     CampaignRepublishView,
     CampaignSimulateView,
     CampaignTikTokVideoView,
@@ -26,6 +27,11 @@ urlpatterns = [
         "campaigns/<uuid:campaign_id>/instagram-image/",
         CampaignInstagramImageView.as_view(),
         name="social-campaign-instagram-image",
+    ),
+    path(
+        "campaigns/<uuid:campaign_id>/platform-media/",
+        CampaignPlatformMediaView.as_view(),
+        name="social-campaign-platform-media",
     ),
     path(
         "campaigns/<uuid:campaign_id>/tiktok-video/",

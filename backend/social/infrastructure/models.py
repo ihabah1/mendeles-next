@@ -46,7 +46,10 @@ class SocialCampaign(BaseModel):
     media_prompt = models.TextField(blank=True, default="")
     video_prompt = models.TextField(blank=True, default="")
     media_url = models.CharField(max_length=1000, blank=True, default="")
+    linkedin_image_url = models.CharField(max_length=1000, blank=True, default="")
+    linkedin_video_url = models.CharField(max_length=1000, blank=True, default="")
     instagram_image_url = models.CharField(max_length=1000, blank=True, default="")
+    instagram_video_url = models.CharField(max_length=1000, blank=True, default="")
     instagram_media_type = models.CharField(
         max_length=20,
         choices=[("image", "Image"), ("video", "Video")],
