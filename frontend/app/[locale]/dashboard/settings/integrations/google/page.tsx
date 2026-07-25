@@ -176,6 +176,18 @@ export default function GoogleIntegrationsPage() {
         </Card>
       ) : null}
 
+      {data?.oauth_redirect_uri ? (
+        <Card className="border-sky-500/30 bg-sky-500/10">
+          <p className="text-sm font-semibold">Redirect URI ל־Google Cloud Console</p>
+          <p className="mt-1 text-xs text-[var(--muted-fg)]">
+            הוסיפו את הכתובת הזו בדיוק תחת Credentials → OAuth client → Authorized redirect URIs:
+          </p>
+          <code className="mt-2 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-sky-100">
+            {data.oauth_redirect_uri}
+          </code>
+        </Card>
+      ) : null}
+
       {dashboard.isLoading && <p className="text-sm">{tc("loading")}</p>}
 
       {data?.services.map((svc) => {

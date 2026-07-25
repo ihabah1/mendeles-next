@@ -90,7 +90,11 @@ class GoogleOAuthService:
             include_granted_scopes="true",
             prompt="consent",
         )
-        return {"auth_url": auth_url, "state": state}
+        return {
+            "auth_url": auth_url,
+            "state": state,
+            "redirect_uri": oauth_redirect_uri(),
+        }
 
     @classmethod
     def handle_callback(cls, *, state: str, code: str) -> GoogleServiceConnection:

@@ -759,6 +759,7 @@ export type GoogleServiceStatus = {
 
 export type GoogleIntegrationDashboard = {
   oauth_platform_configured: boolean;
+  oauth_redirect_uri?: string;
   setup_instructions: string[];
   services: GoogleServiceStatus[];
   recent_syncs: Array<{

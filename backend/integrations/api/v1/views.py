@@ -107,6 +107,38 @@ class GoogleOAuthCallbackView(APIView):
         except GoogleOAuthError as exc:
             return HttpResponseRedirect(f"{return_url}?oauth_error={exc}")
 
+    def post(self, request):
+        """Frontend callback posts code/state here after Google redirects to mendeles.com."""
+        state = (request.data.get("state") or "").strip()
+        code = (request.data.get("code") or "").strip()
+        error = (request.data.get("error") or "").strip()
+        if error:
+            return Response({"ok": False, "error": error}, status=400)
+        if not state or not code:
+            return Response({"ok": False, "error": "missing_code"}, status=400)
+        try:
+            conn = GoogleOAuthService.handle_callback(state=state, code=code)
+            AuditService.log(
+                tenant_id=conn.tenant_id,
+                user=None,
+                action="integrations.google.oauth_completed",
+                resource_type="google_integration",
+                resource_id=None,
+                metadata={
+                    "service_type": conn.service_type,
+                    "email": conn.connected_account_email,
+                },
+            )
+            return Response(
+                {
+                    "ok": True,
+                    "service_type": conn.service_type,
+                    "return_url": f"{frontend_oauth_return_url()}?oauth_success={conn.service_type}",
+                }
+            )
+        except GoogleOAuthError as exc:
+            return Response({"ok": False, "error": str(exc)}, status=400)
+
 
 class GoogleDisconnectView(APIView):
     def post(self, request):

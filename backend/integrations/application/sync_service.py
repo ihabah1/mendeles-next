@@ -66,7 +66,7 @@ class IntegrationSyncService:
     @classmethod
     def dashboard(cls, tenant_id) -> dict:
         from integrations.application.google_oauth_service import GoogleOAuthService
-        from integrations.application.google_config import oauth_configured, setup_instructions
+        from integrations.application.google_config import oauth_configured, oauth_redirect_uri, setup_instructions
 
         services = []
         for st in GoogleServiceType:
@@ -79,6 +79,7 @@ class IntegrationSyncService:
 
         return {
             "oauth_platform_configured": oauth_configured(),
+            "oauth_redirect_uri": oauth_redirect_uri(),
             "setup_instructions": setup_instructions() if not oauth_configured() else [],
             "services": services,
             "recent_syncs": [
