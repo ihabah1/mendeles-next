@@ -54,6 +54,12 @@ export async function PublicHeader() {
 
         <div className="flex items-center gap-1 sm:gap-2">
           <MarketingLocaleSwitcher />
+          <Link
+            href="/blog"
+            className="hidden items-center rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.25)] transition hover:scale-[1.04] sm:inline-flex"
+          >
+            {tl("navBlog")}
+          </Link>
           <Link href="/login" className={cn(btnGhost, "hidden sm:inline-flex")}>
             {t("login")}
           </Link>

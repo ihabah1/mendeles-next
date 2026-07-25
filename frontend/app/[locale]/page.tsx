@@ -4,6 +4,7 @@ import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { PageSchemas } from "@/components/seo/page-schemas";
 import { HeroSection } from "@/components/marketing/hero-section";
 import { PromoVideosSection } from "@/components/marketing/promo-videos-section";
+import { BlogPromoSection } from "@/components/marketing/blog-promo-section";
 import { TrustSection } from "@/components/marketing/trust-section";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -27,6 +28,7 @@ export default function LandingPage() {
       <PageSchemas />
       <HeroSection />
       <PromoVideosSection />
+      <BlogPromoSection />
       <TrustSection />
       <CtaSection />
     </MarketingShell>

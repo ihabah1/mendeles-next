@@ -251,6 +251,16 @@
       "getStarted": "Get started",
       "accessibility": "Accessibility statement",
       "copyright": "© Mendeles — AI-powered lead generation platform"
+    },
+    "blogBanner": {
+      "eyebrow": "Mendeles Blog",
+      "title": "Marketing, SEO and leads — without the noise",
+      "subtitle": "Practical articles on customer acquisition, Google ranking, and marketing automation for growing businesses.",
+      "cta": "Enter the blog",
+      "toolsEyebrow": "Free tools",
+      "toolsTitle": "Blog tools that speed up growth",
+      "toolsSubtitle": "Calculators and templates from the blog — ready to use on your site.",
+      "toolsCta": "Explore tools"
     }
   },
   "hub": {

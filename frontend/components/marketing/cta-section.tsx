@@ -57,6 +57,11 @@ export async function FooterSection() {
                   {tl("industries")}
                 </Link>
               </li>
+              <li>
+                <Link href="/blog" className="font-semibold text-cyan-300 hover:text-white">
+                  {tl("blog")}
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

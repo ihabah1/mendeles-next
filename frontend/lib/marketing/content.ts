@@ -6,10 +6,10 @@ export const MAIN_NAV = [
 ] as const;
 
 export const FEATURED_NAV_CLASS =
-  "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#6F42F5] to-indigo-500 px-4 py-1.5 text-sm font-extrabold tracking-wide text-white shadow-[0_0_22px_rgba(111,66,245,0.45)] ring-1 ring-white/20 transition hover:scale-[1.03] hover:shadow-[0_0_28px_rgba(111,66,245,0.55)]";
+  "relative inline-flex animate-pulse items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-[#6F42F5] to-amber-300 px-5 py-2 text-sm font-black tracking-wide text-white shadow-[0_0_28px_rgba(34,211,238,0.45)] ring-2 ring-white/30 transition hover:scale-[1.05] hover:animate-none hover:shadow-[0_0_36px_rgba(251,191,36,0.5)]";
 
 export const FEATURED_NAV_MOBILE_CLASS =
-  "block rounded-xl bg-gradient-to-r from-[#6F42F5] to-indigo-500 px-4 py-3 text-sm font-extrabold tracking-wide text-white shadow-[0_8px_24px_rgba(111,66,245,0.35)]";
+  "relative block rounded-xl bg-gradient-to-r from-cyan-400 via-[#6F42F5] to-amber-300 px-4 py-3.5 text-center text-sm font-black tracking-wide text-white shadow-[0_10px_28px_rgba(34,211,238,0.35)] ring-2 ring-white/25";
 
 export const SOLUTION_SLUGS = [
   "generate-leads",

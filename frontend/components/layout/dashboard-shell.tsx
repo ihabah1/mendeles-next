@@ -26,7 +26,10 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     id: "control",
     labelKey: "groupControl",
-    items: [{ href: "/dashboard", labelKey: "overview", permission: null }],
+    items: [
+      { href: "/dashboard", labelKey: "overview", permission: null },
+      { href: "/dashboard/campaign-report", labelKey: "campaignReport", permission: "automation.view" },
+    ],
   },
   {
     id: "people",
