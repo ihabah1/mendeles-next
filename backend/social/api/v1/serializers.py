@@ -44,6 +44,10 @@ class PublishCampaignSerializer(serializers.Serializer):
     scheduled_at = serializers.CharField(required=False, allow_blank=True, default="")
     timezone = serializers.CharField(required=False, allow_blank=True, default="Asia/Jerusalem")
     auto_release = serializers.BooleanField(required=False, default=False)
+    interval_minutes = serializers.IntegerField(required=False, min_value=0, max_value=43200, default=0)
+    repeat_count = serializers.IntegerField(required=False, min_value=1, max_value=48, default=1)
+    interval_minutes = serializers.IntegerField(required=False, min_value=5, max_value=43200, default=60)
+    repeat_count = serializers.IntegerField(required=False, min_value=1, max_value=48, default=1)
 
 
 class BatchRepublishSerializer(serializers.Serializer):

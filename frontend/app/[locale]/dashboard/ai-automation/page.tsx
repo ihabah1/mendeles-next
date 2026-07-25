@@ -191,6 +191,8 @@ export default function AiAutomationPage() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("10:00");
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
+  const [scheduleIntervalMinutes, setScheduleIntervalMinutes] = useState(60);
+  const [scheduleRepeatCount, setScheduleRepeatCount] = useState(1);
   const [genStep, setGenStep] = useState(0);
   const [publishStep, setPublishStep] = useState(-1);
   const [error, setError] = useState("");
@@ -452,6 +454,8 @@ export default function AiAutomationPage() {
           mode: scheduleMode ? "schedule" : "now",
           scheduled_at: scheduledAt,
           timezone,
+          interval_minutes: scheduleMode && scheduleRepeatCount > 1 ? scheduleIntervalMinutes : 0,
+          repeat_count: scheduleMode ? scheduleRepeatCount : 1,
         });
       } finally {
         timers.forEach((t) => window.clearTimeout(t));
@@ -608,6 +612,8 @@ export default function AiAutomationPage() {
         scheduled_at: scheduledAt,
         timezone,
         auto_release: true,
+        interval_minutes: scheduleRepeatCount > 1 ? scheduleIntervalMinutes : 0,
+        repeat_count: scheduleRepeatCount,
       });
     },
     onSuccess: (data) => {
@@ -1151,6 +1157,38 @@ export default function AiAutomationPage() {
                   onChange={(e) => setTimezone(e.target.value)}
                 />
               </label>
+              <label className="block text-sm font-medium">
+                כמה פעמים לשלוח
+                <input
+                  type="number"
+                  min={1}
+                  max={48}
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleRepeatCount}
+                  onChange={(e) =>
+                    setScheduleRepeatCount(Math.max(1, Math.min(48, Number(e.target.value) || 1)))
+                  }
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                כל כמה דקות
+                <input
+                  type="number"
+                  min={5}
+                  max={43200}
+                  disabled={scheduleRepeatCount <= 1}
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 disabled:opacity-50"
+                  value={scheduleIntervalMinutes}
+                  onChange={(e) =>
+                    setScheduleIntervalMinutes(Math.max(5, Math.min(43200, Number(e.target.value) || 60)))
+                  }
+                />
+              </label>
+              <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 sm:col-span-1 self-end pb-2">
+                {scheduleRepeatCount > 1
+                  ? `${scheduleRepeatCount} שליחות, כל ${scheduleIntervalMinutes} דקות ממועד ההתחלה.`
+                  : "שליחה אחת במועד שנבחר."}
+              </p>
             </div>
             <Button
               type="button"

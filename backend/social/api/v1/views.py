@@ -199,6 +199,8 @@ class SocialPublishView(APIView):
             scheduled_at=data.get("scheduled_at") or None,
             tz_name=data.get("timezone") or None,
             auto_release=bool(data.get("auto_release")),
+            interval_minutes=int(data.get("interval_minutes") or 0),
+            repeat_count=int(data.get("repeat_count") or 1),
         )
         logger.info(
             "social_publish_response campaign_id=%s status=%s error=%s",

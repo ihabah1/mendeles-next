@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timezone as dt_timezone
+from datetime import timedelta, timezone as dt_timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -324,6 +324,8 @@ class CampaignService:
         scheduled_at: str | None = None,
         tz_name: str | None = None,
         auto_release: bool = False,
+        interval_minutes: int = 0,
+        repeat_count: int = 1,
     ) -> dict[str, Any]:
         try:
             if auto_release:
@@ -339,6 +341,8 @@ class CampaignService:
                 schedule=schedule,
                 scheduled_at=scheduled_at,
                 tz_name=tz_name,
+                interval_minutes=interval_minutes,
+                repeat_count=repeat_count,
             )
         except Exception as exc:  # noqa: BLE001 — never return HTML 500 for publish
             logger.exception(
@@ -371,6 +375,8 @@ class CampaignService:
         schedule: bool = False,
         scheduled_at: str | None = None,
         tz_name: str | None = None,
+        interval_minutes: int = 0,
+        repeat_count: int = 1,
     ) -> dict[str, Any]:
         publisher = get_default_publisher()
         log: list[dict[str, Any]] = []
@@ -471,6 +477,8 @@ class CampaignService:
 
         scheduled_dt = None
         scheduled_iso = None
+        interval_minutes = max(0, min(int(interval_minutes or 0), 60 * 24 * 30))
+        repeat_count = max(1, min(int(repeat_count or 1), 48))
         if schedule:
             if not scheduled_at:
                 campaign.status = CampaignStatus.FAILED
@@ -490,6 +498,12 @@ class CampaignService:
             scheduled_iso = scheduled_dt.astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
             if tz_name:
                 campaign.timezone = tz_name
+            if repeat_count > 1 and interval_minutes < 5:
+                campaign.status = CampaignStatus.FAILED
+                campaign.last_error = "interval_minutes must be at least 5 when repeat_count > 1."
+                campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
 
         campaign.status = CampaignStatus.PUBLISHING
         campaign.scheduled_at = scheduled_dt if schedule else None
@@ -500,83 +514,112 @@ class CampaignService:
         errors: list[str] = []
         platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
 
-        for platform in platforms:
-            caption = (campaign.captions_json or {}).get(platform) or ""
-            tags = (campaign.hashtags_json or {}).get(platform) or []
-            tag_line = " ".join(tags) if tags else ""
-            cta = campaign.cta or ""
-            text_parts = [caption]
-            if tag_line and tag_line not in caption:
-                text_parts.append(tag_line)
-            if cta and cta not in caption:
-                text_parts.append(cta)
-            # Always include tracked landing URL so GA4 can attribute post-publish visits.
-            from social.application.campaign_report_service import tracked_website_url
-
-            tracked = tracked_website_url(campaign, platform=platform)
-            blob = "\n".join(text_parts)
-            if tracked and tracked not in blob and campaign.website_url not in blob:
-                text_parts.append(tracked)
-            elif campaign.website_url and campaign.website_url in blob and tracked not in blob:
-                text_parts = [part.replace(campaign.website_url, tracked) for part in text_parts]
-            text = "\n\n".join(p for p in text_parts if p).strip()
-
-            platform_video = resolve_platform_video_url(campaign, platform)
-            platform_image = resolve_platform_image_url(campaign, platform) or buffer_image
-            media_for_platform = platform_image
-            media_kind = "image"
-            if platform == "tiktok" and (platform_video or buffer_video):
-                media_for_platform = platform_video or buffer_video
-                media_kind = "video"
-            elif platform == "tiktok":
-                media_for_platform = platform_image
-                media_kind = "image"
-            elif platform == "instagram" and instagram_uses_video:
-                media_for_platform = platform_video or buffer_video
-                media_kind = "video"
-            elif platform == "linkedin" and platform_video:
-                media_for_platform = platform_video
-                media_kind = "video"
-            elif platform in {"instagram", "linkedin"}:
-                media_for_platform = platform_image
-                media_kind = "image"
-
-            media_for_platform = public_media_url_for_buffer(media_for_platform)
-            logger.info(
-                "social_publish_platform campaign_id=%s platform=%s kind=%s media=%s text_len=%s",
-                campaign.id,
-                platform,
-                media_kind,
-                (media_for_platform or "")[:180],
-                len(text),
-            )
-
-            result = publisher.publish(
-                PublishPayload(
-                    text=text,
-                    platform=platform,
-                    media_url=media_for_platform,
-                    media_kind=media_kind,
-                    instagram_type="reel" if platform == "instagram" and media_kind == "video" else "post",
-                    scheduled_at_iso=scheduled_iso,
-                    now=not schedule,
+        # One send now, or N scheduled sends starting at scheduled_at every interval_minutes.
+        if schedule and scheduled_dt is not None and repeat_count > 1:
+            send_slots: list[tuple[str | None, bool]] = [
+                (
+                    (scheduled_dt + timedelta(minutes=interval_minutes * i))
+                    .astimezone(dt_timezone.utc)
+                    .strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    False,
                 )
+                for i in range(repeat_count)
+            ]
+            step(
+                "Interval schedule",
+                f"{repeat_count} sends every {interval_minutes} minutes starting {scheduled_iso}",
+                True,
             )
-            if result.ok:
-                buffer_ids[platform] = result.external_id
-                detail = result.channel_name or result.external_id or "queued"
-                step(f"Publishing to Buffer... ({platform})", detail, True)
-            else:
-                errors.append(f"{platform}: {result.error}")
-                step(f"Publishing to Buffer... ({platform})", result.error, False)
-                err_l = (result.error or "").lower()
-                if "rate_limit" in err_l or "rate-limited" in err_l or "חסם את ה-api" in (result.error or ""):
-                    remaining = [p for p in platforms if p not in buffer_ids and p != platform]
-                    for skipped in remaining:
-                        skip_msg = result.error or "Buffer rate limited — skipped"
-                        errors.append(f"{skipped}: {skip_msg}")
-                        step(f"Publishing to Buffer... ({skipped})", "Skipped (rate limit)", False)
-                    break
+        else:
+            send_slots = [(scheduled_iso, not schedule)]
+
+        rate_limited = False
+        for slot_index, (slot_iso, send_now) in enumerate(send_slots):
+            if rate_limited:
+                break
+            slot_label = f"#{slot_index + 1}/{len(send_slots)}"
+            if len(send_slots) > 1:
+                step(f"Queue slot {slot_label}", slot_iso or "now", True)
+            for platform in platforms:
+                caption = (campaign.captions_json or {}).get(platform) or ""
+                tags = (campaign.hashtags_json or {}).get(platform) or []
+                tag_line = " ".join(tags) if tags else ""
+                cta = campaign.cta or ""
+                text_parts = [caption]
+                if tag_line and tag_line not in caption:
+                    text_parts.append(tag_line)
+                if cta and cta not in caption:
+                    text_parts.append(cta)
+                # Always include tracked landing URL so GA4 can attribute post-publish visits.
+                from social.application.campaign_report_service import tracked_website_url
+
+                tracked = tracked_website_url(campaign, platform=platform)
+                blob = "\n".join(text_parts)
+                if tracked and tracked not in blob and campaign.website_url not in blob:
+                    text_parts.append(tracked)
+                elif campaign.website_url and campaign.website_url in blob and tracked not in blob:
+                    text_parts = [part.replace(campaign.website_url, tracked) for part in text_parts]
+                text = "\n\n".join(p for p in text_parts if p).strip()
+
+                platform_video = resolve_platform_video_url(campaign, platform)
+                platform_image = resolve_platform_image_url(campaign, platform) or buffer_image
+                media_for_platform = platform_image
+                media_kind = "image"
+                if platform == "tiktok" and (platform_video or buffer_video):
+                    media_for_platform = platform_video or buffer_video
+                    media_kind = "video"
+                elif platform == "tiktok":
+                    media_for_platform = platform_image
+                    media_kind = "image"
+                elif platform == "instagram" and instagram_uses_video:
+                    media_for_platform = platform_video or buffer_video
+                    media_kind = "video"
+                elif platform == "linkedin" and platform_video:
+                    media_for_platform = platform_video
+                    media_kind = "video"
+                elif platform in {"instagram", "linkedin"}:
+                    media_for_platform = platform_image
+                    media_kind = "image"
+
+                media_for_platform = public_media_url_for_buffer(media_for_platform)
+                logger.info(
+                    "social_publish_platform campaign_id=%s platform=%s kind=%s media=%s text_len=%s slot=%s",
+                    campaign.id,
+                    platform,
+                    media_kind,
+                    (media_for_platform or "")[:180],
+                    len(text),
+                    slot_label,
+                )
+
+                result = publisher.publish(
+                    PublishPayload(
+                        text=text,
+                        platform=platform,
+                        media_url=media_for_platform,
+                        media_kind=media_kind,
+                        instagram_type="reel" if platform == "instagram" and media_kind == "video" else "post",
+                        scheduled_at_iso=slot_iso,
+                        now=send_now,
+                    )
+                )
+                if result.ok:
+                    # Keep the first successful Buffer id per platform for campaign metadata.
+                    buffer_ids.setdefault(platform, result.external_id)
+                    detail = result.channel_name or result.external_id or "queued"
+                    step(f"Publishing to Buffer... ({platform} {slot_label})", detail, True)
+                else:
+                    errors.append(f"{platform}@{slot_label}: {result.error}")
+                    step(f"Publishing to Buffer... ({platform} {slot_label})", result.error, False)
+                    err_l = (result.error or "").lower()
+                    if "rate_limit" in err_l or "rate-limited" in err_l or "חסם את ה-api" in (result.error or ""):
+                        remaining = [p for p in platforms if p not in buffer_ids and p != platform]
+                        for skipped in remaining:
+                            skip_msg = result.error or "Buffer rate limited — skipped"
+                            errors.append(f"{skipped}@{slot_label}: {skip_msg}")
+                            step(f"Publishing to Buffer... ({skipped} {slot_label})", "Skipped (rate limit)", False)
+                        rate_limited = True
+                        break
 
         campaign.buffer_update_ids = {**(campaign.buffer_update_ids or {}), **buffer_ids}
         campaign.publish_log = log
@@ -599,7 +642,10 @@ class CampaignService:
             else:
                 campaign.status = CampaignStatus.PUBLISHED
                 campaign.published_at = timezone.now()
-            step("Completed", "All platforms queued" if schedule else "Published", True)
+            done_detail = "All platforms queued" if schedule else "Published"
+            if schedule and repeat_count > 1:
+                done_detail = f"Queued {repeat_count} sends every {interval_minutes} minutes"
+            step("Completed", done_detail, True)
 
         campaign.publish_log = log
         campaign.save()

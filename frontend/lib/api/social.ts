@@ -78,6 +78,8 @@ export type PublishInput = {
   scheduled_at?: string;
   timezone?: string;
   auto_release?: boolean;
+  interval_minutes?: number;
+  repeat_count?: number;
 };
 
 export const socialApi = {
