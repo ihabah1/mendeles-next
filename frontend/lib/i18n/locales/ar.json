@@ -542,7 +542,8 @@
     "groupPeople": "الناس وإدارة علاقات العملاء",
     "groupContent": "المحتوى وكبار المسئولين الاقتصاديين",
     "groupAutomation": "الأتمتة",
-    "groupSystem": "نظام"
+    "groupSystem": "نظام",
+    "blog": "Blog"
   },
   "clientPortal": {
     "title": "بوابتي",

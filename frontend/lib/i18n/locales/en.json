@@ -124,12 +124,30 @@
       "title": "How It Works",
       "subtitle": "From search to customer — a complete acquisition flow built for business results.",
       "steps": {
-        "search": { "title": "Google Search", "desc": "Customers search for what you offer." },
-        "landingPage": { "title": "SEO Landing Page", "desc": "They land on a page optimized to rank and convert." },
-        "visitor": { "title": "Visitor", "desc": "High-intent traffic reaches your offer." },
-        "qualification": { "title": "AI Qualification", "desc": "AI helps filter and score the best opportunities." },
-        "lead": { "title": "Lead", "desc": "Qualified contacts enter your pipeline." },
-        "customer": { "title": "Customer", "desc": "You close deals and grow revenue." }
+        "search": {
+          "title": "Google Search",
+          "desc": "Customers search for what you offer."
+        },
+        "landingPage": {
+          "title": "SEO Landing Page",
+          "desc": "They land on a page optimized to rank and convert."
+        },
+        "visitor": {
+          "title": "Visitor",
+          "desc": "High-intent traffic reaches your offer."
+        },
+        "qualification": {
+          "title": "AI Qualification",
+          "desc": "AI helps filter and score the best opportunities."
+        },
+        "lead": {
+          "title": "Lead",
+          "desc": "Qualified contacts enter your pipeline."
+        },
+        "customer": {
+          "title": "Customer",
+          "desc": "You close deals and grow revenue."
+        }
       }
     },
     "solutions": {
@@ -137,12 +155,30 @@
       "subtitle": "Every tool is designed to help you acquire more customers — not just build pages.",
       "learnMore": "Learn more →",
       "items": {
-        "generate-leads": { "title": "Generate Leads", "desc": "Capture high-intent prospects from search and campaigns." },
-        "seo-landing-pages": { "title": "SEO Landing Pages", "desc": "Get found on Google with pages built to rank and convert." },
-        "marketing-automation": { "title": "Marketing Automation", "desc": "Follow up automatically so no lead goes cold." },
-        "ai-qualification": { "title": "AI Qualification", "desc": "Prioritize the leads most likely to become customers." },
-        "lead-management": { "title": "Lead Management", "desc": "Track, assign, and nurture every opportunity in one place." },
-        "analytics": { "title": "Analytics", "desc": "Measure what drives customers, revenue, and growth." }
+        "generate-leads": {
+          "title": "Generate Leads",
+          "desc": "Capture high-intent prospects from search and campaigns."
+        },
+        "seo-landing-pages": {
+          "title": "SEO Landing Pages",
+          "desc": "Get found on Google with pages built to rank and convert."
+        },
+        "marketing-automation": {
+          "title": "Marketing Automation",
+          "desc": "Follow up automatically so no lead goes cold."
+        },
+        "ai-qualification": {
+          "title": "AI Qualification",
+          "desc": "Prioritize the leads most likely to become customers."
+        },
+        "lead-management": {
+          "title": "Lead Management",
+          "desc": "Track, assign, and nurture every opportunity in one place."
+        },
+        "analytics": {
+          "title": "Analytics",
+          "desc": "Measure what drives customers, revenue, and growth."
+        }
       }
     },
     "industries": {
@@ -182,13 +218,24 @@
       "title": "AI That Drives Customer Acquisition",
       "subtitle": "Practical AI tools that save time and improve results — without the hype.",
       "items": {
-        "landingPages": { "title": "AI Landing Pages", "desc": "Launch conversion-focused pages faster with AI-assisted content and layout." },
-        "seoAssistant": { "title": "AI SEO Assistant", "desc": "Improve titles, structure, and keywords to rank for the searches that matter." },
-        "leadQualification": { "title": "AI Lead Qualification", "desc": "Score and route leads so your team focuses on buyers ready to act." },
-        "contentOptimization": { "title": "AI Content Optimization", "desc": "Refine messaging to increase engagement and conversion rates." }
+        "landingPages": {
+          "title": "AI Landing Pages",
+          "desc": "Launch conversion-focused pages faster with AI-assisted content and layout."
+        },
+        "seoAssistant": {
+          "title": "AI SEO Assistant",
+          "desc": "Improve titles, structure, and keywords to rank for the searches that matter."
+        },
+        "leadQualification": {
+          "title": "AI Lead Qualification",
+          "desc": "Score and route leads so your team focuses on buyers ready to act."
+        },
+        "contentOptimization": {
+          "title": "AI Content Optimization",
+          "desc": "Refine messaging to increase engagement and conversion rates."
+        }
       }
     },
-    "ctaTitle": "Ready to grow your business?",
     "ctaSubtitle": "Start turning search traffic into qualified customers with SEO, landing pages, and AI.",
     "blogBanner": {
       "eyebrow": "Mendeles Blog",
@@ -277,23 +324,113 @@
       "back": "All industries",
       "cta": "Start Building",
       "pages": {
-        "electricians": { "metaTitle": "Lead Generation for Electricians — Mendeles", "metaDescription": "Get more electrical service calls from Google search.", "title": "Electricians", "subtitle": "More local jobs from customers searching online.", "body": "Rank for emergency and planned electrical searches, capture calls and form leads, and grow your book of business with SEO landing pages built for local service companies." },
-        "plumbers": { "metaTitle": "Lead Generation for Plumbers — Mendeles", "metaDescription": "Convert plumbing searches into booked jobs.", "title": "Plumbers", "subtitle": "Turn urgent searches into scheduled work.", "body": "Capture high-intent plumbing leads from Google with fast-loading, mobile-first pages designed for local trades." },
-        "lawyers": { "metaTitle": "Lead Generation for Lawyers — Mendeles", "metaDescription": "Attract qualified legal inquiries online.", "title": "Lawyers", "subtitle": "More case inquiries from search intent.", "body": "Build trust-focused landing pages that rank for practice-area keywords and convert visitors into consultation requests." },
-        "insurance": { "metaTitle": "Lead Generation for Insurance — Mendeles", "metaDescription": "Generate insurance policy leads online.", "title": "Insurance", "subtitle": "Policy leads from search and campaigns.", "body": "Create compliant, conversion-oriented funnels that turn insurance shoppers into qualified leads for your agents." },
-        "mortgage": { "metaTitle": "Lead Generation for Mortgage — Mendeles", "metaDescription": "Capture mortgage applications from search.", "title": "Mortgage", "subtitle": "Applications from buyers ready to move.", "body": "Target mortgage-related searches with pages that educate, build trust, and capture application-ready leads." },
-        "solar": { "metaTitle": "Lead Generation for Solar — Mendeles", "metaDescription": "Solar consultation leads from organic search.", "title": "Solar", "subtitle": "Consultations from homeowners researching solar.", "body": "Convert solar interest into qualified site visits with SEO pages optimized for local installation markets." },
-        "medical-clinics": { "metaTitle": "Lead Generation for Medical Clinics — Mendeles", "metaDescription": "Patient leads and appointment requests online.", "title": "Medical Clinics", "subtitle": "Fill your calendar with patient inquiries.", "body": "Attract patients searching for care with accessible, trustworthy landing experiences that drive appointment requests." },
-        "dentists": { "metaTitle": "Lead Generation for Dentists — Mendeles", "metaDescription": "New patient leads for dental practices.", "title": "Dentists", "subtitle": "Grow your practice with local patient leads.", "body": "Win new patients from Google with clinic pages optimized for local dental searches and treatment intent." },
-        "real-estate": { "metaTitle": "Lead Generation for Real Estate — Mendeles", "metaDescription": "Buyer and seller leads from SEO funnels.", "title": "Real Estate", "subtitle": "Connect with buyers and sellers online.", "body": "Capture listing inquiries and buyer leads with hyper-local SEO landing pages for agents and brokerages." },
-        "education": { "metaTitle": "Lead Generation for Education — Mendeles", "metaDescription": "Student enrollment leads from targeted pages.", "title": "Education", "subtitle": "More enrollments from search and campaigns.", "body": "Drive course and program signups with landing flows built for education providers and training businesses." },
-        "agencies": { "metaTitle": "Lead Generation for Agencies — Mendeles", "metaDescription": "Scale client acquisition campaigns with Mendeles.", "title": "Agencies", "subtitle": "Deliver client results at scale.", "body": "Manage multiple client funnels, prove ROI, and launch SEO + lead gen campaigns faster for every account." },
-        "affiliate-marketers": { "metaTitle": "Lead Generation for Affiliates — Mendeles", "metaDescription": "High-converting affiliate funnels and tracking.", "title": "Affiliate Marketers", "subtitle": "Monetize traffic with better conversions.", "body": "Build, test, and optimize affiliate landing pages that convert cold traffic into commissions." }
+        "electricians": {
+          "metaTitle": "Lead Generation for Electricians — Mendeles",
+          "metaDescription": "Get more electrical service calls from Google search.",
+          "title": "Electricians",
+          "subtitle": "More local jobs from customers searching online.",
+          "body": "Rank for emergency and planned electrical searches, capture calls and form leads, and grow your book of business with SEO landing pages built for local service companies."
+        },
+        "plumbers": {
+          "metaTitle": "Lead Generation for Plumbers — Mendeles",
+          "metaDescription": "Convert plumbing searches into booked jobs.",
+          "title": "Plumbers",
+          "subtitle": "Turn urgent searches into scheduled work.",
+          "body": "Capture high-intent plumbing leads from Google with fast-loading, mobile-first pages designed for local trades."
+        },
+        "lawyers": {
+          "metaTitle": "Lead Generation for Lawyers — Mendeles",
+          "metaDescription": "Attract qualified legal inquiries online.",
+          "title": "Lawyers",
+          "subtitle": "More case inquiries from search intent.",
+          "body": "Build trust-focused landing pages that rank for practice-area keywords and convert visitors into consultation requests."
+        },
+        "insurance": {
+          "metaTitle": "Lead Generation for Insurance — Mendeles",
+          "metaDescription": "Generate insurance policy leads online.",
+          "title": "Insurance",
+          "subtitle": "Policy leads from search and campaigns.",
+          "body": "Create compliant, conversion-oriented funnels that turn insurance shoppers into qualified leads for your agents."
+        },
+        "mortgage": {
+          "metaTitle": "Lead Generation for Mortgage — Mendeles",
+          "metaDescription": "Capture mortgage applications from search.",
+          "title": "Mortgage",
+          "subtitle": "Applications from buyers ready to move.",
+          "body": "Target mortgage-related searches with pages that educate, build trust, and capture application-ready leads."
+        },
+        "solar": {
+          "metaTitle": "Lead Generation for Solar — Mendeles",
+          "metaDescription": "Solar consultation leads from organic search.",
+          "title": "Solar",
+          "subtitle": "Consultations from homeowners researching solar.",
+          "body": "Convert solar interest into qualified site visits with SEO pages optimized for local installation markets."
+        },
+        "medical-clinics": {
+          "metaTitle": "Lead Generation for Medical Clinics — Mendeles",
+          "metaDescription": "Patient leads and appointment requests online.",
+          "title": "Medical Clinics",
+          "subtitle": "Fill your calendar with patient inquiries.",
+          "body": "Attract patients searching for care with accessible, trustworthy landing experiences that drive appointment requests."
+        },
+        "dentists": {
+          "metaTitle": "Lead Generation for Dentists — Mendeles",
+          "metaDescription": "New patient leads for dental practices.",
+          "title": "Dentists",
+          "subtitle": "Grow your practice with local patient leads.",
+          "body": "Win new patients from Google with clinic pages optimized for local dental searches and treatment intent."
+        },
+        "real-estate": {
+          "metaTitle": "Lead Generation for Real Estate — Mendeles",
+          "metaDescription": "Buyer and seller leads from SEO funnels.",
+          "title": "Real Estate",
+          "subtitle": "Connect with buyers and sellers online.",
+          "body": "Capture listing inquiries and buyer leads with hyper-local SEO landing pages for agents and brokerages."
+        },
+        "education": {
+          "metaTitle": "Lead Generation for Education — Mendeles",
+          "metaDescription": "Student enrollment leads from targeted pages.",
+          "title": "Education",
+          "subtitle": "More enrollments from search and campaigns.",
+          "body": "Drive course and program signups with landing flows built for education providers and training businesses."
+        },
+        "agencies": {
+          "metaTitle": "Lead Generation for Agencies — Mendeles",
+          "metaDescription": "Scale client acquisition campaigns with Mendeles.",
+          "title": "Agencies",
+          "subtitle": "Deliver client results at scale.",
+          "body": "Manage multiple client funnels, prove ROI, and launch SEO + lead gen campaigns faster for every account."
+        },
+        "affiliate-marketers": {
+          "metaTitle": "Lead Generation for Affiliates — Mendeles",
+          "metaDescription": "High-converting affiliate funnels and tracking.",
+          "title": "Affiliate Marketers",
+          "subtitle": "Monetize traffic with better conversions.",
+          "body": "Build, test, and optimize affiliate landing pages that convert cold traffic into commissions."
+        }
       }
     },
-    "templates": { "metaTitle": "Templates — Mendeles", "metaDescription": "Industry-optimized landing page templates for lead generation.", "title": "Templates", "subtitle": "Conversion-ready templates for every industry — launching soon.", "comingSoon": "Industry-specific templates optimized for SEO and lead capture are on the way. Check back soon or start building with Mendeles today." },
-    "resources": { "metaTitle": "Resources — Mendeles", "metaDescription": "Guides on SEO, lead generation, and AI marketing.", "title": "Resources", "subtitle": "Playbooks and guides to grow your business with search and AI.", "comingSoon": "Guides on SEO, conversion optimization, and automated lead generation are coming soon." },
-    "blog": { "metaTitle": "Blog — Mendeles", "metaDescription": "Insights on customer acquisition, SEO, and AI marketing.", "title": "Blog", "subtitle": "Ideas and strategies for turning search traffic into revenue.", "comingSoon": "Articles on lead generation, SEO, and AI-powered marketing are on the way." },
+    "templates": {
+      "metaTitle": "Templates — Mendeles",
+      "metaDescription": "Industry-optimized landing page templates for lead generation.",
+      "title": "Templates",
+      "subtitle": "Conversion-ready templates for every industry — launching soon.",
+      "comingSoon": "Industry-specific templates optimized for SEO and lead capture are on the way. Check back soon or start building with Mendeles today."
+    },
+    "resources": {
+      "metaTitle": "Resources — Mendeles",
+      "metaDescription": "Guides on SEO, lead generation, and AI marketing.",
+      "title": "Resources",
+      "subtitle": "Playbooks and guides to grow your business with search and AI.",
+      "comingSoon": "Guides on SEO, conversion optimization, and automated lead generation are coming soon."
+    },
+    "blog": {
+      "metaTitle": "Blog — Mendeles",
+      "metaDescription": "Insights on customer acquisition, SEO, and AI marketing.",
+      "title": "Blog",
+      "subtitle": "Ideas and strategies for turning search traffic into revenue.",
+      "comingSoon": "Articles on lead generation, SEO, and AI-powered marketing are on the way."
+    },
     "pricing": {
       "metaTitle": "Pricing — Mendeles",
       "metaDescription": "Plans for businesses, agencies, and marketers growing with SEO and AI.",
@@ -301,9 +438,30 @@
       "subtitle": "Invest in customer acquisition — plans that scale with your growth.",
       "cta": "Start Building",
       "plans": {
-        "starter": { "name": "Starter", "price": "Free", "desc": "For small businesses getting started with lead gen.", "f1": "SEO landing pages", "f2": "Lead capture forms", "f3": "Basic analytics" },
-        "growth": { "name": "Growth", "price": "Soon", "desc": "For businesses scaling Google traffic and conversions.", "f1": "AI qualification", "f2": "Marketing automation", "f3": "Advanced analytics" },
-        "agency": { "name": "Agency", "price": "Soon", "desc": "For agencies managing multiple client funnels.", "f1": "Multi-client workspaces", "f2": "White-label options", "f3": "Priority support" }
+        "starter": {
+          "name": "Starter",
+          "price": "Free",
+          "desc": "For small businesses getting started with lead gen.",
+          "f1": "SEO landing pages",
+          "f2": "Lead capture forms",
+          "f3": "Basic analytics"
+        },
+        "growth": {
+          "name": "Growth",
+          "price": "Soon",
+          "desc": "For businesses scaling Google traffic and conversions.",
+          "f1": "AI qualification",
+          "f2": "Marketing automation",
+          "f3": "Advanced analytics"
+        },
+        "agency": {
+          "name": "Agency",
+          "price": "Soon",
+          "desc": "For agencies managing multiple client funnels.",
+          "f1": "Multi-client workspaces",
+          "f2": "White-label options",
+          "f3": "Priority support"
+        }
       }
     },
     "company": {
@@ -384,7 +542,8 @@
     "groupPeople": "People & CRM",
     "groupContent": "Content & SEO",
     "groupAutomation": "Automation",
-    "groupSystem": "System"
+    "groupSystem": "System",
+    "blog": "Blog"
   },
   "clientPortal": {
     "title": "My portal",
@@ -592,36 +751,113 @@
       "apiHint": "REST API v1 endpoints"
     },
     "items": {
-      "dashboard": { "label": "Control center", "description": "Platform overview, stats, and recent activity" },
-      "links": { "label": "Site interfaces", "description": "This page — links to all interfaces" },
-      "users": { "label": "Users", "description": "Manage users, invites, and roles" },
-      "content": { "label": "Content", "description": "Pages, publish status, and versions" },
-      "leads": { "label": "Leads", "description": "Lead list, filters, and export" },
-      "workspace": { "label": "Work management workspace", "description": "Manual and scheduled Gemini content generation" },
-      "traffic": { "label": "Published content traffic", "description": "Links to articles and landing pages published to production" },
-      "aiSeo": { "label": "AI SEO Automation Center", "description": "SEO, Trends, content, and lead command center" },
-      "automation": { "label": "Automation", "description": "Job queue, workers, and reports" },
-      "aiAutomation": { "label": "AI Automation", "description": "Generate, preview, schedule and publish social campaigns via Buffer" },
-      "seo": { "label": "SEO management", "description": "Global settings, status, and validation" },
-      "roles": { "label": "Roles & permissions", "description": "RBAC matrix" },
-      "settings": { "label": "Settings", "description": "Organization and system settings" },
-      "integrations": { "label": "Google integrations", "description": "Search Console, Analytics 4, and Trends" },
-      "audit": { "label": "Audit log", "description": "User action history" },
-      "login": { "label": "Log in" },
-      "register": { "label": "Register" },
-      "forgotPassword": { "label": "Forgot password" },
-      "resetPassword": { "label": "Reset password" },
-      "verifyEmail": { "label": "Verify email" },
-      "home": { "label": "Homepage" },
-      "company": { "label": "About company" },
-      "accessibility": { "label": "Accessibility statement" },
-      "solutionsHub": { "label": "Solutions hub" },
-      "industriesHub": { "label": "Industries hub" },
-      "apiDocs": { "label": "OpenAPI / Swagger", "description": "Interactive API documentation" },
-      "apiHealth": { "label": "Health check", "description": "Server and database status" },
-      "apiSeoSitemap": { "label": "Sitemap (JSON)" },
-      "apiSeoRobots": { "label": "Robots.txt (JSON)" },
-      "apiSeoPublic": { "label": "SEO public bundle" }
+      "dashboard": {
+        "label": "Control center",
+        "description": "Platform overview, stats, and recent activity"
+      },
+      "links": {
+        "label": "Site interfaces",
+        "description": "This page — links to all interfaces"
+      },
+      "users": {
+        "label": "Users",
+        "description": "Manage users, invites, and roles"
+      },
+      "content": {
+        "label": "Content",
+        "description": "Pages, publish status, and versions"
+      },
+      "leads": {
+        "label": "Leads",
+        "description": "Lead list, filters, and export"
+      },
+      "workspace": {
+        "label": "Work management workspace",
+        "description": "Manual and scheduled Gemini content generation"
+      },
+      "traffic": {
+        "label": "Published content traffic",
+        "description": "Links to articles and landing pages published to production"
+      },
+      "aiSeo": {
+        "label": "AI SEO Automation Center",
+        "description": "SEO, Trends, content, and lead command center"
+      },
+      "automation": {
+        "label": "Automation",
+        "description": "Job queue, workers, and reports"
+      },
+      "aiAutomation": {
+        "label": "AI Automation",
+        "description": "Generate, preview, schedule and publish social campaigns via Buffer"
+      },
+      "seo": {
+        "label": "SEO management",
+        "description": "Global settings, status, and validation"
+      },
+      "roles": {
+        "label": "Roles & permissions",
+        "description": "RBAC matrix"
+      },
+      "settings": {
+        "label": "Settings",
+        "description": "Organization and system settings"
+      },
+      "integrations": {
+        "label": "Google integrations",
+        "description": "Search Console, Analytics 4, and Trends"
+      },
+      "audit": {
+        "label": "Audit log",
+        "description": "User action history"
+      },
+      "login": {
+        "label": "Log in"
+      },
+      "register": {
+        "label": "Register"
+      },
+      "forgotPassword": {
+        "label": "Forgot password"
+      },
+      "resetPassword": {
+        "label": "Reset password"
+      },
+      "verifyEmail": {
+        "label": "Verify email"
+      },
+      "home": {
+        "label": "Homepage"
+      },
+      "company": {
+        "label": "About company"
+      },
+      "accessibility": {
+        "label": "Accessibility statement"
+      },
+      "solutionsHub": {
+        "label": "Solutions hub"
+      },
+      "industriesHub": {
+        "label": "Industries hub"
+      },
+      "apiDocs": {
+        "label": "OpenAPI / Swagger",
+        "description": "Interactive API documentation"
+      },
+      "apiHealth": {
+        "label": "Health check",
+        "description": "Server and database status"
+      },
+      "apiSeoSitemap": {
+        "label": "Sitemap (JSON)"
+      },
+      "apiSeoRobots": {
+        "label": "Robots.txt (JSON)"
+      },
+      "apiSeoPublic": {
+        "label": "SEO public bundle"
+      }
     }
   },
   "roles": {

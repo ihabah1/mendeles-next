@@ -542,7 +542,8 @@
     "groupPeople": "People & CRM",
     "groupContent": "Content & SEO",
     "groupAutomation": "Automation",
-    "groupSystem": "System"
+    "groupSystem": "System",
+    "blog": "Blog"
   },
   "clientPortal": {
     "title": "My portal",
