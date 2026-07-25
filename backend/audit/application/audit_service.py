@@ -1,19 +1,19 @@
+import logging
 import uuid
 
 from audit.infrastructure.models import AuditLog
 
+logger = logging.getLogger(__name__)
+
 
 class AuditService:
     @staticmethod
-    def _coerce_resource_id(resource_id):
+    def _normalize_resource_id(resource_id) -> str | None:
         if resource_id is None or resource_id == "":
             return None
         if isinstance(resource_id, uuid.UUID):
-            return resource_id
-        try:
-            return uuid.UUID(str(resource_id))
-        except (ValueError, TypeError, AttributeError):
-            return None
+            return str(resource_id)
+        return str(resource_id)[:64]
 
     @staticmethod
     def log(
@@ -26,19 +26,24 @@ class AuditService:
         metadata: dict | None = None,
         ip_address: str | None = None,
         user_agent: str = "",
-    ) -> AuditLog:
-        meta = dict(metadata or {})
-        coerced = AuditService._coerce_resource_id(resource_id)
-        # Preserve non-UUID identifiers in metadata instead of crashing create().
-        if resource_id not in (None, "") and coerced is None:
-            meta.setdefault("resource_key", str(resource_id))
-        return AuditLog.objects.create(
-            action=action,
-            user=user,
-            tenant_id=tenant_id,
-            resource_type=resource_type,
-            resource_id=coerced,
-            metadata=meta,
-            ip_address=ip_address,
-            user_agent=user_agent[:500],
-        )
+    ) -> AuditLog | None:
+        """Best-effort audit write — never raises into request handlers."""
+        try:
+            return AuditLog.objects.create(
+                action=action,
+                user=user,
+                tenant_id=tenant_id,
+                resource_type=resource_type,
+                resource_id=AuditService._normalize_resource_id(resource_id),
+                metadata=dict(metadata or {}),
+                ip_address=ip_address,
+                user_agent=(user_agent or "")[:500],
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "audit_log_failed action=%s resource_type=%s resource_id=%s",
+                action,
+                resource_type,
+                resource_id,
+            )
+            return None

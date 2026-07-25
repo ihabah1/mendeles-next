@@ -22,7 +22,7 @@ class AuditLog(models.Model):
     )
     action = models.CharField(max_length=100, db_index=True)
     resource_type = models.CharField(max_length=50, null=True, blank=True)
-    resource_id = models.UUIDField(null=True, blank=True)
+    resource_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     metadata = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True, default="")

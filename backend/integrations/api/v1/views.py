@@ -65,11 +65,15 @@ class GoogleConnectView(APIView):
                 {"error": f"Failed to start Google OAuth: {exc}"},
                 status=500,
             )
-        _audit_google(
-            request,
-            action="integrations.google.connect_started",
-            service_type=service_type,
-        )
+        # Never let audit failures block the OAuth redirect.
+        try:
+            _audit_google(
+                request,
+                action="integrations.google.connect_started",
+                service_type=service_type,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return Response(result)
 
 
