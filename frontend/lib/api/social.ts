@@ -235,8 +235,11 @@ export const socialApi = {
     apiFetch<{
       generated_at: string;
       ga4_connected: boolean;
+      ga4_connection_state?: string;
       ga4_error: string;
       ga4_note: string;
+      ga4_property_id?: string;
+      ga4_property_label?: string;
       rows: Array<{
         campaign_id: string;
         campaign_name: string;

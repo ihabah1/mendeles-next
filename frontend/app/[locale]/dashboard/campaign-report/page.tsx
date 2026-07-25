@@ -84,22 +84,40 @@ export default function CampaignReportPage() {
         </div>
       </div>
 
-      <Card className="space-y-2 !rounded-2xl">
+      <Card className="space-y-3 !rounded-2xl">
         <p className="text-sm">
-          <span className="font-semibold">GA4: </span>
+          <span className="font-semibold">GA4 במנדלס: </span>
           {report.data?.ga4_connected ? (
-            <span className="text-emerald-700 dark:text-emerald-300">מחובר</span>
+            <span className="text-emerald-700 dark:text-emerald-300">
+              מחובר
+              {report.data.ga4_property_label ? ` · ${report.data.ga4_property_label}` : ""}
+            </span>
           ) : (
-            <span className="text-amber-700 dark:text-amber-300">לא מחובר / אין נתונים</span>
+            <span className="text-amber-700 dark:text-amber-300">לא מחובר לקריאה ב־API</span>
           )}
         </p>
         {report.data?.ga4_error ? (
           <p className="text-sm text-red-600">{report.data.ga4_error}</p>
         ) : null}
         <p className="text-xs text-[var(--muted-fg)]">{report.data?.ga4_note}</p>
+        {!report.data?.ga4_connected ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed">
+            <p className="font-semibold text-amber-900 dark:text-amber-100">למה זה נראה מנותק?</p>
+            <p className="mt-1 text-[var(--muted-fg)]">
+              המסך ב־analytics.google.com מציג את ה־Property של האתר. הדוח כאן קורא נתונים רק אחרי חיבור OAuth
+              בתוך מנדלס ובחירת אותו Property — זה לא אותו דבר כמו מדידת תנועה באתר.
+            </p>
+            <Link
+              href="/dashboard/settings/integrations/google"
+              className="mt-3 inline-flex font-semibold text-[#6F42F5] hover:underline"
+            >
+              פתיחת אינטגרציות Google →
+            </Link>
+          </div>
+        ) : null}
         <p className="text-xs text-[var(--muted-fg)]">
           איפה מפיקים את הדוח: תפריט אדמין → תוכן → <strong>דוח קמפיינים</strong>, או מכפתור באוטומציית
-          קמפיין. לייחוס כניסות יש לחבר GA4 תחת הגדרות → אינטגרציות Google.
+          קמפיין.
         </p>
       </Card>
 

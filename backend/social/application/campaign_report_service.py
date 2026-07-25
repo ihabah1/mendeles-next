@@ -79,12 +79,15 @@ class CampaignReportService:
         return {
             "generated_at": timezone.now().isoformat(),
             "ga4_connected": bool(ga4.get("connected")),
+            "ga4_connection_state": ga4.get("connection_state") or ("connected" if ga4.get("connected") else "not_connected"),
             "ga4_error": ga4.get("error") or "",
             "ga4_note": ga4.get("note")
             or (
                 "כניסות מיוחסות לפי UTM (utm_campaign) שנשלח בקישור בפרסום. "
                 "קמפיינים שפורסמו לפני הוספת ה-UTM יופיעו ללא כניסות."
             ),
+            "ga4_property_id": ga4.get("property_id") or "",
+            "ga4_property_label": ga4.get("property_label") or "",
             "rows": rows,
             "totals": {
                 "campaigns": len(rows),
@@ -131,6 +134,13 @@ class CampaignReportService:
             )
         return buf.getvalue()
 
+    @staticmethod
+    def _normalize_ga4_property_id(property_id: str) -> str:
+        pid = (property_id or "").strip()
+        if pid and not pid.startswith("properties/"):
+            return f"properties/{pid}"
+        return pid
+
     @classmethod
     def _fetch_ga4_campaign_sessions(cls, tenant_id, *, refresh: bool = False) -> dict[str, Any]:
         try:
@@ -139,21 +149,78 @@ class CampaignReportService:
             from google.analytics.data_v1beta import BetaAnalyticsDataClient
             from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
         except Exception as exc:  # noqa: BLE001
-            return {"connected": False, "error": str(exc), "by_campaign": {}, "note": ""}
+            return {
+                "connected": False,
+                "connection_state": "dependency_missing",
+                "error": str(exc),
+                "by_campaign": {},
+                "note": "",
+                "property_id": "",
+                "property_label": "",
+            }
 
         try:
             conn = GoogleOAuthService.get_or_create_connection(tenant_id, GoogleServiceType.ANALYTICS)
-            if GoogleOAuthService.effective_status(conn) != ConnectionStatus.CONNECTED or not conn.property_id:
+            status = GoogleOAuthService.effective_status(conn)
+            property_id = cls._normalize_ga4_property_id(conn.property_id or "")
+
+            if status == ConnectionStatus.CONFIG_REQUIRED:
                 return {
                     "connected": False,
-                    "error": "Google Analytics לא מחובר או לא נבחר Property.",
+                    "connection_state": "config_required",
+                    "error": "OAuth של Google לא מוגדר בשרת.",
                     "by_campaign": {},
-                    "note": "חברו GA4 תחת הגדרות → אינטגרציות Google.",
+                    "note": "צריך להגדיר GOOGLE_OAUTH_CLIENT_ID/SECRET בשרת לפני חיבור GA4.",
+                    "property_id": property_id,
+                    "property_label": conn.property_label or "",
                 }
+
+            if not conn.encrypted_refresh_token:
+                return {
+                    "connected": False,
+                    "connection_state": "not_connected",
+                    "error": "Google Analytics לא מחובר למנדלס דרך OAuth.",
+                    "by_campaign": {},
+                    "note": (
+                        "צפייה ב־analytics.google.com אינה מספיקה. "
+                        "יש לחבר GA4 בתוך מנדלס: הגדרות → אינטגרציות Google → Google Analytics → Connect, "
+                        "ואז לבחור את ה־Property (למשל mendeles-79320)."
+                    ),
+                    "property_id": "",
+                    "property_label": "",
+                }
+
+            if not property_id:
+                return {
+                    "connected": False,
+                    "connection_state": "property_required",
+                    "error": "GA4 מחובר ב־OAuth, אבל לא נבחר Property.",
+                    "by_campaign": {},
+                    "note": "בחרו Property תחת הגדרות → אינטגרציות Google → Google Analytics.",
+                    "property_id": "",
+                    "property_label": "",
+                }
+
+            if status != ConnectionStatus.CONNECTED:
+                return {
+                    "connected": False,
+                    "connection_state": status,
+                    "error": f"סטטוס חיבור GA4: {status}",
+                    "by_campaign": {},
+                    "note": "השלימו את החיבור תחת הגדרות → אינטגרציות Google.",
+                    "property_id": property_id,
+                    "property_label": conn.property_label or "",
+                }
+
+            # Persist normalized property id if needed
+            if property_id != (conn.property_id or "").strip():
+                conn.property_id = property_id
+                conn.save(update_fields=["property_id", "updated_at"])
+
             creds = GoogleOAuthService.get_credentials(conn)
             client = BetaAnalyticsDataClient(credentials=creds)
             request = RunReportRequest(
-                property=conn.property_id,
+                property=property_id,
                 date_ranges=[DateRange(start_date="90daysAgo", end_date="today")],
                 dimensions=[Dimension(name="sessionCampaignName")],
                 metrics=[
@@ -176,19 +243,33 @@ class CampaignReportService:
                 by_campaign[name.lower()] = metrics
             return {
                 "connected": True,
+                "connection_state": "connected",
                 "error": "",
                 "by_campaign": by_campaign,
                 "note": "נתוני GA4 ל־90 הימים האחרונים לפי sessionCampaignName (utm_campaign).",
                 "refreshed": refresh,
                 "retrieved_at": timezone.now().isoformat(),
+                "property_id": property_id,
+                "property_label": conn.property_label or property_id,
             }
         except GoogleOAuthError as exc:
-            return {"connected": False, "error": str(exc), "by_campaign": {}, "note": ""}
+            return {
+                "connected": False,
+                "connection_state": "oauth_error",
+                "error": str(exc),
+                "by_campaign": {},
+                "note": "",
+                "property_id": "",
+                "property_label": "",
+            }
         except Exception as exc:  # noqa: BLE001
             logger.exception("campaign_report_ga4_failed tenant_id=%s", tenant_id)
             return {
                 "connected": False,
+                "connection_state": "api_error",
                 "error": f"GA4 report failed: {exc}",
                 "by_campaign": {},
                 "note": "",
+                "property_id": "",
+                "property_label": "",
             }
