@@ -23,6 +23,20 @@ def _check(request, view, permission: str):
         raise ForbiddenError()
 
 
+def _audit_google(request, *, action: str, service_type: str, metadata: dict | None = None, resource_id=None):
+    """Audit helper — resource_id must be UUID or None (never service_type strings)."""
+    AuditService.log(
+        tenant_id=getattr(request.user, "default_tenant_id", None),
+        user=request.user,
+        action=action,
+        resource_type="google_integration",
+        resource_id=resource_id,
+        metadata={"service_type": service_type, **(metadata or {})},
+        ip_address=request.META.get("REMOTE_ADDR"),
+        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+    )
+
+
 class GoogleDashboardView(APIView):
     def get(self, request):
         _check(request, self, "integrations.view")
@@ -46,14 +60,15 @@ class GoogleConnectView(APIView):
                 },
                 status=503 if exc.setup_required else 400,
             )
-        AuditService.log(
-            tenant_id=request.user.default_tenant_id,
-            user=request.user,
+        except Exception as exc:  # noqa: BLE001
+            return Response(
+                {"error": f"Failed to start Google OAuth: {exc}"},
+                status=500,
+            )
+        _audit_google(
+            request,
             action="integrations.google.connect_started",
-            resource_type="google_integration",
-            resource_id=service_type,
-            ip_address=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            service_type=service_type,
         )
         return Response(result)
 
@@ -78,8 +93,11 @@ class GoogleOAuthCallbackView(APIView):
                 user=None,
                 action="integrations.google.oauth_completed",
                 resource_type="google_integration",
-                resource_id=conn.service_type,
-                metadata={"email": conn.connected_account_email},
+                resource_id=None,
+                metadata={
+                    "service_type": conn.service_type,
+                    "email": conn.connected_account_email,
+                },
             )
             return HttpResponseRedirect(f"{return_url}?oauth_success={conn.service_type}")
         except GoogleOAuthError as exc:
@@ -93,14 +111,10 @@ class GoogleDisconnectView(APIView):
         if service_type not in {t.value for t in GoogleServiceType}:
             return Response({"error": "Invalid service_type"}, status=400)
         GoogleOAuthService.disconnect(request.user.default_tenant_id, service_type)
-        AuditService.log(
-            tenant_id=request.user.default_tenant_id,
-            user=request.user,
+        _audit_google(
+            request,
             action="integrations.google.disconnected",
-            resource_type="google_integration",
-            resource_id=service_type,
-            ip_address=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            service_type=service_type,
         )
         return Response({"ok": True})
 
@@ -138,15 +152,11 @@ class GooglePropertySelectView(APIView):
                 return Response({"error": "Invalid service_type"}, status=400)
         except GoogleOAuthError as exc:
             return Response({"error": str(exc)}, status=400)
-        AuditService.log(
-            tenant_id=tenant_id,
-            user=request.user,
+        _audit_google(
+            request,
             action="integrations.google.property_selected",
-            resource_type="google_integration",
-            resource_id=service_type,
+            service_type=service_type,
             metadata={"property_id": property_id},
-            ip_address=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
         return Response(GoogleOAuthService.serialize_connection(conn))
 
@@ -168,15 +178,12 @@ class GoogleSyncView(APIView):
             )
         except GoogleOAuthError as exc:
             return Response({"error": str(exc)}, status=400)
-        AuditService.log(
-            tenant_id=request.user.default_tenant_id,
-            user=request.user,
+        _audit_google(
+            request,
             action="integrations.google.sync_queued",
-            resource_type="automation_job",
-            resource_id=str(job.id),
-            metadata={"service_type": service_type},
-            ip_address=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            service_type=service_type,
+            resource_id=job.id,
+            metadata={"job_id": str(job.id)},
         )
         return Response({"job_id": str(job.id), "status": job.status})
 

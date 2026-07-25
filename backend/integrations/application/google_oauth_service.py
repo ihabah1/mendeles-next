@@ -116,11 +116,27 @@ class GoogleOAuthService:
         flow.fetch_token(code=code)
         creds = flow.credentials
 
+        email = ""
+        if getattr(creds, "id_token", None):
+            try:
+                from google.oauth2 import id_token as google_id_token
+                from google.auth.transport.requests import Request as GoogleRequest
+
+                info = google_id_token.verify_oauth2_token(
+                    creds.id_token,
+                    GoogleRequest(),
+                    settings.GOOGLE_OAUTH_CLIENT_ID,
+                )
+                email = (info.get("email") or "").strip()
+            except Exception:  # noqa: BLE001
+                email = ""
+
         conn.encrypted_access_token = encrypt_value(creds.token or "")
         conn.encrypted_refresh_token = encrypt_value(creds.refresh_token or "")
         conn.token_expires_at = creds.expiry
         conn.oauth_state = ""
         conn.scopes = list(creds.scopes or scopes)
+        conn.connected_account_email = email
         conn.status = ConnectionStatus.WAITING_AUTHORIZATION
         conn.last_error = ""
         conn.save()

@@ -156,6 +156,14 @@ export default function GoogleIntegrationsPage() {
         </Card>
       )}
 
+      {connect.isError ? (
+        <Card className="border-red-500/50 bg-red-500/10">
+          <p className="text-sm text-red-600">
+            {t("google.oauthError")}: {(connect.error as Error)?.message || "Connect failed"}
+          </p>
+        </Card>
+      ) : null}
+
       {!data?.oauth_platform_configured && data?.setup_instructions?.length ? (
         <Card>
           <h2 className="font-semibold">{t("google.setupRequired")}</h2>

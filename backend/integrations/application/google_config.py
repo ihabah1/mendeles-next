@@ -6,7 +6,7 @@ from django.conf import settings
 GOOGLE_SETUP_INSTRUCTIONS = [
     "Open Google Cloud Console: https://console.cloud.google.com/",
     "Create or select a project for Mendeles.",
-    "Enable APIs: Google Search Console API, Google Analytics Data API.",
+    "Enable APIs: Google Search Console API, Google Analytics Data API, and Google Analytics Admin API.",
     "Go to APIs & Services → Credentials → Create Credentials → OAuth client ID.",
     "Application type: Web application.",
     "Add Authorized redirect URI (backend callback): {redirect_uri}",
