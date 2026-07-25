@@ -233,6 +233,38 @@ export const socialApi = {
       json: body,
     }),
 
+  republishCronStatus: () =>
+    apiFetch<{
+      enabled: boolean;
+      job_id: string | null;
+      status: string | null;
+      interval_hours: number;
+      campaign_ids: string[];
+      next_run_at: string | null;
+      last_job_id: string | null;
+      last_status: string | null;
+      last_error: string;
+      error?: string;
+    }>("/api/v1/social/republish-cron/", { headers: authHeaders() }),
+
+  setRepublishCron: (body: { enabled: boolean; interval_hours?: number; campaign_ids?: string[] }) =>
+    apiFetch<{
+      enabled: boolean;
+      job_id: string | null;
+      status: string | null;
+      interval_hours: number;
+      campaign_ids: string[];
+      next_run_at: string | null;
+      last_job_id: string | null;
+      last_status: string | null;
+      last_error: string;
+      error?: string;
+    }>("/api/v1/social/republish-cron/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
+
   campaignReport: (refresh = false) =>
     apiFetch<{
       generated_at: string;

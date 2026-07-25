@@ -206,6 +206,7 @@ export default function AiAutomationPage() {
   const [republishStrategy, setRepublishStrategy] = useState<"random_one" | "shuffle_all">("random_one");
   const [republishIntervalMinutes, setRepublishIntervalMinutes] = useState(60);
   const [republishMode, setRepublishMode] = useState<"now" | "schedule">("schedule");
+  const [cronIntervalHours, setCronIntervalHours] = useState(6);
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -292,6 +293,13 @@ export default function AiAutomationPage() {
     queryKey: ["social-campaigns"],
     queryFn: socialApi.list,
     enabled: canView,
+  });
+
+  const republishCron = useQuery({
+    queryKey: ["social-republish-cron"],
+    queryFn: () => socialApi.republishCronStatus(),
+    enabled: canView && canManage,
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {
@@ -532,6 +540,28 @@ export default function AiAutomationPage() {
     },
     onError: (err: Error) => setError(err.message || "פרסום חוזר נכשל"),
   });
+
+  const setRepublishCron = useMutation({
+    mutationFn: (enabled: boolean) =>
+      socialApi.setRepublishCron({
+        enabled,
+        interval_hours: cronIntervalHours,
+        campaign_ids: republishIds.length ? republishIds : undefined,
+      }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["social-republish-cron"] });
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      if (data.error) setError(data.error);
+      else setError("");
+    },
+    onError: (err: Error) => setError(err.message || "עדכון ה־CRON נכשל"),
+  });
+
+  useEffect(() => {
+    if (republishCron.data?.interval_hours) {
+      setCronIntervalHours(republishCron.data.interval_hours);
+    }
+  }, [republishCron.data?.interval_hours]);
 
   const createIgImage = useMutation({
     mutationFn: async () => {
@@ -2057,7 +2087,7 @@ export default function AiAutomationPage() {
           {scheduleMode ? (
             <div className="grid gap-3 rounded-2xl border border-[var(--border)] p-4 md:grid-cols-3">
               <label className="text-sm font-medium">
-                Date
+                תאריך
                 <input
                   type="date"
                   className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
@@ -2066,7 +2096,7 @@ export default function AiAutomationPage() {
                 />
               </label>
               <label className="text-sm font-medium">
-                Time
+                שעה
                 <input
                   type="time"
                   className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
@@ -2075,7 +2105,7 @@ export default function AiAutomationPage() {
                 />
               </label>
               <label className="text-sm font-medium">
-                Timezone
+                אזור זמן
                 <select
                   className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
                   value={timezone}
@@ -2087,13 +2117,45 @@ export default function AiAutomationPage() {
                   <option value="Europe/London">Europe/London</option>
                 </select>
               </label>
+              <label className="text-sm font-medium">
+                כמה פעמים לשלוח
+                <input
+                  type="number"
+                  min={1}
+                  max={48}
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                  value={scheduleRepeatCount}
+                  onChange={(e) =>
+                    setScheduleRepeatCount(Math.max(1, Math.min(48, Number(e.target.value) || 1)))
+                  }
+                />
+              </label>
+              <label className="text-sm font-medium">
+                כל כמה דקות
+                <input
+                  type="number"
+                  min={5}
+                  max={43200}
+                  disabled={scheduleRepeatCount <= 1}
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 disabled:opacity-50"
+                  value={scheduleIntervalMinutes}
+                  onChange={(e) =>
+                    setScheduleIntervalMinutes(Math.max(5, Math.min(43200, Number(e.target.value) || 60)))
+                  }
+                />
+              </label>
+              <p className="text-xs text-[var(--muted-fg)] self-end pb-2">
+                {scheduleRepeatCount > 1
+                  ? `${scheduleRepeatCount} שליחות ל־Buffer, כל ${scheduleIntervalMinutes} דקות.`
+                  : "שליחה אחת במועד שנבחר."}
+              </p>
               <Button
                 type="button"
                 disabled={!canManage || !hasCampaign || !scheduleDate || publishing || simulate.isPending}
                 onClick={() => publish.mutate()}
                 className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
               >
-                Confirm scheduled release
+                אישור תזמון ושחרור
               </Button>
             </div>
           ) : null}
@@ -2322,6 +2384,62 @@ export default function AiAutomationPage() {
                   ? "שלח אחד באקראי"
                   : "Shuffle ושלח / תזמן"}
             </Button>
+
+            <div className="mt-4 space-y-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4">
+              <p className="font-bold text-amber-950 dark:text-amber-100">CRON — פרסום אקראי חוזר</p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-100/80">
+                כל X שעות המערכת בוחרת באקראי קמפיין מהרשימה שנבחרה (או מכל הקמפיינים שפורסמו) ושולחת אותו עכשיו דרך
+                Buffer. דורש worker אוטומציה פעיל.
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block text-sm font-medium">
+                  כל כמה שעות
+                  <input
+                    type="number"
+                    min={1}
+                    max={720}
+                    className="mt-1 w-28 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                    value={cronIntervalHours}
+                    onChange={(e) =>
+                      setCronIntervalHours(Math.max(1, Math.min(720, Number(e.target.value) || 6)))
+                    }
+                  />
+                </label>
+                {republishCron.data?.enabled ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManage || setRepublishCron.isPending}
+                    onClick={() => setRepublishCron.mutate(false)}
+                    className="rounded-full border-red-500/50 text-red-700 dark:text-red-300"
+                  >
+                    {setRepublishCron.isPending ? "עוצר…" : "עצור CRON"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={!canManage || setRepublishCron.isPending}
+                    onClick={() => setRepublishCron.mutate(true)}
+                    className="rounded-full bg-amber-600 px-5 font-bold text-white hover:bg-amber-700"
+                  >
+                    {setRepublishCron.isPending ? "מפעיל…" : "הפעל CRONJOB"}
+                  </Button>
+                )}
+              </div>
+              {republishCron.data ? (
+                <p className="text-xs text-[var(--muted-fg)]">
+                  סטטוס:{" "}
+                  {republishCron.data.enabled
+                    ? `פעיל · כל ${republishCron.data.interval_hours} שע׳ · ריצה הבאה: ${
+                        republishCron.data.next_run_at
+                          ? formatDate(republishCron.data.next_run_at)
+                          : "בקרוב"
+                      }`
+                    : "כבוי"}
+                  {republishCron.data.last_error ? ` · שגיאה אחרונה: ${republishCron.data.last_error}` : ""}
+                </p>
+              ) : null}
+            </div>
           </Card>
         </section>
       ) : null}

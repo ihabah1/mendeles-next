@@ -12,6 +12,7 @@ from social.api.v1.serializers import (
     GenerateCampaignSerializer,
     PlatformMediaUploadSerializer,
     PublishCampaignSerializer,
+    RandomRepublishCronSerializer,
     TikTokVideoUploadSerializer,
     UpdateCampaignSerializer,
 )
@@ -246,6 +247,38 @@ class CampaignBatchRepublishView(APIView):
         )
         status_code = status.HTTP_400_BAD_REQUEST if result.get("error") else status.HTTP_200_OK
         return Response(result, status=status_code)
+
+
+class RandomRepublishCronView(APIView):
+    """GET status / POST enable|disable recurring random republish every X hours."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def get(self, request):
+        _check(request, self, "automation.manage")
+        from social.application.random_republish_cron_service import RandomRepublishCronService
+
+        return Response(RandomRepublishCronService.status(_tenant_id(request)))
+
+    def post(self, request):
+        _check(request, self, "automation.manage")
+        ser = RandomRepublishCronSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        from social.application.random_republish_cron_service import RandomRepublishCronService
+
+        tenant_id = _tenant_id(request)
+        if data.get("enabled"):
+            result = RandomRepublishCronService.start(
+                tenant_id,
+                request.user,
+                interval_hours=data.get("interval_hours") or 6,
+                campaign_ids=[str(x) for x in (data.get("campaign_ids") or [])],
+            )
+            code = status.HTTP_400_BAD_REQUEST if result.get("error") else status.HTTP_200_OK
+            return Response(result, status=code)
+        return Response(RandomRepublishCronService.stop(tenant_id, request.user))
 
 
 class CampaignReportView(APIView):

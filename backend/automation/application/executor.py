@@ -379,6 +379,13 @@ class JobExecutor:
                 execution=execution,
             )
             return
+        if job_type == JobType.SOCIAL_RANDOM_REPUBLISH.value:
+            from social.application.random_republish_cron_service import RandomRepublishCronService
+
+            result = RandomRepublishCronService.execute(job, execution=execution)
+            execution.result = result
+            execution.save(update_fields=["result", "updated_at"])
+            return
         if job_type not in {t.value for t in IMPLEMENTED_JOB_TYPES}:
             raise RuntimeError(
                 f"Job type '{job_type}' is not implemented yet. "

@@ -66,6 +66,17 @@ class BatchRepublishSerializer(serializers.Serializer):
     timezone = serializers.CharField(required=False, allow_blank=True, default="Asia/Jerusalem")
 
 
+class RandomRepublishCronSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField(required=True)
+    interval_hours = serializers.IntegerField(required=False, min_value=1, max_value=720, default=6)
+    campaign_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=True,
+        max_length=50,
+    )
+
+
 class PlatformMediaUploadSerializer(serializers.Serializer):
     platform = serializers.ChoiceField(choices=[(p, p) for p in SUPPORTED_PLATFORMS])
     kind = serializers.ChoiceField(choices=["image", "video"])

@@ -11,6 +11,7 @@ from social.api.v1.views import (
     CampaignRepublishView,
     CampaignSimulateView,
     CampaignTikTokVideoView,
+    RandomRepublishCronView,
     SocialPublishView,
     SocialStatusView,
     VideoProvidersStatusView,
@@ -52,6 +53,7 @@ urlpatterns = [
         name="social-campaign-republish",
     ),
     path("republish-batch/", CampaignBatchRepublishView.as_view(), name="social-republish-batch"),
+    path("republish-cron/", RandomRepublishCronView.as_view(), name="social-republish-cron"),
     path("campaign-report/", CampaignReportView.as_view(), name="social-campaign-report"),
     path(
         "campaign-report/export.csv",

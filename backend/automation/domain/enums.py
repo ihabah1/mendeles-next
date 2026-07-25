@@ -69,6 +69,7 @@ class JobType(models.TextChoices):
     WHATSAPP_CAMPAIGN = "whatsapp_campaign", "WhatsApp Campaign"
     SMS_CAMPAIGN = "sms_campaign", "SMS Campaign"
     LEAD_FOLLOW_UP = "lead_follow_up", "Lead Follow-up"
+    SOCIAL_RANDOM_REPUBLISH = "social_random_republish", "Social random republish"
     # System
     BACKUP = "backup", "Backup"
     HEALTH_CHECK = "health_check", "Health Check"
@@ -93,6 +94,7 @@ IMPLEMENTED_JOB_TYPES = {
     JobType.GENERATE_LANDING_PAGE,
     JobType.ACCESSIBILITY_AUDIT,
     JobType.TRANSLATE_SITE_PAGES,
+    JobType.SOCIAL_RANDOM_REPUBLISH,
 }
 
 GEMINI_JOB_TYPES = {
