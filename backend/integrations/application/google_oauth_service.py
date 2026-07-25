@@ -67,10 +67,6 @@ class GoogleOAuthService:
 
         state = secrets.token_urlsafe(32)
         conn = cls.get_or_create_connection(tenant_id, service_type)
-        conn.oauth_state = state
-        conn.status = ConnectionStatus.WAITING_AUTHORIZATION
-        conn.last_error = ""
-        conn.save(update_fields=["oauth_state", "status", "last_error", "updated_at"])
 
         flow = Flow.from_client_config(
             {
@@ -89,6 +85,19 @@ class GoogleOAuthService:
             access_type="offline",
             include_granted_scopes="true",
             prompt="consent",
+        )
+        conn.oauth_state = state
+        conn.oauth_code_verifier = getattr(flow, "code_verifier", None) or ""
+        conn.status = ConnectionStatus.WAITING_AUTHORIZATION
+        conn.last_error = ""
+        conn.save(
+            update_fields=[
+                "oauth_state",
+                "oauth_code_verifier",
+                "status",
+                "last_error",
+                "updated_at",
+            ]
         )
         return {
             "auth_url": auth_url,
@@ -117,7 +126,14 @@ class GoogleOAuthService:
             state=state,
         )
         flow.redirect_uri = oauth_redirect_uri()
-        flow.fetch_token(code=code)
+        if conn.oauth_code_verifier:
+            flow.code_verifier = conn.oauth_code_verifier
+        try:
+            flow.fetch_token(code=code)
+        except Exception as exc:  # noqa: BLE001
+            conn.last_error = str(exc)[:500]
+            conn.save(update_fields=["last_error", "updated_at"])
+            raise GoogleOAuthError(f"Google token exchange failed: {exc}") from exc
         creds = flow.credentials
 
         email = ""
@@ -139,6 +155,7 @@ class GoogleOAuthService:
         conn.encrypted_refresh_token = encrypt_value(creds.refresh_token or "")
         conn.token_expires_at = creds.expiry
         conn.oauth_state = ""
+        conn.oauth_code_verifier = ""
         conn.scopes = list(creds.scopes or scopes)
         conn.connected_account_email = email
         conn.status = ConnectionStatus.WAITING_AUTHORIZATION
@@ -176,6 +193,7 @@ class GoogleOAuthService:
         conn.encrypted_refresh_token = ""
         conn.token_expires_at = None
         conn.oauth_state = ""
+        conn.oauth_code_verifier = ""
         conn.scopes = []
         conn.last_error = ""
         conn.save()

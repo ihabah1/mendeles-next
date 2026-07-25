@@ -27,6 +27,7 @@ class GoogleServiceConnection(BaseModel):
     encrypted_refresh_token = models.TextField(blank=True, default="")
     token_expires_at = models.DateTimeField(null=True, blank=True)
     oauth_state = models.CharField(max_length=128, blank=True, default="", db_index=True)
+    oauth_code_verifier = models.CharField(max_length=128, blank=True, default="")
     scopes = models.JSONField(default=list, blank=True)
     last_error = models.TextField(blank=True, default="")
     last_sync_at = models.DateTimeField(null=True, blank=True)

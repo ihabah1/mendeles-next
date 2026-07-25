@@ -118,17 +118,20 @@ class GoogleOAuthCallbackView(APIView):
             return Response({"ok": False, "error": "missing_code"}, status=400)
         try:
             conn = GoogleOAuthService.handle_callback(state=state, code=code)
-            AuditService.log(
-                tenant_id=conn.tenant_id,
-                user=None,
-                action="integrations.google.oauth_completed",
-                resource_type="google_integration",
-                resource_id=None,
-                metadata={
-                    "service_type": conn.service_type,
-                    "email": conn.connected_account_email,
-                },
-            )
+            try:
+                AuditService.log(
+                    tenant_id=conn.tenant_id,
+                    user=None,
+                    action="integrations.google.oauth_completed",
+                    resource_type="google_integration",
+                    resource_id=None,
+                    metadata={
+                        "service_type": conn.service_type,
+                        "email": conn.connected_account_email,
+                    },
+                )
+            except Exception:  # noqa: BLE001
+                pass
             return Response(
                 {
                     "ok": True,
@@ -138,6 +141,8 @@ class GoogleOAuthCallbackView(APIView):
             )
         except GoogleOAuthError as exc:
             return Response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:  # noqa: BLE001
+            return Response({"ok": False, "error": f"OAuth callback failed: {exc}"}, status=500)
 
 
 class GoogleDisconnectView(APIView):

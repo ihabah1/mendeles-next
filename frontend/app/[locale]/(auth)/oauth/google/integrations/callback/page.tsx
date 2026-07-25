@@ -5,6 +5,32 @@ import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
+function formatOAuthError(payload: unknown, fallback: string): string {
+  if (!payload) return fallback;
+  if (typeof payload === "string") return payload;
+  if (typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (typeof obj.message === "string" && obj.message) return obj.message;
+    if (typeof obj.error === "string" && obj.error) return obj.error;
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>;
+      if (typeof nested.message === "string" && nested.message) return nested.message;
+      if (typeof nested.exception_message === "string" && nested.exception_message) {
+        return nested.exception_message;
+      }
+    }
+    if (typeof obj.exception_message === "string" && obj.exception_message) {
+      return obj.exception_message;
+    }
+    try {
+      return JSON.stringify(payload);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 function IntegrationsGoogleCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,23 +58,24 @@ function IntegrationsGoogleCallbackInner() {
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ code, state }),
         });
-        const data = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          error?: string;
-          service_type?: string;
-          return_url?: string;
-        };
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || `OAuth complete failed (${res.status})`);
+        const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        if (!res.ok || data.ok !== true) {
+          throw new Error(
+            formatOAuthError(data.error ?? data, `OAuth complete failed (${res.status})`),
+          );
         }
         if (!cancelled) {
+          const serviceType =
+            typeof data.service_type === "string" && data.service_type
+              ? data.service_type
+              : "analytics";
           router.replace(
-            `/dashboard/settings/integrations/google?oauth_success=${encodeURIComponent(data.service_type || "analytics")}`,
+            `/dashboard/settings/integrations/google?oauth_success=${encodeURIComponent(serviceType)}`,
           );
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "OAuth failed");
+          setError(err instanceof Error ? err.message : formatOAuthError(err, "OAuth failed"));
         }
       }
     })();
@@ -65,7 +92,7 @@ function IntegrationsGoogleCallbackInner() {
         {!error ? <p className="text-sm text-[var(--muted-fg)]">רגע אחד, משלימים את האישור.</p> : null}
         {error ? (
           <>
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-600 break-words">{error}</p>
             <Link
               href="/dashboard/settings/integrations/google"
               className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius)] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-fg)]"
