@@ -48,18 +48,19 @@ TRENDS_MARKET_CONFIG: dict[str, dict[str, str]] = {
 }
 
 
-# OAuth scopes per service
+# OAuth scopes per service — use full userinfo URLs (not "email"/"profile")
+# so Google's returned scopes match what oauthlib expects on token exchange.
 GOOGLE_OAUTH_SCOPES: dict[str, list[str]] = {
     GoogleServiceType.SEARCH_CONSOLE: [
         "https://www.googleapis.com/auth/webmasters.readonly",
         "openid",
-        "email",
-        "profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
     ],
     GoogleServiceType.ANALYTICS: [
         "https://www.googleapis.com/auth/analytics.readonly",
         "openid",
-        "email",
-        "profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
     ],
 }

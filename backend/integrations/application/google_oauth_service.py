@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 from datetime import timedelta
 from urllib.parse import urlencode
@@ -81,9 +82,9 @@ class GoogleOAuthService:
             state=state,
         )
         flow.redirect_uri = oauth_redirect_uri()
+        # Avoid include_granted_scopes — it often triggers false "Scope has changed" errors.
         auth_url, _ = flow.authorization_url(
             access_type="offline",
-            include_granted_scopes="true",
             prompt="consent",
         )
         conn.oauth_state = state
@@ -128,12 +129,20 @@ class GoogleOAuthService:
         flow.redirect_uri = oauth_redirect_uri()
         if conn.oauth_code_verifier:
             flow.code_verifier = conn.oauth_code_verifier
+        # Google may return equivalent scope aliases; allow token exchange to proceed.
+        previous_relax = os.environ.get("OAUTHLIB_RELAX_TOKEN_SCOPE")
+        os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
         try:
             flow.fetch_token(code=code)
         except Exception as exc:  # noqa: BLE001
             conn.last_error = str(exc)[:500]
             conn.save(update_fields=["last_error", "updated_at"])
             raise GoogleOAuthError(f"Google token exchange failed: {exc}") from exc
+        finally:
+            if previous_relax is None:
+                os.environ.pop("OAUTHLIB_RELAX_TOKEN_SCOPE", None)
+            else:
+                os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = previous_relax
         creds = flow.credentials
 
         email = ""
