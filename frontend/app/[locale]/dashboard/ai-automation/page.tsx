@@ -790,6 +790,14 @@ export default function AiAutomationPage() {
       .join("\n");
   }, [active]);
 
+  const publishedForRepublish = useMemo(
+    () =>
+      (history.data?.results || []).filter(
+        (row) => row.status === "published" || row.status === "scheduled",
+      ),
+    [history.data?.results],
+  );
+
   function setHashtagText(value: string) {
     if (!active) return;
     const next: SocialCampaign["hashtags"] = { ...active.hashtags };
@@ -841,13 +849,6 @@ export default function AiAutomationPage() {
   const geminiEnabled = status.data?.gemini_enabled !== false;
   const isPublished = active?.status === "published";
   const isScheduled = active?.status === "scheduled";
-  const publishedForRepublish = useMemo(
-    () =>
-      (history.data?.results || []).filter(
-        (row) => row.status === "published" || row.status === "scheduled",
-      ),
-    [history.data?.results],
-  );
   const publishedPlatforms = Object.keys(active?.buffer_update_ids || {});
   const pngBlocked = /חסרה תמונת PNG|Campaign PNG|Create Instagram image/i.test(error || "");
   const needCampaignHint = "צרו קמפיין בשלב 1 — ואז הפעולות כאן ייפתחו.";
