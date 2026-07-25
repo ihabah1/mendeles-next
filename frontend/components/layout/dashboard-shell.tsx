@@ -43,6 +43,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     labelKey: "groupContent",
     items: [
       { href: "/dashboard/ai-automation", labelKey: "aiAutomation", permission: "automation.view" },
+      { href: "/dashboard/campaign-report", labelKey: "campaignReport", permission: "automation.view" },
       { href: "/dashboard/content", labelKey: "content", permission: "content.view" },
       { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
       { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },

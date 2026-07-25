@@ -46,6 +46,22 @@ class PublishCampaignSerializer(serializers.Serializer):
     auto_release = serializers.BooleanField(required=False, default=False)
 
 
+class BatchRepublishSerializer(serializers.Serializer):
+    campaign_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        allow_empty=False,
+        max_length=50,
+    )
+    strategy = serializers.ChoiceField(
+        choices=["random_one", "shuffle_all"],
+        default="random_one",
+    )
+    mode = serializers.ChoiceField(choices=["now", "schedule"], default="schedule")
+    scheduled_at = serializers.CharField(required=False, allow_blank=True, default="")
+    interval_minutes = serializers.IntegerField(required=False, min_value=5, max_value=43200, default=60)
+    timezone = serializers.CharField(required=False, allow_blank=True, default="Asia/Jerusalem")
+
+
 class PlatformMediaUploadSerializer(serializers.Serializer):
     platform = serializers.ChoiceField(choices=[(p, p) for p in SUPPORTED_PLATFORMS])
     kind = serializers.ChoiceField(choices=["image", "video"])

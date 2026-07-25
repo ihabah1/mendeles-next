@@ -1,10 +1,13 @@
 from django.urls import path
 
 from social.api.v1.views import (
+    CampaignBatchRepublishView,
     CampaignDetailView,
     CampaignInstagramImageView,
     CampaignListCreateView,
     CampaignPlatformMediaView,
+    CampaignReportExportView,
+    CampaignReportView,
     CampaignRepublishView,
     CampaignSimulateView,
     CampaignTikTokVideoView,
@@ -47,6 +50,13 @@ urlpatterns = [
         "campaigns/<uuid:campaign_id>/republish/",
         CampaignRepublishView.as_view(),
         name="social-campaign-republish",
+    ),
+    path("republish-batch/", CampaignBatchRepublishView.as_view(), name="social-republish-batch"),
+    path("campaign-report/", CampaignReportView.as_view(), name="social-campaign-report"),
+    path(
+        "campaign-report/export.csv",
+        CampaignReportExportView.as_view(),
+        name="social-campaign-report-export",
     ),
     path("publish/", SocialPublishView.as_view(), name="social-publish"),
 ]

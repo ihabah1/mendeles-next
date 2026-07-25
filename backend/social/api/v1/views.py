@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,12 +8,14 @@ import logging
 from core.exceptions.base import ForbiddenError, NotFoundError, ValidationError
 from core.permissions.base import HasPermission
 from social.api.v1.serializers import (
+    BatchRepublishSerializer,
     GenerateCampaignSerializer,
     PlatformMediaUploadSerializer,
     PublishCampaignSerializer,
     TikTokVideoUploadSerializer,
     UpdateCampaignSerializer,
 )
+from social.application.campaign_report_service import CampaignReportService
 from social.application.campaign_service import CampaignService
 from social.application.generation_service import CampaignGenerationService
 from social.application.media_service import MediaGenerationService
@@ -217,6 +220,58 @@ class CampaignRepublishView(APIView):
             raise NotFoundError("Campaign not found.")
         result = CampaignService.publish(campaign, schedule=False)
         return Response(result)
+
+
+class CampaignBatchRepublishView(APIView):
+    """POST — republish selected published campaigns (random one or shuffled batch)."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.manage"
+
+    def post(self, request):
+        _check(request, self, "automation.manage")
+        ser = BatchRepublishSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        result = CampaignService.batch_republish(
+            _tenant_id(request),
+            data["campaign_ids"],
+            strategy=data.get("strategy") or "random_one",
+            schedule=data.get("mode") == "schedule",
+            scheduled_at=data.get("scheduled_at") or None,
+            interval_minutes=data.get("interval_minutes") or 60,
+            tz_name=data.get("timezone") or None,
+        )
+        status_code = status.HTTP_400_BAD_REQUEST if result.get("error") else status.HTTP_200_OK
+        return Response(result, status=status_code)
+
+
+class CampaignReportView(APIView):
+    """GET — campaign performance report (name, datetime, visits from GA4 UTMs)."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.view"
+
+    def get(self, request):
+        _check(request, self, "automation.view")
+        refresh = str(request.query_params.get("refresh") or "").lower() in {"1", "true", "yes"}
+        return Response(CampaignReportService.build_report(_tenant_id(request), refresh_ga4=refresh))
+
+
+class CampaignReportExportView(APIView):
+    """GET — CSV export of campaign performance report."""
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    required_permission = "automation.view"
+
+    def get(self, request):
+        from django.http import HttpResponse
+
+        _check(request, self, "automation.view")
+        csv_body = CampaignReportService.export_csv(_tenant_id(request))
+        response = HttpResponse(csv_body, content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="campaign-traffic-report.csv"'
+        return response
 
 
 class CampaignSimulateView(APIView):

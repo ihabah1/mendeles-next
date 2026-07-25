@@ -747,3 +747,100 @@ def test_auto_release_runs_simulation_then_schedules(tenant, owner_user, setting
     assert result["status"] == CampaignStatus.SCHEDULED
     assert result["simulated_at"]
     assert result["buffer_update_ids"].get("linkedin") == "buf-1"
+
+
+def test_batch_republish_random_one_and_shuffle(tenant, owner_user, settings, monkeypatch):
+    settings.FRONTEND_URL = "https://mendeles.com"
+    settings.BUFFER_ACCESS_TOKEN = "token"
+
+    from django.utils import timezone
+
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+    from social.providers.base import PublishResult
+
+    campaigns = []
+    for i in range(3):
+        campaigns.append(
+            SocialCampaign.objects.create(
+                tenant=tenant,
+                created_by=owner_user,
+                title=f"Published {i}",
+                website_url="https://mendeles.com",
+                platforms=["linkedin"],
+                captions_json={"linkedin": f"Caption {i}"},
+                linkedin_image_url=f"https://mendeles.com/media/social/li{i}.png",
+                media_url=f"https://mendeles.com/media/social/li{i}.png",
+                status=CampaignStatus.PUBLISHED,
+                simulated_at=timezone.now(),
+                published_at=timezone.now(),
+            )
+        )
+
+    published: list[str] = []
+
+    class FakePublisher:
+        def configured(self):
+            return True
+
+        def publish(self, payload):
+            published.append(payload.text)
+            return PublishResult(ok=True, platform="linkedin", external_id="buf-x", channel_name="linkedin")
+
+    monkeypatch.setattr(
+        "social.application.campaign_service.get_default_publisher",
+        lambda: FakePublisher(),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.is_real_raster_image_url",
+        lambda url: bool(url) and str(url).endswith(".png"),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.public_media_url_for_buffer",
+        lambda url: url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_buffer_image_url",
+        lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.resolve_platform_image_url",
+        lambda campaign, platform: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.resolve_platform_video_url",
+        lambda campaign, platform: "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_buffer_video_url",
+        lambda campaign: "",
+    )
+
+    ids = [c.id for c in campaigns]
+    one = CampaignService.batch_republish(
+        tenant.id,
+        ids,
+        strategy="random_one",
+        schedule=False,
+    )
+    assert not one.get("error")
+    assert one["count"] == 1
+    assert len(one["results"]) == 1
+
+    published.clear()
+    all_shuffled = CampaignService.batch_republish(
+        tenant.id,
+        ids,
+        strategy="shuffle_all",
+        schedule=True,
+        scheduled_at="2030-02-01T10:00:00Z",
+        interval_minutes=30,
+        tz_name="Asia/Jerusalem",
+    )
+    assert not all_shuffled.get("error")
+    assert all_shuffled["count"] == 3
+    assert len(all_shuffled["results"]) == 3
+    assert all(r["status"] == CampaignStatus.SCHEDULED for r in all_shuffled["results"])
+    scheduled_times = [r["scheduled_at"] for r in all_shuffled["results"]]
+    assert len(set(scheduled_times)) == 3

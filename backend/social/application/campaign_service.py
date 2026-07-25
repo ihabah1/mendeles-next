@@ -26,6 +26,8 @@ def _placeholder_media_url(prompt: str, media_type: str) -> str:
 class CampaignService:
     @staticmethod
     def serialize(campaign: SocialCampaign) -> dict[str, Any]:
+        from social.application.campaign_report_service import campaign_tracking_code
+
         return {
             "id": str(campaign.id),
             "title": campaign.title,
@@ -66,6 +68,7 @@ class CampaignService:
             "last_error": campaign.last_error,
             "publish_log": campaign.publish_log or [],
             "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+            "tracking_code": campaign_tracking_code(campaign),
         }
 
     @staticmethod
@@ -507,6 +510,15 @@ class CampaignService:
                 text_parts.append(tag_line)
             if cta and cta not in caption:
                 text_parts.append(cta)
+            # Always include tracked landing URL so GA4 can attribute post-publish visits.
+            from social.application.campaign_report_service import tracked_website_url
+
+            tracked = tracked_website_url(campaign, platform=platform)
+            blob = "\n".join(text_parts)
+            if tracked and tracked not in blob and campaign.website_url not in blob:
+                text_parts.append(tracked)
+            elif campaign.website_url and campaign.website_url in blob and tracked not in blob:
+                text_parts = [part.replace(campaign.website_url, tracked) for part in text_parts]
             text = "\n\n".join(p for p in text_parts if p).strip()
 
             platform_video = resolve_platform_video_url(campaign, platform)
@@ -592,3 +604,110 @@ class CampaignService:
         campaign.publish_log = log
         campaign.save()
         return CampaignService.serialize(campaign)
+
+    @staticmethod
+    def batch_republish(
+        tenant_id,
+        campaign_ids: list,
+        *,
+        strategy: str = "random_one",
+        schedule: bool = False,
+        scheduled_at: str | None = None,
+        interval_minutes: int = 60,
+        tz_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Republish previously published/scheduled campaigns.
+
+        strategies:
+          - random_one: shuffle pool, publish/schedule only the first
+          - shuffle_all: shuffle pool, publish/schedule each (staggered when scheduling)
+        """
+        import random
+        from datetime import timedelta
+
+        ids = [str(cid) for cid in (campaign_ids or [])]
+        if not ids:
+            return {
+                "strategy": strategy,
+                "order": [],
+                "results": [],
+                "error": "Select at least one published campaign.",
+            }
+
+        qs = SocialCampaign.objects.filter(
+            id__in=ids,
+            tenant_id=tenant_id,
+            deleted_at__isnull=True,
+            status__in=[CampaignStatus.PUBLISHED, CampaignStatus.SCHEDULED, CampaignStatus.SIMULATED],
+        )
+        campaigns = list(qs)
+        if not campaigns:
+            return {
+                "strategy": strategy,
+                "order": [],
+                "results": [],
+                "error": "No eligible published campaigns found for the selection.",
+            }
+
+        # Preserve only selected IDs that exist; shuffle for randomness.
+        random.shuffle(campaigns)
+        interval_minutes = max(5, min(int(interval_minutes or 60), 60 * 24 * 30))
+
+        base_dt = None
+        if schedule:
+            if not scheduled_at:
+                return {
+                    "strategy": strategy,
+                    "order": [],
+                    "results": [],
+                    "error": "scheduled_at is required when scheduling.",
+                }
+            base_dt = parse_datetime(scheduled_at)
+            if base_dt is None:
+                return {
+                    "strategy": strategy,
+                    "order": [],
+                    "results": [],
+                    "error": "Invalid scheduled_at datetime.",
+                }
+            if timezone.is_naive(base_dt):
+                base_dt = timezone.make_aware(base_dt, dt_timezone.utc)
+
+        selected: list[SocialCampaign]
+        if strategy == "shuffle_all":
+            selected = campaigns
+        else:
+            selected = campaigns[:1]
+
+        results: list[dict[str, Any]] = []
+        for index, campaign in enumerate(selected):
+            if not campaign.simulated_at:
+                CampaignService.run_simulation(campaign)
+                campaign.refresh_from_db()
+            if not campaign.simulated_at:
+                failed = CampaignService.serialize(campaign)
+                failed["batch_error"] = campaign.last_error or "Simulation failed before republish."
+                results.append(failed)
+                continue
+
+            slot = None
+            if schedule and base_dt is not None:
+                slot_dt = base_dt + timedelta(minutes=interval_minutes * index)
+                slot = slot_dt.astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+            results.append(
+                CampaignService.publish(
+                    campaign,
+                    schedule=schedule,
+                    scheduled_at=slot,
+                    tz_name=tz_name,
+                )
+            )
+
+        return {
+            "strategy": strategy,
+            "order": [r.get("id") for r in results],
+            "count": len(results),
+            "results": results,
+            "error": "",
+        }

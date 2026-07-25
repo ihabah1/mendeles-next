@@ -211,4 +211,51 @@ export const socialApi = {
       method: "POST",
       headers: authHeaders(),
     }),
+  republishBatch: (body: {
+    campaign_ids: string[];
+    strategy: "random_one" | "shuffle_all";
+    mode: "now" | "schedule";
+    scheduled_at?: string;
+    interval_minutes?: number;
+    timezone?: string;
+  }) =>
+    apiFetch<{
+      strategy: string;
+      order: string[];
+      count?: number;
+      results: SocialCampaign[];
+      error?: string;
+    }>("/api/v1/social/republish-batch/", {
+      method: "POST",
+      headers: authHeaders(),
+      json: body,
+    }),
+
+  campaignReport: (refresh = false) =>
+    apiFetch<{
+      generated_at: string;
+      ga4_connected: boolean;
+      ga4_error: string;
+      ga4_note: string;
+      rows: Array<{
+        campaign_id: string;
+        campaign_name: string;
+        status: string;
+        platforms: string[];
+        published_at: string | null;
+        scheduled_at: string | null;
+        event_at: string | null;
+        tracking_code: string;
+        tracked_url: string;
+        sessions: number | null;
+        pageviews: number | null;
+        users: number | null;
+        visits_available: boolean;
+      }>;
+      totals: { campaigns: number; sessions: number; pageviews: number };
+    }>(`/api/v1/social/campaign-report/${refresh ? "?refresh=1" : ""}`, {
+      headers: authHeaders(),
+    }),
+
+  campaignReportExportUrl: () => "/api/v1/social/campaign-report/export.csv",
 };
