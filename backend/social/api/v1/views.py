@@ -280,6 +280,8 @@ class RandomRepublishCronView(APIView):
                 request.user,
                 interval_hours=data.get("interval_hours") or 6,
                 campaign_ids=[str(x) for x in (data.get("campaign_ids") or [])],
+                last_order=[str(x) for x in (data.get("last_order") or [])],
+                last_error=str(data.get("last_error") or ""),
             )
             code = status.HTTP_400_BAD_REQUEST if result.get("error") else status.HTTP_200_OK
             return Response(result, status=code)

@@ -59,6 +59,7 @@ export type SocialCampaign = {
   last_error: string;
   publish_log: Array<{ step: string; detail: string; ok: boolean; at: string }>;
   created_at: string | null;
+  updated_at?: string | null;
 };
 
 export type GenerateCampaignInput = {
@@ -245,10 +246,19 @@ export const socialApi = {
       last_job_id: string | null;
       last_status: string | null;
       last_error: string;
+      last_run_at?: string | null;
+      last_campaign_ids?: string[];
+      last_result?: Record<string, unknown>;
       error?: string;
     }>("/api/v1/social/republish-cron/", { headers: authHeaders() }),
 
-  setRepublishCron: (body: { enabled: boolean; interval_hours?: number; campaign_ids?: string[] }) =>
+  setRepublishCron: (body: {
+    enabled: boolean;
+    interval_hours?: number;
+    campaign_ids?: string[];
+    last_order?: string[];
+    last_error?: string;
+  }) =>
     apiFetch<{
       enabled: boolean;
       job_id: string | null;
@@ -259,6 +269,9 @@ export const socialApi = {
       last_job_id: string | null;
       last_status: string | null;
       last_error: string;
+      last_run_at?: string | null;
+      last_campaign_ids?: string[];
+      last_result?: Record<string, unknown>;
       error?: string;
     }>("/api/v1/social/republish-cron/", {
       method: "POST",

@@ -42,6 +42,12 @@ class RandomRepublishCronService:
             .first()
         )
         cfg = (active or recent).config if (active or recent) else {}
+        last_result = dict((cfg or {}).get("last_result") or {})
+        last_finished = None
+        if recent and getattr(recent, "finished_at", None):
+            last_finished = recent.finished_at.isoformat()
+        elif (cfg or {}).get("last_run_at"):
+            last_finished = str((cfg or {}).get("last_run_at"))
         return {
             "enabled": bool(active),
             "job_id": str(active.id) if active else None,
@@ -51,7 +57,11 @@ class RandomRepublishCronService:
             "next_run_at": active.scheduled_at.isoformat() if active and active.scheduled_at else None,
             "last_job_id": str(recent.id) if recent else None,
             "last_status": recent.status if recent else None,
-            "last_error": (recent.error_message if recent else "") or "",
+            "last_error": (recent.error_message if recent else "")
+            or str(last_result.get("error") or ""),
+            "last_run_at": last_finished,
+            "last_campaign_ids": list(last_result.get("order") or []),
+            "last_result": last_result,
         }
 
     @classmethod
@@ -62,6 +72,8 @@ class RandomRepublishCronService:
         *,
         interval_hours: int = 6,
         campaign_ids: list[str] | None = None,
+        last_order: list[str] | None = None,
+        last_error: str = "",
     ) -> dict[str, Any]:
         hours = max(1, min(int(interval_hours or 6), 24 * 30))
         ids = [str(x) for x in (campaign_ids or []) if x]
@@ -85,6 +97,10 @@ class RandomRepublishCronService:
 
         cls.stop(tenant_id, user)
         now = timezone.now()
+        # Immediate send is handled by the API caller (republish-batch). Schedule the
+        # first worker tick for the next interval so we don't double-publish now.
+        first_run_at = now + timedelta(hours=hours)
+        seed_order = [str(x) for x in (last_order or []) if x] or ids[:1]
         job = JobService.create_job(
             tenant_id,
             user,
@@ -92,15 +108,21 @@ class RandomRepublishCronService:
                 "name": f"Random campaign republish every {hours}h",
                 "job_type": cls.JOB_TYPE,
                 "requires_approval": False,
-                "scheduled_at": now,
+                "scheduled_at": first_run_at,
                 "config": {
                     "chain_key": cls.CHAIN_KEY,
                     "interval_hours": hours,
                     "campaign_ids": ids,
+                    "started_at": now.isoformat(),
+                    "last_run_at": now.isoformat(),
+                    "last_result": {
+                        "order": seed_order,
+                        "error": str(last_error or ""),
+                        "source": "manual_start",
+                    },
                 },
             },
         )
-        # Run ASAP via the worker (scheduled_at <= now → queued on next poll).
         job.status = JobStatus.SCHEDULED
         job.save(update_fields=["status", "updated_at"])
         return cls.status(tenant_id)
@@ -172,9 +194,12 @@ class RandomRepublishCronService:
             **config,
             "next_recurring_job_id": str(next_job.id),
             "next_recurring_run_at": next_run_at.isoformat(),
+            "last_run_at": timezone.now().isoformat(),
             "last_result": {
                 "order": result.get("order"),
                 "error": result.get("error") or "",
+                "count": result.get("count") or 0,
+                "source": "cron",
             },
         }
         job.save(update_fields=["config", "updated_at"])

@@ -208,6 +208,7 @@ export default function AiAutomationPage() {
   const [republishIntervalMinutes, setRepublishIntervalMinutes] = useState(60);
   const [republishMode, setRepublishMode] = useState<"now" | "schedule" | "now_hourly">("now");
   const [cronIntervalHours, setCronIntervalHours] = useState(1);
+  const [republishNotice, setRepublishNotice] = useState("");
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -300,8 +301,16 @@ export default function AiAutomationPage() {
     queryKey: ["social-republish-cron"],
     queryFn: () => socialApi.republishCronStatus(),
     enabled: canView && canManage,
-    refetchInterval: 30_000,
+    refetchInterval: (q) => (q.state.data?.enabled ? 15_000 : 60_000),
   });
+
+  useEffect(() => {
+    if (!republishCron.data?.enabled) return;
+    const id = window.setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [republishCron.data?.enabled, qc]);
 
   useEffect(() => {
     if (!active) return;
@@ -535,15 +544,24 @@ export default function AiAutomationPage() {
 
       let cron = null as Awaited<ReturnType<typeof socialApi.setRepublishCron>> | null;
       if (republishMode === "now_hourly") {
+        const okResults = (batch.results || []).filter((r) => r.status !== "failed");
+        const failedResults = (batch.results || []).filter((r) => r.status === "failed");
         cron = await socialApi.setRepublishCron({
           enabled: true,
           interval_hours: Math.max(1, Math.min(720, cronIntervalHours || 1)),
           campaign_ids: republishIds,
+          last_order: (okResults.length ? okResults : batch.results || [])
+            .map((r) => r.id)
+            .filter(Boolean),
+          last_error: failedResults[0]?.last_error || "",
         });
         if (cron.error) {
           return {
             ...batch,
-            error: `נשלח עכשיו, אבל הפעלת החזרה נכשלה: ${cron.error}`,
+            error:
+              okResults.length > 0
+                ? `נשלח עכשיו, אבל הפעלת החזרה נכשלה: ${cron.error}`
+                : cron.error,
             cron,
           };
         }
@@ -554,13 +572,16 @@ export default function AiAutomationPage() {
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       qc.invalidateQueries({ queryKey: ["social-republish-cron"] });
       if (data.error) {
+        setRepublishNotice("");
         setError(data.error);
         return;
       }
       const failed = (data.results || []).filter((r) => r.status === "failed");
+      const ok = (data.results || []).filter((r) => r.status !== "failed");
       if (failed.length) {
         const reason = failed[0]?.last_error || "חלק מהפרסומים החוזרים נכשלו.";
         const cronOn = Boolean(data.cron?.enabled);
+        setRepublishNotice("");
         setError(
           cronOn
             ? `השליחה המיידית נכשלה: ${reason} החזרה האוטומטית הופעלה ותנסה שוב בריצה הבאה.`
@@ -568,6 +589,18 @@ export default function AiAutomationPage() {
         );
       } else {
         setError("");
+        const first = ok[0];
+        const when = first?.published_at ? formatDate(first.published_at) : formatDate(new Date().toISOString());
+        const title = first?.title || "קמפיין";
+        if (republishMode === "now_hourly") {
+          setRepublishNotice(
+            `נשלח עכשיו: «${title}» · ${when}. חזרה אוטומטית פעילה — ריצה הבאה בעוד כ־${cronIntervalHours} שע׳.`,
+          );
+        } else if (republishMode === "schedule") {
+          setRepublishNotice(`תוזמן: «${title}».`);
+        } else {
+          setRepublishNotice(`נשלח עכשיו: «${title}» · ${when}.`);
+        }
       }
       if (data.results?.[0]) setActive(data.results[0]);
       setRepublishIds([]);
@@ -2292,6 +2325,13 @@ export default function AiAutomationPage() {
             </p>
           </div>
 
+          {republishNotice ? (
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-950 dark:text-emerald-100">
+              <p className="font-semibold">פרסום חוזר בוצע</p>
+              <p className="mt-1 text-xs opacity-90">{republishNotice}</p>
+            </div>
+          ) : null}
+
           {republishCron.data?.enabled ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
               <div className="min-w-0 text-sm">
@@ -2301,6 +2341,15 @@ export default function AiAutomationPage() {
                   {republishCron.data.next_run_at
                     ? formatDate(republishCron.data.next_run_at)
                     : "בקרוב"}
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-900/80 dark:text-emerald-100/75">
+                  שליחה אחרונה במערכת:{" "}
+                  {republishCron.data.last_run_at
+                    ? formatDate(republishCron.data.last_run_at)
+                    : "עדיין לא נרשמה"}
+                  {republishCron.data.last_campaign_ids?.length
+                    ? ` · ${republishCron.data.last_campaign_ids.length} קמפיין`
+                    : ""}
                   {republishCron.data.last_error ? ` · שגיאה: ${republishCron.data.last_error}` : ""}
                 </p>
               </div>
@@ -2596,18 +2645,23 @@ export default function AiAutomationPage() {
 
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold">היסטוריית קמפיינים</h2>
+        <div>
+          <h2 className="text-xl font-bold">היסטוריית קמפיינים</h2>
+          <p className="mt-1 text-xs text-[var(--muted-fg)]">
+            עמודת «פורסם לאחרונה» מתעדכנת בכל שליחה/פרסום חוזר — גם אם זה אותו קמפיין.
+          </p>
+        </div>
         <Card className="overflow-x-auto !rounded-2xl !p-0">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="border-b border-[var(--border)] bg-[var(--muted)]/40 text-xs uppercase tracking-wide text-[var(--muted-fg)]">
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Campaign</th>
-                <th className="px-4 py-3">Platforms</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Published</th>
-                <th className="px-4 py-3">Scheduled</th>
-                <th className="px-4 py-3">Actions</th>
+                <th className="px-4 py-3">נוצר</th>
+                <th className="px-4 py-3">קמפיין</th>
+                <th className="px-4 py-3">רשתות</th>
+                <th className="px-4 py-3">סטטוס</th>
+                <th className="px-4 py-3">פורסם לאחרונה</th>
+                <th className="px-4 py-3">מתוזמן</th>
+                <th className="px-4 py-3">פעולות</th>
               </tr>
             </thead>
             <tbody>
@@ -2618,7 +2672,11 @@ export default function AiAutomationPage() {
                   </td>
                 </tr>
               ) : null}
-              {(history.data?.results || []).map((row) => (
+              {(history.data?.results || []).map((row) => {
+                const republished =
+                  Array.isArray(row.publish_log) &&
+                  row.publish_log.some((e) => /republish/i.test(e.detail || "") || /republish/i.test(e.step || ""));
+                return (
                 <tr key={row.id} className="border-b border-[var(--border)] align-top">
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.created_at)}</td>
                   <td className="px-4 py-3 font-medium">{row.title || "Untitled"}</td>
@@ -2628,6 +2686,11 @@ export default function AiAutomationPage() {
                       <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-bold uppercase">
                         {row.status}
                       </span>
+                      {republished ? (
+                        <span className="ms-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
+                          republished
+                        </span>
+                      ) : null}
                       {row.last_error ? (
                         <p className="max-w-[220px] text-[11px] leading-snug text-amber-600 dark:text-amber-300">
                           {row.last_error}
@@ -2672,7 +2735,8 @@ export default function AiAutomationPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
               {!history.isLoading && !(history.data?.results || []).length ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-[var(--muted-fg)]">

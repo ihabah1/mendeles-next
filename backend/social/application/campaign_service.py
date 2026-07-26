@@ -77,12 +77,17 @@ class CampaignService:
             "last_error": campaign.last_error,
             "publish_log": campaign.publish_log or [],
             "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+            "updated_at": campaign.updated_at.isoformat() if getattr(campaign, "updated_at", None) else None,
             "tracking_code": campaign_tracking_code(campaign),
         }
 
     @staticmethod
     def list_campaigns(tenant_id) -> list[dict[str, Any]]:
-        qs = SocialCampaign.objects.filter(tenant_id=tenant_id, deleted_at__isnull=True).order_by("-created_at")[:100]
+        qs = SocialCampaign.objects.filter(tenant_id=tenant_id, deleted_at__isnull=True).order_by(
+            "-updated_at",
+            "-published_at",
+            "-created_at",
+        )[:100]
         return [CampaignService.serialize(c) for c in qs]
 
     @staticmethod
@@ -775,14 +780,17 @@ class CampaignService:
             campaign.status = CampaignStatus.SCHEDULED if had_future_slot else CampaignStatus.PUBLISHED
             campaign.last_error = "Partial failure: " + " | ".join(errors)
             if had_immediate_slot:
-                campaign.published_at = campaign.published_at or timezone.now()
+                campaign.published_at = timezone.now()
             step("Completed", "Partial success", False)
         else:
             if had_future_slot:
                 campaign.status = CampaignStatus.SCHEDULED
             else:
                 campaign.status = CampaignStatus.PUBLISHED
-            if had_immediate_slot or not had_future_slot:
+            # Always bump published_at on a successful immediate send so history shows the latest send.
+            if had_immediate_slot:
+                campaign.published_at = timezone.now()
+            elif not had_future_slot:
                 campaign.published_at = campaign.published_at or timezone.now()
             campaign.last_error = ""
             if send_first_now and had_future_slot:
@@ -795,7 +803,7 @@ class CampaignService:
                 done_detail = "All platforms queued"
             else:
                 done_detail = "Published"
-            if was_released and not had_future_slot:
+            if was_released and had_immediate_slot and not had_future_slot:
                 done_detail = "Republished"
             step("Completed", done_detail, True)
 

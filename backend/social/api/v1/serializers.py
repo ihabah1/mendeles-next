@@ -74,6 +74,13 @@ class RandomRepublishCronSerializer(serializers.Serializer):
         allow_empty=True,
         max_length=50,
     )
+    last_order = serializers.ListField(
+        child=serializers.CharField(allow_blank=False),
+        required=False,
+        allow_empty=True,
+        max_length=50,
+    )
+    last_error = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class PlatformMediaUploadSerializer(serializers.Serializer):
