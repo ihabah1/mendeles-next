@@ -193,6 +193,7 @@ export default function AiAutomationPage() {
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
   const [scheduleIntervalMinutes, setScheduleIntervalMinutes] = useState(60);
   const [scheduleRepeatCount, setScheduleRepeatCount] = useState(1);
+  const [sendFirstNow, setSendFirstNow] = useState(false);
   const [genStep, setGenStep] = useState(0);
   const [publishStep, setPublishStep] = useState(-1);
   const [error, setError] = useState("");
@@ -452,6 +453,12 @@ export default function AiAutomationPage() {
         scheduleMode && scheduleDate
           ? new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString()
           : undefined;
+      if (scheduleMode && !sendFirstNow && !scheduledAt) {
+        throw new Error("בחרו תאריך ושעה לתזמון.");
+      }
+      if (scheduleMode && sendFirstNow && scheduleRepeatCount > 1 && !scheduledAt) {
+        throw new Error("בחרו תאריך ושעה לשליחות הבאות אחרי השליחה הראשונה.");
+      }
       setPublishStep(1);
       const timers = PUBLISH_STEPS.map((_, idx) =>
         window.setTimeout(() => setPublishStep(Math.max(1, idx)), idx * 700),
@@ -462,6 +469,7 @@ export default function AiAutomationPage() {
           mode: scheduleMode ? "schedule" : "now",
           scheduled_at: scheduledAt,
           timezone,
+          send_first_now: scheduleMode ? sendFirstNow : false,
           interval_minutes: scheduleMode && scheduleRepeatCount > 1 ? scheduleIntervalMinutes : 0,
           repeat_count: scheduleMode ? scheduleRepeatCount : 1,
         });
@@ -551,7 +559,13 @@ export default function AiAutomationPage() {
       }
       const failed = (data.results || []).filter((r) => r.status === "failed");
       if (failed.length) {
-        setError(failed[0]?.last_error || "חלק מהפרסומים החוזרים נכשלו.");
+        const reason = failed[0]?.last_error || "חלק מהפרסומים החוזרים נכשלו.";
+        const cronOn = Boolean(data.cron?.enabled);
+        setError(
+          cronOn
+            ? `השליחה המיידית נכשלה: ${reason} החזרה האוטומטית הופעלה ותנסה שוב בריצה הבאה.`
+            : reason,
+        );
       } else {
         setError("");
       }
@@ -635,7 +649,9 @@ export default function AiAutomationPage() {
 
   const autoRelease = useMutation({
     mutationFn: async () => {
-      if (!scheduleDate) throw new Error("בחרו תאריך ושעה לתזמון האוטומטי.");
+      if (!sendFirstNow || scheduleRepeatCount > 1) {
+        if (!scheduleDate) throw new Error("בחרו תאריך ושעה לתזמון האוטומטי.");
+      }
       if (!goal.trim() || platforms.length === 0) {
         throw new Error("מלאו מטרה ובחרו לפחות רשת אחת.");
       }
@@ -654,7 +670,10 @@ export default function AiAutomationPage() {
         });
         setActive(campaign);
       }
-      const scheduledAt = new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString();
+      const scheduledAt =
+        scheduleDate
+          ? new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString()
+          : undefined;
       setPublishStep(2);
       return socialApi.publish({
         campaign_id: campaign.id,
@@ -662,6 +681,7 @@ export default function AiAutomationPage() {
         scheduled_at: scheduledAt,
         timezone,
         auto_release: true,
+        send_first_now: sendFirstNow,
         interval_minutes: scheduleRepeatCount > 1 ? scheduleIntervalMinutes : 0,
         repeat_count: scheduleRepeatCount,
       });
@@ -1238,19 +1258,38 @@ export default function AiAutomationPage() {
                   }
                 />
               </label>
-              <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 sm:col-span-1 self-end pb-2">
-                {scheduleRepeatCount > 1
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-emerald-400/40 bg-[var(--background)]/60 px-3 py-3 sm:self-end">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-emerald-600"
+                  checked={sendFirstNow}
+                  onChange={(e) => setSendFirstNow(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-semibold">שלח עכשיו קמפיין ראשון</span>
+                  <span className="mt-0.5 block text-xs text-[var(--muted-fg)]">
+                    השליחה הראשונה יוצאת מיד; השאר לפי התאריך שנבחר
+                  </span>
+                </span>
+              </label>
+            </div>
+            <p className="mt-3 text-xs text-emerald-800/80 dark:text-emerald-200/80">
+              {sendFirstNow
+                ? scheduleRepeatCount > 1
+                  ? `שליחה ראשונה עכשיו, ואז עוד ${scheduleRepeatCount - 1} ממועד שנבחר כל ${scheduleIntervalMinutes} דקות.`
+                  : "שליחה מיידית אחת עכשיו."
+                : scheduleRepeatCount > 1
                   ? `${scheduleRepeatCount} שליחות, כל ${scheduleIntervalMinutes} דקות ממועד ההתחלה.`
                   : "שליחה אחת במועד שנבחר."}
-              </p>
-            </div>
+            </p>
             <Button
               type="button"
               disabled={
                 !canManage ||
                 !goal.trim() ||
                 platforms.length === 0 ||
-                !scheduleDate ||
+                (!sendFirstNow && !scheduleDate) ||
+                (sendFirstNow && scheduleRepeatCount > 1 && !scheduleDate) ||
                 generate.isPending ||
                 autoRelease.isPending ||
                 publish.isPending
@@ -2168,14 +2207,39 @@ export default function AiAutomationPage() {
                   }
                 />
               </label>
-              <p className="text-xs text-[var(--muted-fg)] self-end pb-2">
-                {scheduleRepeatCount > 1
-                  ? `${scheduleRepeatCount} שליחות ל־Buffer, כל ${scheduleIntervalMinutes} דקות.`
-                  : "שליחה אחת במועד שנבחר."}
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 px-3 py-3 md:self-end">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[#6F42F5]"
+                  checked={sendFirstNow}
+                  onChange={(e) => setSendFirstNow(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-semibold">שלח עכשיו קמפיין ראשון</span>
+                  <span className="mt-0.5 block text-xs text-[var(--muted-fg)]">
+                    השליחה הראשונה יוצאת מיד; השאר לפי התאריך שנבחר
+                  </span>
+                </span>
+              </label>
+              <p className="text-xs text-[var(--muted-fg)] md:col-span-3">
+                {sendFirstNow
+                  ? scheduleRepeatCount > 1
+                    ? `שליחה ראשונה עכשיו, ואז עוד ${scheduleRepeatCount - 1} ל־Buffer ממועד שנבחר כל ${scheduleIntervalMinutes} דקות.`
+                    : "שליחה מיידית אחת עכשיו."
+                  : scheduleRepeatCount > 1
+                    ? `${scheduleRepeatCount} שליחות ל־Buffer, כל ${scheduleIntervalMinutes} דקות.`
+                    : "שליחה אחת במועד שנבחר."}
               </p>
               <Button
                 type="button"
-                disabled={!canManage || !hasCampaign || !scheduleDate || publishing || simulate.isPending}
+                disabled={
+                  !canManage ||
+                  !hasCampaign ||
+                  (!sendFirstNow && !scheduleDate) ||
+                  (sendFirstNow && scheduleRepeatCount > 1 && !scheduleDate) ||
+                  publishing ||
+                  simulate.isPending
+                }
                 onClick={() => publish.mutate()}
                 className="md:col-span-3 rounded-full bg-red-600 font-bold text-white hover:bg-red-700 disabled:bg-red-600/40"
               >
@@ -2391,7 +2455,7 @@ export default function AiAutomationPage() {
                     {
                       id: "now_hourly" as const,
                       title: "חזרה אוטומטית",
-                      desc: "שולחים עכשיו, ואז כל X שעות",
+                      desc: "שולחים מיד, ואז חוזרים כל שעה",
                     },
                   ] as const
                 ).map((opt) => (

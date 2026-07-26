@@ -611,6 +611,83 @@ def test_campaign_publish_selects_instagram_video_reel(tenant, owner_user, setti
     assert calls["variables"]["input"]["metadata"]["instagram"]["type"] == "reel"
 
 
+def test_publish_instagram_dead_video_falls_back_to_site_promo(
+    tenant, owner_user, settings, monkeypatch
+):
+    """Ephemeral /media Instagram video → attach durable /videos/logo.mp4 and still publish."""
+    settings.FRONTEND_URL = "https://mendeles.com"
+
+    from django.utils import timezone as dj_tz
+
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Dead IG video",
+        platforms=["instagram"],
+        captions_json={"instagram": "Watch this"},
+        instagram_media_type="video",
+        instagram_video_url="https://mendeles.com/media/social/gone.mp4",
+        status=CampaignStatus.SIMULATED,
+        simulated_at=dj_tz.now(),
+    )
+    publisher = BufferPublisher(access_token="test-token")
+    monkeypatch.setattr(
+        publisher,
+        "list_channels",
+        lambda force_refresh=False: [
+            {
+                "id": "ig1",
+                "service": "instagram",
+                "name": "mendeles",
+                "display_name": "Mendeles",
+                "label": "Mendeles",
+                "type": "business",
+                "is_disconnected": False,
+                "is_locked": False,
+            }
+        ],
+    )
+    calls = {}
+
+    def fake_graphql(query, variables=None):
+        calls["variables"] = variables
+        return {"createPost": {"post": {"id": "promo1", "text": "Watch this", "status": "buffer"}}}
+
+    monkeypatch.setattr(publisher, "_graphql", fake_graphql)
+    monkeypatch.setattr("social.application.campaign_service.get_default_publisher", lambda: publisher)
+
+    def fake_reachable_video(c, platform="tiktok"):
+        # After attach_site_promo, tiktok_video_url points at durable logo.
+        url = (c.tiktok_video_url or "") + (getattr(c, "instagram_video_url", "") or "")
+        if "/videos/logo.mp4" in (c.tiktok_video_url or ""):
+            return c.tiktok_video_url
+        return ""
+
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_video",
+        fake_reachable_video,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_image",
+        lambda campaign, allow_regen=True: "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.media_url_is_reachable",
+        lambda url, timeout=8.0: bool(url) and "/videos/" in url,
+    )
+
+    result = CampaignService.publish(campaign, schedule=False)
+
+    assert result["status"] == CampaignStatus.PUBLISHED
+    assert result["buffer_update_ids"]["instagram"] == "promo1"
+    assert "/videos/logo.mp4" in calls["variables"]["input"]["assets"][0]["video"]["url"]
+    assert calls["variables"]["input"]["metadata"]["instagram"]["type"] == "reel"
+
+
 def test_attach_site_promo_videos(tenant, owner_user, settings):
     settings.FRONTEND_URL = "https://mendeles.com"
     from social.application.media_service import MediaGenerationService

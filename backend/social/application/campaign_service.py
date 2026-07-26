@@ -333,6 +333,7 @@ class CampaignService:
         scheduled_at: str | None = None,
         tz_name: str | None = None,
         auto_release: bool = False,
+        send_first_now: bool = False,
         interval_minutes: int = 0,
         repeat_count: int = 1,
     ) -> dict[str, Any]:
@@ -350,6 +351,7 @@ class CampaignService:
                 schedule=schedule,
                 scheduled_at=scheduled_at,
                 tz_name=tz_name,
+                send_first_now=send_first_now,
                 interval_minutes=interval_minutes,
                 repeat_count=repeat_count,
             )
@@ -384,6 +386,7 @@ class CampaignService:
         schedule: bool = False,
         scheduled_at: str | None = None,
         tz_name: str | None = None,
+        send_first_now: bool = False,
         interval_minutes: int = 0,
         repeat_count: int = 1,
     ) -> dict[str, Any]:
@@ -451,14 +454,52 @@ class CampaignService:
         ig_video = (
             ensure_reachable_buffer_video(campaign, "instagram") if instagram_uses_video else ""
         )
-        # Dead Instagram video → publish as image post instead of failing Buffer fetch.
-        if instagram_uses_video and not ig_video and buffer_image:
-            instagram_uses_video = False
-            step(
-                "Instagram media fallback",
-                "Video URL unreachable — publishing as image post",
-                True,
-            )
+
+        # Dead Instagram video → durable site promo, then image post (same idea as TikTok).
+        if instagram_uses_video and not ig_video:
+            try:
+                from social.application.media_service import MediaGenerationService
+
+                MediaGenerationService.attach_site_promo_videos(campaign, ["logo"])
+                campaign.refresh_from_db()
+                ig_video = ensure_reachable_buffer_video(campaign, "instagram")
+                if not buffer_video:
+                    buffer_video = ensure_reachable_buffer_video(campaign, "tiktok")
+                if ig_video:
+                    step(
+                        "Instagram media fallback",
+                        "Attached durable /videos/logo.mp4 promo",
+                        True,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "instagram_promo_fallback_failed campaign_id=%s: %s",
+                    campaign.id,
+                    exc,
+                )
+        if instagram_uses_video and not ig_video:
+            if not buffer_image:
+                buffer_image = ensure_reachable_buffer_image(campaign, allow_regen=True)
+            if buffer_image:
+                instagram_uses_video = False
+                if campaign.instagram_media_type == "video":
+                    campaign.instagram_media_type = "image"
+                    campaign.save(update_fields=["instagram_media_type", "updated_at"])
+                step(
+                    "Instagram media fallback",
+                    "Video URL unreachable — publishing as image post",
+                    True,
+                )
+            else:
+                campaign.status = _failure_status_for(campaign)
+                campaign.last_error = (
+                    "סרטון Instagram לא זמין ב־URL ציבורי ואין תמונת PNG חלופית. "
+                    "צרפו סרטון promo מהאתר או לחצו Create Instagram image, ואז פרסמו שוב."
+                )
+                campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
+
         needs_image = (
             ("linkedin" in platforms and not linkedin_video)
             or ("instagram" in platforms and not instagram_uses_video)
@@ -473,15 +514,6 @@ class CampaignService:
         if needs_image and buffer_image and not media_url_is_reachable(buffer_image):
             campaign.status = _failure_status_for(campaign)
             campaign.last_error = UNREACHABLE_MEDIA_MESSAGE
-            campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
-            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
-            return CampaignService.serialize(campaign)
-        if instagram_uses_video and not ig_video:
-            campaign.status = _failure_status_for(campaign)
-            campaign.last_error = (
-                "סרטון Instagram לא זמין ב־URL ציבורי. "
-                "צרפו סרטון promo מהאתר או בחרו Image לאינסטגרם, ואז פרסמו שוב."
-            )
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
@@ -529,34 +561,43 @@ class CampaignService:
         scheduled_iso = None
         interval_minutes = max(0, min(int(interval_minutes or 0), 60 * 24 * 30))
         repeat_count = max(1, min(int(repeat_count or 1), 48))
+        needs_schedule_anchor = schedule and not (send_first_now and repeat_count == 1)
         if schedule:
-            if not scheduled_at:
+            if needs_schedule_anchor and not scheduled_at:
                 campaign.status = _failure_status_for(campaign)
                 campaign.last_error = "scheduled_at is required when scheduling."
                 campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
                 campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
                 return CampaignService.serialize(campaign)
-            scheduled_dt = parse_datetime(scheduled_at)
-            if scheduled_dt is None:
-                campaign.status = _failure_status_for(campaign)
-                campaign.last_error = "Invalid scheduled_at datetime."
-                campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
-                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
-                return CampaignService.serialize(campaign)
-            if timezone.is_naive(scheduled_dt):
-                scheduled_dt = timezone.make_aware(scheduled_dt, dt_timezone.utc)
-            scheduled_iso = scheduled_dt.astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            if scheduled_at:
+                scheduled_dt = parse_datetime(scheduled_at)
+                if scheduled_dt is None:
+                    campaign.status = _failure_status_for(campaign)
+                    campaign.last_error = "Invalid scheduled_at datetime."
+                    campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
+                    campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                    return CampaignService.serialize(campaign)
+                if timezone.is_naive(scheduled_dt):
+                    scheduled_dt = timezone.make_aware(scheduled_dt, dt_timezone.utc)
+                scheduled_iso = scheduled_dt.astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
             if tz_name:
                 campaign.timezone = tz_name
-            if repeat_count > 1 and interval_minutes < 5:
+            remaining_after_first = repeat_count - 1 if send_first_now else repeat_count
+            if remaining_after_first > 1 and interval_minutes < 5:
                 campaign.status = _failure_status_for(campaign)
                 campaign.last_error = "interval_minutes must be at least 5 when repeat_count > 1."
                 campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
                 campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
                 return CampaignService.serialize(campaign)
+            if send_first_now and repeat_count > 1 and scheduled_dt is None:
+                campaign.status = _failure_status_for(campaign)
+                campaign.last_error = "scheduled_at is required for remaining sends after the first immediate send."
+                campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
 
         campaign.status = CampaignStatus.PUBLISHING
-        campaign.scheduled_at = scheduled_dt if schedule else None
+        campaign.scheduled_at = scheduled_dt if needs_schedule_anchor else None
         campaign.last_error = ""
         campaign.save(update_fields=["status", "scheduled_at", "timezone", "last_error", "updated_at"])
 
@@ -564,9 +605,28 @@ class CampaignService:
         errors: list[str] = []
         platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
 
-        # One send now, or N scheduled sends starting at scheduled_at every interval_minutes.
-        if schedule and scheduled_dt is not None and repeat_count > 1:
-            send_slots: list[tuple[str | None, bool]] = [
+        # Slots: optional immediate first send, then N scheduled sends from scheduled_at.
+        if schedule and send_first_now:
+            send_slots: list[tuple[str | None, bool]] = [(None, True)]
+            if repeat_count > 1 and scheduled_dt is not None:
+                for i in range(repeat_count - 1):
+                    slot_iso = (
+                        (scheduled_dt + timedelta(minutes=interval_minutes * i))
+                        .astimezone(dt_timezone.utc)
+                        .strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                    )
+                    send_slots.append((slot_iso, False))
+            step(
+                "Send first now",
+                (
+                    f"1 immediate + {repeat_count - 1} scheduled every {interval_minutes} minutes"
+                    if repeat_count > 1
+                    else "1 immediate send"
+                ),
+                True,
+            )
+        elif schedule and scheduled_dt is not None and repeat_count > 1:
+            send_slots = [
                 (
                     (scheduled_dt + timedelta(minutes=interval_minutes * i))
                     .astimezone(dt_timezone.utc)
@@ -695,6 +755,8 @@ class CampaignService:
         campaign.buffer_update_ids = {**prior_ids, **buffer_ids}
         campaign.publish_log = log
         was_released = bool(campaign.published_at or prior_ids or campaign.scheduled_at)
+        had_immediate_slot = any(send_now for _, send_now in send_slots)
+        had_future_slot = any(not send_now for _, send_now in send_slots)
 
         if errors and not buffer_ids:
             # Total miss this attempt — keep prior release status so CRON can retry later.
@@ -710,24 +772,30 @@ class CampaignService:
             campaign.last_error = " | ".join(errors)
             step("Completed", campaign.last_error, False)
         elif errors:
-            campaign.status = CampaignStatus.SCHEDULED if schedule else CampaignStatus.PUBLISHED
+            campaign.status = CampaignStatus.SCHEDULED if had_future_slot else CampaignStatus.PUBLISHED
             campaign.last_error = "Partial failure: " + " | ".join(errors)
-            if schedule:
-                pass
-            else:
+            if had_immediate_slot:
                 campaign.published_at = campaign.published_at or timezone.now()
             step("Completed", "Partial success", False)
         else:
-            if schedule:
+            if had_future_slot:
                 campaign.status = CampaignStatus.SCHEDULED
             else:
                 campaign.status = CampaignStatus.PUBLISHED
-                campaign.published_at = timezone.now()
+            if had_immediate_slot or not had_future_slot:
+                campaign.published_at = campaign.published_at or timezone.now()
             campaign.last_error = ""
-            done_detail = "All platforms queued" if schedule else "Published"
-            if schedule and repeat_count > 1:
+            if send_first_now and had_future_slot:
+                done_detail = (
+                    f"Sent first now + queued {repeat_count - 1} more every {interval_minutes} minutes"
+                )
+            elif had_future_slot and repeat_count > 1:
                 done_detail = f"Queued {repeat_count} sends every {interval_minutes} minutes"
-            if was_released and not schedule:
+            elif had_future_slot:
+                done_detail = "All platforms queued"
+            else:
+                done_detail = "Published"
+            if was_released and not had_future_slot:
                 done_detail = "Republished"
             step("Completed", done_detail, True)
 

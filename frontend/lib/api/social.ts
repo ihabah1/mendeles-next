@@ -78,6 +78,7 @@ export type PublishInput = {
   scheduled_at?: string;
   timezone?: string;
   auto_release?: boolean;
+  send_first_now?: boolean;
   interval_minutes?: number;
   repeat_count?: number;
 };
