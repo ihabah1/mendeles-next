@@ -10,6 +10,13 @@ const STAT_ICONS: Record<(typeof STAT_KEYS)[number], string> = {
   satisfaction: "🏆",
 };
 
+const STAT_GROWTH: Record<(typeof STAT_KEYS)[number], string> = {
+  businesses: "📈",
+  leads: "⬆️",
+  pageviews: "📈",
+  satisfaction: "✨",
+};
+
 export async function StatsSection() {
   const t = await getTranslations("landing.stats");
 
@@ -26,8 +33,14 @@ export async function StatsSection() {
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/20 text-lg sm:mx-0">
                   <span aria-hidden="true">{STAT_ICONS[key]}</span>
                 </div>
-                <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">{t(`items.${key}.value`)}</p>
-                <p className="mt-1 text-xs text-slate-400 sm:text-sm">{t(`items.${key}.label`)}</p>
+                <p
+                  className="mt-3 text-3xl leading-none sm:text-4xl"
+                  aria-hidden="true"
+                  title={t(`items.${key}.label`)}
+                >
+                  {STAT_GROWTH[key]}
+                </p>
+                <p className="mt-2 text-xs text-slate-400 sm:text-sm">{t(`items.${key}.label`)}</p>
               </li>
             ))}
           </ul>
