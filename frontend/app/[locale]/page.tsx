@@ -7,7 +7,6 @@ import { BlogPromoSection } from "@/components/marketing/blog-promo-section";
 import { LogosTrustSection } from "@/components/marketing/logos-trust-section";
 import { FeaturesSection } from "@/components/marketing/features-section";
 import { StatsSection } from "@/components/marketing/stats-section";
-import { PromoVideosSection } from "@/components/marketing/promo-videos-section";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
@@ -33,7 +32,6 @@ export default function LandingPage() {
       <LogosTrustSection />
       <FeaturesSection />
       <StatsSection />
-      <PromoVideosSection />
       <CtaSection />
     </MarketingShell>
   );
