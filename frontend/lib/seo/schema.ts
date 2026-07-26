@@ -21,7 +21,7 @@ export function websiteSchema(settings: SEOSettings) {
     "@type": "WebSite",
     name: settings.site_name || settings.organization_name,
     url: base,
-    inLanguage: settings.default_language || "he",
+    inLanguage: settings.default_language || "en",
   };
 }
 
@@ -74,7 +74,7 @@ export function articleSchema(settings: SEOSettings, article: {
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": article.url },
     url: article.url,
-    inLanguage: settings.default_language || "he",
+    inLanguage: settings.default_language || "en",
   };
 }
 

@@ -1,8 +1,8 @@
 """Shared SEO constants."""
 
 SUPPORTED_LOCALES = [
-    "he",
     "en",
+    "he",
     "es",
     "ar",
     "de",

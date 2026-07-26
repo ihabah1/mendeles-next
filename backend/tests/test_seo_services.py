@@ -86,7 +86,7 @@ def test_sitemap_includes_static_pages(tenant, monkeypatch):
     assert any("/solutions/generate-leads" in loc for loc in locs)
     assert len(SUPPORTED_LOCALES) == 18
     for locale in SUPPORTED_LOCALES:
-        expected = "https://example.com/" if locale == "he" else f"https://example.com/{locale}"
+        expected = "https://example.com/" if locale == "en" else f"https://example.com/{locale}"
         assert expected in locs
     tool_entries = [
         entry

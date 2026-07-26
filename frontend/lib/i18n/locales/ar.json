@@ -109,8 +109,19 @@
         "ai": {
           "title": "تحسين الذكاء الاصطناعي",
           "desc": "احصل على رؤى واقتراحات مدعومة بالذكاء الاصطناعي لتحسين التصنيف والنتائج."
+        },
+        "landing": {
+          "title": "Landing Page Builder",
+          "desc": "Build high-converting landing pages designed to capture leads."
+        },
+        "crm": {
+          "title": "Lead Capture & CRM",
+          "desc": "Capture, manage, and nurture leads in one simple workflow."
         }
-      }
+      },
+      "titlePrefix": "Everything you need to",
+      "titleHighlight": "grow",
+      "titleSuffix": "— in one platform"
     },
     "statLeads": "العملاء المتوقعون المؤهلون",
     "statLeadsValue": "أكثر",
@@ -260,7 +271,36 @@
       "toolsEyebrow": "Free tools",
       "toolsTitle": "Blog tools that speed up growth",
       "toolsSubtitle": "Calculators and templates from the blog — ready to use on your site.",
-      "toolsCta": "Explore tools"
+      "toolsCta": "Explore tools",
+      "livePrefix": "The",
+      "liveBrand": "Mendeles Blog",
+      "liveSuffix": "is LIVE!",
+      "freshNote": "Fresh Insights Every Week!"
+    },
+    "blogHint": "Insights. Strategies. Growth.",
+    "logosTrust": {
+      "title": "Trusted by growing businesses worldwide"
+    },
+    "stats": {
+      "title": "Mendeles by the numbers",
+      "items": {
+        "businesses": {
+          "value": "10K+",
+          "label": "Businesses Growing"
+        },
+        "leads": {
+          "value": "2M+",
+          "label": "Leads Captured"
+        },
+        "pageviews": {
+          "value": "250M+",
+          "label": "Page Views Generated"
+        },
+        "satisfaction": {
+          "value": "98%",
+          "label": "Customer Satisfaction"
+        }
+      }
     }
   },
   "hub": {

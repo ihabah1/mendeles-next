@@ -421,11 +421,12 @@ class CampaignService:
 
         from social.application.media_service import (
             MISSING_PNG_MESSAGE,
-            ensure_buffer_image_url,
-            ensure_buffer_video_url,
+            UNREACHABLE_MEDIA_MESSAGE,
+            ensure_reachable_buffer_image,
+            ensure_reachable_buffer_video,
+            media_url_is_reachable,
             public_media_url_for_buffer,
             resolve_platform_image_url,
-            resolve_platform_video_url,
         )
 
         if not campaign.media_url:
@@ -439,14 +440,25 @@ class CampaignService:
             if campaign.media_url:
                 campaign.save(update_fields=["media_url", "updated_at"])
 
-        # Never run Gemini during Buffer publish — real PNG only (no placehold fallback).
-        buffer_image = ensure_buffer_image_url(campaign, allow_ai_regen=False)
-        buffer_video = ensure_buffer_video_url(campaign)
+        # Prefer freshly reachable creatives — Railway /media is ephemeral across deploys.
+        buffer_image = ensure_reachable_buffer_image(campaign, allow_regen=True)
+        buffer_video = ensure_reachable_buffer_video(campaign, "tiktok")
         platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
         instagram_uses_video = (
             "instagram" in platforms and campaign.instagram_media_type == "video"
         )
-        linkedin_video = resolve_platform_video_url(campaign, "linkedin")
+        linkedin_video = ensure_reachable_buffer_video(campaign, "linkedin")
+        ig_video = (
+            ensure_reachable_buffer_video(campaign, "instagram") if instagram_uses_video else ""
+        )
+        # Dead Instagram video → publish as image post instead of failing Buffer fetch.
+        if instagram_uses_video and not ig_video and buffer_image:
+            instagram_uses_video = False
+            step(
+                "Instagram media fallback",
+                "Video URL unreachable — publishing as image post",
+                True,
+            )
         needs_image = (
             ("linkedin" in platforms and not linkedin_video)
             or ("instagram" in platforms and not instagram_uses_video)
@@ -458,14 +470,43 @@ class CampaignService:
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
-        if instagram_uses_video and not (
-            resolve_platform_video_url(campaign, "instagram") or buffer_video
-        ):
+        if needs_image and buffer_image and not media_url_is_reachable(buffer_image):
             campaign.status = _failure_status_for(campaign)
-            campaign.last_error = "Instagram video is selected, but no public MP4/MOV campaign video is available."
+            campaign.last_error = UNREACHABLE_MEDIA_MESSAGE
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
+        if instagram_uses_video and not ig_video:
+            campaign.status = _failure_status_for(campaign)
+            campaign.last_error = (
+                "סרטון Instagram לא זמין ב־URL ציבורי. "
+                "צרפו סרטון promo מהאתר או בחרו Image לאינסטגרם, ואז פרסמו שוב."
+            )
+            campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
+            campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+            return CampaignService.serialize(campaign)
+        if "tiktok" in platforms and not buffer_video:
+            try:
+                from social.application.media_service import MediaGenerationService
+
+                MediaGenerationService.attach_site_promo_videos(campaign, ["logo"])
+                campaign.refresh_from_db()
+                buffer_video = ensure_reachable_buffer_video(campaign, "tiktok")
+                if buffer_video:
+                    step("TikTok media fallback", "Attached durable /videos/logo.mp4 promo", True)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("tiktok_promo_fallback_failed campaign_id=%s: %s", campaign.id, exc)
+        if "tiktok" in platforms and not buffer_video:
+            # TikTok without reachable video: allow image-only only if we have a PNG.
+            if not buffer_image:
+                campaign.status = _failure_status_for(campaign)
+                campaign.last_error = (
+                    "סרטון TikTok לא זמין (קובץ /media נמחק אחרי deploy). "
+                    "סמנו «Use site promo videos» או צרו מחדש, ואז פרסמו שוב."
+                )
+                campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
+                campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
+                return CampaignService.serialize(campaign)
 
         logger.info(
             "social_publish_media campaign_id=%s image=%s video=%s ig=%s media=%s",
@@ -570,18 +611,26 @@ class CampaignService:
                     text_parts = [part.replace(campaign.website_url, tracked) for part in text_parts]
                 text = "\n\n".join(p for p in text_parts if p).strip()
 
-                platform_video = resolve_platform_video_url(campaign, platform)
+                platform_video = ""
+                if platform == "linkedin":
+                    platform_video = linkedin_video
+                elif platform == "instagram" and instagram_uses_video:
+                    platform_video = ig_video or buffer_video
+                elif platform == "tiktok":
+                    platform_video = buffer_video
                 platform_image = resolve_platform_image_url(campaign, platform) or buffer_image
+                if platform_image and not media_url_is_reachable(platform_image):
+                    platform_image = buffer_image if media_url_is_reachable(buffer_image) else ""
                 media_for_platform = platform_image
                 media_kind = "image"
-                if platform == "tiktok" and (platform_video or buffer_video):
-                    media_for_platform = platform_video or buffer_video
+                if platform == "tiktok" and platform_video:
+                    media_for_platform = platform_video
                     media_kind = "video"
                 elif platform == "tiktok":
                     media_for_platform = platform_image
                     media_kind = "image"
-                elif platform == "instagram" and instagram_uses_video:
-                    media_for_platform = platform_video or buffer_video
+                elif platform == "instagram" and instagram_uses_video and platform_video:
+                    media_for_platform = platform_video
                     media_kind = "video"
                 elif platform == "linkedin" and platform_video:
                     media_for_platform = platform_video
@@ -591,6 +640,17 @@ class CampaignService:
                     media_kind = "image"
 
                 media_for_platform = public_media_url_for_buffer(media_for_platform)
+                if media_for_platform and not media_url_is_reachable(media_for_platform):
+                    errors.append(
+                        f"{platform}@{slot_label}: {UNREACHABLE_MEDIA_MESSAGE}"
+                    )
+                    step(
+                        f"Publishing to Buffer... ({platform} {slot_label})",
+                        UNREACHABLE_MEDIA_MESSAGE,
+                        False,
+                    )
+                    continue
+
                 logger.info(
                     "social_publish_platform campaign_id=%s platform=%s kind=%s media=%s text_len=%s slot=%s",
                     campaign.id,

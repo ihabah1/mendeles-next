@@ -9,19 +9,19 @@ import type { PageSEOInput } from "./types";
 export async function buildPageMetadata(page: PageSEOInput): Promise<Metadata> {
   const bundle = await fetchPublicSEO();
   const settings = bundle?.settings ?? DEFAULT_SEO_SETTINGS;
-  const locale = page.locale || settings.default_language || "he";
+  const locale = page.locale || settings.default_language || "en";
   const localizedPath = localizePath(page.path, locale);
   const base = getSiteUrl();
 
   const meta = mergePageMetadata(settings, { ...page, path: localizedPath, locale });
-  const hePath = localizePath(page.path, "he");
+  const defaultPath = localizePath(page.path, "en");
   const languageAlternates = Object.fromEntries(
     SYSTEM_LOCALE_CODES.map((code) => [
       code,
       absoluteSiteUrl(localizePath(page.path, code), base),
     ]),
   );
-  languageAlternates["x-default"] = absoluteSiteUrl(hePath, base);
+  languageAlternates["x-default"] = absoluteSiteUrl(defaultPath, base);
 
   const result: Metadata = {
     metadataBase: new URL(base),

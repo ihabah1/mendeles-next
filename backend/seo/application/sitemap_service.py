@@ -71,8 +71,8 @@ class SitemapService:
 
     @classmethod
     def _entry(cls, tenant_id, path: str, *, changefreq: str, priority: float, locale: str) -> dict:
-        localized_path = path if locale == "he" else f"/{locale}{path if path != '/' else ''}"
-        if locale != "he" and path == "/":
+        localized_path = path if locale == "en" else f"/{locale}{path if path != '/' else ''}"
+        if locale != "en" and path == "/":
             localized_path = f"/{locale}"
         return {
             "loc": CanonicalService.for_page(tenant_id, localized_path),

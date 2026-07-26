@@ -221,6 +221,24 @@ def test_public_media_url_rewrites_to_frontend(settings):
         == "https://mendeles.com/media/social/x.png"
     )
     assert public_media_url_for_buffer("/media/social/y.jpg") == "https://mendeles.com/media/social/y.jpg"
+    assert (
+        public_media_url_for_buffer("https://api.example.railway.app/videos/logo.mp4")
+        == "https://mendeles.com/videos/logo.mp4"
+    )
+
+
+def test_media_url_is_reachable_local_file(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    settings.FRONTEND_URL = "https://mendeles.com"
+    settings.BACKEND_PUBLIC_URL = "https://api.example.test"
+    from social.application.media_service import media_url_is_reachable
+
+    social = tmp_path / "social"
+    social.mkdir()
+    png = social / "alive.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    assert media_url_is_reachable("https://mendeles.com/media/social/alive.png")
+    assert not media_url_is_reachable("https://mendeles.com/media/social/missing.png")
 
 
 def test_publish_missing_platform_lists_connected(monkeypatch):
@@ -572,6 +590,18 @@ def test_campaign_publish_selects_instagram_video_reel(tenant, owner_user, setti
 
     monkeypatch.setattr(publisher, "_graphql", fake_graphql)
     monkeypatch.setattr("social.application.campaign_service.get_default_publisher", lambda: publisher)
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_video",
+        lambda campaign, platform="tiktok": "https://mendeles.com/media/social/manual.mp4",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_image",
+        lambda campaign, allow_regen=True: "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.media_url_is_reachable",
+        lambda url, timeout=8.0: bool(url),
+    )
 
     result = CampaignService.publish(campaign, schedule=False)
 
@@ -733,6 +763,18 @@ def test_auto_release_runs_simulation_then_schedules(tenant, owner_user, setting
         lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
     )
     monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_image",
+        lambda campaign, allow_regen=True: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_video",
+        lambda campaign, platform="tiktok": "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.media_url_is_reachable",
+        lambda url, timeout=8.0: bool(url),
+    )
+    monkeypatch.setattr(
         "social.application.campaign_service.CampaignService.bootstrap_creatives",
         lambda campaign, tiktok_count=5: campaign,
     )
@@ -803,6 +845,18 @@ def test_batch_republish_random_one_and_shuffle(tenant, owner_user, settings, mo
     monkeypatch.setattr(
         "social.application.media_service.ensure_buffer_image_url",
         lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_image",
+        lambda campaign, allow_regen=True: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_video",
+        lambda campaign, platform="tiktok": "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.media_url_is_reachable",
+        lambda url, timeout=8.0: bool(url),
     )
     monkeypatch.setattr(
         "social.application.media_service.resolve_platform_image_url",
@@ -900,6 +954,18 @@ def test_republish_failure_keeps_published_and_includes_failed_pool(tenant, owne
     monkeypatch.setattr(
         "social.application.media_service.ensure_buffer_image_url",
         lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_image",
+        lambda campaign, allow_regen=True: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_reachable_buffer_video",
+        lambda campaign, platform="tiktok": "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.media_url_is_reachable",
+        lambda url, timeout=8.0: bool(url),
     )
     monkeypatch.setattr(
         "social.application.media_service.resolve_platform_image_url",

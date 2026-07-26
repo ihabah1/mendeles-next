@@ -7,7 +7,7 @@ import type { Locale } from "@/lib/i18n/routing";
 import { routing } from "@/lib/i18n/routing";
 
 export function localizePath(href: string, locale: Locale): string {
-  if (locale === "he") return href;
+  if (locale === "en") return href;
   if (href === "/") return `/${locale}`;
   return `/${locale}${href}`;
 }

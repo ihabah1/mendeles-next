@@ -29,7 +29,7 @@ class SEOSettingsService:
             tenant_id=tenant_id,
             defaults={
                 "canonical_base_url": getattr(settings, "FRONTEND_URL", ""),
-                "default_language": "he",
+                "default_language": "en",
             },
         )
         if created:

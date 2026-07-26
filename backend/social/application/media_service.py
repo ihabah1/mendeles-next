@@ -44,6 +44,7 @@ def public_media_url_for_buffer(url: str) -> str:
     Absolute URL Buffer can fetch from the public internet.
     Prefer the frontend /media proxy (FRONTEND_URL) so Buffer does not need
     to reach the private Railway API host.
+    Keep /videos/* on the frontend host — those are durable static files.
     """
     from urllib.parse import urlparse
 
@@ -58,6 +59,9 @@ def public_media_url_for_buffer(url: str) -> str:
         parsed = urlparse(raw)
         path = parsed.path or ""
         query = f"?{parsed.query}" if parsed.query else ""
+        # Durable static promo videos live on the frontend public/ folder.
+        if path.startswith("/videos/") and frontend:
+            return f"{frontend}{path}{query}"
         # Any /media/... host → public frontend proxy (Buffer crawls the open web).
         if frontend and path.startswith("/media"):
             return f"{frontend}{path}{query}"
@@ -74,11 +78,146 @@ def public_media_url_for_buffer(url: str) -> str:
         return f"{backend}{path}"
     return path
 
-def _buffer_placeholder_png(label: str) -> str:
-    from urllib.parse import quote
 
-    text = quote((label or "Mendeles")[:80])
-    return f"https://placehold.co/1080x1080/6F42F5/ffffff/png?text={text}"
+def _local_media_file(url: str) -> Path | None:
+    """Map a /media/social/... URL to a file under MEDIA_ROOT when possible."""
+    from urllib.parse import urlparse
+
+    raw = (url or "").strip()
+    if not raw:
+        return None
+    path = urlparse(raw).path if raw.startswith("http") else raw
+    media_prefix = (settings.MEDIA_URL or "/media/").rstrip("/") + "/"
+    if not path.startswith(media_prefix) and not path.startswith("/media/"):
+        return None
+    rel = path.split("/media/", 1)[-1].lstrip("/")
+    if not rel or ".." in rel:
+        return None
+    candidate = Path(settings.MEDIA_ROOT) / rel
+    return candidate if candidate.is_file() and candidate.stat().st_size > 0 else None
+
+
+def media_url_is_reachable(url: str, *, timeout: float = 8.0) -> bool:
+    """True when Buffer could fetch this URL (local file exists or public HTTP 2xx)."""
+    import urllib.error
+    import urllib.request
+
+    public = public_media_url_for_buffer(url or "")
+    if not public:
+        return False
+
+    # Durable frontend static videos / already-public CDN URLs — HTTP check only.
+    # Ephemeral /media files: accept if present on this container's disk (Buffer will
+    # fetch via Next → Django proxy while this deploy is live).
+    if _local_media_file(public) or _local_media_file(url):
+        return True
+
+    if not public.startswith("http"):
+        return False
+
+    for method in ("HEAD", "GET"):
+        try:
+            req = urllib.request.Request(
+                public,
+                method=method,
+                headers={"User-Agent": "mendeles-buffer-preflight"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = int(getattr(resp, "status", 200) or 200)
+                if 200 <= status < 400:
+                    if method == "GET":
+                        chunk = resp.read(64)
+                        if chunk[:15].lower().startswith(b"<!doctype html") or chunk[:6].lower().startswith(
+                            b"<html"
+                        ):
+                            return False
+                    return True
+        except urllib.error.HTTPError as exc:
+            if exc.code in {405, 501} and method == "HEAD":
+                continue
+            return False
+        except Exception:
+            if method == "HEAD":
+                continue
+            return False
+    return False
+
+
+UNREACHABLE_MEDIA_MESSAGE = (
+    "Buffer לא מצליח לקרוא את המדיה מה־URL (קובץ חסר אחרי deploy ב־Railway). "
+    "לחצו Create Instagram image / צרפו סרטוני promo מהאתר, הריצו סימולציה, ופרסמו שוב."
+)
+
+
+def ensure_reachable_buffer_image(campaign: SocialCampaign, *, allow_regen: bool = True) -> str:
+    """Return a public image URL Buffer can fetch; regenerate PNG when /media file is gone."""
+    url = ensure_buffer_image_url(campaign, allow_ai_regen=False)
+    if url and media_url_is_reachable(url):
+        return url
+
+    if allow_regen:
+        logger.warning(
+            "buffer_media_image_unreachable campaign_id=%s url=%s — regenerating",
+            campaign.id,
+            (url or "")[:180],
+        )
+        try:
+            MediaGenerationService.create_instagram_image(campaign, require_ai=True)
+            campaign.refresh_from_db()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("buffer_media_regen_ai_failed campaign_id=%s: %s", campaign.id, exc)
+        url = ensure_buffer_image_url(campaign, allow_ai_regen=False)
+        if url and media_url_is_reachable(url):
+            return url
+
+    logger.warning(
+        "buffer_media_image_still_unreachable campaign_id=%s url=%s",
+        campaign.id,
+        (url or "")[:180],
+    )
+    return ""
+
+
+def ensure_reachable_buffer_video(campaign: SocialCampaign, platform: str = "tiktok") -> str:
+    """Prefer durable /videos promo URLs when generated /media videos vanished."""
+    candidates: list[str] = []
+    primary = resolve_platform_video_url(campaign, platform) or ensure_buffer_video_url(campaign)
+    if primary:
+        candidates.append(primary)
+    for item in campaign.tiktok_videos_json or []:
+        if not isinstance(item, dict):
+            continue
+        item_url = str(item.get("url") or "").strip()
+        if not item_url:
+            continue
+        # Prefer durable site promos first when recovering from dead media.
+        if item.get("provider") == "site_promo":
+            candidates.insert(0, item_url)
+        else:
+            candidates.append(item_url)
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        public = public_media_url_for_buffer(candidate)
+        if not public or public in seen:
+            continue
+        seen.add(public)
+        if _is_buffer_video_url(public) and media_url_is_reachable(public):
+            logger.info(
+                "buffer_media_video_ok campaign_id=%s platform=%s url=%s",
+                campaign.id,
+                platform,
+                public[:180],
+            )
+            return public
+
+    logger.info(
+        "buffer_media_video_unreachable campaign_id=%s platform=%s tried=%s",
+        campaign.id,
+        platform,
+        len(seen),
+    )
+    return ""
 
 
 def is_real_raster_image_url(url: str) -> bool:

@@ -8,7 +8,7 @@ export const DEFAULT_SEO_SETTINGS: SEOSettings = {
   default_description: "",
   default_keywords: "",
   default_author: "",
-  default_language: "he",
+  default_language: "en",
   robots_policy: "index,follow",
   canonical_base_url: getSiteUrl(),
   default_og_image: "/opengraph-image",
@@ -67,7 +67,7 @@ export function mergePageMetadata(settings: SEOSettings, page: {
   canonical?: string;
 }): PageMetadata {
   const normalizedSettings = normalizeSettings(settings);
-  const locale = page.locale || normalizedSettings.default_language || "he";
+  const locale = page.locale || normalizedSettings.default_language || "en";
   const title = page.title || normalizedSettings.default_title || normalizedSettings.site_name;
   const description = page.description || normalizedSettings.default_description;
   const base = normalizedSettings.canonical_base_url;

@@ -43,7 +43,7 @@ export function MobileNav() {
                   {tl(item.labelKey)}
                   {"featured" in item && item.featured ? (
                     <span className="ms-1.5 text-[10px] opacity-90" aria-hidden="true">
-                      ✦
+                      +
                     </span>
                   ) : null}
                 </Link>

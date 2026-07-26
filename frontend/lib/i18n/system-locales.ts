@@ -3,8 +3,8 @@
  * (site translations, CRM preferred language, language switcher).
  */
 export const SYSTEM_LOCALES = [
-  { code: "he", label: "עברית", native: "עברית" },
   { code: "en", label: "English", native: "English" },
+  { code: "he", label: "עברית", native: "עברית" },
   { code: "es", label: "Español", native: "Español" },
   { code: "ar", label: "العربية", native: "العربية" },
   { code: "de", label: "Deutsch", native: "Deutsch" },

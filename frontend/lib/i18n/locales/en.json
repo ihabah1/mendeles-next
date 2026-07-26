@@ -26,6 +26,7 @@
     "navTemplates": "Templates",
     "navResources": "Resources",
     "navBlog": "Blog",
+    "blogHint": "Insights. Strategies. Growth.",
     "navPricing": "Pricing",
     "navCompany": "Company",
     "navMenu": "Menu",
@@ -83,33 +84,56 @@
       "journeyDesc": "Build, rank, and grow — all in one platform."
     },
     "growthFeatures": {
-      "title": "Everything You Need to Grow",
-      "subtitle": "Powerful tools to help you attract more traffic, generate leads, and grow your business.",
+      "title": "Everything you need to grow — in one platform",
+      "titlePrefix": "Everything you need to",
+      "titleHighlight": "grow",
+      "titleSuffix": "— in one platform",
+      "subtitle": "From research to ranking — we've got your growth covered.",
       "items": {
-        "keyword": {
-          "title": "Keyword Research",
-          "desc": "Discover profitable keywords with real search data and opportunity scores."
+        "seo": {
+          "title": "SEO & Keyword Research",
+          "desc": "Discover high-impact keywords and opportunities that drive real traffic."
         },
         "content": {
           "title": "AI Content Creation",
-          "desc": "Create SEO-optimized landing pages and articles in seconds."
+          "desc": "Create SEO-optimized content and campaigns in minutes with AI."
         },
-        "seo": {
-          "title": "SEO Automation",
-          "desc": "Automate technical SEO, sitemaps, meta tags, and internal linking."
+        "landing": {
+          "title": "Landing Page Builder",
+          "desc": "Build high-converting landing pages designed to capture leads."
+        },
+        "crm": {
+          "title": "Lead Capture & CRM",
+          "desc": "Capture, manage, and nurture leads in one simple workflow."
+        },
+        "analytics": {
+          "title": "Analytics & Insights",
+          "desc": "Track performance and grow smarter with clear insights."
+        },
+        "keyword": {
+          "title": "Keyword Research",
+          "desc": "Discover profitable keywords with real search data and opportunity scores."
         },
         "leads": {
           "title": "Lead Generation",
           "desc": "Capture, qualify, and manage leads with smart forms and CRM."
         },
-        "analytics": {
-          "title": "Analytics",
-          "desc": "Track performance, rankings, and conversions in real-time."
-        },
         "ai": {
           "title": "AI Optimization",
           "desc": "Get AI-powered insights and suggestions to improve rankings and results."
         }
+      }
+    },
+    "logosTrust": {
+      "title": "Trusted by growing businesses worldwide"
+    },
+    "stats": {
+      "title": "Mendeles by the numbers",
+      "items": {
+        "businesses": { "value": "10K+", "label": "Businesses Growing" },
+        "leads": { "value": "2M+", "label": "Leads Captured" },
+        "pageviews": { "value": "250M+", "label": "Page Views Generated" },
+        "satisfaction": { "value": "98%", "label": "Customer Satisfaction" }
       }
     },
     "statLeads": "Qualified leads",
@@ -239,9 +263,13 @@
     "ctaSubtitle": "Start turning search traffic into qualified customers with SEO, landing pages, and AI.",
     "blogBanner": {
       "eyebrow": "Mendeles Blog",
+      "livePrefix": "The",
+      "liveBrand": "Mendeles Blog",
+      "liveSuffix": "is LIVE!",
       "title": "Marketing, SEO and leads — without the noise",
-      "subtitle": "Practical articles on customer acquisition, Google ranking, and marketing automation for growing businesses.",
-      "cta": "Enter the blog",
+      "subtitle": "Actionable tips, SEO strategies, and growth playbooks for modern businesses.",
+      "cta": "Explore the Blog",
+      "freshNote": "Fresh Insights Every Week!",
       "toolsEyebrow": "Free tools",
       "toolsTitle": "Blog tools that speed up growth",
       "toolsSubtitle": "Calculators and templates from the blog — ready to use on your site.",

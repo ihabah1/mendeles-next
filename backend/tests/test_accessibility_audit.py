@@ -107,6 +107,6 @@ def test_accessibility_audit_collects_he_and_en_paths(tenant):
 
     assert locales == {"he", "en", "ar"}
     assert "/accessibility" in localized
-    assert "/en/accessibility" in localized
+    assert "/he/accessibility" in localized
     assert "/dashboard/automation" in localized
-    assert "/en/dashboard/automation" in localized
+    assert "/he/dashboard/automation" in localized

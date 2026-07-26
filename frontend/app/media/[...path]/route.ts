@@ -11,12 +11,17 @@ export async function GET(
   const target = `${backendBase()}/media/${rel}${request.nextUrl.search}`;
 
   try {
+    const upstreamHeaders: HeadersInit = {
+      accept: request.headers.get("accept") || "*/*",
+      "user-agent": request.headers.get("user-agent") || "mendeles-media-proxy",
+    };
+    // Buffer (and browsers) often request video/image byte ranges.
+    const range = request.headers.get("range");
+    if (range) upstreamHeaders.range = range;
+
     const upstream = await fetch(target, {
       method: "GET",
-      headers: {
-        accept: request.headers.get("accept") || "*/*",
-        "user-agent": request.headers.get("user-agent") || "mendeles-media-proxy",
-      },
+      headers: upstreamHeaders,
       redirect: "manual",
       cache: "no-store",
     });
@@ -26,6 +31,12 @@ export async function GET(
     if (contentType) headers.set("content-type", contentType);
     const cacheControl = upstream.headers.get("cache-control");
     if (cacheControl) headers.set("cache-control", cacheControl);
+    const contentRange = upstream.headers.get("content-range");
+    if (contentRange) headers.set("content-range", contentRange);
+    const acceptRanges = upstream.headers.get("accept-ranges");
+    if (acceptRanges) headers.set("accept-ranges", acceptRanges);
+    const contentLength = upstream.headers.get("content-length");
+    if (contentLength) headers.set("content-length", contentLength);
     headers.set("access-control-allow-origin", "*");
 
     return new NextResponse(upstream.body, {

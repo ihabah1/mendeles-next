@@ -19,7 +19,7 @@ export const STATIC_SITEMAP_PAGES: Array<{ path: string; changefreq: string; pri
 export const LOCALES = SYSTEM_LOCALE_CODES;
 
 export function localizeSitemapPath(path: string, locale: string): string {
-  if (locale === "he") return path;
+  if (locale === "en") return path;
   if (path === "/") return `/${locale}`;
   return `/${locale}${path}`;
 }

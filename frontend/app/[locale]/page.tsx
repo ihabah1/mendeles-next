@@ -3,9 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { PageSchemas } from "@/components/seo/page-schemas";
 import { HeroSection } from "@/components/marketing/hero-section";
-import { PromoVideosSection } from "@/components/marketing/promo-videos-section";
 import { BlogPromoSection } from "@/components/marketing/blog-promo-section";
-import { TrustSection } from "@/components/marketing/trust-section";
+import { LogosTrustSection } from "@/components/marketing/logos-trust-section";
+import { FeaturesSection } from "@/components/marketing/features-section";
+import { StatsSection } from "@/components/marketing/stats-section";
+import { PromoVideosSection } from "@/components/marketing/promo-videos-section";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
@@ -27,9 +29,11 @@ export default function LandingPage() {
     <MarketingShell>
       <PageSchemas />
       <HeroSection />
-      <PromoVideosSection />
       <BlogPromoSection />
-      <TrustSection />
+      <LogosTrustSection />
+      <FeaturesSection />
+      <StatsSection />
+      <PromoVideosSection />
       <CtaSection />
     </MarketingShell>
   );

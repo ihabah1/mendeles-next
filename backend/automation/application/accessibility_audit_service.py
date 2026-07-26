@@ -85,7 +85,7 @@ class AccessibilityAuditService:
 
     @classmethod
     def _localize_path(cls, path: str, locale: str) -> str:
-        if locale == "he":
+        if locale == "en":
             return path if path.startswith("/") else f"/{path}"
         if path == "/":
             return f"/{locale}"
