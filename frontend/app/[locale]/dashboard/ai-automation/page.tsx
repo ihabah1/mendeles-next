@@ -205,8 +205,8 @@ export default function AiAutomationPage() {
   const [republishIds, setRepublishIds] = useState<string[]>([]);
   const [republishStrategy, setRepublishStrategy] = useState<"random_one" | "shuffle_all">("random_one");
   const [republishIntervalMinutes, setRepublishIntervalMinutes] = useState(60);
-  const [republishMode, setRepublishMode] = useState<"now" | "schedule">("schedule");
-  const [cronIntervalHours, setCronIntervalHours] = useState(6);
+  const [republishMode, setRepublishMode] = useState<"now" | "schedule" | "now_hourly">("now");
+  const [cronIntervalHours, setCronIntervalHours] = useState(1);
 
   const [localCreativeProgress, setLocalCreativeProgress] = useState(0);
   const [localCreativeLog, setLocalCreativeLog] = useState<Array<{ level: string; message: string }>>([]);
@@ -514,17 +514,37 @@ export default function AiAutomationPage() {
         republishMode === "schedule" && scheduleDate
           ? new Date(`${scheduleDate}T${scheduleTime || "10:00"}:00`).toISOString()
           : undefined;
-      return socialApi.republishBatch({
+      const batchMode = republishMode === "schedule" ? "schedule" : "now";
+      const batch = await socialApi.republishBatch({
         campaign_ids: republishIds,
         strategy: republishStrategy,
-        mode: republishMode,
+        mode: batchMode,
         scheduled_at: scheduledAt,
         interval_minutes: republishIntervalMinutes,
         timezone,
       });
+      if (batch.error) return { ...batch, cron: null as null };
+
+      let cron = null as Awaited<ReturnType<typeof socialApi.setRepublishCron>> | null;
+      if (republishMode === "now_hourly") {
+        cron = await socialApi.setRepublishCron({
+          enabled: true,
+          interval_hours: Math.max(1, Math.min(720, cronIntervalHours || 1)),
+          campaign_ids: republishIds,
+        });
+        if (cron.error) {
+          return {
+            ...batch,
+            error: `נשלח עכשיו, אבל הפעלת החזרה נכשלה: ${cron.error}`,
+            cron,
+          };
+        }
+      }
+      return { ...batch, cron };
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["social-republish-cron"] });
       if (data.error) {
         setError(data.error);
         return;
@@ -2201,247 +2221,309 @@ export default function AiAutomationPage() {
       {/* Republish shuffle from published campaigns */}
       {canManage ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-bold">פרסום חוזר מקמפיינים שפורסמו</h2>
-          <Card className="space-y-4 !rounded-2xl">
-            <p className="text-sm text-[var(--muted-fg)]">
-              בחרו קמפיינים שכבר פורסמו/תוזמנו, ואז שלחו אחד באקראי או ערבבו (shuffle) את כולם לתזמון מדורג.
+          <div>
+            <h2 className="text-xl font-bold">פרסום חוזר</h2>
+            <p className="mt-1 text-sm text-[var(--muted-fg)]">
+              בחרו קמפיינים שפורסמו, בחרו איך לשלוח, ולחצו על הכפתור. שלושה שלבים פשוטים.
             </p>
-            {publishedForRepublish.length === 0 ? (
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                אין עדיין קמפיינים שפורסמו או תוזמנו לבחירה.
-              </p>
-            ) : (
-              <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-[var(--border)] p-3">
-                <div className="mb-2 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full text-xs"
-                    onClick={() => setRepublishIds(publishedForRepublish.map((c) => c.id))}
-                  >
-                    בחר הכל
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full text-xs"
-                    onClick={() => setRepublishIds([])}
-                  >
-                    נקה בחירה
-                  </Button>
-                  <span className="self-center text-xs text-[var(--muted-fg)]">
-                    נבחרו {republishIds.length} / {publishedForRepublish.length}
-                  </span>
-                </div>
-                {publishedForRepublish.map((row) => {
-                  const checked = republishIds.includes(row.id);
-                  return (
-                    <label
-                      key={row.id}
-                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 hover:bg-[var(--muted)]/40"
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 accent-[#6F42F5]"
-                        checked={checked}
-                        onChange={() => {
-                          setRepublishIds((prev) =>
-                            checked ? prev.filter((id) => id !== row.id) : [...prev, row.id],
-                          );
-                        }}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{row.title || "Untitled"}</span>
-                        <span className="block text-xs text-[var(--muted-fg)]">
-                          {(row.platforms || []).join(", ")} · {row.status}
-                          {row.published_at ? ` · פורסם ${formatDate(row.published_at)}` : ""}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
+          </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="mb-2 text-sm font-medium">אסטרטגיה</p>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { id: "random_one" as const, label: "אקראי — אחד מהרשימה" },
-                      { id: "shuffle_all" as const, label: "Shuffle — כולם בסדר אקראי" },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setRepublishStrategy(opt.id)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-xs font-bold transition",
-                        republishStrategy === opt.id
-                          ? "bg-[#6F42F5] text-white"
-                          : "border border-[var(--border)] bg-[var(--background)]",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+          {republishCron.data?.enabled ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
+              <div className="min-w-0 text-sm">
+                <p className="font-semibold text-emerald-950 dark:text-emerald-100">חזרה אוטומטית פעילה</p>
+                <p className="mt-0.5 text-xs text-emerald-900/80 dark:text-emerald-100/75">
+                  כל {republishCron.data.interval_hours} שע׳ · ריצה הבאה:{" "}
+                  {republishCron.data.next_run_at
+                    ? formatDate(republishCron.data.next_run_at)
+                    : "בקרוב"}
+                  {republishCron.data.last_error ? ` · שגיאה: ${republishCron.data.last_error}` : ""}
+                </p>
               </div>
-              <div>
-                <p className="mb-2 text-sm font-medium">מתי לשלוח</p>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { id: "schedule" as const, label: "תזמון" },
-                      { id: "now" as const, label: "עכשיו" },
-                    ] as const
-                  ).map((opt) => (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={setRepublishCron.isPending}
+                onClick={() => setRepublishCron.mutate(false)}
+                className="shrink-0 rounded-full border-red-500/50 text-red-700 dark:text-red-300"
+              >
+                {setRepublishCron.isPending ? "עוצר…" : "עצור חזרה"}
+              </Button>
+            </div>
+          ) : null}
+
+          <Card className="space-y-6 !rounded-2xl !p-5 sm:!p-6">
+            {/* Step 1 — campaigns */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">
+                  <span className="me-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6F42F5] text-xs font-bold text-white">
+                    1
+                  </span>
+                  בחירת קמפיינים
+                </p>
+                {publishedForRepublish.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
-                      key={opt.id}
                       type="button"
-                      onClick={() => setRepublishMode(opt.id)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-xs font-bold transition",
-                        republishMode === opt.id
-                          ? "bg-emerald-600 text-white"
-                          : "border border-[var(--border)] bg-[var(--background)]",
-                      )}
+                      className="text-xs font-semibold text-[#6F42F5] hover:underline"
+                      onClick={() => setRepublishIds(publishedForRepublish.map((c) => c.id))}
                     >
-                      {opt.label}
+                      בחר הכל
                     </button>
-                  ))}
+                    <span className="text-[var(--muted-fg)]">·</span>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-[var(--muted-fg)] hover:underline"
+                      onClick={() => setRepublishIds([])}
+                    >
+                      נקה
+                    </button>
+                    <span className="rounded-full bg-[var(--muted)] px-2.5 py-0.5 text-xs font-medium tabular-nums">
+                      {republishIds.length}/{publishedForRepublish.length}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {publishedForRepublish.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-sm text-[var(--muted-fg)]">
+                  אין עדיין קמפיינים שפורסמו או תוזמנו לבחירה.
+                </p>
+              ) : (
+                <div className="max-h-52 space-y-1 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-2">
+                  {publishedForRepublish.map((row) => {
+                    const checked = republishIds.includes(row.id);
+                    return (
+                      <label
+                        key={row.id}
+                        className={cn(
+                          "flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 transition",
+                          checked ? "bg-[#6F42F5]/10 ring-1 ring-[#6F42F5]/25" : "hover:bg-[var(--background)]",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 accent-[#6F42F5]"
+                          checked={checked}
+                          onChange={() => {
+                            setRepublishIds((prev) =>
+                              checked ? prev.filter((id) => id !== row.id) : [...prev, row.id],
+                            );
+                          }}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{row.title || "Untitled"}</span>
+                          <span className="block text-xs text-[var(--muted-fg)]">
+                            {(row.platforms || []).join(", ")}
+                            {row.published_at ? ` · ${formatDate(row.published_at)}` : ""}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
+
+            {/* Step 2 — strategy */}
+            <div className="space-y-3 border-t border-[var(--border)] pt-5">
+              <p className="text-sm font-semibold">
+                <span className="me-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6F42F5] text-xs font-bold text-white">
+                  2
+                </span>
+                כמה לשלוח
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    {
+                      id: "random_one" as const,
+                      title: "אחד באקראי",
+                      desc: "בוחרים קמפיין אחד מהרשימה ושולחים אותו",
+                    },
+                    {
+                      id: "shuffle_all" as const,
+                      title: "כולם בסדר אקראי",
+                      desc: "מערבבים את כל הנבחרים ושולחים/מתזמנים לפי הסדר",
+                    },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setRepublishStrategy(opt.id)}
+                    className={cn(
+                      "rounded-xl border px-4 py-3 text-start transition",
+                      republishStrategy === opt.id
+                        ? "border-[#6F42F5] bg-[#6F42F5]/10 ring-1 ring-[#6F42F5]/30"
+                        : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]/40",
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">{opt.title}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--muted-fg)]">{opt.desc}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {republishMode === "schedule" ? (
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className="block text-sm font-medium">
-                  תאריך התחלה
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                  />
-                </label>
-                <label className="block text-sm font-medium">
-                  שעה
-                  <input
-                    type="time"
-                    className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                    value={scheduleTime}
-                    onChange={(e) => setScheduleTime(e.target.value)}
-                  />
-                </label>
-                {republishStrategy === "shuffle_all" ? (
+            {/* Step 3 — when */}
+            <div className="space-y-3 border-t border-[var(--border)] pt-5">
+              <p className="text-sm font-semibold">
+                <span className="me-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6F42F5] text-xs font-bold text-white">
+                  3
+                </span>
+                מתי לשלוח
+              </p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(
+                  [
+                    {
+                      id: "now" as const,
+                      title: "עכשיו",
+                      desc: "שליחה חד־פעמית מיידית",
+                    },
+                    {
+                      id: "schedule" as const,
+                      title: "תזמון",
+                      desc: "תאריך ושעה מוגדרים מראש",
+                    },
+                    {
+                      id: "now_hourly" as const,
+                      title: "חזרה אוטומטית",
+                      desc: "שולחים עכשיו, ואז כל X שעות",
+                    },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setRepublishMode(opt.id);
+                      if (opt.id === "now_hourly" && cronIntervalHours < 1) {
+                        setCronIntervalHours(1);
+                      }
+                    }}
+                    className={cn(
+                      "rounded-xl border px-4 py-3 text-start transition",
+                      republishMode === opt.id
+                        ? "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600/30"
+                        : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--muted)]/40",
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">{opt.title}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--muted-fg)]">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+
+              {republishMode === "schedule" ? (
+                <div className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-4 sm:grid-cols-3">
                   <label className="block text-sm font-medium">
-                    מרווח בין קמפיינים (דקות)
+                    תאריך
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    שעה
+                    <input
+                      type="time"
+                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                    />
+                  </label>
+                  {republishStrategy === "shuffle_all" ? (
+                    <label className="block text-sm font-medium">
+                      מרווח בין קמפיינים (דקות)
+                      <input
+                        type="number"
+                        min={5}
+                        max={43200}
+                        className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                        value={republishIntervalMinutes}
+                        onChange={(e) =>
+                          setRepublishIntervalMinutes(
+                            Math.max(5, Math.min(43200, Number(e.target.value) || 60)),
+                          )
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <label className="block text-sm font-medium">
+                      אזור זמן
+                      <input
+                        className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                      />
+                    </label>
+                  )}
+                </div>
+              ) : null}
+
+              {republishMode === "now_hourly" ? (
+                <div className="flex flex-wrap items-end gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <label className="block text-sm font-medium">
+                    חזרה כל כמה שעות
                     <input
                       type="number"
-                      min={5}
-                      max={43200}
-                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={republishIntervalMinutes}
+                      min={1}
+                      max={720}
+                      className="mt-1 w-28 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                      value={cronIntervalHours}
                       onChange={(e) =>
-                        setRepublishIntervalMinutes(Math.max(5, Math.min(43200, Number(e.target.value) || 60)))
+                        setCronIntervalHours(Math.max(1, Math.min(720, Number(e.target.value) || 1)))
                       }
                     />
                   </label>
-                ) : (
-                  <label className="block text-sm font-medium">
-                    אזור זמן
-                    <input
-                      className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                    />
-                  </label>
-                )}
-              </div>
-            ) : null}
+                  <p className="max-w-md pb-2 text-xs text-[var(--muted-fg)]">
+                    נשלח עכשיו לפי האסטרטגיה, ואז ממשיכים לבחור באקראי מהרשימה כל {cronIntervalHours} שע׳.
+                    דורש worker פעיל.
+                  </p>
+                </div>
+              ) : null}
 
-            <p className="text-xs text-[var(--muted-fg)]">
-              {republishStrategy === "random_one"
-                ? "המערכת מערבבת את הבחירה ושולחת/מתזמנת קמפיין אחד באקראי."
-                : republishMode === "schedule"
-                  ? `המערכת מערבבת את הסדר ומתזמנת את כולם עם מרווח של ${republishIntervalMinutes} דקות.`
-                  : "המערכת מערבבת את הסדר ושולחת את כולם עכשיו (שימו לב להגבלות קצב של Buffer)."}
-            </p>
-
-            <Button
-              type="button"
-              disabled={
-                !canManage ||
-                republishIds.length === 0 ||
-                republishBatch.isPending ||
-                (republishMode === "schedule" && !scheduleDate)
-              }
-              onClick={() => republishBatch.mutate()}
-              className="rounded-full bg-[#6F42F5] px-6 font-bold text-white hover:bg-[#5a32d4]"
-            >
-              {republishBatch.isPending
-                ? "שולח…"
-                : republishStrategy === "random_one"
-                  ? "שלח אחד באקראי"
-                  : "Shuffle ושלח / תזמן"}
-            </Button>
-
-            <div className="mt-4 space-y-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4">
-              <p className="font-bold text-amber-950 dark:text-amber-100">CRON — פרסום אקראי חוזר</p>
-              <p className="text-xs text-amber-900/80 dark:text-amber-100/80">
-                כל X שעות המערכת בוחרת באקראי קמפיין מהרשימה שנבחרה (או מכל הקמפיינים שפורסמו) ושולחת אותו עכשיו דרך
-                Buffer. דורש worker אוטומציה פעיל.
-              </p>
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="block text-sm font-medium">
-                  כל כמה שעות
-                  <input
-                    type="number"
-                    min={1}
-                    max={720}
-                    className="mt-1 w-28 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                    value={cronIntervalHours}
-                    onChange={(e) =>
-                      setCronIntervalHours(Math.max(1, Math.min(720, Number(e.target.value) || 6)))
-                    }
-                  />
-                </label>
-                {republishCron.data?.enabled ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!canManage || setRepublishCron.isPending}
-                    onClick={() => setRepublishCron.mutate(false)}
-                    className="rounded-full border-red-500/50 text-red-700 dark:text-red-300"
-                  >
-                    {setRepublishCron.isPending ? "עוצר…" : "עצור CRON"}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    disabled={!canManage || setRepublishCron.isPending}
-                    onClick={() => setRepublishCron.mutate(true)}
-                    className="rounded-full bg-amber-600 px-5 font-bold text-white hover:bg-amber-700"
-                  >
-                    {setRepublishCron.isPending ? "מפעיל…" : "הפעל CRONJOB"}
-                  </Button>
-                )}
-              </div>
-              {republishCron.data ? (
+              {republishMode === "now" ? (
                 <p className="text-xs text-[var(--muted-fg)]">
-                  סטטוס:{" "}
-                  {republishCron.data.enabled
-                    ? `פעיל · כל ${republishCron.data.interval_hours} שע׳ · ריצה הבאה: ${
-                        republishCron.data.next_run_at
-                          ? formatDate(republishCron.data.next_run_at)
-                          : "בקרוב"
-                      }`
-                    : "כבוי"}
-                  {republishCron.data.last_error ? ` · שגיאה אחרונה: ${republishCron.data.last_error}` : ""}
+                  {republishStrategy === "random_one"
+                    ? "שולחים עכשיו קמפיין אחד באקראי מהבחירה."
+                    : "שולחים עכשיו את כל הנבחרים בסדר אקראי (שימו לב להגבלות קצב של Buffer)."}
                 </p>
+              ) : null}
+            </div>
+
+            {/* CTA */}
+            <div className="border-t border-[var(--border)] pt-5">
+              <Button
+                type="button"
+                disabled={
+                  !canManage ||
+                  republishIds.length === 0 ||
+                  republishBatch.isPending ||
+                  (republishMode === "schedule" && !scheduleDate)
+                }
+                onClick={() => republishBatch.mutate()}
+                className="w-full rounded-full bg-[#6F42F5] px-6 py-3 text-base font-bold text-white hover:bg-[#5a32d4] sm:w-auto"
+              >
+                {republishBatch.isPending
+                  ? "שולח…"
+                  : republishMode === "now_hourly"
+                    ? `שלח עכשיו והפעל חזרה כל ${cronIntervalHours} שע׳`
+                    : republishMode === "schedule"
+                      ? republishStrategy === "random_one"
+                        ? "תזמן אחד באקראי"
+                        : "תזמן את כולם"
+                      : republishStrategy === "random_one"
+                        ? "שלח אחד באקראי"
+                        : "שלח את כולם עכשיו"}
+              </Button>
+              {republishIds.length === 0 ? (
+                <p className="mt-2 text-xs text-[var(--muted-fg)]">בחרו לפחות קמפיין אחד בשלב 1 כדי להמשיך.</p>
               ) : null}
             </div>
           </Card>
