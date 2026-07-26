@@ -23,6 +23,15 @@ def _placeholder_media_url(prompt: str, media_type: str) -> str:
     return f"https://placehold.co/1080x1080/{bg}/ffffff/png?text={label}"
 
 
+def _failure_status_for(campaign: SocialCampaign) -> str:
+    """Don't demote a previously released campaign to FAILED — CRON/republish rely on it."""
+    if campaign.published_at or campaign.buffer_update_ids:
+        return CampaignStatus.PUBLISHED
+    if campaign.scheduled_at:
+        return CampaignStatus.SCHEDULED
+    return CampaignStatus.FAILED
+
+
 class CampaignService:
     @staticmethod
     def serialize(campaign: SocialCampaign) -> dict[str, Any]:
@@ -353,7 +362,7 @@ class CampaignService:
             )
             msg = f"Publish crashed: {type(exc).__name__}: {exc}"
             try:
-                campaign.status = CampaignStatus.FAILED
+                campaign.status = _failure_status_for(campaign)
                 campaign.last_error = msg[:2000]
                 campaign.publish_log = list(campaign.publish_log or []) + [
                     {
@@ -394,14 +403,14 @@ class CampaignService:
             return entry
 
         if not campaign.simulated_at:
-            campaign.status = CampaignStatus.FAILED
+            campaign.status = _failure_status_for(campaign)
             campaign.last_error = "Simulation required before releasing the campaign to the network."
             campaign.publish_log = [step("Gate", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
 
         if not publisher.configured():
-            campaign.status = CampaignStatus.FAILED
+            campaign.status = _failure_status_for(campaign)
             campaign.last_error = "BUFFER_ACCESS_TOKEN is not configured on the server."
             campaign.publish_log = [step("Publishing to Buffer...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
@@ -444,7 +453,7 @@ class CampaignService:
             or ("tiktok" in platforms and not buffer_video)
         )
         if needs_image and not buffer_image and not resolve_platform_image_url(campaign, "linkedin"):
-            campaign.status = CampaignStatus.FAILED
+            campaign.status = _failure_status_for(campaign)
             campaign.last_error = MISSING_PNG_MESSAGE
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
@@ -452,7 +461,7 @@ class CampaignService:
         if instagram_uses_video and not (
             resolve_platform_video_url(campaign, "instagram") or buffer_video
         ):
-            campaign.status = CampaignStatus.FAILED
+            campaign.status = _failure_status_for(campaign)
             campaign.last_error = "Instagram video is selected, but no public MP4/MOV campaign video is available."
             campaign.publish_log = log + [step("Uploading media...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
@@ -481,14 +490,14 @@ class CampaignService:
         repeat_count = max(1, min(int(repeat_count or 1), 48))
         if schedule:
             if not scheduled_at:
-                campaign.status = CampaignStatus.FAILED
+                campaign.status = _failure_status_for(campaign)
                 campaign.last_error = "scheduled_at is required when scheduling."
                 campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
                 campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
                 return CampaignService.serialize(campaign)
             scheduled_dt = parse_datetime(scheduled_at)
             if scheduled_dt is None:
-                campaign.status = CampaignStatus.FAILED
+                campaign.status = _failure_status_for(campaign)
                 campaign.last_error = "Invalid scheduled_at datetime."
                 campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
                 campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
@@ -499,7 +508,7 @@ class CampaignService:
             if tz_name:
                 campaign.timezone = tz_name
             if repeat_count > 1 and interval_minutes < 5:
-                campaign.status = CampaignStatus.FAILED
+                campaign.status = _failure_status_for(campaign)
                 campaign.last_error = "interval_minutes must be at least 5 when repeat_count > 1."
                 campaign.publish_log = log + [step("Publishing to Buffer...", campaign.last_error, False)]
                 campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
@@ -621,11 +630,23 @@ class CampaignService:
                         rate_limited = True
                         break
 
-        campaign.buffer_update_ids = {**(campaign.buffer_update_ids or {}), **buffer_ids}
+        # Merge new Buffer ids; keep prior ids if this attempt added none (e.g. rate limit).
+        prior_ids = dict(campaign.buffer_update_ids or {})
+        campaign.buffer_update_ids = {**prior_ids, **buffer_ids}
         campaign.publish_log = log
+        was_released = bool(campaign.published_at or prior_ids or campaign.scheduled_at)
 
         if errors and not buffer_ids:
-            campaign.status = CampaignStatus.FAILED
+            # Total miss this attempt — keep prior release status so CRON can retry later.
+            campaign.status = (
+                CampaignStatus.PUBLISHED
+                if (campaign.published_at or prior_ids)
+                else (
+                    CampaignStatus.SCHEDULED
+                    if campaign.scheduled_at
+                    else CampaignStatus.FAILED
+                )
+            )
             campaign.last_error = " | ".join(errors)
             step("Completed", campaign.last_error, False)
         elif errors:
@@ -634,7 +655,7 @@ class CampaignService:
             if schedule:
                 pass
             else:
-                campaign.published_at = timezone.now()
+                campaign.published_at = campaign.published_at or timezone.now()
             step("Completed", "Partial success", False)
         else:
             if schedule:
@@ -642,9 +663,12 @@ class CampaignService:
             else:
                 campaign.status = CampaignStatus.PUBLISHED
                 campaign.published_at = timezone.now()
+            campaign.last_error = ""
             done_detail = "All platforms queued" if schedule else "Published"
             if schedule and repeat_count > 1:
                 done_detail = f"Queued {repeat_count} sends every {interval_minutes} minutes"
+            if was_released and not schedule:
+                done_detail = "Republished"
             step("Completed", done_detail, True)
 
         campaign.publish_log = log
@@ -684,9 +708,20 @@ class CampaignService:
             id__in=ids,
             tenant_id=tenant_id,
             deleted_at__isnull=True,
-            status__in=[CampaignStatus.PUBLISHED, CampaignStatus.SCHEDULED, CampaignStatus.SIMULATED],
         )
-        campaigns = list(qs)
+        # Include previously released campaigns even if a later republish marked them failed.
+        campaigns = [
+            c
+            for c in qs
+            if c.status
+            in {
+                CampaignStatus.PUBLISHED,
+                CampaignStatus.SCHEDULED,
+                CampaignStatus.SIMULATED,
+            }
+            or c.published_at
+            or bool(c.buffer_update_ids)
+        ]
         if not campaigns:
             return {
                 "strategy": strategy,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from datetime import timedelta
+from datetime import timedelta, timezone as dt_timezone
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -176,19 +176,54 @@ class GoogleOAuthService:
     def get_credentials(cls, conn: GoogleServiceConnection) -> Credentials:
         if not conn.encrypted_refresh_token and not conn.encrypted_access_token:
             raise GoogleOAuthError("Not connected — authorize with Google first.")
+        token = decrypt_value(conn.encrypted_access_token) or None
+        refresh_token = decrypt_value(conn.encrypted_refresh_token) or None
+        expiry = conn.token_expires_at
+        if expiry is not None and timezone.is_naive(expiry):
+            expiry = timezone.make_aware(expiry, dt_timezone.utc)
+
+        # Prefer stored granted scopes; fall back to the service defaults.
+        scopes = list(conn.scopes or []) or list(GOOGLE_OAUTH_SCOPES.get(conn.service_type, []))
         creds = Credentials(
-            token=decrypt_value(conn.encrypted_access_token) or None,
-            refresh_token=decrypt_value(conn.encrypted_refresh_token) or None,
+            token=token,
+            refresh_token=refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
             client_id=settings.GOOGLE_OAUTH_CLIENT_ID,
             client_secret=settings.GOOGLE_OAUTH_CLIENT_SECRET,
-            scopes=conn.scopes or GOOGLE_OAUTH_SCOPES.get(conn.service_type, []),
+            scopes=scopes or None,
+            expiry=expiry,
         )
-        if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+
+        # Access tokens die in ~1h. If expiry was never stored, google-auth assumes
+        # the token never expires — which causes GA4 401 after the hour is up.
+        needs_refresh = bool(creds.refresh_token) and (
+            not creds.token
+            or expiry is None
+            or creds.expired
+            or (expiry - timezone.now()).total_seconds() < 300
+        )
+        if needs_refresh:
+            try:
+                creds.refresh(Request())
+            except Exception as exc:  # noqa: BLE001
+                conn.last_error = f"Token refresh failed: {exc}"[:500]
+                conn.status = ConnectionStatus.ERROR
+                conn.save(update_fields=["last_error", "status", "updated_at"])
+                raise GoogleOAuthError(
+                    "פג תוקף החיבור ל־Google. לחצו שוב «חיבור חשבון» תחת אינטגרציות Google."
+                ) from exc
             conn.encrypted_access_token = encrypt_value(creds.token or "")
             conn.token_expires_at = creds.expiry
-            conn.save(update_fields=["encrypted_access_token", "token_expires_at", "updated_at"])
+            conn.last_error = ""
+            update_fields = ["encrypted_access_token", "token_expires_at", "last_error", "updated_at"]
+            if conn.status == ConnectionStatus.ERROR:
+                conn.status = (
+                    ConnectionStatus.CONNECTED
+                    if conn.property_id
+                    else ConnectionStatus.WAITING_AUTHORIZATION
+                )
+                update_fields.append("status")
+            conn.save(update_fields=update_fields)
         return creds
 
     @classmethod

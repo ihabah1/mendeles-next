@@ -829,7 +829,11 @@ export default function AiAutomationPage() {
   const publishedForRepublish = useMemo(
     () =>
       (history.data?.results || []).filter(
-        (row) => row.status === "published" || row.status === "scheduled",
+        (row) =>
+          row.status === "published" ||
+          row.status === "scheduled" ||
+          Boolean(row.published_at) ||
+          (row.buffer_update_ids && Object.keys(row.buffer_update_ids).length > 0),
       ),
     [history.data?.results],
   );
@@ -2474,9 +2478,16 @@ export default function AiAutomationPage() {
                   <td className="px-4 py-3 font-medium">{row.title || "Untitled"}</td>
                   <td className="px-4 py-3">{(row.platforms || []).join(", ")}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-bold uppercase">
-                      {row.status}
-                    </span>
+                    <div className="space-y-1">
+                      <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-bold uppercase">
+                        {row.status}
+                      </span>
+                      {row.last_error ? (
+                        <p className="max-w-[220px] text-[11px] leading-snug text-amber-600 dark:text-amber-300">
+                          {row.last_error}
+                        </p>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.published_at)}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.scheduled_at)}</td>

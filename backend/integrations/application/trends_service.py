@@ -100,23 +100,40 @@ class TrendsService:
         pytrends = TrendReq(hl=hl, tz=360, timeout=(timeout_seconds, timeout_seconds))
         pytrends.build_payload(keywords[:5], timeframe=cls._timeframe(date_range), geo=geo)
 
-        interest = pytrends.interest_over_time()
-        if not interest.empty and "isPartial" in interest.columns:
-            interest = interest.drop(columns=["isPartial"])
+        try:
+            interest = pytrends.interest_over_time()
+            if interest is not None and not interest.empty and "isPartial" in interest.columns:
+                interest = interest.drop(columns=["isPartial"])
+        except Exception:
+            interest = None
 
-        related_queries = pytrends.related_queries()
-        related_topics = pytrends.related_topics()
+        # pytrends raises IndexError when Google returns empty related payloads.
+        try:
+            related_queries = pytrends.related_queries() or {}
+        except Exception:
+            related_queries = {}
+        try:
+            related_topics = pytrends.related_topics() or {}
+        except Exception:
+            related_topics = {}
+
         trending_rows: list = []
         try:
             trending = pytrends.trending_searches(pn=pn)
-            trending_rows = trending.head(25).values.tolist() if trending is not None and not trending.empty else []
+            trending_rows = (
+                trending.head(25).values.tolist()
+                if trending is not None and not getattr(trending, "empty", True)
+                else []
+            )
         except Exception:
             trending_rows = []
 
+        interest_records = []
+        if interest is not None and hasattr(interest, "empty") and not interest.empty:
+            interest_records = interest.reset_index().to_dict(orient="records")
+
         raw = {
-            "interest_over_time": TrendsService._json_safe(
-                interest.reset_index().to_dict(orient="records") if not interest.empty else []
-            ),
+            "interest_over_time": TrendsService._json_safe(interest_records),
             "related_queries": cls._to_records(related_queries or {}),
             "related_topics": cls._to_records(related_topics or {}),
             "trending_searches": trending_rows,

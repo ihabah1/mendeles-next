@@ -66,16 +66,20 @@ class RandomRepublishCronService:
         hours = max(1, min(int(interval_hours or 6), 24 * 30))
         ids = [str(x) for x in (campaign_ids or []) if x]
         if not ids:
-            ids = [
-                str(cid)
-                for cid in SocialCampaign.objects.filter(
+            candidates = list(
+                SocialCampaign.objects.filter(
                     tenant_id=tenant_id,
                     deleted_at__isnull=True,
-                    status__in=[CampaignStatus.PUBLISHED, CampaignStatus.SCHEDULED],
                 )
-                .order_by("-published_at", "-created_at")
-                .values_list("id", flat=True)[:50]
-            ]
+                .order_by("-published_at", "-created_at")[:80]
+            )
+            ids = [
+                str(c.id)
+                for c in candidates
+                if c.status in {CampaignStatus.PUBLISHED, CampaignStatus.SCHEDULED}
+                or c.published_at
+                or bool(c.buffer_update_ids)
+            ][:50]
         if not ids:
             return {"enabled": False, "error": "אין קמפיינים שפורסמו לבחירה אקראית."}
 

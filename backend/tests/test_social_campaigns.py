@@ -844,3 +844,84 @@ def test_batch_republish_random_one_and_shuffle(tenant, owner_user, settings, mo
     assert all(r["status"] == CampaignStatus.SCHEDULED for r in all_shuffled["results"])
     scheduled_times = [r["scheduled_at"] for r in all_shuffled["results"]]
     assert len(set(scheduled_times)) == 3
+
+
+def test_republish_failure_keeps_published_and_includes_failed_pool(tenant, owner_user, settings, monkeypatch):
+    settings.FRONTEND_URL = "https://mendeles.com"
+    settings.BUFFER_ACCESS_TOKEN = "token"
+
+    from django.utils import timezone
+
+    from social.application.campaign_service import CampaignService
+    from social.domain.enums import CampaignStatus
+    from social.infrastructure.models import SocialCampaign
+    from social.providers.base import PublishResult
+
+    campaign = SocialCampaign.objects.create(
+        tenant=tenant,
+        created_by=owner_user,
+        title="Was published",
+        website_url="https://mendeles.com",
+        platforms=["linkedin"],
+        captions_json={"linkedin": "Caption"},
+        linkedin_image_url="https://mendeles.com/media/social/li.png",
+        media_url="https://mendeles.com/media/social/li.png",
+        status=CampaignStatus.PUBLISHED,
+        simulated_at=timezone.now(),
+        published_at=timezone.now(),
+        buffer_update_ids={"linkedin": "old-buf"},
+    )
+
+    class FailPublisher:
+        def configured(self):
+            return True
+
+        def publish(self, payload):
+            return PublishResult(
+                ok=False,
+                platform=payload.platform,
+                error="rate_limit_exceeded",
+                external_id="",
+                channel_name="",
+            )
+
+    monkeypatch.setattr(
+        "social.application.campaign_service.get_default_publisher",
+        lambda: FailPublisher(),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.is_real_raster_image_url",
+        lambda url: bool(url) and str(url).endswith(".png"),
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.public_media_url_for_buffer",
+        lambda url: url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_buffer_image_url",
+        lambda campaign, allow_ai_regen=False: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.resolve_platform_image_url",
+        lambda campaign, platform: campaign.linkedin_image_url or campaign.media_url,
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.resolve_platform_video_url",
+        lambda campaign, platform: "",
+    )
+    monkeypatch.setattr(
+        "social.application.media_service.ensure_buffer_video_url",
+        lambda campaign: "",
+    )
+
+    result = CampaignService.publish(campaign, schedule=False)
+    assert result["status"] == CampaignStatus.PUBLISHED
+    assert "rate_limit" in (result["last_error"] or "").lower()
+    assert result["buffer_update_ids"].get("linkedin") == "old-buf"
+
+    # Simulate legacy bad state: FAILED but already released — still eligible for batch.
+    campaign.status = CampaignStatus.FAILED
+    campaign.save(update_fields=["status", "updated_at"])
+    batch = CampaignService.batch_republish(tenant.id, [campaign.id], strategy="random_one")
+    assert not batch.get("error")
+    assert batch["count"] == 1

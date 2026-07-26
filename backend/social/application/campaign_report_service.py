@@ -159,10 +159,13 @@ class CampaignReportService:
                 "property_label": "",
             }
 
+        property_id = ""
+        property_label = ""
         try:
             conn = GoogleOAuthService.get_or_create_connection(tenant_id, GoogleServiceType.ANALYTICS)
             status = GoogleOAuthService.effective_status(conn)
             property_id = cls._normalize_ga4_property_id(conn.property_id or "")
+            property_label = conn.property_label or ""
 
             if status == ConnectionStatus.CONFIG_REQUIRED:
                 return {
@@ -258,18 +261,42 @@ class CampaignReportService:
                 "connection_state": "oauth_error",
                 "error": str(exc),
                 "by_campaign": {},
-                "note": "",
-                "property_id": "",
-                "property_label": "",
+                "note": "פתחו אינטגרציות Google וחברו מחדש את GA4 (חיבור חשבון).",
+                "property_id": property_id,
+                "property_label": property_label,
             }
         except Exception as exc:  # noqa: BLE001
             logger.exception("campaign_report_ga4_failed tenant_id=%s", tenant_id)
+            msg = str(exc)
+            auth_fail = any(
+                tip in msg.lower()
+                for tip in ("401", "invalid authentication", "unauthenticated", "credentials")
+            )
+            if auth_fail:
+                try:
+                    conn.status = ConnectionStatus.ERROR
+                    conn.last_error = msg[:500]
+                    conn.save(update_fields=["status", "last_error", "updated_at"])
+                except Exception:  # noqa: BLE001
+                    pass
+                return {
+                    "connected": False,
+                    "connection_state": "oauth_error",
+                    "error": (
+                        "פג תוקף הטוקן של GA4. לחצו «חיבור חשבון» מחדש תחת "
+                        "הגדרות → אינטגרציות Google → Google Analytics."
+                    ),
+                    "by_campaign": {},
+                    "note": "אחרי חיבור מחדש רעננו את דוח הקמפיין.",
+                    "property_id": property_id,
+                    "property_label": property_label,
+                }
             return {
                 "connected": False,
                 "connection_state": "api_error",
                 "error": f"GA4 report failed: {exc}",
                 "by_campaign": {},
                 "note": "",
-                "property_id": "",
-                "property_label": "",
+                "property_id": property_id,
+                "property_label": property_label,
             }

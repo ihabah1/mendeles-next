@@ -221,6 +221,10 @@ class CampaignRepublishView(APIView):
         campaign = CampaignService.get_campaign(_tenant_id(request), campaign_id)
         if not campaign:
             raise NotFoundError("Campaign not found.")
+        # Match batch republish: ensure simulation gate before Buffer send.
+        if not campaign.simulated_at:
+            CampaignService.run_simulation(campaign)
+            campaign.refresh_from_db()
         result = CampaignService.publish(campaign, schedule=False)
         return Response(result)
 
