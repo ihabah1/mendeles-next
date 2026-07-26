@@ -34,58 +34,66 @@ export async function CtaSection() {
 
 export async function FooterSection() {
   const tl = await getTranslations("landing.footer");
+  const landing = await getTranslations("landing");
   const tc = await getTranslations("common");
 
   return (
-    <footer className="border-t border-white/10 px-6 py-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <div className="font-bold text-white">{tc("appName")}</div>
-            <p className="mt-2 text-sm text-slate-400">{tc("tagline")}</p>
+    <footer className="border-t border-white/10">
+      <div className="border-b border-white/5 bg-[#070a12] px-6 py-4">
+        <p className="mx-auto max-w-7xl text-center text-sm font-medium tracking-wide text-slate-200 sm:text-start">
+          {landing("blogHint")}
+        </p>
+      </div>
+      <div className="px-6 py-12">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <div className="font-bold text-white">{tc("appName")}</div>
+              <p className="mt-2 text-sm text-slate-400">{tc("tagline")}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">{tl("product")}</h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li>
+                  <Link href="/solutions" className="hover:text-white">
+                    {tl("solutions")}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/industries" className="hover:text-white">
+                    {tl("industries")}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className="font-semibold text-cyan-300 hover:text-white">
+                    {tl("blog")}
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">{tl("company")}</h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li>
+                  <Link href="/company" className="hover:text-white">
+                    {tl("about")}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="hover:text-white">
+                    {tl("getStarted")}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/accessibility" className="hover:text-white">
+                    {tl("accessibility")}
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">{tl("product")}</h3>
-            <ul className="mt-3 space-y-2 text-sm text-slate-400">
-              <li>
-                <Link href="/solutions" className="hover:text-white">
-                  {tl("solutions")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/industries" className="hover:text-white">
-                  {tl("industries")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="font-semibold text-cyan-300 hover:text-white">
-                  {tl("blog")}
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">{tl("company")}</h3>
-            <ul className="mt-3 space-y-2 text-sm text-slate-400">
-              <li>
-                <Link href="/company" className="hover:text-white">
-                  {tl("about")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/register" className="hover:text-white">
-                  {tl("getStarted")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/accessibility" className="hover:text-white">
-                  {tl("accessibility")}
-                </Link>
-              </li>
-            </ul>
-          </div>
+          <p className="mt-10 text-xs text-slate-400">{tl("copyright")}</p>
         </div>
-        <p className="mt-10 text-xs text-slate-400">{tl("copyright")}</p>
       </div>
     </footer>
   );

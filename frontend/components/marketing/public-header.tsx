@@ -28,37 +28,28 @@ export async function PublicHeader() {
 
         <nav className="hidden items-center gap-6 text-sm text-slate-400 xl:flex" aria-label={ta("mainNav")}>
           {MAIN_NAV.map((item) => (
-            <span key={item.href} className="relative inline-flex flex-col items-center">
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                "featured" in item && item.featured
+                  ? FEATURED_NAV_CLASS
+                  : "inline-flex items-center gap-0.5 whitespace-nowrap transition hover:text-white"
+              }
+            >
+              {tl(item.labelKey)}
               {"featured" in item && item.featured ? (
-                <span className="pointer-events-none absolute -top-5 whitespace-nowrap text-[10px] font-medium italic text-violet-300/90">
-                  {tl("blogHint")}
-                  <span className="ms-1" aria-hidden>
-                    ↘
-                  </span>
+                <span className="text-[10px] opacity-90" aria-hidden="true">
+                  +
                 </span>
-              ) : null}
-              <Link
-                href={item.href}
-                className={
-                  "featured" in item && item.featured
-                    ? FEATURED_NAV_CLASS
-                    : "inline-flex items-center gap-0.5 whitespace-nowrap transition hover:text-white"
-                }
-              >
-                {tl(item.labelKey)}
-                {"featured" in item && item.featured ? (
-                  <span className="text-[10px] opacity-90" aria-hidden="true">
-                    +
+              ) : (
+                DROPDOWN_NAV.has(item.labelKey) && (
+                  <span className="text-[10px] opacity-60" aria-hidden="true">
+                    ▾
                   </span>
-                ) : (
-                  DROPDOWN_NAV.has(item.labelKey) && (
-                    <span className="text-[10px] opacity-60" aria-hidden="true">
-                      ▾
-                    </span>
-                  )
-                )}
-              </Link>
-            </span>
+                )
+              )}
+            </Link>
           ))}
         </nav>
 
