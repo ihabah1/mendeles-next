@@ -403,6 +403,7 @@ export default function AiAutomationPage() {
         video_prompt: active.video_prompt,
         instagram_media_type: active.instagram_media_type || "image",
         timezone,
+        platforms: active.platforms?.length ? active.platforms : platforms,
       });
     },
     onSuccess: (data) => {
@@ -677,22 +678,62 @@ export default function AiAutomationPage() {
     onError: (err: Error) => setError(err.message || "יצירת תמונת AI נכשלה"),
   });
 
+  const ensureCampaignPlatforms = async (needed: SocialPlatform[]) => {
+    if (!active?.id) throw new Error("No campaign");
+    const current = active.platforms?.length ? active.platforms : platforms;
+    const missing = needed.filter((p) => !current.includes(p));
+    if (!missing.length) return active;
+    const nextPlatforms = [...current, ...missing];
+    const nextCaptions = { ...active.captions };
+    for (const p of missing) {
+      if (!nextCaptions[p]) {
+        nextCaptions[p] =
+          nextCaptions.linkedin || nextCaptions.instagram || nextCaptions.tiktok || nextCaptions.facebook || "";
+      }
+    }
+    const updated = await socialApi.update(active.id, {
+      platforms: nextPlatforms,
+      captions: nextCaptions,
+    });
+    setActive(updated);
+    setPlatforms(nextPlatforms);
+    return updated;
+  };
+
   const uploadPlatformMedia = useMutation({
-    mutationFn: async (input: { platform: SocialPlatform; kind: "image" | "video"; file: File }) => {
+    mutationFn: async (input: {
+      platform?: SocialPlatform;
+      platforms?: SocialPlatform[];
+      kind: "image" | "video";
+      file: File;
+    }) => {
       if (!active?.id) throw new Error("No campaign");
+      const targets =
+        input.platforms?.length
+          ? input.platforms
+          : input.platform
+            ? [input.platform]
+            : (["linkedin", "instagram", "tiktok", "facebook"] as SocialPlatform[]);
+      await ensureCampaignPlatforms(targets);
       const data_url =
         input.kind === "video"
           ? await videoFileToDataUrl(input.file)
           : await imageFileToDataUrl(input.file);
       setManualVideoName(input.file.name);
-      return socialApi.uploadPlatformMedia(active.id, {
-        platform: input.platform,
-        kind: input.kind,
-        data_url,
-      });
+      let latest: SocialCampaign | null = null;
+      for (const platform of targets) {
+        latest = await socialApi.uploadPlatformMedia(active.id, {
+          platform,
+          kind: input.kind,
+          data_url,
+        });
+      }
+      if (!latest) throw new Error("העלאת המדיה נכשלה");
+      return latest;
     },
     onSuccess: (data) => {
       setActive(data);
+      if (data.platforms?.length) setPlatforms(data.platforms);
       qc.invalidateQueries({ queryKey: ["social-campaigns"] });
       setError("");
     },
@@ -1397,7 +1438,7 @@ export default function AiAutomationPage() {
               <div>
                 <h2 className="text-xl font-bold">2 · מדיה לפי רשת</h2>
                 <p className="text-sm text-[var(--muted-fg)]">
-                  טענו תמונה או סרטון בנפרד לכל רשת שנבחרה. אפשר גם ליצור PNG ב־AI לאינסטגרם.
+                  טענו תמונה לכל הרשתות באותו שלב — פעם אחת לכולן, או בנפרד לכל רשת. אפשר גם ליצור PNG ב־AI לאינסטגרם.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1408,6 +1449,31 @@ export default function AiAutomationPage() {
                   המשך לסימולציה →
                 </Button>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex cursor-pointer items-center">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                  className="sr-only"
+                  disabled={!canManage || uploadPlatformMedia.isPending}
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (file) {
+                      uploadPlatformMedia.mutate({
+                        platforms: ["linkedin", "instagram", "tiktok", "facebook"],
+                        kind: "image",
+                        file,
+                      });
+                    }
+                  }}
+                />
+                <span className="rounded-full bg-[#1877F2] px-4 py-2 text-sm font-bold text-white">
+                  טען תמונה לכל הרשתות
+                </span>
+              </label>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
@@ -1434,9 +1500,7 @@ export default function AiAutomationPage() {
                     hint: "תמונה או סרטון ל־Page (Meta ישיר)",
                   },
                 ] as const
-              )
-                .filter((card) => active.platforms?.includes(card.id))
-                .map((card) => {
+              ).map((card) => {
                   const imageUrl = platformImageUrl(active, card.id);
                   const videoUrl = platformVideoUrl(active, card.id);
                   return (
@@ -1580,23 +1644,21 @@ export default function AiAutomationPage() {
                   onChange={(e) => setActive({ ...active, title: e.target.value })}
                 />
               </label>
-              {(["linkedin", "instagram", "tiktok"] as SocialPlatform[]).map((platform) =>
-                active.captions?.[platform] !== undefined || platforms.includes(platform) ? (
-                  <label key={platform} className="block text-sm font-medium capitalize">
-                    {platform} caption
-                    <textarea
-                      className="mt-1 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-                      value={active.captions?.[platform] || ""}
-                      onChange={(e) =>
-                        setActive({
-                          ...active,
-                          captions: { ...active.captions, [platform]: e.target.value },
-                        })
-                      }
-                    />
-                  </label>
-                ) : null,
-              )}
+              {(["linkedin", "instagram", "tiktok", "facebook"] as SocialPlatform[]).map((platform) => (
+                <label key={platform} className="block text-sm font-medium capitalize">
+                  {platform} caption
+                  <textarea
+                    className="mt-1 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+                    value={active.captions?.[platform] || ""}
+                    onChange={(e) =>
+                      setActive({
+                        ...active,
+                        captions: { ...active.captions, [platform]: e.target.value },
+                      })
+                    }
+                  />
+                </label>
+              ))}
               <label className="block text-sm font-medium">
                 Hashtags (one platform per line: linkedin: #a #b)
                 <textarea

@@ -128,6 +128,7 @@ export const socialApi = {
     media_url: string;
     instagram_media_type: "image" | "video";
     timezone: string;
+    platforms: SocialPlatform[];
   }>) =>
     apiFetch<SocialCampaign>(`/api/v1/social/campaigns/${id}/`, {
       method: "PATCH",
