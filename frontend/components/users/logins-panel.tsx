@@ -22,13 +22,21 @@ export function LoginsPanel() {
         {data.scope === "platform" ? t("scopePlatform") : t("scopeTenant")}
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <ExpandableStatCard
           label={t("logins24h")}
           value={data.stats.logins_24h}
           hint={t("loginsPeriod", { n: data.stats.logins_period })}
           accent
           daily={data.daily_logins}
+          dailyLabel={t("dailyBreakdown")}
+        />
+        <ExpandableStatCard
+          label="Google · 24 שע׳"
+          value={data.stats.google_logins_24h ?? 0}
+          hint={`ב־${data.days} ימים: ${data.stats.google_logins_period ?? 0}`}
+          accent
+          daily={data.daily_google_logins}
           dailyLabel={t("dailyBreakdown")}
         />
         <ExpandableStatCard

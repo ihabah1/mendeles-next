@@ -964,6 +964,7 @@
       "lastSync": "סנכרון אחרון",
       "nextSync": "סנכרון הבא",
       "error": "שגיאה אחרונה",
+      "trendsPartialWarning": "הערת סנכרון חלקי",
       "trendsAvailable": "זמין אוטומטית — אין צורך ב-OAuth",
       "trendsNoOAuthTitle": "Google Trends לא דורש חיבור חשבון",
       "trendsNoOAuthBody": "Mendeles משתמשת ב-pytrends בצד השרת כדי למשוך Trending Searches, Related Queries, Related Topics ו-Interest Over Time.",

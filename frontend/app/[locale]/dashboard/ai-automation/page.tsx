@@ -35,10 +35,11 @@ const TONES = [
   ["shocking", "Shocking"],
 ] as const;
 
-const PLATFORMS: { id: SocialPlatform; label: string }[] = [
+const PLATFORMS: { id: SocialPlatform; label: string; hint?: string }[] = [
   { id: "linkedin", label: "LinkedIn" },
   { id: "instagram", label: "Instagram" },
   { id: "tiktok", label: "TikTok" },
+  { id: "facebook", label: "Facebook", hint: "ישירות מ־Meta (לא Buffer)" },
 ];
 
 const GEN_STEPS = [
@@ -1035,6 +1036,19 @@ export default function AiAutomationPage() {
           >
             Buffer: {status.data?.buffer_configured ? "מחובר" : "לא מוגדר"}
           </span>
+          <span
+            className={cn(
+              "rounded-full px-3 py-1 font-semibold",
+              status.data?.facebook_configured
+                ? "bg-sky-500/15 text-sky-800 dark:text-sky-200"
+                : "bg-slate-500/15 text-slate-700 dark:text-slate-300",
+            )}
+          >
+            Facebook:{" "}
+            {status.data?.facebook_configured
+              ? status.data.facebook_page || "מחובר"
+              : "לא מוגדר"}
+          </span>
           {!geminiEnabled ? (
             <span className="rounded-full bg-slate-500/15 px-3 py-1 font-semibold text-slate-700 dark:text-slate-300">
               Gemini AI מושבת
@@ -1196,10 +1210,21 @@ export default function AiAutomationPage() {
                     onChange={() => togglePlatform(p.id)}
                     className="h-4 w-4 accent-[#6F42F5]"
                   />
-                  {p.label}
+                  <span>
+                    {p.label}
+                    {p.hint ? (
+                      <span className="ms-1 text-xs font-normal text-[var(--muted-fg)]">({p.hint})</span>
+                    ) : null}
+                  </span>
                 </label>
               ))}
             </div>
+            {platforms.includes("facebook") && status.data && !status.data.facebook_configured ? (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                Facebook דורש הגדרת FACEBOOK_PAGE_ID ו־FACEBOOK_PAGE_ACCESS_TOKEN בשרת — פרסום ישיר ל־Page, בלי מכסת
+                Buffer.
+              </p>
+            ) : null}
           </div>
 
           {platforms.includes("tiktok") ? (

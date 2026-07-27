@@ -36,6 +36,6 @@ class CampaignStatus(TextChoices):
     FAILED = "failed", "Failed"
 
 
-# Extensible registry — add facebook, threads, x, pinterest, youtube_shorts later.
-SUPPORTED_PLATFORMS = ("linkedin", "instagram", "tiktok")
-FUTURE_PLATFORMS = ("facebook", "threads", "x", "pinterest", "youtube_shorts")
+# Buffer covers linkedin/instagram/tiktok (3-channel cap). Facebook uses Meta Graph directly.
+SUPPORTED_PLATFORMS = ("linkedin", "instagram", "tiktok", "facebook")
+FUTURE_PLATFORMS = ("threads", "x", "pinterest", "youtube_shorts")

@@ -179,6 +179,10 @@ GOOGLE_TRENDS_TIMEOUT_SECONDS = int(os.environ.get("GOOGLE_TRENDS_TIMEOUT_SECOND
 
 # Buffer social publishing (server-side only)
 BUFFER_ACCESS_TOKEN = os.environ.get("BUFFER_ACCESS_TOKEN", "")
+# Direct Facebook Page publish (bypasses Buffer's 3-channel limit)
+FACEBOOK_PAGE_ID = os.environ.get("FACEBOOK_PAGE_ID", "")
+FACEBOOK_PAGE_ACCESS_TOKEN = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
+FACEBOOK_PAGE_NAME = os.environ.get("FACEBOOK_PAGE_NAME", "Facebook Page")
 # Public backend origin for media files Buffer can fetch (e.g. https://xxx.up.railway.app)
 BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
 

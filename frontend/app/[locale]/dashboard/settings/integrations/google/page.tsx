@@ -196,7 +196,7 @@ export default function GoogleIntegrationsPage() {
         const props = propertyLists[key] ?? [];
         const visualStatus =
           key === "trends"
-            ? svc.last_error
+            ? svc.status === "error"
               ? "error"
               : svc.last_sync_at
                 ? "connected"
@@ -205,6 +205,7 @@ export default function GoogleIntegrationsPage() {
               ? "property_required"
               : svc.status;
         const statusStyle = STATUS_STYLE[visualStatus] || STATUS_STYLE.error;
+        const trendsWarning = key === "trends" && svc.last_error && visualStatus === "connected";
         const statusLabel =
           visualStatus === "available"
             ? t("google.trendsAvailable")
@@ -302,8 +303,12 @@ export default function GoogleIntegrationsPage() {
               </div>
               {svc.last_error && (
                 <div className="sm:col-span-2">
-                  <dt className="text-[var(--muted-fg)]">{t("google.error")}</dt>
-                  <dd className="text-red-600">{svc.last_error}</dd>
+                  <dt className="text-[var(--muted-fg)]">
+                    {trendsWarning ? t("google.trendsPartialWarning") : t("google.error")}
+                  </dt>
+                  <dd className={trendsWarning ? "text-amber-600 dark:text-amber-300" : "text-red-600"}>
+                    {svc.last_error}
+                  </dd>
                 </div>
               )}
             </dl>

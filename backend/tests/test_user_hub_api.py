@@ -9,7 +9,10 @@ def test_users_hub_api(api_client, seeded, super_admin_user, owner_user):
     body = response.json()
     assert "stats" in body
     assert "daily_logins" in body
+    assert "daily_google_logins" in body
     assert "logins_by_email" in body
+    assert "google_logins_24h" in body["stats"]
+    assert len(body["daily_google_logins"]) == body["days"]
     assert body["scope"] == "platform"
 
 

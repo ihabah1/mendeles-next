@@ -290,13 +290,31 @@ export type UsersHubData = {
     logins_24h: number;
     logins_period: number;
     unique_emails_period: number;
+    google_logins_24h?: number;
+    google_logins_period?: number;
+    google_unique_emails_period?: number;
     users_total: number;
     users_verified: number;
     users_unverified: number;
   };
   daily_logins: Array<{ date: string; count: number }>;
+  daily_google_logins?: Array<{ date: string; count: number }>;
   logins_by_email: Array<{ email: string; count: number; last_login: string | null }>;
-  recent_logins: Array<{ id: string; user_email: string | null; ip_address: string | null; created_at: string | null }>;
+  google_logins_by_email?: Array<{ email: string; count: number; last_login: string | null }>;
+  recent_logins: Array<{
+    id: string;
+    user_email: string | null;
+    ip_address: string | null;
+    created_at: string | null;
+    action?: string;
+  }>;
+  recent_google_logins?: Array<{
+    id: string;
+    user_email: string | null;
+    ip_address: string | null;
+    created_at: string | null;
+    action?: string;
+  }>;
 };
 
 export const usersHubApi = {

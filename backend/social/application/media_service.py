@@ -305,6 +305,12 @@ def resolve_platform_image_url(campaign: SocialCampaign, platform: str) -> str:
         ]
     elif platform == "instagram":
         candidates = [campaign.instagram_image_url, campaign.media_url]
+    elif platform == "facebook":
+        candidates = [
+            getattr(campaign, "linkedin_image_url", "") or "",
+            campaign.instagram_image_url,
+            campaign.media_url,
+        ]
     else:
         candidates = [campaign.media_url, campaign.instagram_image_url]
     for candidate in candidates:
@@ -320,6 +326,15 @@ def resolve_platform_video_url(campaign: SocialCampaign, platform: str) -> str:
         candidates = [getattr(campaign, "linkedin_video_url", "") or ""]
     elif platform == "instagram":
         candidates = [
+            getattr(campaign, "instagram_video_url", "") or "",
+            campaign.tiktok_video_url,
+        ]
+        for item in campaign.tiktok_videos_json or []:
+            if isinstance(item, dict) and item.get("url"):
+                candidates.append(str(item["url"]))
+    elif platform == "facebook":
+        candidates = [
+            getattr(campaign, "linkedin_video_url", "") or "",
             getattr(campaign, "instagram_video_url", "") or "",
             campaign.tiktok_video_url,
         ]

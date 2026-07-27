@@ -45,6 +45,13 @@ def _fallback_campaign(payload: dict[str, Any]) -> dict[str, Any]:
             f"{cta}"
         )
         hashtags["tiktok"] = base_tags + ["#TikTokMarketing", "#SaaS"]
+    if "facebook" in platforms:
+        captions["facebook"] = (
+            f"{main_idea}\n\n"
+            f"For {audience}: {goal}\n\n"
+            f"{cta}"
+        )
+        hashtags["facebook"] = base_tags + ["#FacebookMarketing", "#SmallBusiness"]
 
     result = {
         "title": title,
@@ -96,12 +103,14 @@ Return JSON with this exact shape:
   "captions": {{
     "linkedin": "LinkedIn caption (professional, line breaks ok)",
     "instagram": "Instagram caption",
-    "tiktok": "TikTok caption (short, punchy)"
+    "tiktok": "TikTok caption (short, punchy)",
+    "facebook": "Facebook Page caption (engaging, clear CTA)"
   }},
   "hashtags": {{
     "linkedin": ["#Tag1", "#Tag2"],
     "instagram": ["#Tag1", "#Tag2"],
-    "tiktok": ["#Tag1", "#Tag2"]
+    "tiktok": ["#Tag1", "#Tag2"],
+    "facebook": ["#Tag1", "#Tag2"]
   }},
   "cta": "clear call to action with URL if relevant",
   "media_prompt": "detailed AI image prompt",

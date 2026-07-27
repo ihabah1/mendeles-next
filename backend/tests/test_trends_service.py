@@ -96,6 +96,35 @@ def test_sync_market_serializes_pandas_timestamps(monkeypatch, tenant):
 
 
 @pytest.mark.django_db
+def test_sync_market_survives_build_payload_index_error(monkeypatch, tenant):
+    class FakeTrendReq:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def build_payload(self, *args, **kwargs):
+            raise IndexError("list index out of range")
+
+        def trending_searches(self, pn):
+            import pandas as pd
+
+            return pd.DataFrame([["mendeles"]])
+
+    monkeypatch.setattr("pytrends.request.TrendReq", FakeTrendReq)
+
+    record = TrendsService._sync_market(
+        tenant.id,
+        keywords=["mendeles"],
+        country="IL",
+        language="he",
+        date_range="7d",
+    )
+
+    assert record.sync_status == "success"
+    assert record.processed_data["trending_searches"]
+    assert any("build_payload" in w for w in record.processed_data.get("sync_warnings", []))
+
+
+@pytest.mark.django_db
 def test_sync_market_uses_trendreq_without_retries_kwarg(monkeypatch, tenant):
     captured: dict = {}
 

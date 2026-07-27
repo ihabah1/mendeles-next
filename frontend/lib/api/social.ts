@@ -6,7 +6,7 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export type SocialPlatform = "linkedin" | "instagram" | "tiktok";
+export type SocialPlatform = "linkedin" | "instagram" | "tiktok" | "facebook";
 
 export type SimulationLogEntry = {
   step: string;
@@ -88,6 +88,8 @@ export const socialApi = {
   status: () =>
     apiFetch<{
       buffer_configured: boolean;
+      facebook_configured?: boolean;
+      facebook_page?: string;
       gemini_enabled: boolean;
       channels?: Array<{
         id: string;
@@ -99,6 +101,7 @@ export const socialApi = {
         formatted_username: string;
         is_disconnected?: boolean;
         is_locked?: boolean;
+        provider?: string;
       }>;
       profiles: Array<{ id: string; service: string; formatted_username: string }>;
       error: string;

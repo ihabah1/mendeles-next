@@ -51,11 +51,64 @@ class SocialStatusView(APIView):
         publisher = get_default_publisher()
         channels = []
         error = ""
+        facebook_configured = False
+        facebook_page = ""
+        buffer_configured = False
+
+        from social.providers.buffer import BufferPublisher
+        from social.providers.composite import CompositeSocialPublisher
+        from social.providers.facebook import FacebookPublisher
+
+        if isinstance(publisher, CompositeSocialPublisher):
+            buffer_configured = publisher.buffer.configured()
+            facebook_configured = publisher.facebook.configured()
+            facebook_page = publisher.facebook.page_name if facebook_configured else ""
+        elif isinstance(publisher, BufferPublisher):
+            buffer_configured = publisher.configured()
+        elif isinstance(publisher, FacebookPublisher):
+            facebook_configured = publisher.configured()
+            facebook_page = publisher.page_name if facebook_configured else ""
+        else:
+            buffer_configured = publisher.configured()
+
         if publisher.configured():
             try:
-                from social.providers.buffer import BufferPublisher
-
-                if isinstance(publisher, BufferPublisher) and publisher.is_rate_limited():
+                if isinstance(publisher, CompositeSocialPublisher):
+                    if publisher.buffer.configured() and publisher.buffer.is_rate_limited():
+                        error = BufferPublisher.rate_limit_message()
+                        channels = [
+                            {
+                                "id": str(ch.get("id") or ""),
+                                "service": ch.get("service") or "",
+                                "name": ch.get("name") or "",
+                                "display_name": ch.get("display_name") or "",
+                                "label": ch.get("label") or "",
+                                "type": ch.get("type") or "",
+                                "is_disconnected": bool(ch.get("is_disconnected")),
+                                "is_locked": bool(ch.get("is_locked")),
+                                "formatted_username": ch.get("formatted_username") or ch.get("label") or "",
+                                "provider": "buffer",
+                            }
+                            for ch in (BufferPublisher._channels_cache or [])
+                        ]
+                        channels.extend(publisher.facebook.list_channels())
+                    else:
+                        channels = [
+                            {
+                                "id": str(ch.get("id") or ""),
+                                "service": ch.get("service") or "",
+                                "name": ch.get("name") or "",
+                                "display_name": ch.get("display_name") or "",
+                                "label": ch.get("label") or "",
+                                "type": ch.get("type") or "",
+                                "is_disconnected": bool(ch.get("is_disconnected")),
+                                "is_locked": bool(ch.get("is_locked")),
+                                "formatted_username": ch.get("formatted_username") or ch.get("label") or "",
+                                "provider": ch.get("provider") or "",
+                            }
+                            for ch in publisher.list_channels()
+                        ]
+                elif isinstance(publisher, BufferPublisher) and publisher.is_rate_limited():
                     error = BufferPublisher.rate_limit_message()
                     channels = [
                         {
@@ -90,7 +143,9 @@ class SocialStatusView(APIView):
                 error = str(exc)
         return Response(
             {
-                "buffer_configured": publisher.configured(),
+                "buffer_configured": buffer_configured,
+                "facebook_configured": facebook_configured,
+                "facebook_page": facebook_page,
                 "gemini_enabled": GeminiService.enabled(_tenant_id(request)),
                 "channels": channels,
                 # Back-compat for older UI

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { InstagramPreview, LinkedInPreview, TikTokPreview } from "@/components/social/social-previews";
+import { FacebookPreview, InstagramPreview, LinkedInPreview, TikTokPreview } from "@/components/social/social-previews";
 import type { SocialCampaign, SocialPlatform } from "@/lib/api/social";
 import { PROMO_VIDEOS } from "@/lib/marketing/promo-videos";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const TABS: { id: TabId; label: string; he: string }[] = [
   { id: "linkedin", label: "LinkedIn", he: "לינקדאין" },
   { id: "instagram", label: "Instagram", he: "אינסטגרם" },
   { id: "tiktok", label: "TikTok", he: "טיקטוק" },
+  { id: "facebook", label: "Facebook", he: "פייסבוק" },
 ];
 
 type Props = {
@@ -29,7 +30,9 @@ function sitePromoEntries(campaign: SocialCampaign) {
 export function CampaignNetworkSimulator({ campaign, platforms, className }: Props) {
   const selected = useMemo(() => {
     const list = (platforms?.length ? platforms : campaign.platforms) || [];
-    const unique = (["linkedin", "instagram", "tiktok"] as SocialPlatform[]).filter((p) => list.includes(p));
+    const unique = (["linkedin", "instagram", "tiktok", "facebook"] as SocialPlatform[]).filter((p) =>
+      list.includes(p),
+    );
     return unique.length ? unique : (["linkedin", "instagram", "tiktok"] as SocialPlatform[]);
   }, [campaign.platforms, platforms]);
 
@@ -41,8 +44,10 @@ export function CampaignNetworkSimulator({ campaign, platforms, className }: Pro
   const showLinkedIn = selected.includes("linkedin") && (tab === "all" || tab === "linkedin");
   const showInstagram = selected.includes("instagram") && (tab === "all" || tab === "instagram");
   const showTikTok = selected.includes("tiktok") && (tab === "all" || tab === "tiktok");
+  const showFacebook = selected.includes("facebook") && (tab === "all" || tab === "facebook");
 
   const visibleTabs = TABS.filter((t) => t.id === "all" || selected.includes(t.id as SocialPlatform));
+  const colCount = [showLinkedIn, showInstagram, showTikTok, showFacebook].filter(Boolean).length;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -89,7 +94,11 @@ export function CampaignNetworkSimulator({ campaign, platforms, className }: Pro
       <div
         className={cn(
           "grid gap-6",
-          tab === "all" ? "lg:grid-cols-3" : "mx-auto max-w-xl lg:grid-cols-1",
+          tab === "all"
+            ? colCount >= 4
+              ? "lg:grid-cols-2 xl:grid-cols-4"
+              : "lg:grid-cols-3"
+            : "mx-auto max-w-xl lg:grid-cols-1",
         )}
       >
         {showLinkedIn ? (
@@ -130,6 +139,14 @@ export function CampaignNetworkSimulator({ campaign, platforms, className }: Pro
                 ))}
               </div>
             ) : null}
+          </figure>
+        ) : null}
+        {showFacebook ? (
+          <figure className="space-y-2">
+            <figcaption className="text-center text-xs font-bold uppercase tracking-wide text-[#1877F2]">
+              Facebook · פרסום ישיר ל־Page
+            </figcaption>
+            <FacebookPreview campaign={campaign} />
           </figure>
         ) : null}
       </div>

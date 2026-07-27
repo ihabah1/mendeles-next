@@ -98,26 +98,40 @@ class TrendsService:
         timeout_seconds = int(getattr(settings, "GOOGLE_TRENDS_TIMEOUT_SECONDS", 20))
         # Do not pass retries/backoff_factor — incompatible with urllib3 2.x in pytrends 4.9.
         pytrends = TrendReq(hl=hl, tz=360, timeout=(timeout_seconds, timeout_seconds))
-        pytrends.build_payload(keywords[:5], timeframe=cls._timeframe(date_range), geo=geo)
 
-        try:
-            interest = pytrends.interest_over_time()
-            if interest is not None and not interest.empty and "isPartial" in interest.columns:
-                interest = interest.drop(columns=["isPartial"])
-        except Exception:
-            interest = None
-
-        # pytrends raises IndexError when Google returns empty related payloads.
-        try:
-            related_queries = pytrends.related_queries() or {}
-        except Exception:
-            related_queries = {}
-        try:
-            related_topics = pytrends.related_topics() or {}
-        except Exception:
-            related_topics = {}
-
+        interest_records: list = []
+        related_queries: dict = {}
+        related_topics: dict = {}
         trending_rows: list = []
+        sync_warnings: list[str] = []
+
+        try:
+            pytrends.build_payload(keywords[:5], timeframe=cls._timeframe(date_range), geo=geo)
+        except Exception as exc:
+            sync_warnings.append(f"build_payload: {exc}")
+
+        if not sync_warnings:
+            try:
+                interest = pytrends.interest_over_time()
+                if interest is not None and not interest.empty and "isPartial" in interest.columns:
+                    interest = interest.drop(columns=["isPartial"])
+                if interest is not None and hasattr(interest, "empty") and not interest.empty:
+                    interest_records = interest.reset_index().to_dict(orient="records")
+            except Exception as exc:
+                sync_warnings.append(f"interest_over_time: {exc}")
+
+            # pytrends raises IndexError when Google returns empty related payloads.
+            try:
+                related_queries = pytrends.related_queries() or {}
+            except Exception as exc:
+                sync_warnings.append(f"related_queries: {exc}")
+                related_queries = {}
+            try:
+                related_topics = pytrends.related_topics() or {}
+            except Exception as exc:
+                sync_warnings.append(f"related_topics: {exc}")
+                related_topics = {}
+
         try:
             trending = pytrends.trending_searches(pn=pn)
             trending_rows = (
@@ -125,18 +139,16 @@ class TrendsService:
                 if trending is not None and not getattr(trending, "empty", True)
                 else []
             )
-        except Exception:
+        except Exception as exc:
+            sync_warnings.append(f"trending_searches: {exc}")
             trending_rows = []
-
-        interest_records = []
-        if interest is not None and hasattr(interest, "empty") and not interest.empty:
-            interest_records = interest.reset_index().to_dict(orient="records")
 
         raw = {
             "interest_over_time": TrendsService._json_safe(interest_records),
             "related_queries": cls._to_records(related_queries or {}),
             "related_topics": cls._to_records(related_topics or {}),
             "trending_searches": trending_rows,
+            "sync_warnings": sync_warnings,
         }
         processed = TrendsService._json_safe(
             {
@@ -149,6 +161,7 @@ class TrendsService:
                 "related_queries": raw["related_queries"],
                 "related_topics": raw["related_topics"],
                 "trending_searches": raw["trending_searches"],
+                "sync_warnings": sync_warnings,
             }
         )
 
@@ -222,6 +235,7 @@ class TrendsService:
 
         conn.last_sync_at = now
         conn.next_sync_at = now + timedelta(days=1)
+        # Partial market warnings are informational — do not mark the service as failed.
         conn.last_error = "; ".join(errors) if errors else ""
         conn.status = ConnectionStatus.CONNECTED
         conn.save(update_fields=["last_sync_at", "next_sync_at", "last_error", "status", "updated_at"])

@@ -1236,6 +1236,7 @@
       "lastSync": "Last sync",
       "nextSync": "Next sync",
       "error": "Last error",
+      "trendsPartialWarning": "Partial sync note",
       "trendsAvailable": "Available automatically — no OAuth required",
       "trendsNoOAuthTitle": "Google Trends does not require account connection",
       "trendsNoOAuthBody": "Mendeles uses server-side pytrends to retrieve Trending Searches, Related Queries, Related Topics, and Interest Over Time.",

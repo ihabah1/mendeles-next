@@ -51,6 +51,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/studio/articles", labelKey: "articleStudio", permission: "content.edit" },
       { href: "/dashboard/studio/landing-pages", labelKey: "landingStudio", permission: "content.edit" },
       { href: "/dashboard/ai-seo", labelKey: "aiSeo", permission: "ai_seo.view" },
+      { href: "/dashboard/traffic", labelKey: "traffic", permission: "ai_seo.view" },
       { href: "/blog", labelKey: "blog", permission: null },
     ],
   },

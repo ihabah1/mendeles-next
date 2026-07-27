@@ -5,6 +5,7 @@ import { Link } from "@/lib/i18n/navigation";
 import { aiSeoApi } from "@/lib/api/dashboard";
 import { useAuth } from "@/lib/auth/auth-context";
 import { pageLocale } from "@/components/workspace/workspace-helpers";
+import { GoogleLoginsWeek } from "@/components/traffic/google-logins-week";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -12,6 +13,7 @@ export default function TrafficTrackingPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("ai_seo.view");
   const canManage = hasPermission("ai_seo.manage");
+  const canViewUsers = hasPermission("users.view");
   const qc = useQueryClient();
 
   const workspace = useQuery({
@@ -48,13 +50,15 @@ export default function TrafficTrackingPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">מעקב תנועה לתוצרים שעלו</h1>
           <p className="mt-1 text-sm text-[var(--muted-fg)]">
-            ריכוז לינקים למאמרים ודפי נחיתה שפורסמו לפרודקשן. מדדי תנועה יוצגו רק אחרי סנכרון אמיתי מ-GA4/Search Console.
+            ריכוז לינקים שפורסמו, ומדד כניסות משתמשים דרך Google על ציר זמן של שבוע. מדדי עמודים מ-GA4 יוצגו אחרי סנכרון.
           </p>
         </div>
         <Link href="/dashboard/workspace">
           <Button type="button" variant="outline">חזרה לממשק עבודה</Button>
         </Link>
       </div>
+
+      <GoogleLoginsWeek enabled={canViewUsers} />
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">

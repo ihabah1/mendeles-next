@@ -224,6 +224,7 @@ class CampaignService:
             ("linkedin" in platforms and not linkedin_video)
             or ("instagram" in platforms and not instagram_uses_video)
             or ("tiktok" in platforms and not buffer_video)
+            or ("facebook" in platforms and not linkedin_video and not buffer_video)
         )
 
         if needs_png:
@@ -314,6 +315,29 @@ class CampaignService:
                 "LinkedIn caption",
                 bool((campaign.captions_json or {}).get("linkedin")),
                 "caption ready" if (campaign.captions_json or {}).get("linkedin") else "missing caption",
+            )
+
+        if "facebook" in platforms:
+            fb_image = (
+                resolve_platform_image_url(campaign, "facebook")
+                or linkedin_image
+                or resolve_platform_image_url(campaign, "instagram")
+            )
+            fb_video = resolve_platform_video_url(campaign, "facebook") or linkedin_video or buffer_video
+            if fb_video:
+                ok &= check("Facebook video", True, fb_video)
+            elif fb_image:
+                ok &= check("Facebook image", True, fb_image)
+            else:
+                ok &= check(
+                    "Facebook media",
+                    False,
+                    "Create a campaign image (or video) before publishing to Facebook.",
+                )
+            ok &= check(
+                "Facebook caption",
+                bool((campaign.captions_json or {}).get("facebook")),
+                "caption ready" if (campaign.captions_json or {}).get("facebook") else "missing caption",
             )
 
         campaign.simulation_log = log
@@ -417,10 +441,36 @@ class CampaignService:
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
 
-        if not publisher.configured():
+        platforms = [p for p in (campaign.platforms or []) if p in SUPPORTED_PLATFORMS]
+        needs_buffer = any(p in {"linkedin", "instagram", "tiktok"} for p in platforms)
+        needs_facebook = "facebook" in platforms
+        from social.providers.buffer import BufferPublisher
+        from social.providers.composite import CompositeSocialPublisher
+        from social.providers.facebook import FacebookPublisher
+
+        buffer_ok = True
+        facebook_ok = True
+        if isinstance(publisher, CompositeSocialPublisher):
+            buffer_ok = publisher.buffer.configured() if needs_buffer else True
+            facebook_ok = publisher.facebook.configured() if needs_facebook else True
+        elif isinstance(publisher, BufferPublisher):
+            buffer_ok = publisher.configured() if needs_buffer else True
+            facebook_ok = not needs_facebook
+        elif isinstance(publisher, FacebookPublisher):
+            facebook_ok = publisher.configured() if needs_facebook else True
+            buffer_ok = not needs_buffer
+        else:
+            buffer_ok = facebook_ok = publisher.configured()
+
+        if not buffer_ok or not facebook_ok:
+            missing = []
+            if not buffer_ok:
+                missing.append("BUFFER_ACCESS_TOKEN")
+            if not facebook_ok:
+                missing.append("FACEBOOK_PAGE_ID + FACEBOOK_PAGE_ACCESS_TOKEN")
             campaign.status = _failure_status_for(campaign)
-            campaign.last_error = "BUFFER_ACCESS_TOKEN is not configured on the server."
-            campaign.publish_log = [step("Publishing to Buffer...", campaign.last_error, False)]
+            campaign.last_error = "חסרים פרטי חיבור לפרסום: " + ", ".join(missing) + "."
+            campaign.publish_log = [step("Publishing...", campaign.last_error, False)]
             campaign.save(update_fields=["status", "last_error", "publish_log", "updated_at"])
             return CampaignService.serialize(campaign)
 
@@ -509,6 +559,7 @@ class CampaignService:
             ("linkedin" in platforms and not linkedin_video)
             or ("instagram" in platforms and not instagram_uses_video)
             or ("tiktok" in platforms and not buffer_video)
+            or ("facebook" in platforms and not linkedin_video)
         )
         if needs_image and not buffer_image and not resolve_platform_image_url(campaign, "linkedin"):
             campaign.status = _failure_status_for(campaign)
@@ -683,6 +734,8 @@ class CampaignService:
                     platform_video = ig_video or buffer_video
                 elif platform == "tiktok":
                     platform_video = buffer_video
+                elif platform == "facebook":
+                    platform_video = linkedin_video or buffer_video
                 platform_image = resolve_platform_image_url(campaign, platform) or buffer_image
                 if platform_image and not media_url_is_reachable(platform_image):
                     platform_image = buffer_image if media_url_is_reachable(buffer_image) else ""
@@ -700,17 +753,21 @@ class CampaignService:
                 elif platform == "linkedin" and platform_video:
                     media_for_platform = platform_video
                     media_kind = "video"
-                elif platform in {"instagram", "linkedin"}:
+                elif platform == "facebook" and platform_video:
+                    media_for_platform = platform_video
+                    media_kind = "video"
+                elif platform in {"instagram", "linkedin", "facebook"}:
                     media_for_platform = platform_image
                     media_kind = "image"
 
                 media_for_platform = public_media_url_for_buffer(media_for_platform)
+                provider_label = "Facebook" if platform == "facebook" else "Buffer"
                 if media_for_platform and not media_url_is_reachable(media_for_platform):
                     errors.append(
                         f"{platform}@{slot_label}: {UNREACHABLE_MEDIA_MESSAGE}"
                     )
                     step(
-                        f"Publishing to Buffer... ({platform} {slot_label})",
+                        f"Publishing to {provider_label}... ({platform} {slot_label})",
                         UNREACHABLE_MEDIA_MESSAGE,
                         False,
                     )
@@ -741,14 +798,16 @@ class CampaignService:
                     # Keep the first successful Buffer id per platform for campaign metadata.
                     buffer_ids.setdefault(platform, result.external_id)
                     detail = result.channel_name or result.external_id or "queued"
-                    step(f"Publishing to Buffer... ({platform} {slot_label})", detail, True)
+                    step(f"Publishing to {provider_label}... ({platform} {slot_label})", detail, True)
                 else:
                     errors.append(f"{platform}@{slot_label}: {result.error}")
-                    step(f"Publishing to Buffer... ({platform} {slot_label})", result.error, False)
+                    step(f"Publishing to {provider_label}... ({platform} {slot_label})", result.error, False)
                     err_l = (result.error or "").lower()
                     if "rate_limit" in err_l or "rate-limited" in err_l or "חסם את ה-api" in (result.error or ""):
                         remaining = [p for p in platforms if p not in buffer_ids and p != platform]
                         for skipped in remaining:
+                            if skipped == "facebook":
+                                continue
                             skip_msg = result.error or "Buffer rate limited — skipped"
                             errors.append(f"{skipped}@{slot_label}: {skip_msg}")
                             step(f"Publishing to Buffer... ({skipped} {slot_label})", "Skipped (rate limit)", False)
