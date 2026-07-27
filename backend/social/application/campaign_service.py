@@ -56,6 +56,8 @@ class CampaignService:
             "media_url": campaign.media_url,
             "linkedin_image_url": getattr(campaign, "linkedin_image_url", "") or "",
             "linkedin_video_url": getattr(campaign, "linkedin_video_url", "") or "",
+            "facebook_image_url": getattr(campaign, "facebook_image_url", "") or "",
+            "facebook_video_url": getattr(campaign, "facebook_video_url", "") or "",
             "instagram_image_url": campaign.instagram_image_url,
             "instagram_video_url": getattr(campaign, "instagram_video_url", "") or "",
             "instagram_media_type": campaign.instagram_media_type,
@@ -735,7 +737,11 @@ class CampaignService:
                 elif platform == "tiktok":
                     platform_video = buffer_video
                 elif platform == "facebook":
-                    platform_video = linkedin_video or buffer_video
+                    platform_video = (
+                        ensure_reachable_buffer_video(campaign, "facebook")
+                        or linkedin_video
+                        or buffer_video
+                    )
                 platform_image = resolve_platform_image_url(campaign, platform) or buffer_image
                 if platform_image and not media_url_is_reachable(platform_image):
                     platform_image = buffer_image if media_url_is_reachable(buffer_image) else ""

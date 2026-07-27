@@ -33,6 +33,8 @@ export type SocialCampaign = {
   media_url: string;
   linkedin_image_url?: string;
   linkedin_video_url?: string;
+  facebook_image_url?: string;
+  facebook_video_url?: string;
   instagram_image_url: string;
   instagram_video_url?: string;
   instagram_media_type: "image" | "video";

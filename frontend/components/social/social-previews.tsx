@@ -197,16 +197,21 @@ export function TikTokPreview({ campaign }: Props) {
 }
 
 export function FacebookPreview({ campaign }: Props) {
-  const text = campaign.captions?.facebook || campaign.captions?.linkedin || "";
-  const tags = hashtagsLine(campaign, "facebook");
+  const image =
+    campaign.facebook_image_url ||
+    campaign.linkedin_image_url ||
+    campaign.instagram_image_url ||
+    campaign.media_url ||
+    "";
   const video =
+    campaign.facebook_video_url ||
     campaign.linkedin_video_url ||
     campaign.instagram_video_url ||
     campaign.tiktok_video_url ||
     "";
   const useVideo = /\.(mp4|mov)(\?|$)/i.test(video);
-  const image =
-    campaign.linkedin_image_url || campaign.instagram_image_url || campaign.media_url || "";
+  const text = campaign.captions?.facebook || campaign.captions?.linkedin || "";
+  const tags = hashtagsLine(campaign, "facebook");
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm dark:bg-zinc-900">
       <div className="border-b border-[var(--border)] bg-[#1877F2]/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#1877F2]">

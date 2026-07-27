@@ -266,12 +266,30 @@ export default function AiAutomationPage() {
     if (platform === "instagram") {
       return campaign.instagram_image_url || campaign.media_url || "";
     }
+    if (platform === "facebook") {
+      return (
+        campaign.facebook_image_url ||
+        campaign.linkedin_image_url ||
+        campaign.instagram_image_url ||
+        campaign.media_url ||
+        ""
+      );
+    }
     return campaign.media_url || campaign.instagram_image_url || "";
   }
 
   function platformVideoUrl(campaign: SocialCampaign, platform: SocialPlatform) {
     if (platform === "linkedin") return campaign.linkedin_video_url || "";
     if (platform === "instagram") return bestInstagramVideoUrl(campaign);
+    if (platform === "facebook") {
+      return (
+        campaign.facebook_video_url ||
+        campaign.linkedin_video_url ||
+        bestInstagramVideoUrl(campaign) ||
+        bestTikTokVideoUrl(campaign) ||
+        ""
+      );
+    }
     return bestTikTokVideoUrl(campaign);
   }
 
@@ -1392,7 +1410,7 @@ export default function AiAutomationPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
               {(
                 [
                   {
@@ -1409,6 +1427,11 @@ export default function AiAutomationPage() {
                     id: "tiktok" as const,
                     title: "TikTok",
                     hint: "סרטון (או תמונה כגיבוי)",
+                  },
+                  {
+                    id: "facebook" as const,
+                    title: "Facebook",
+                    hint: "תמונה או סרטון ל־Page (Meta ישיר)",
                   },
                 ] as const
               )

@@ -307,6 +307,7 @@ def resolve_platform_image_url(campaign: SocialCampaign, platform: str) -> str:
         candidates = [campaign.instagram_image_url, campaign.media_url]
     elif platform == "facebook":
         candidates = [
+            getattr(campaign, "facebook_image_url", "") or "",
             getattr(campaign, "linkedin_image_url", "") or "",
             campaign.instagram_image_url,
             campaign.media_url,
@@ -334,6 +335,7 @@ def resolve_platform_video_url(campaign: SocialCampaign, platform: str) -> str:
                 candidates.append(str(item["url"]))
     elif platform == "facebook":
         candidates = [
+            getattr(campaign, "facebook_video_url", "") or "",
             getattr(campaign, "linkedin_video_url", "") or "",
             getattr(campaign, "instagram_video_url", "") or "",
             campaign.tiktok_video_url,
@@ -910,6 +912,15 @@ class MediaGenerationService:
         elif platform == "linkedin" and kind == "video":
             campaign.linkedin_video_url = url_public
             update_fields.append("linkedin_video_url")
+        elif platform == "facebook" and kind == "image":
+            campaign.facebook_image_url = url_public
+            update_fields.append("facebook_image_url")
+            if not campaign.media_url:
+                campaign.media_url = url_public
+                update_fields.append("media_url")
+        elif platform == "facebook" and kind == "video":
+            campaign.facebook_video_url = url_public
+            update_fields.append("facebook_video_url")
         elif platform == "instagram" and kind == "image":
             campaign.instagram_image_url = url_public
             campaign.instagram_media_type = "image"
