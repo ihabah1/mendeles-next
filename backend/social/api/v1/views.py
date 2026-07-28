@@ -53,6 +53,9 @@ class SocialStatusView(APIView):
         error = ""
         facebook_configured = False
         facebook_page = ""
+        facebook_can_publish: bool | None = None
+        facebook_missing_permissions: list[str] = []
+        facebook_token_error = ""
         buffer_configured = False
 
         from social.providers.buffer import BufferPublisher
@@ -63,11 +66,25 @@ class SocialStatusView(APIView):
             buffer_configured = publisher.buffer.configured()
             facebook_configured = publisher.facebook.configured()
             facebook_page = publisher.facebook.page_name if facebook_configured else ""
+            if facebook_configured:
+                fb_check = publisher.facebook.verify_access()
+                facebook_can_publish = fb_check.get("can_publish")
+                facebook_missing_permissions = fb_check.get("missing_permissions") or []
+                facebook_token_error = fb_check.get("error") or ""
+                if fb_check.get("page_name"):
+                    facebook_page = fb_check["page_name"]
         elif isinstance(publisher, BufferPublisher):
             buffer_configured = publisher.configured()
         elif isinstance(publisher, FacebookPublisher):
             facebook_configured = publisher.configured()
             facebook_page = publisher.page_name if facebook_configured else ""
+            if facebook_configured:
+                fb_check = publisher.verify_access()
+                facebook_can_publish = fb_check.get("can_publish")
+                facebook_missing_permissions = fb_check.get("missing_permissions") or []
+                facebook_token_error = fb_check.get("error") or ""
+                if fb_check.get("page_name"):
+                    facebook_page = fb_check["page_name"]
         else:
             buffer_configured = publisher.configured()
 
@@ -146,6 +163,9 @@ class SocialStatusView(APIView):
                 "buffer_configured": buffer_configured,
                 "facebook_configured": facebook_configured,
                 "facebook_page": facebook_page,
+                "facebook_can_publish": facebook_can_publish,
+                "facebook_missing_permissions": facebook_missing_permissions,
+                "facebook_token_error": facebook_token_error,
                 "gemini_enabled": GeminiService.enabled(_tenant_id(request)),
                 "channels": channels,
                 # Back-compat for older UI

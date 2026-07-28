@@ -89,6 +89,37 @@ def test_composite_routes_linkedin_to_buffer():
     assert result.ok
 
 
+def test_facebook_verify_access_not_configured():
+    pub = FacebookPublisher(page_id="", access_token="")
+    result = pub.verify_access()
+    assert not result["ok"]
+    assert result["can_publish"] is False
+
+
+def test_facebook_verify_access_ok(monkeypatch):
+    pub = FacebookPublisher(page_id="123", access_token="tok", page_name="Mendeles")
+
+    def fake_get(path, params=None):
+        if path == "/123":
+            return {"id": "123", "name": "Mendeles Page"}
+        if path == "/debug_token":
+            return {
+                "data": {
+                    "is_valid": True,
+                    "scopes": ["pages_manage_posts", "pages_read_engagement", "pages_show_list"],
+                }
+            }
+        raise AssertionError(path)
+
+    monkeypatch.setenv("FACEBOOK_APP_ID", "app1")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "secret1")
+    monkeypatch.setattr(pub, "_get", fake_get)
+    result = pub.verify_access()
+    assert result["ok"]
+    assert result["can_publish"] is True
+    assert result["missing_permissions"] == []
+
+
 def test_facebook_in_supported_platforms():
     from social.domain.enums import SUPPORTED_PLATFORMS
 

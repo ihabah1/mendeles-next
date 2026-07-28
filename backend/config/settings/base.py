@@ -183,6 +183,9 @@ BUFFER_ACCESS_TOKEN = os.environ.get("BUFFER_ACCESS_TOKEN", "")
 FACEBOOK_PAGE_ID = os.environ.get("FACEBOOK_PAGE_ID", "")
 FACEBOOK_PAGE_ACCESS_TOKEN = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
 FACEBOOK_PAGE_NAME = os.environ.get("FACEBOOK_PAGE_NAME", "Facebook Page")
+# Optional — enables scope validation via /debug_token in status checks
+FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "")
+FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
 # Public backend origin for media files Buffer can fetch (e.g. https://xxx.up.railway.app)
 BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
 

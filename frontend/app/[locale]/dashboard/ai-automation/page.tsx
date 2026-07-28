@@ -1100,15 +1100,24 @@ export default function AiAutomationPage() {
             className={cn(
               "rounded-full px-3 py-1 font-semibold",
               status.data?.facebook_configured
-                ? "bg-sky-500/15 text-sky-800 dark:text-sky-200"
+                ? status.data.facebook_can_publish === false
+                  ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                  : "bg-sky-500/15 text-sky-800 dark:text-sky-200"
                 : "bg-slate-500/15 text-slate-700 dark:text-slate-300",
             )}
           >
             Facebook:{" "}
             {status.data?.facebook_configured
-              ? status.data.facebook_page || "מחובר"
+              ? status.data.facebook_can_publish === false
+                ? "חסרות הרשאות"
+                : status.data.facebook_page || "מחובר"
               : "לא מוגדר"}
           </span>
+          {status.data?.facebook_token_error ? (
+            <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
+              {status.data.facebook_token_error}
+            </span>
+          ) : null}
           {!geminiEnabled ? (
             <span className="rounded-full bg-slate-500/15 px-3 py-1 font-semibold text-slate-700 dark:text-slate-300">
               Gemini AI מושבת

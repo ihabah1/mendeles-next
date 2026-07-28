@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 GRAPH_VERSION = "v21.0"
 GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_VERSION}"
+REQUIRED_PAGE_SCOPES = frozenset({"pages_manage_posts", "pages_read_engagement"})
 
 
 class FacebookPublisher(SocialPublisher):
@@ -48,6 +49,81 @@ class FacebookPublisher(SocialPublisher):
 
     def configured(self) -> bool:
         return bool(self.page_id and self.access_token)
+
+    def verify_access(self) -> dict[str, Any]:
+        """Validate page token and (optionally) required publish scopes."""
+        if not self.configured():
+            return {
+                "ok": False,
+                "can_publish": False,
+                "missing_permissions": sorted(REQUIRED_PAGE_SCOPES),
+                "error": "Facebook לא מוגדר (FACEBOOK_PAGE_ID / FACEBOOK_PAGE_ACCESS_TOKEN).",
+            }
+        try:
+            page = self._get(f"/{self.page_id}", {"fields": "id,name"})
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "ok": False,
+                "can_publish": False,
+                "missing_permissions": sorted(REQUIRED_PAGE_SCOPES),
+                "error": str(exc)[:800],
+            }
+
+        page_name = str(page.get("name") or self.page_name)
+        scopes = self._token_scopes()
+        if scopes is None:
+            return {
+                "ok": True,
+                "can_publish": None,
+                "page_id": str(page.get("id") or self.page_id),
+                "page_name": page_name,
+                "missing_permissions": [],
+                "error": "",
+            }
+
+        missing = sorted(REQUIRED_PAGE_SCOPES - scopes)
+        can_publish = not missing
+        error = ""
+        if missing:
+            error = (
+                "לטוקן Facebook חסרות הרשאות: "
+                + ", ".join(missing)
+                + ". הפיקו Page Access Token חדש ב-Graph API Explorer עם pages_manage_posts "
+                "ו-pages_read_engagement, וודאו שהמשתמש Admin בדף."
+            )
+        return {
+            "ok": True,
+            "can_publish": can_publish,
+            "page_id": str(page.get("id") or self.page_id),
+            "page_name": page_name,
+            "missing_permissions": missing,
+            "scopes": sorted(scopes),
+            "error": error,
+        }
+
+    def _token_scopes(self) -> set[str] | None:
+        app_id = (os.environ.get("FACEBOOK_APP_ID") or "").strip()
+        app_secret = (os.environ.get("FACEBOOK_APP_SECRET") or "").strip()
+        if not app_id or not app_secret:
+            return None
+        try:
+            debug = self._get(
+                "/debug_token",
+                {
+                    "input_token": self.access_token,
+                    "access_token": f"{app_id}|{app_secret}",
+                },
+            )
+        except Exception:
+            return None
+        data = debug.get("data") if isinstance(debug, dict) else {}
+        if not isinstance(data, dict) or not data.get("is_valid"):
+            return set()
+        scopes = set(data.get("scopes") or [])
+        for item in data.get("granular_scopes") or []:
+            if isinstance(item, dict) and item.get("scope"):
+                scopes.add(str(item["scope"]))
+        return scopes
 
     def list_channels(self, *, force_refresh: bool = False) -> list[dict[str, Any]]:
         if not self.configured():
@@ -185,6 +261,17 @@ class FacebookPublisher(SocialPublisher):
         }
         return self._post(f"/{self.page_id}/feed", fields)
 
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        query = dict(params or {})
+        query.setdefault("access_token", self.access_token)
+        url = f"{GRAPH_BASE}{path}?{urllib.parse.urlencode(query)}"
+        request = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(self._format_graph_error(exc)) from exc
+
     def _post(self, path: str, fields: dict[str, Any]) -> dict[str, Any]:
         url = f"{GRAPH_BASE}{path}"
         body = urllib.parse.urlencode({k: v for k, v in fields.items() if v is not None}).encode(
@@ -200,25 +287,37 @@ class FacebookPublisher(SocialPublisher):
             with urllib.request.urlopen(request, timeout=90) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            raw = exc.read().decode("utf-8", errors="replace")
-            try:
-                parsed = json.loads(raw)
-                err = parsed.get("error") or {}
-                msg = err.get("message") or raw
-                code = err.get("code")
-                sub = err.get("error_subcode")
-                detail = f"{msg}"
-                if code is not None:
-                    detail = f"[{code}] {detail}"
-                if sub is not None:
-                    detail = f"{detail} (subcode {sub})"
-                # 190 = OAuthException; 463/467 = expired/invalid session
-                if code == 190 or sub in {463, 467}:
-                    detail = (
-                        "טוקן Facebook פג תוקף או לא תקף. "
-                        "חדשו FACEBOOK_PAGE_ACCESS_TOKEN בשרת (Page token ארוך־טווח מ־Meta Graph API Explorer / App) "
-                        f"ואז נסו שוב. ({detail})"
-                    )
-            except Exception:
-                detail = raw or str(exc)
-            raise RuntimeError(f"Facebook Graph API error: {detail}") from exc
+            raise RuntimeError(self._format_graph_error(exc)) from exc
+
+    def _format_graph_error(self, exc: urllib.error.HTTPError) -> str:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(raw)
+            err = parsed.get("error") or {}
+            msg = err.get("message") or raw
+            code = err.get("code")
+            sub = err.get("error_subcode")
+            detail = f"{msg}"
+            if code is not None:
+                detail = f"[{code}] {detail}"
+            if sub is not None:
+                detail = f"{detail} (subcode {sub})"
+            # 190 = OAuthException; 463/467 = expired/invalid session
+            if code == 190 or sub in {463, 467}:
+                detail = (
+                    "טוקן Facebook פג תוקף או לא תקף. "
+                    "חדשו FACEBOOK_PAGE_ACCESS_TOKEN בשרת (Page token ארוך־טווח מ־Meta Graph API Explorer / App) "
+                    f"ואז נסו שוב. ({detail})"
+                )
+            elif code == 200 or (
+                "pages_manage_posts" in msg.lower() or "pages_read_engagement" in msg.lower()
+            ):
+                detail = (
+                    "לטוקן Facebook חסרות הרשאות פרסום לדף. "
+                    "הפיקו Page Access Token חדש עם pages_manage_posts ו-pages_read_engagement "
+                    "(וגם pages_show_list), וודאו שהמשתמש הוא Admin בדף. "
+                    f"({detail})"
+                )
+        except Exception:
+            detail = raw or str(exc)
+        return f"Facebook Graph API error: {detail}"
