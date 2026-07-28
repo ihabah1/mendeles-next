@@ -186,7 +186,7 @@ export default function AiAutomationPage() {
   const [audience, setAudience] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("https://mendeles.com");
   const [mediaType, setMediaType] = useState<"image" | "video">("image");
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>(["linkedin", "instagram", "tiktok"]);
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>(["linkedin", "instagram", "tiktok", "facebook"]);
   const [active, setActive] = useState<SocialCampaign | null>(null);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
@@ -394,6 +394,7 @@ export default function AiAutomationPage() {
   const saveEdits = useMutation({
     mutationFn: () => {
       if (!active?.id) throw new Error("No campaign");
+      const selectedPlatforms = platforms.length ? platforms : active.platforms || [];
       return socialApi.update(active.id, {
         title: active.title,
         captions: active.captions,
@@ -403,7 +404,7 @@ export default function AiAutomationPage() {
         video_prompt: active.video_prompt,
         instagram_media_type: active.instagram_media_type || "image",
         timezone,
-        platforms: active.platforms?.length ? active.platforms : platforms,
+        platforms: selectedPlatforms,
       });
     },
     onSuccess: (data) => {
@@ -415,9 +416,9 @@ export default function AiAutomationPage() {
 
   const prepareAndSimulate = async (): Promise<SocialCampaign> => {
     if (!active?.id) throw new Error("No campaign");
-    await saveEdits.mutateAsync();
-    const platformsSelected = active.platforms?.length ? active.platforms : platforms;
-    let campaign = active;
+    const savedCampaign = await saveEdits.mutateAsync();
+    const platformsSelected = savedCampaign.platforms?.length ? savedCampaign.platforms : platforms;
+    let campaign = savedCampaign;
     const needsPng =
       (platformsSelected.includes("instagram") && campaign.instagram_media_type !== "video") ||
       platformsSelected.includes("linkedin") ||
