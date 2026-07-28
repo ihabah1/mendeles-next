@@ -94,7 +94,19 @@ class FacebookPublisher(SocialPublisher):
 
         try:
             if payload.media_url and payload.media_kind == "video":
-                data = self._publish_video(payload, scheduled_unix=scheduled_unix)
+                try:
+                    data = self._publish_video(payload, scheduled_unix=scheduled_unix)
+                except Exception as exc:  # noqa: BLE001
+                    if self._is_video_permission_error(exc):
+                        logger.warning(
+                            "facebook_video_permission_denied_fallback_to_feed page_id=%s",
+                            self.page_id,
+                        )
+                        # Some pages/apps can publish posts but not videos.
+                        # Fall back to text-only post so campaign can still complete.
+                        data = self._publish_feed(payload, scheduled_unix=scheduled_unix)
+                    else:
+                        raise
             elif payload.media_url:
                 data = self._publish_photo(payload, scheduled_unix=scheduled_unix)
             else:
@@ -118,6 +130,13 @@ class FacebookPublisher(SocialPublisher):
             channel_id=self.page_id,
             channel_name=self.page_name,
             raw=data if isinstance(data, dict) else {},
+        )
+
+    def _is_video_permission_error(self, exc: Exception) -> bool:
+        text = str(exc).lower()
+        return (
+            "no permission to publish the video" in text
+            or "(#100)" in text and "video" in text and "permission" in text
         )
 
     def _parse_schedule_unix(self, iso: str | None) -> int | None:
@@ -193,6 +212,13 @@ class FacebookPublisher(SocialPublisher):
                     detail = f"[{code}] {detail}"
                 if sub is not None:
                     detail = f"{detail} (subcode {sub})"
+                # 190 = OAuthException; 463/467 = expired/invalid session
+                if code == 190 or sub in {463, 467}:
+                    detail = (
+                        "טוקן Facebook פג תוקף או לא תקף. "
+                        "חדשו FACEBOOK_PAGE_ACCESS_TOKEN בשרת (Page token ארוך־טווח מ־Meta Graph API Explorer / App) "
+                        f"ואז נסו שוב. ({detail})"
+                    )
             except Exception:
                 detail = raw or str(exc)
             raise RuntimeError(f"Facebook Graph API error: {detail}") from exc
