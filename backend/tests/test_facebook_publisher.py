@@ -89,6 +89,29 @@ def test_composite_routes_linkedin_to_buffer():
     assert result.ok
 
 
+def test_facebook_page_token_used_as_is_when_token_is_page_token(monkeypatch):
+    pub = FacebookPublisher(page_id="123", access_token="page-tok")
+
+    monkeypatch.setattr(pub, "_get", lambda path, params=None, token=None: {"id": "123"})
+    assert pub.page_token() == "page-tok"
+
+
+def test_facebook_exchanges_user_token_for_page_token(monkeypatch):
+    pub = FacebookPublisher(page_id="123", access_token="user-tok")
+
+    def fake_get(path, params=None, token=None):
+        if path == "/me":
+            return {"id": "999"}
+        if path == "/123":
+            return {"access_token": "real-page-tok"}
+        raise AssertionError(path)
+
+    monkeypatch.setattr(pub, "_get", fake_get)
+    assert pub.page_token() == "real-page-tok"
+    # cached on second call
+    assert pub.page_token() == "real-page-tok"
+
+
 def test_facebook_verify_access_not_configured():
     pub = FacebookPublisher(page_id="", access_token="")
     result = pub.verify_access()
@@ -99,9 +122,11 @@ def test_facebook_verify_access_not_configured():
 def test_facebook_verify_access_ok(monkeypatch):
     pub = FacebookPublisher(page_id="123", access_token="tok", page_name="Mendeles")
 
-    def fake_get(path, params=None):
+    def fake_get(path, params=None, token=None):
         if path == "/123":
             return {"id": "123", "name": "Mendeles Page"}
+        if path == "/me":
+            return {"id": "123"}
         if path == "/debug_token":
             return {
                 "data": {

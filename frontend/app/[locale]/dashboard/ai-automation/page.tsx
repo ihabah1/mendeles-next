@@ -1113,6 +1113,11 @@ export default function AiAutomationPage() {
                 : status.data.facebook_page || "מחובר"
               : "לא מוגדר"}
           </span>
+          {status.data?.facebook_token_kind === "user" ? (
+            <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
+              טוקן Facebook הוא User token — המערכת תמיר אותו ל־Page token אוטומטית
+            </span>
+          ) : null}
           {status.data?.facebook_token_error ? (
             <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
               {status.data.facebook_token_error}

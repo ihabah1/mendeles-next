@@ -56,6 +56,7 @@ class SocialStatusView(APIView):
         facebook_can_publish: bool | None = None
         facebook_missing_permissions: list[str] = []
         facebook_token_error = ""
+        facebook_token_kind = ""
         buffer_configured = False
 
         from social.providers.buffer import BufferPublisher
@@ -71,6 +72,7 @@ class SocialStatusView(APIView):
                 facebook_can_publish = fb_check.get("can_publish")
                 facebook_missing_permissions = fb_check.get("missing_permissions") or []
                 facebook_token_error = fb_check.get("error") or ""
+                facebook_token_kind = fb_check.get("token_kind") or ""
                 if fb_check.get("page_name"):
                     facebook_page = fb_check["page_name"]
         elif isinstance(publisher, BufferPublisher):
@@ -83,6 +85,7 @@ class SocialStatusView(APIView):
                 facebook_can_publish = fb_check.get("can_publish")
                 facebook_missing_permissions = fb_check.get("missing_permissions") or []
                 facebook_token_error = fb_check.get("error") or ""
+                facebook_token_kind = fb_check.get("token_kind") or ""
                 if fb_check.get("page_name"):
                     facebook_page = fb_check["page_name"]
         else:
@@ -166,6 +169,7 @@ class SocialStatusView(APIView):
                 "facebook_can_publish": facebook_can_publish,
                 "facebook_missing_permissions": facebook_missing_permissions,
                 "facebook_token_error": facebook_token_error,
+                "facebook_token_kind": facebook_token_kind,
                 "gemini_enabled": GeminiService.enabled(_tenant_id(request)),
                 "channels": channels,
                 # Back-compat for older UI

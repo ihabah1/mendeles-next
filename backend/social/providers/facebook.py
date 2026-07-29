@@ -46,9 +46,41 @@ class FacebookPublisher(SocialPublisher):
             or os.environ.get("FACEBOOK_PAGE_NAME")
             or "Facebook Page"
         ).strip()
+        self._resolved_page_token: str | None = None
 
     def configured(self) -> bool:
         return bool(self.page_id and self.access_token)
+
+    def page_token(self) -> str:
+        """
+        Return a token that can post as the Page.
+
+        A User token cannot publish to /{page-id}/feed; Meta answers #200 even when
+        the required scopes were granted. When the configured token belongs to a
+        user, exchange it for the Page token via /{page-id}?fields=access_token.
+        """
+        if self._resolved_page_token:
+            return self._resolved_page_token
+
+        token = self.access_token
+        try:
+            identity = self._get("/me", {"fields": "id"}, token=token)
+            identity_id = str(identity.get("id") or "")
+        except Exception:
+            identity_id = ""
+
+        if identity_id and identity_id != self.page_id:
+            try:
+                page = self._get(f"/{self.page_id}", {"fields": "access_token"}, token=token)
+                page_token = str(page.get("access_token") or "")
+                if page_token:
+                    logger.info("facebook_exchanged_user_token_for_page_token page_id=%s", self.page_id)
+                    token = page_token
+            except Exception:
+                logger.warning("facebook_page_token_exchange_failed page_id=%s", self.page_id)
+
+        self._resolved_page_token = token
+        return token
 
     def verify_access(self) -> dict[str, Any]:
         """Validate page token and (optionally) required publish scopes."""
@@ -70,6 +102,7 @@ class FacebookPublisher(SocialPublisher):
             }
 
         page_name = str(page.get("name") or self.page_name)
+        token_kind = self._token_kind()
         scopes = self._token_scopes()
         if scopes is None:
             return {
@@ -77,6 +110,7 @@ class FacebookPublisher(SocialPublisher):
                 "can_publish": None,
                 "page_id": str(page.get("id") or self.page_id),
                 "page_name": page_name,
+                "token_kind": token_kind,
                 "missing_permissions": [],
                 "error": "",
             }
@@ -96,10 +130,21 @@ class FacebookPublisher(SocialPublisher):
             "can_publish": can_publish,
             "page_id": str(page.get("id") or self.page_id),
             "page_name": page_name,
+            "token_kind": token_kind,
             "missing_permissions": missing,
             "scopes": sorted(scopes),
             "error": error,
         }
+
+    def _token_kind(self) -> str:
+        try:
+            identity = self._get("/me", {"fields": "id"})
+        except Exception:
+            return "unknown"
+        identity_id = str(identity.get("id") or "")
+        if not identity_id:
+            return "unknown"
+        return "page" if identity_id == self.page_id else "user"
 
     def _token_scopes(self) -> set[str] | None:
         app_id = (os.environ.get("FACEBOOK_APP_ID") or "").strip()
@@ -239,7 +284,7 @@ class FacebookPublisher(SocialPublisher):
         fields = {
             "url": payload.media_url,
             "caption": payload.text or "",
-            "access_token": self.access_token,
+            "access_token": self.page_token(),
             **self._schedule_fields(scheduled_unix),
         }
         return self._post(f"/{self.page_id}/photos", fields)
@@ -248,7 +293,7 @@ class FacebookPublisher(SocialPublisher):
         fields = {
             "file_url": payload.media_url,
             "description": payload.text or "",
-            "access_token": self.access_token,
+            "access_token": self.page_token(),
             **self._schedule_fields(scheduled_unix),
         }
         return self._post(f"/{self.page_id}/videos", fields)
@@ -256,14 +301,20 @@ class FacebookPublisher(SocialPublisher):
     def _publish_feed(self, payload: PublishPayload, *, scheduled_unix: int | None) -> dict:
         fields = {
             "message": payload.text or "",
-            "access_token": self.access_token,
+            "access_token": self.page_token(),
             **self._schedule_fields(scheduled_unix),
         }
         return self._post(f"/{self.page_id}/feed", fields)
 
-    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _get(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        *,
+        token: str | None = None,
+    ) -> dict[str, Any]:
         query = dict(params or {})
-        query.setdefault("access_token", self.access_token)
+        query.setdefault("access_token", token or self.access_token)
         url = f"{GRAPH_BASE}{path}?{urllib.parse.urlencode(query)}"
         request = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
         try:

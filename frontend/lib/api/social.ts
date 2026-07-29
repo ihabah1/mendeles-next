@@ -95,6 +95,7 @@ export const socialApi = {
       facebook_can_publish?: boolean | null;
       facebook_missing_permissions?: string[];
       facebook_token_error?: string;
+      facebook_token_kind?: string;
       gemini_enabled: boolean;
       channels?: Array<{
         id: string;
